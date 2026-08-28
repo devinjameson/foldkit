@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { type Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -9,12 +9,12 @@ import { describe, it } from '@effect/vitest'
 
 import { view } from './index.js'
 
-const Section = S.Literals(['Dashboard', 'Projects', 'Settings'])
+const Section = Schema.Literals(['Dashboard', 'Projects', 'Settings'])
 type Section = typeof Section.Type
 
 const sections: ReadonlyArray<Section> = ['Dashboard', 'Projects', 'Settings']
 
-const Model = S.Struct({ current: Section })
+const Model = Schema.Struct({ current: Section })
 type Model = typeof Model.Type
 
 const Message = defineMessageUnion({

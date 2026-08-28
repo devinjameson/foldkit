@@ -1,9 +1,9 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 
 const Message = defineMessageUnion({
-  InputtedEmail: { value: S.String },
+  InputtedEmail: { value: Schema.String },
 })
 type Message = typeof Message.Type
 

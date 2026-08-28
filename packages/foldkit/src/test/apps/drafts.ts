@@ -1,4 +1,4 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Document, HtmlBuilder } from '../../html/index.js'
@@ -8,11 +8,11 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const SaveStatus = S.Literals(['Editing', 'Saving', 'Saved'])
+export const SaveStatus = Schema.Literals(['Editing', 'Saving', 'Saved'])
 export type SaveStatus = typeof SaveStatus.Type
 
-export const Model = S.Struct({
-  revision: S.Number,
+export const Model = Schema.Struct({
+  revision: Schema.Number,
   status: SaveStatus,
 })
 export type Model = typeof Model.Type
@@ -21,14 +21,14 @@ export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   ClickedSaveDraft: {},
-  SucceededSaveDraft: { revision: S.Number },
+  SucceededSaveDraft: { revision: Schema.Number },
 })
 
 export type Message = typeof Message.Type
 
 // COMMAND
 
-export const SaveDraftArgs = S.Struct({ revision: S.Number })
+export const SaveDraftArgs = Schema.Struct({ revision: Schema.Number })
 export type SaveDraftArgs = typeof SaveDraftArgs.Type
 
 export const SaveDraft = Command.define('SaveDraft', {

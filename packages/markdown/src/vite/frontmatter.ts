@@ -1,4 +1,4 @@
-import { Array, Option, String as String_, pipe } from 'effect'
+import { Array, Option, String, pipe } from 'effect'
 import type { Position } from 'unist'
 
 import type { FieldsSchema } from './validateFields.js'
@@ -63,15 +63,15 @@ export const parseFrontmatterFields = (
   const fieldLineOffsets = new Map<string, number>()
 
   const entryLines = pipe(
-    String_.split(value, '\n'),
+    String.split(value, '\n'),
     Array.map((line, lineIndex) => ({ line, lineIndex })),
-    Array.filter(({ line }) => String_.isNonEmpty(line.trim())),
+    Array.filter(({ line }) => String.isNonEmpty(line.trim())),
   )
 
   for (const { line, lineIndex } of entryLines) {
     const location = sourceLocation(maybePosition, lineIndex + 1)
     const [fieldName, rawFieldValue] = Option.match(
-      String_.match(FRONTMATTER_ENTRY_PATTERN)(line),
+      String.match(FRONTMATTER_ENTRY_PATTERN)(line),
       {
         onNone: (): readonly [string, string] => {
           throw new Error(

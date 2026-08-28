@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, pipe } from 'effect'
+import { Array, Match, Option, pipe } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 
 import { VirtualList } from '@foldkit/ui'
@@ -88,11 +88,11 @@ const formatTimeAgo = (hours: number): string => {
 
 const targetForVerb = (verb: string, index: number): string => {
   const number = ((index * 13) % 9999) + 1
-  return M.value(verb).pipe(
-    M.withReturnType<string>(),
-    M.when('pushed to', () => cycle(branchNames, index)),
-    M.whenOr('opened', 'closed', 'reopened', () => `issue #${number}`),
-    M.orElse(() => `PR #${number}`),
+  return Match.value(verb).pipe(
+    Match.withReturnType<string>(),
+    Match.when('pushed to', () => cycle(branchNames, index)),
+    Match.whenOr('opened', 'closed', 'reopened', () => `issue #${number}`),
+    Match.orElse(() => `PR #${number}`),
   )
 }
 

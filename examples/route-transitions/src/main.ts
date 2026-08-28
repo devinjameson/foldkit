@@ -1,12 +1,4 @@
-import {
-  Array,
-  Duration,
-  Effect,
-  Match as M,
-  Option,
-  Schema as S,
-  pipe,
-} from 'effect'
+import { Array, Duration, Effect, Match, Option, Schema, pipe } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -35,30 +27,30 @@ const MAX_LOGGED_TRANSITIONS = 20
 
 // MODEL
 
-export const CatalogStatus = S.Literals(['Idle', 'Loading', 'Ready'])
+export const CatalogStatus = Schema.Literals(['Idle', 'Loading', 'Ready'])
 export type CatalogStatus = typeof CatalogStatus.Type
 
 export const PaintingStatus = defineTaggedUnion({
   Idle: {},
-  Loading: { paintingId: S.Number },
-  Ready: { paintingId: S.Number },
+  Loading: { paintingId: Schema.Number },
+  Ready: { paintingId: Schema.Number },
 })
 export type PaintingStatus = typeof PaintingStatus.Type
 
-export const LoggedTransition = S.Struct({
-  sequenceNumber: S.Number,
-  maybePreviousRoute: S.Option(AppRoute),
+export const LoggedTransition = Schema.Struct({
+  sequenceNumber: Schema.Number,
+  maybePreviousRoute: Schema.Option(AppRoute),
   nextRoute: AppRoute,
 })
 export type LoggedTransition = typeof LoggedTransition.Type
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   route: AppRoute,
-  transitionLog: S.Array(LoggedTransition),
+  transitionLog: Schema.Array(LoggedTransition),
   catalogStatus: CatalogStatus,
   paintingStatus: PaintingStatus,
-  studioDraft: S.String,
-  maybeSavedDraft: S.Option(S.String),
+  studioDraft: Schema.String,
+  maybeSavedDraft: Schema.Option(Schema.String),
 })
 export type Model = typeof Model.Type
 
@@ -70,9 +62,9 @@ export const Message = defineMessageUnion({
   ClickedLink: { request: UrlRequest },
   ChangedUrl: { url: Url },
   SucceededLoadCatalog: {},
-  SucceededLoadPainting: { paintingId: S.Number },
-  UpdatedStudioDraft: { value: S.String },
-  SucceededSaveDraft: { draft: S.String },
+  SucceededLoadPainting: { paintingId: Schema.Number },
+  UpdatedStudioDraft: { value: Schema.String },
+  SucceededSaveDraft: { draft: Schema.String },
 })
 
 export type Message = typeof Message.Type
@@ -80,14 +72,14 @@ export type Message = typeof Message.Type
 // COMMAND
 
 const NavigateInternal = Command.define('NavigateInternal', {
-  args: { url: S.String },
+  args: { url: Schema.String },
   messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
     pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
-  args: { href: S.String },
+  args: { href: Schema.String },
   messages: [Message.CompletedLoadExternal],
   execute: ({ href }) =>
     load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
@@ -101,7 +93,7 @@ export const LoadCatalog = Command.define('LoadCatalog', {
 })
 
 export const LoadPainting = Command.define('LoadPainting', {
-  args: { paintingId: S.Number },
+  args: { paintingId: Schema.Number },
   messages: [Message.SucceededLoadPainting],
   execute: ({ paintingId }) =>
     Effect.sleep(PAINTING_LATENCY).pipe(
@@ -110,7 +102,7 @@ export const LoadPainting = Command.define('LoadPainting', {
 })
 
 export const SaveDraft = Command.define('SaveDraft', {
-  args: { draft: S.String },
+  args: { draft: Schema.String },
   messages: [Message.SucceededSaveDraft],
   execute: ({ draft }) =>
     Effect.sleep(SAVE_LATENCY).pipe(
@@ -748,9 +740,11 @@ const transitionLogView = (
   )
 
 const routeTitle = (route: AppRoute): string =>
-  M.value(route).pipe(
-    M.tag('Home', () => 'Route Transitions'),
-    M.orElse(currentRoute => `${routeLabel(currentRoute)} | Route Transitions`),
+  Match.value(route).pipe(
+    Match.tag('Home', () => 'Route Transitions'),
+    Match.orElse(
+      currentRoute => `${routeLabel(currentRoute)} | Route Transitions`,
+    ),
   )
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {

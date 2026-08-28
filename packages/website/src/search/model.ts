@@ -1,11 +1,11 @@
-import { Match as M, Schema as S } from 'effect'
+import { Match, Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 import { Dialog } from '@foldkit/ui'
 
 import { SearchResult } from './message'
 
-const Results = S.Array(SearchResult)
+const Results = Schema.Array(SearchResult)
 
 export const SearchState = defineTaggedUnion({
   Idle: {},
@@ -17,16 +17,16 @@ export type SearchState = typeof SearchState.Type
 export const resultsFromState = (
   state: SearchState,
 ): ReadonlyArray<typeof SearchResult.Type> =>
-  M.value(state).pipe(
-    M.tag('Ok', ({ results }) => results),
-    M.tag('Loading', ({ results }) => results),
-    M.orElse(() => []),
+  Match.value(state).pipe(
+    Match.tag('Ok', ({ results }) => results),
+    Match.tag('Loading', ({ results }) => results),
+    Match.orElse(() => []),
   )
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   dialog: Dialog.Model,
-  query: S.String,
+  query: Schema.String,
   searchState: SearchState,
-  activeResultIndex: S.Number,
+  activeResultIndex: Schema.Number,
 })
 export type Model = typeof Model.Type

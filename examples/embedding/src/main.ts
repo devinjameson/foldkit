@@ -1,4 +1,4 @@
-import { Duration, Effect, Schema as S, Stream } from 'effect'
+import { Duration, Effect, Schema, Stream } from 'effect'
 import { Command, Port, Runtime, Subscription, type Update } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -8,7 +8,10 @@ import { Button } from '@foldkit/ui'
 
 // MODEL
 
-export const Model = S.Struct({ count: S.Number, step: S.Number })
+export const Model = Schema.Struct({
+  count: Schema.Number,
+  step: Schema.Number,
+})
 export type Model = typeof Model.Type
 
 // MESSAGE
@@ -16,7 +19,7 @@ export type Model = typeof Model.Type
 export const Message = defineMessageUnion({
   Ticked: {},
   ClickedAdvance: {},
-  ChangedStep: { step: S.Number },
+  ChangedStep: { step: Schema.Number },
   CompletedReportCount: {},
 })
 
@@ -25,13 +28,13 @@ export type Message = typeof Message.Type
 // PORT
 
 export const ports = {
-  inbound: { stepChanged: Port.inbound(S.Number) },
-  outbound: { countChanged: Port.outbound(S.Number) },
+  inbound: { stepChanged: Port.inbound(Schema.Number) },
+  outbound: { countChanged: Port.outbound(Schema.Number) },
 }
 
 // INIT
 
-export const Flags = S.Struct({ initialCount: S.Number })
+export const Flags = Schema.Struct({ initialCount: Schema.Number })
 export type Flags = typeof Flags.Type
 
 export const init: Runtime.ElementInit<Model, Message, Flags> = flags => ({
@@ -41,7 +44,7 @@ export const init: Runtime.ElementInit<Model, Message, Flags> = flags => ({
 // COMMAND
 
 export const ReportCount = Command.define('ReportCount', {
-  args: { count: S.Number },
+  args: { count: Schema.Number },
   messages: [Message.CompletedReportCount],
   execute: ({ count }) =>
     Port.emit(ports.outbound.countChanged, count).pipe(

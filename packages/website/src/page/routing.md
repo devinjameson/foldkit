@@ -76,7 +76,7 @@ Query parameters use [Effect Schema](https://effect.website/docs/schema/introduc
 
 ::Snippet{name="routingQueryParams" label="query parameters example"}
 
-`S.OptionFromOptional` makes parameters optional. Missing params become `Option.none()`. `S.FiniteFromString` automatically parses string query values into numbers.
+`Schema.OptionFromOptional` makes parameters optional. Missing params become `Option.none()`. `Schema.FiniteFromString` automatically parses string query values into numbers.
 
 For a complete routing example, see the [Routing example](/example-apps/routing). For a deeper look at query parameters (custom schema transforms, lenient parsing, and bidirectional URL sync), see the [Query Sync example](/example-apps/query-sync).
 
@@ -94,7 +94,7 @@ The schema’s encoded form must be a single segment string, and `schemaSegment`
 
 ## Rest Segments
 
-Some routes carry a whole path as data: a file tree, a documentation page, a breadcrumb trail. `rest` captures every remaining segment as a named field, the feature other routers call catch-all or splat routes. The parsed value is a non-empty array of strings, so the route schema declares the field with `S.NonEmptyArray(S.String)`.
+Some routes carry a whole path as data: a file tree, a documentation page, a breadcrumb trail. `rest` captures every remaining segment as a named field, the feature other routers call catch-all or splat routes. The parsed value is a non-empty array of strings, so the route schema declares the field with `Schema.NonEmptyArray(Schema.String)`.
 
 ::Snippet{name="routingRest" label="rest segments example"}
 
@@ -104,7 +104,7 @@ A specific route under the same prefix is different. The rest route also matches
 
 Nothing can follow `rest` in the path, so `slash` cannot extend it. TypeScript rejects the composition. `query` can still follow, since query parameters live after the path.
 
-When the path itself is the value, `restString` captures the same tail as a single string, slashes included, so the route schema declares the field with `S.String`. A repository-relative file path like `20-upgrade/teach/the-elm-architecture.md` round-trips as one value instead of an array of segments.
+When the path itself is the value, `restString` captures the same tail as a single string, slashes included, so the route schema declares the field with `Schema.String`. A repository-relative file path like `20-upgrade/teach/the-elm-architecture.md` round-trips as one value instead of an array of segments.
 
 ::Snippet{name="routingRestString" label="restString example"}
 

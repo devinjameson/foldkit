@@ -1,4 +1,4 @@
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { type Update } from 'foldkit'
 import { type View as SubmodelView, defineView } from 'foldkit/submodel'
 
@@ -17,7 +17,7 @@ import {
 // MODEL
 
 /** Schema for the single-select listbox's private interaction state (open/closed status, active item, activation trigger, typeahead search). The selection is owned by the parent and passed in via `ViewInputs.maybeSelectedValue`. */
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   ...BaseModel.fields,
 })
 

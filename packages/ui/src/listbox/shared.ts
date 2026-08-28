@@ -2,12 +2,12 @@ import {
   Array,
   Effect,
   Equal,
-  Match as M,
+  Match,
   Number,
   Option,
   Predicate,
-  Schema as S,
-  String as Str,
+  Schema,
+  String,
   pipe,
 } from 'effect'
 import * as Command from 'foldkit/command'
@@ -49,29 +49,29 @@ export { resolveTypeaheadMatch }
 // MODEL
 
 /** Schema for the activation trigger: whether the user interacted via mouse or keyboard. */
-export const ActivationTrigger = S.Literals(['Pointer', 'Keyboard'])
+export const ActivationTrigger = Schema.Literals(['Pointer', 'Keyboard'])
 export type ActivationTrigger = typeof ActivationTrigger.Type
 
 /** Schema for the listbox orientation: whether items flow vertically or horizontally. */
-export const Orientation = S.Literals(['Vertical', 'Horizontal'])
+export const Orientation = Schema.Literals(['Vertical', 'Horizontal'])
 export type Orientation = typeof Orientation.Type
 
-/** Schema fields shared by all listbox variants (single-select and multi-select). Spread into each variant's `S.Struct` to avoid duplicating field definitions. */
-export const BaseModel = S.Struct({
-  id: S.String,
-  isOpen: S.Boolean,
-  isAnimated: S.Boolean,
-  isModal: S.Boolean,
+/** Schema fields shared by all listbox variants (single-select and multi-select). Spread into each variant's `Schema.Struct` to avoid duplicating field definitions. */
+export const BaseModel = Schema.Struct({
+  id: Schema.String,
+  isOpen: Schema.Boolean,
+  isAnimated: Schema.Boolean,
+  isModal: Schema.Boolean,
   orientation: Orientation,
   animation: AnimationModel,
-  maybeActiveItemIndex: S.Option(S.Number),
+  maybeActiveItemIndex: Schema.Option(Schema.Number),
   activationTrigger: ActivationTrigger,
-  searchQuery: S.String,
-  searchVersion: S.Number,
-  maybeLastPointerPosition: S.Option(
-    S.Struct({ screenX: S.Number, screenY: S.Number }),
+  searchQuery: Schema.String,
+  searchVersion: Schema.Number,
+  maybeLastPointerPosition: Schema.Option(
+    Schema.Struct({ screenX: Schema.Number, screenY: Schema.Number }),
   ),
-  maybeLastButtonPointerType: S.Option(S.String),
+  maybeLastButtonPointerType: Schema.Option(Schema.String),
 })
 export type BaseModel = typeof BaseModel.Type
 
@@ -103,26 +103,26 @@ export const baseInit = (config: BaseInitConfig): BaseModel => ({
 
 /** Union of all messages the listbox component can produce. */
 export const Message = defineMessageUnion({
-  Opened: { maybeActiveItemIndex: S.Option(S.Number) },
+  Opened: { maybeActiveItemIndex: Schema.Option(Schema.Number) },
   Closed: {},
   BlurredItems: {},
   ActivatedItem: {
-    index: S.Number,
+    index: Schema.Number,
     activationTrigger: ActivationTrigger,
   },
   DeactivatedItem: {},
-  SelectedItem: { item: S.String },
+  SelectedItem: { item: Schema.String },
   MovedPointerOverItem: {
-    index: S.Number,
-    screenX: S.Number,
-    screenY: S.Number,
+    index: Schema.Number,
+    screenX: Schema.Number,
+    screenY: Schema.Number,
   },
-  RequestedItemClick: { index: S.Number },
+  RequestedItemClick: { index: Schema.Number },
   Searched: {
-    key: S.String,
-    maybeTargetIndex: S.Option(S.Number),
+    key: Schema.String,
+    maybeTargetIndex: Schema.Option(Schema.Number),
   },
-  CompletedDelayClearSearch: { version: S.Number },
+  CompletedDelayClearSearch: { version: Schema.Number },
   CompletedLockScroll: {},
   CompletedUnlockScroll: {},
   CompletedInertOthers: {},
@@ -138,8 +138,8 @@ export const Message = defineMessageUnion({
   CompletedPortalListboxBackdrop: {},
   GotAnimationMessage: { message: AnimationMessage },
   PressedPointerOnButton: {
-    pointerType: S.String,
-    button: S.Number,
+    pointerType: Schema.String,
+    button: Schema.Number,
   },
 })
 
@@ -170,7 +170,7 @@ export type Selected<Value extends string = string> = Readonly<{
 
 /** Union of out-messages the listbox component can produce. The parent folds `Selected` into the selection it owns: single-select stores the value, multi-select toggles the value's membership. */
 export const OutMessage = defineMessageUnion({
-  Selected: { value: S.String },
+  Selected: { value: Schema.String },
 })
 
 /** Generic over `Value extends string` so consumers who create the listbox
@@ -240,7 +240,7 @@ export const UnlockScroll = Command.define('UnlockScroll', {
 })
 /** Marks all elements outside the listbox as inert for modal behavior. */
 export const InertOthers = Command.define('InertOthers', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedInertOthers],
   execute: ({ id }) =>
     Dom.inertOthers(id, [buttonSelector(id), itemsSelector(id)]).pipe(
@@ -249,14 +249,14 @@ export const InertOthers = Command.define('InertOthers', {
 })
 /** Removes the inert attribute from elements outside the listbox. */
 export const RestoreInert = Command.define('RestoreInert', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedRestoreInert],
   execute: ({ id }) =>
     Dom.restoreInert(id).pipe(Effect.as(Message.CompletedRestoreInert())),
 })
 /** Moves focus back to the listbox button after closing. */
 export const FocusButton = Command.define('FocusButton', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedFocusButton],
   execute: ({ id }) =>
     Dom.focus(buttonSelector(id)).pipe(
@@ -266,7 +266,7 @@ export const FocusButton = Command.define('FocusButton', {
 })
 /** Moves focus to the listbox items container after opening. */
 export const FocusItems = Command.define('FocusItems', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedFocusItems],
   execute: ({ id }) =>
     Dom.focus(itemsSelector(id)).pipe(
@@ -276,7 +276,7 @@ export const FocusItems = Command.define('FocusItems', {
 })
 /** Scrolls the active listbox item into view after keyboard navigation. */
 export const ScrollIntoView = Command.define('ScrollIntoView', {
-  args: { id: S.String, index: S.Number },
+  args: { id: Schema.String, index: Schema.Number },
   messages: [Message.CompletedScrollIntoView],
   execute: ({ id, index }) =>
     Dom.scrollIntoView(itemSelector(id, index)).pipe(
@@ -286,7 +286,7 @@ export const ScrollIntoView = Command.define('ScrollIntoView', {
 })
 /** Programmatically clicks the active listbox item's DOM element. */
 export const ClickItem = Command.define('ClickItem', {
-  args: { id: S.String, index: S.Number },
+  args: { id: Schema.String, index: Schema.Number },
   messages: [Message.CompletedClickItem],
   execute: ({ id, index }) =>
     Dom.clickElement(itemSelector(id, index)).pipe(
@@ -296,7 +296,7 @@ export const ClickItem = Command.define('ClickItem', {
 })
 /** Waits for the typeahead search debounce period before clearing the query. */
 export const DelayClearSearch = Command.define('DelayClearSearch', {
-  args: { version: S.Number },
+  args: { version: Schema.Number },
   messages: [Message.CompletedDelayClearSearch],
   execute: ({ version }) =>
     Effect.sleep(SEARCH_DEBOUNCE_MILLISECONDS).pipe(
@@ -307,7 +307,7 @@ export const DelayClearSearch = Command.define('DelayClearSearch', {
 export const DetectMovementOrAnimationEnd = Command.define(
   'DetectMovementOrAnimationEnd',
   {
-    args: { id: S.String },
+    args: { id: Schema.String },
     messages: [Message.GotAnimationMessage],
     execute: ({ id }) =>
       Effect.raceFirst(
@@ -339,9 +339,9 @@ export const makeUpdate = <Model extends BaseModel>(
   type PlainUpdateReturn = Update.Return<Model, Message>
   type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
-  const foldAnimationOutMessage = M.type<AnimationOutMessage>().pipe(
-    M.withReturnType<Update.Step<Model, Message>>(),
-    M.tagsExhaustive({
+  const foldAnimationOutMessage = Match.type<AnimationOutMessage>().pipe(
+    Match.withReturnType<Update.Step<Model, Message>>(),
+    Match.tagsExhaustive({
       StartedLeaveAnimating: () => model => ({
         model,
         commands: [DetectMovementOrAnimationEnd({ id: model.id })],
@@ -614,7 +614,7 @@ export const makeUpdate = <Model extends BaseModel>(
  *  Exposed so Scene tests can call
  *  `Scene.Mount.resolve(AnchorListbox, CompletedAnchorListbox())`. */
 export const AnchorListbox = Mount.define('AnchorListbox', {
-  args: { buttonId: S.String, anchor: AnchorConfig },
+  args: { buttonId: Schema.String, anchor: AnchorConfig },
   messages: [Message.CompletedAnchorListbox],
   execute: ({ element, buttonId, anchor }) =>
     Effect.gen(function* () {
@@ -800,7 +800,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
       } = viewInputs
 
       const itemToValue =
-        viewInputs.itemToValue ?? ((item: unknown) => String(item))
+        viewInputs.itemToValue ?? ((item: unknown) => globalThis.String(item))
       const isValueSelected = (itemValue: string): boolean =>
         Array.contains(selectedValues, itemValue)
       const itemToSearchText =
@@ -812,26 +812,26 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
 
       const animationAttributes: ReadonlyArray<
         ReturnType<typeof h.DataAttribute>
-      > = M.value(transitionState).pipe(
-        M.when('EnterStart', () => [
+      > = Match.value(transitionState).pipe(
+        Match.when('EnterStart', () => [
           h.DataAttribute('closed', ''),
           h.DataAttribute('enter', ''),
           h.DataAttribute('transition', ''),
         ]),
-        M.when('EnterAnimating', () => [
+        Match.when('EnterAnimating', () => [
           h.DataAttribute('enter', ''),
           h.DataAttribute('transition', ''),
         ]),
-        M.when('LeaveStart', () => [
+        Match.when('LeaveStart', () => [
           h.DataAttribute('leave', ''),
           h.DataAttribute('transition', ''),
         ]),
-        M.when('LeaveAnimating', () => [
+        Match.when('LeaveAnimating', () => [
           h.DataAttribute('closed', ''),
           h.DataAttribute('leave', ''),
           h.DataAttribute('transition', ''),
         ]),
-        M.orElse(() => []),
+        Match.orElse(() => []),
       )
 
       const isItemDisabledByIndex = (index: number): boolean =>
@@ -886,8 +886,8 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
           return handleItemsKeyDown(key)
         }
 
-        return M.value(key).pipe(
-          M.whenOr('Enter', ' ', 'ArrowDown', () =>
+        return Match.value(key).pipe(
+          Match.whenOr('Enter', ' ', 'ArrowDown', () =>
             Option.some(
               Message.Opened({
                 maybeActiveItemIndex: Option.orElse(selectedItemIndex, () =>
@@ -896,7 +896,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               }),
             ),
           ),
-          M.when('ArrowUp', () =>
+          Match.when('ArrowUp', () =>
             Option.some(
               Message.Opened({
                 maybeActiveItemIndex: Option.orElse(selectedItemIndex, () =>
@@ -905,7 +905,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               }),
             ),
           ),
-          M.orElse(() => Option.none()),
+          Match.orElse(() => Option.none()),
         )
       }
 
@@ -936,9 +936,14 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
       const resolveActiveIndex = (key: string): number =>
         Option.match(maybeActiveItemIndex, {
           onNone: () =>
-            M.value(key).pipe(
-              M.whenOr(previousKey, 'End', 'PageDown', () => lastEnabledIndex),
-              M.orElse(() => firstEnabledIndex),
+            Match.value(key).pipe(
+              Match.whenOr(
+                previousKey,
+                'End',
+                'PageDown',
+                () => lastEnabledIndex,
+              ),
+              Match.orElse(() => firstEnabledIndex),
             ),
           onSome: activeIndex =>
             keyToIndex(
@@ -958,7 +963,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
           maybeActiveItemIndex,
           isItemDisabledByIndex,
           itemToSearchText,
-          Str.isNonEmpty(searchQuery),
+          String.isNonEmpty(searchQuery),
         )
         return Option.some(Message.Searched({ key, maybeTargetIndex }))
       }
@@ -974,15 +979,15 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
       }
 
       const handleItemsKeyDown = (key: string): Option.Option<Message> =>
-        M.value(key).pipe(
-          M.when('Escape', () => Option.some(Message.Closed())),
-          M.when('Enter', resolveCommitMessage),
-          M.when(' ', () =>
-            Str.isNonEmpty(searchQuery)
+        Match.value(key).pipe(
+          Match.when('Escape', () => Option.some(Message.Closed())),
+          Match.when('Enter', resolveCommitMessage),
+          Match.when(' ', () =>
+            String.isNonEmpty(searchQuery)
               ? searchForKey(' ')
               : resolveCommitMessage(),
           ),
-          M.when(isNavigationKey, () =>
+          Match.when(isNavigationKey, () =>
             Option.some(
               Message.ActivatedItem({
                 index: resolveActiveIndex(key),
@@ -990,8 +995,8 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               }),
             ),
           ),
-          M.when(isPrintableKey, () => searchForKey(key)),
-          M.orElse(() => Option.none()),
+          Match.when(isPrintableKey, () => searchForKey(key)),
+          Match.orElse(() => Option.none()),
         )
 
       const resolveButtonLabel = () => {
@@ -1050,7 +1055,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
       const itemsContainerAttributes = [
         h.Id(`${id}-items`),
         h.Role('listbox'),
-        h.AriaOrientation(Str.toLowerCase(orientation)),
+        h.AriaOrientation(String.toLowerCase(orientation)),
         ...(behavior.ariaMultiSelectable ? [h.AriaMultiSelectable(true)] : []),
         ...(isReadOnly
           ? [h.AriaReadonly(true), h.DataAttribute('readonly', '')]

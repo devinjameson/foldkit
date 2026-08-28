@@ -1,18 +1,18 @@
-import { Effect, Schema as S, Stream } from 'effect'
+import { Effect, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
 // MESSAGE
 
 const Message = defineMessageUnion({
-  PressedKey: { key: S.String },
+  PressedKey: { key: Schema.String },
 })
 type Message = typeof Message.Type
 
 // MODEL
 
-const Model = S.Struct({
-  isListening: S.Boolean,
+const Model = Schema.Struct({
+  isListening: Schema.Boolean,
 })
 
 type Model = typeof Model.Type
@@ -21,7 +21,7 @@ type Model = typeof Model.Type
 
 const subscriptions = Subscription.make<Model, Message>()(entry => ({
   shortcut: entry(
-    { isListening: S.Boolean },
+    { isListening: Schema.Boolean },
     {
       modelToDependencies: model => ({ isListening: model.isListening }),
       dependenciesToStream: ({ isListening }) =>

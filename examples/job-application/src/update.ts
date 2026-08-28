@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, pipe } from 'effect'
+import { Array, Match, Option, pipe } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -87,9 +87,9 @@ const foldAttachments = Update.foldChild({
   toParentMessage: message => Message.GotAttachmentsMessage({ message }),
 })
 
-const foldStepMenuOutMessage = M.type<Menu.OutMessage<Step.Step>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldStepMenuOutMessage = Match.type<Menu.OutMessage<Step.Step>>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({ model: evo(model, { currentStep: () => value }) }),
@@ -104,9 +104,9 @@ const foldStepMenu = Update.foldChild({
   foldOutMessage: foldStepMenuOutMessage,
 })
 
-const foldStepTabsOutMessage = M.type<Tabs.OutMessage<Step.Step>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldStepTabsOutMessage = Match.type<Tabs.OutMessage<Step.Step>>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({ model: evo(model, { currentStep: () => value }) }),

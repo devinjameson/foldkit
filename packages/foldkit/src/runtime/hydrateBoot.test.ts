@@ -1,4 +1,4 @@
-import { Effect, Fiber, Option, Schema as S } from 'effect'
+import { Effect, Fiber, Option, Schema } from 'effect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { renderToString } from '../experimental/server/server.js'
@@ -13,10 +13,10 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({ count: S.Number })
+const Model = Schema.Struct({ count: Schema.Number })
 type Model = typeof Model.Type
 
-const Flags = S.Struct({ start: S.Number })
+const Flags = Schema.Struct({ start: Schema.Number })
 type Flags = typeof Flags.Type
 
 const h = __htmlBuilder<Message>()
@@ -186,7 +186,9 @@ describe('hydrating boot', () => {
   })
 
   it('round-trips non-JSON-native Schema values through the flags payload', async () => {
-    const OptionalFlags = S.Struct({ maybeStart: S.Option(S.Number) })
+    const OptionalFlags = Schema.Struct({
+      maybeStart: Schema.Option(Schema.Number),
+    })
     type OptionalFlags = typeof OptionalFlags.Type
     const optionalInit = (
       flags: OptionalFlags,

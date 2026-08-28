@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { Calendar } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest } from 'foldkit/navigation'
@@ -12,10 +12,10 @@ import { GroupKey, SidebarState } from './sidebarStorage'
 
 // THEME
 
-export const ThemePreference = S.Literals(['Dark', 'Light', 'System'])
+export const ThemePreference = Schema.Literals(['Dark', 'Light', 'System'])
 export type ThemePreference = typeof ThemePreference.Type
 
-export const ResolvedTheme = S.Literals(['Dark', 'Light'])
+export const ResolvedTheme = Schema.Literals(['Dark', 'Light'])
 export type ResolvedTheme = typeof ResolvedTheme.Type
 
 // MESSAGE
@@ -31,12 +31,12 @@ export const Message = defineMessageUnion({
   CompletedSaveThemePreference: {},
   CompletedSaveSidebarState: {},
   CompletedLoadBrowserEnvironment: {
-    maybeThemePreference: S.Option(ThemePreference),
-    maybeSidebarState: S.Option(SidebarState),
+    maybeThemePreference: Schema.Option(ThemePreference),
+    maybeSidebarState: Schema.Option(SidebarState),
     systemTheme: ResolvedTheme,
-    isNarrowViewport: S.Boolean,
-    isChromium: S.Boolean,
-    currentYear: S.Number,
+    isNarrowViewport: Schema.Boolean,
+    isChromium: Schema.Boolean,
+    currentYear: Schema.Number,
     today: Calendar.CalendarDate,
   },
   CompletedScrollSidebarActiveLinkIntoView: {},
@@ -45,19 +45,19 @@ export const Message = defineMessageUnion({
   FailedCopyLink: {},
   ClickedLink: { request: UrlRequest },
   ChangedUrl: { url: Url },
-  ClickedCopySnippet: { text: S.String },
-  ClickedCopyLink: { hash: S.String },
-  SucceededCopySnippet: { text: S.String },
+  ClickedCopySnippet: { text: Schema.String },
+  ClickedCopyLink: { hash: Schema.String },
+  SucceededCopySnippet: { text: Schema.String },
   FailedCopySnippet: {},
-  CompletedWaitBeforeHidingCopiedIndicator: { text: S.String },
+  CompletedWaitBeforeHidingCopiedIndicator: { text: Schema.String },
   GotMobileMenuDialogMessage: { message: Dialog.Message },
   ClickedOpenMobileMenu: {},
-  ToggledMobileTableOfContents: { isOpen: S.Boolean },
-  ClickedMobileTableOfContentsLink: { sectionId: S.String },
-  ChangedActiveSection: { sectionId: S.String },
+  ToggledMobileTableOfContents: { isOpen: Schema.Boolean },
+  ClickedMobileTableOfContentsLink: { sectionId: Schema.String },
+  ChangedActiveSection: { sectionId: Schema.String },
   SelectedThemePreference: { preference: ThemePreference },
   ChangedSystemTheme: { theme: ResolvedTheme },
-  ChangedViewportWidth: { isNarrow: S.Boolean },
+  ChangedViewportWidth: { isNarrow: Schema.Boolean },
   ToggledAiHeading: {},
   GotDemoTabsMessage: { message: Tabs.Message },
   GotPlaygroundMenuMessage: { message: Menu.Message },
@@ -67,9 +67,9 @@ export const Message = defineMessageUnion({
   GotComingFromReactMessage: { message: Page.ComingFromReact.Message },
   GotApiReferenceMessage: { message: Page.ApiReference.Message },
   GotUiPageMessage: { message: Page.UiPages.Message },
-  ToggledSidebarGroup: { key: GroupKey, isOpen: S.Boolean },
+  ToggledSidebarGroup: { key: GroupKey, isOpen: Schema.Boolean },
   GotExampleDetailMessage: { message: Page.Example.ExampleDetail.Message },
   GotSearchMessage: { message: Search.Message },
-  ToggledMapMessagesUnderHood: { isOpen: S.Boolean },
+  ToggledMapMessagesUnderHood: { isOpen: Schema.Boolean },
 })
 export type Message = typeof Message.Type

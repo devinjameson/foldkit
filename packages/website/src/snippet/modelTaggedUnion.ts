@@ -1,14 +1,14 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 const EditorMode = defineTaggedUnion({
   Browsing: {},
-  Editing: { noteId: S.String },
-  Previewing: { noteId: S.String },
+  Editing: { noteId: Schema.String },
+  Previewing: { noteId: Schema.String },
 })
 type EditorMode = typeof EditorMode.Type
 
-const Model = S.Struct({
+const Model = Schema.Struct({
   editorMode: EditorMode,
 })
 type Model = typeof Model.Type

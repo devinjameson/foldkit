@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 // ❌ Bad
@@ -7,7 +7,7 @@ import { defineMessageUnion } from 'foldkit/message'
 const BadMessage = defineMessageUnion({
   GotSettingsMessage: {
     message: Settings.Message,
-    timestamp: S.Number,
+    timestamp: Schema.Number,
   },
 })
 
@@ -15,7 +15,7 @@ const BadMessage = defineMessageUnion({
 // message plus routing keys (id, or keys ending in Id) only.
 const Message = defineMessageUnion({
   GotCounterMessage: {
-    id: S.String,
+    id: Schema.String,
     message: Counter.Message,
   },
 })

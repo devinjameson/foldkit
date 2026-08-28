@@ -1,4 +1,4 @@
-import { Option, Record as Record_ } from 'effect'
+import { Option, Record } from 'effect'
 import { Html, inertHtml as ih } from 'foldkit/html'
 
 import type { RenderHeadingLink } from '../prose'
@@ -12,7 +12,7 @@ import type { RenderCopyButton } from '../view/codeBlock'
  * missing or misspelled key is a type error where the page builds it instead of
  * a demo that silently renders nothing.
  */
-export type Demos<Name extends string> = Readonly<Record<Name, Html>>
+export type Demos<Name extends string> = Readonly<globalThis.Record<Name, Html>>
 
 /**
  * Wraps one `:::Faq` island's rendered children in the page's collapsible shell.
@@ -50,7 +50,7 @@ export type Slots<DemoName extends string> = Readonly<{
  * `::Demo` registration test is there to catch.
  */
 export const resolveDemo = (slots: Slots<string>, name: string): Html =>
-  Option.getOrElse(Record_.get(slots.demos, name), () => ih.empty)
+  Option.getOrElse(Record.get(slots.demos, name), () => ih.empty)
 
 /**
  * Renders a `:::Faq` island. Without a page-supplied shell the question becomes

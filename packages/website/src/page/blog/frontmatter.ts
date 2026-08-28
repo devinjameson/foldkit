@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S, String as String_, pipe } from 'effect'
+import { Array, Option, Schema, String, pipe } from 'effect'
 
 // POST FRONTMATTER
 
@@ -22,7 +22,7 @@ const daysInMonth = (year: number, month: number): number => {
 }
 
 const isCalendarDate = (value: string): boolean =>
-  Option.match(String_.match(ISO_DATE_PATTERN)(value), {
+  Option.match(String.match(ISO_DATE_PATTERN)(value), {
     onNone: () => false,
     onSome: ([, year = '', month = '', day = '']) => {
       const monthNumber = Number(month)
@@ -36,8 +36,8 @@ const isCalendarDate = (value: string): boolean =>
     },
   })
 
-const PostCoverImagePath = S.String.check(
-  S.makeFilter(
+const PostCoverImagePath = Schema.String.check(
+  Schema.makeFilter(
     value => (value.startsWith('/') ? undefined : 'not a root-relative path'),
     {
       identifier: 'PostCoverImagePath',
@@ -48,8 +48,8 @@ const PostCoverImagePath = S.String.check(
 
 const POSITIVE_INTEGER_PATTERN = /^[1-9][0-9]*$/
 
-const PostCoverImageDimension = S.String.check(
-  S.makeFilter(
+const PostCoverImageDimension = Schema.String.check(
+  Schema.makeFilter(
     value =>
       POSITIVE_INTEGER_PATTERN.test(value)
         ? undefined
@@ -79,11 +79,11 @@ const PostCoverImageDimension = S.String.check(
  * Kept dependency-light (Schema only) so `vite.config.ts` and
  * `vitest.config.ts` can import it without pulling in the browser view layer.
  */
-export const PostFrontmatter = S.Struct({
-  title: S.String.check(S.isNonEmpty()),
-  description: S.String.check(S.isNonEmpty()),
-  date: S.String.check(
-    S.makeFilter(
+export const PostFrontmatter = Schema.Struct({
+  title: Schema.String.check(Schema.isNonEmpty()),
+  description: Schema.String.check(Schema.isNonEmpty()),
+  date: Schema.String.check(
+    Schema.makeFilter(
       value => (isCalendarDate(value) ? undefined : 'invalid calendar date'),
       {
         identifier: 'PostDate',
@@ -91,12 +91,12 @@ export const PostFrontmatter = S.Struct({
       },
     ),
   ),
-  coverImage: S.optional(PostCoverImagePath),
-  coverImageAlt: S.optional(S.String),
-  coverImageWidth: S.optional(PostCoverImageDimension),
-  coverImageHeight: S.optional(PostCoverImageDimension),
+  coverImage: Schema.optional(PostCoverImagePath),
+  coverImageAlt: Schema.optional(Schema.String),
+  coverImageWidth: Schema.optional(PostCoverImageDimension),
+  coverImageHeight: Schema.optional(PostCoverImageDimension),
 }).check(
-  S.makeFilter(
+  Schema.makeFilter(
     fields => {
       const coverFields = [
         fields.coverImage,

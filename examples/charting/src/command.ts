@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, Schema as S } from 'effect'
+import { Effect, Layer, Option, Schema } from 'effect'
 import { Command, Http } from 'foldkit'
 
 import { getChart } from './chartHost'
@@ -31,12 +31,12 @@ export const FetchTelemetry = Command.define('FetchTelemetry', {
 
 export const SyncChart = Command.define('SyncChart', {
   args: {
-    hostId: S.String,
+    hostId: Schema.String,
     telemetry: Telemetry,
     chartMode: ChartMode,
     selectedPackageId: PackageId,
     period: Period,
-    maybeSelectedDatumId: S.Option(S.String),
+    maybeSelectedDatumId: Schema.Option(Schema.String),
   },
   messages: [Message.SucceededSyncChart, Message.FailedSyncChart],
   execute: args =>

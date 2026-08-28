@@ -1,4 +1,4 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import { Command, Runtime, type Update } from 'foldkit'
 import { type Document, type HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -10,19 +10,19 @@ import { COUNT_COOKIE } from './cookie'
 
 // MODEL
 
-export const Model = S.Struct({
-  count: S.Number,
-  renderedAt: S.String,
-  renderedOn: S.Literals(['Server', 'Client']),
+export const Model = Schema.Struct({
+  count: Schema.Number,
+  renderedAt: Schema.String,
+  renderedOn: Schema.Literals(['Server', 'Client']),
 })
 export type Model = typeof Model.Type
 
 // FLAGS
 
-export const Flags = S.Struct({
-  initialCount: S.Number,
-  renderedAt: S.String,
-  renderedOn: S.Literals(['Server', 'Client']),
+export const Flags = Schema.Struct({
+  initialCount: Schema.Number,
+  renderedAt: Schema.String,
+  renderedOn: Schema.Literals(['Server', 'Client']),
 })
 export type Flags = typeof Flags.Type
 
@@ -62,7 +62,7 @@ export const update = (model: Model, message: Message) =>
 const COUNT_COOKIE_MAX_AGE_SECONDS = 31536000
 
 export const PersistCount = Command.define('PersistCount', {
-  args: { count: S.Number },
+  args: { count: Schema.Number },
   messages: [Message.CompletedPersistCount],
   execute: ({ count }) =>
     Effect.try(() => {

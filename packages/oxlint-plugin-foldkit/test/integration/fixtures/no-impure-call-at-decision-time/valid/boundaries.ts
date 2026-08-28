@@ -1,4 +1,4 @@
-import { Effect, Schema as S, Stream } from 'effect'
+import { Effect, Schema, Stream } from 'effect'
 import {
   Command,
   ManagedResource,
@@ -99,7 +99,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
 
 export const managedResources = ManagedResource.make<Model, Message>()(
   entry => ({
-    connection: entry(Resource, S.Struct({}), {
+    connection: entry(Resource, Schema.Struct({}), {
       modelToMaybeRequirements: () => SomeRequirements,
       acquire: () => Effect.succeed(crypto.randomUUID()),
       release: () => Effect.sync(() => crypto.getRandomValues(bytes)),

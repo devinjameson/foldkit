@@ -1,4 +1,4 @@
-import { Match as M } from 'effect'
+import { Match } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 
 import { Tabs } from '@foldkit/ui'
@@ -98,11 +98,11 @@ export const horizontalDemo = (
   )
 
   const panelFor = (tab: DemoTab) =>
-    M.value(tab).pipe(
-      M.when('Foldkit', () => foldkitPanel),
-      M.when('React', () => reactPanel),
-      M.when('Elm', () => elmPanel),
-      M.exhaustive,
+    Match.value(tab).pipe(
+      Match.when('Foldkit', () => foldkitPanel),
+      Match.when('React', () => reactPanel),
+      Match.when('Elm', () => elmPanel),
+      Match.exhaustive,
     )
 
   return [
@@ -216,11 +216,11 @@ export const verticalDemo = (
   )
 
   const panelFor = (tab: DemoTab) =>
-    M.value(tab).pipe(
-      M.when('Foldkit', () => foldkitPanel),
-      M.when('React', () => reactPanel),
-      M.when('Elm', () => elmPanel),
-      M.exhaustive,
+    Match.value(tab).pipe(
+      Match.when('Foldkit', () => foldkitPanel),
+      Match.when('React', () => reactPanel),
+      Match.when('Elm', () => elmPanel),
+      Match.exhaustive,
     )
 
   return [

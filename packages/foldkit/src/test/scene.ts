@@ -4,11 +4,11 @@ import {
   Effect,
   Equal,
   Function,
-  Match as M,
+  Match,
   Option,
   Predicate,
   Schema,
-  String as String_,
+  String,
   pipe,
 } from 'effect'
 import { dual } from 'effect/Function'
@@ -761,7 +761,7 @@ const isSubmitButton = (element: VNode): boolean => {
   const maybeType = pipe(
     lookupStringAttribute(element, 'type'),
     Option.fromNullishOr,
-    Option.map(String_.toLowerCase),
+    Option.map(String.toLowerCase),
   )
 
   if (element.sel === 'button') {
@@ -1341,7 +1341,7 @@ const emitCustomElementEvent =
       const declared = Object.keys(spec.events).join(', ')
       throw new Error(
         `I tried to emit "${eventName}" but the '${spec.tag}' element does not declare it.\n\n` +
-          `Declared events: ${String_.isEmpty(declared) ? '(none)' : declared}.`,
+          `Declared events: ${String.isEmpty(declared) ? '(none)' : declared}.`,
       )
     }
 
@@ -1581,9 +1581,9 @@ export const expectHandled =
   <Model, Message, OutMessage>(
     simulation: SceneSimulation<Model, Message, OutMessage>,
   ): SceneSimulation<Model, Message, OutMessage> =>
-    M.value(toInternal(simulation).lastInteractionOutcome).pipe(
-      M.withReturnType<SceneSimulation<Model, Message, OutMessage>>(),
-      M.tagsExhaustive({
+    Match.value(toInternal(simulation).lastInteractionOutcome).pipe(
+      Match.withReturnType<SceneSimulation<Model, Message, OutMessage>>(),
+      Match.tagsExhaustive({
         NotRun: () => {
           throw new Error(
             'I was asked whether the last interaction was handled, but no interaction has run yet.\n\n' +
@@ -1622,9 +1622,9 @@ export const expectIgnored =
   <Model, Message, OutMessage>(
     simulation: SceneSimulation<Model, Message, OutMessage>,
   ): SceneSimulation<Model, Message, OutMessage> =>
-    M.value(toInternal(simulation).lastInteractionOutcome).pipe(
-      M.withReturnType<SceneSimulation<Model, Message, OutMessage>>(),
-      M.tagsExhaustive({
+    Match.value(toInternal(simulation).lastInteractionOutcome).pipe(
+      Match.withReturnType<SceneSimulation<Model, Message, OutMessage>>(),
+      Match.tagsExhaustive({
         NotRun: () => {
           throw new Error(
             'I was asked whether the last interaction was ignored, but no interaction has run yet.\n\n' +
@@ -2564,7 +2564,7 @@ const assertHasStyle = (
       return Option.match(maybeActualValue, {
         onNone: () => ({ pass: false, actual: 'it is not present' }),
         onSome: actualValue => ({
-          pass: String(actualValue) === value,
+          pass: globalThis.String(actualValue) === value,
           actual: `received "${actualValue}"`,
         }),
       })
@@ -2677,8 +2677,8 @@ const assertIsEmpty: SceneAssertion = assertOnElement(vnode => {
   const childCount = (vnode.children ?? []).length
   const text = textContent(vnode)
   return {
-    pass: String_.isEmpty(text) && childCount === 0,
-    actual: String_.isNonEmpty(text)
+    pass: String.isEmpty(text) && childCount === 0,
+    actual: String.isNonEmpty(text)
       ? `received text "${text}"`
       : `received ${childCount} child(ren)`,
   }

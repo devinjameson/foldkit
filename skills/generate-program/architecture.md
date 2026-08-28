@@ -85,22 +85,22 @@ Use discriminated unions to make impossible states unrepresentable:
 
 ```ts
 // WRONG: boolean flags allow impossible combinations
-const Model = S.Struct({
-  isLoading: S.Boolean,
-  isError: S.Boolean,
-  data: S.Option(Data),
-  error: S.Option(S.String),
+const Model = Schema.Struct({
+  isLoading: Schema.Boolean,
+  isError: Schema.Boolean,
+  data: Schema.Option(Data),
+  error: Schema.Option(Schema.String),
 })
 
 // RIGHT: each state is a distinct variant
 const DataState = defineTaggedUnion({
   Idle: {},
   Loading: {},
-  Error: { error: S.String },
+  Error: { error: Schema.String },
   Ok: { data: Data },
 })
 
-const Model = S.Struct({
+const Model = Schema.Struct({
   dataState: DataState,
 })
 ```
@@ -112,9 +112,9 @@ For **remote data specifically**, don't hand-roll the union. The `AsyncData` mod
 ```ts
 import { AsyncData } from 'foldkit'
 
-const WeatherAsyncData = AsyncData.Schema(WeatherData, S.String)
+const WeatherAsyncData = AsyncData.Schema(WeatherData, Schema.String)
 
-const Model = S.Struct({
+const Model = Schema.Struct({
   weather: WeatherAsyncData.schema,
 })
 ```
@@ -146,14 +146,14 @@ Messages describe what happened, not what should happen. The update function dec
 // WRONG: imperative, tells the system what to do
 const Message = defineMessageUnion({
   FetchData: {},
-  SetFilter: { filter: S.String },
+  SetFilter: { filter: Schema.String },
   ShowModal: {},
 })
 
 // RIGHT: past-tense, describes what happened
 const Message = defineMessageUnion({
   ClickedRefresh: {},
-  SelectedFilter: { filter: S.String },
+  SelectedFilter: { filter: Schema.String },
   ClickedOpenModal: {},
 })
 ```
@@ -175,7 +175,7 @@ const update = (model: Model, message: Message) =>
 
 Update, init, boot, and component helper producers return `{ model }` when they statically create no Commands. When they compute a Commands collection, they return it directly without checking whether it is empty. Never write the literal `commands: []`.
 
-Inline the return type when the matcher is its only use. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses it. `Message.match<UpdateReturn>` constrains the whole update function, so do not repeat `: UpdateReturn` on its signature. When a domain union match inside a handler needs the same constraint, pass it as that union's `match` generic (`Submission.match<UpdateReturn>(submission, { ... })`). Use `M.withReturnType<UpdateReturn>()` only on an Effect `Match` (a partial match, or a union without its own `match`).
+Inline the return type when the matcher is its only use. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses it. `Message.match<UpdateReturn>` constrains the whole update function, so do not repeat `: UpdateReturn` on its signature. When a domain union match inside a handler needs the same constraint, pass it as that union's `match` generic (`Submission.match<UpdateReturn>(submission, { ... })`). Use `Match.withReturnType<UpdateReturn>()` only on an Effect `Match` (a partial match, or a union without its own `match`).
 
 Use `Update.Return<Model, Message>` for an update that cannot emit an OutMessage. It prevents a result containing an OutMessage from entering code that would keep only its Model and Commands. A result with no `outMessage` can still be used where `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is expected. The missing field means that update emitted no OutMessage. A hand-written plain-return type must preserve the `outMessage?: never` field.
 
@@ -214,8 +214,8 @@ const now = Date.now()
 const init = () => ({ model: { createdAt: now } })
 
 // RIGHT: Flags run as an Effect before init, result passed in
-const Flags = S.Struct({
-  createdAt: S.Number,
+const Flags = Schema.Struct({
+  createdAt: Schema.Number,
 })
 
 const flags: Effect.Effect<Flags> = Effect.gen(function* () {
@@ -237,10 +237,12 @@ For a fresh browser boot, Flags are produced by an `Effect<Flags>`. The runtime 
 When Flags restore a value that a Command saved to storage, define the persistence Schema once next to the saved Schema and use it for both decode and encode:
 
 ```ts
-export const SavedBoardJsonString = S.fromJsonString(S.toCodecJson(SavedBoard))
+export const SavedBoardJsonString = Schema.fromJsonString(
+  Schema.toCodecJson(SavedBoard),
+)
 ```
 
-`toCodecJson` turns the domain value into canonical JSON, then `fromJsonString` stringifies it. Leave it out and a field like `S.Option` writes Effect's runtime shape (`{_id:"Option",_tag:"None"}`) to storage. The next boot fails to decode it, the Flags `Effect.catch` falls back to the empty value, and the user's saved data looks gone. For a Schema that is already JSON-native, `toCodecJson` changes nothing on the wire, so composing it every time costs nothing.
+`toCodecJson` turns the domain value into canonical JSON, then `fromJsonString` stringifies it. Leave it out and a field like `Schema.Option` writes Effect's runtime shape (`{_id:"Option",_tag:"None"}`) to storage. The next boot fails to decode it, the Flags `Effect.catch` falls back to the empty value, and the user's saved data looks gone. For a Schema that is already JSON-native, `toCodecJson` changes nothing on the wire, so composing it every time costs nothing.
 
 Declare the `Flags` Schema on `Runtime.makeApplication`, then pass the Effect to `Runtime.run`:
 
@@ -282,9 +284,9 @@ const update = (model: Model, message: Message) =>
   })
 
 // Parent folds the child update and handles its OutMessage
-const foldChildOutMessage = M.type<Child.OutMessage>().pipe(
-  M.withReturnType<Update.Step<ParentModel, ParentMessage>>(),
-  M.tagsExhaustive({
+const foldChildOutMessage = Match.type<Child.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<ParentModel, ParentMessage>>(),
+  Match.tagsExhaustive({
     SucceededCreateRoom:
       ({ roomId }) =>
       model => ({
@@ -335,7 +337,7 @@ Subscriptions are model-driven streams. They automatically start and stop based 
 
 Build them with `Subscription.make<Model, Message>()(entry => ({ ... }))`. The builder callback receives an `entry(fields, callbacks)` helper. For each subscription, you provide:
 
-- A `fields` map (the bare field map passed as `entry`'s first argument) naming every dependency. The builder calls `S.Struct(fields)` internally and infers the dependency type from this map.
+- A `fields` map (the bare field map passed as `entry`'s first argument) naming every dependency. The builder calls `Schema.Struct(fields)` internally and infers the dependency type from this map.
 - A `modelToDependencies(model)` function that returns the parameters the stream needs. Wrap an absent dependency in `Option` at the field level. The runtime restarts the stream whenever the dependencies change.
 - A `dependenciesToStream(dependencies)` function that turns those parameters into a `Stream<Message>`. Errors should be mapped to a `Failed*` Message inside the stream rather than thrown.
 
@@ -480,7 +482,7 @@ When the host application needs to control the embedded app (mount and unmount i
 
 With `makeApplication`, the `view` returns a `Document`. The runtime sets `document.title` from its `title` field after every render and syncs the canonical / og:url tags (`canonical` defaults to the current URL, and `ogUrl` defaults to `canonical`, so setting `canonical` alone moves both). With `makeElement`, there is no title or metadata management at all.
 
-`lang` and `dir` sync to the `<html>` element, so an app that switches language at runtime drives them from the Model. `dir` is `TextDirection` from `foldkit/html`, a Schema over `'Ltr' | 'Rtl' | 'Auto'` that you can drop straight into a Model `S.Struct`, and the runtime writes it as the lowercase attribute value. Both fields are optional and have no default: when a view omits one, the runtime does not touch that attribute, leaving whatever value it currently holds, so a view that never sets it leaves the served HTML in place.
+`lang` and `dir` sync to the `<html>` element, so an app that switches language at runtime drives them from the Model. `dir` is `TextDirection` from `foldkit/html`, a Schema over `'Ltr' | 'Rtl' | 'Auto'` that you can drop straight into a Model `Schema.Struct`, and the runtime writes it as the lowercase attribute value. Both fields are optional and have no default: when a view omits one, the runtime does not touch that attribute, leaving whatever value it currently holds, so a view that never sets it leaves the served HTML in place.
 
 `onUrlRequest` fires when the user clicks a link. The Message receives a `UrlRequest` (a tagged union from the `Navigation` namespace) which you handle in update by matching on its `_tag`. `onUrlChange` fires when the browser URL changes (back/forward buttons); the handler updates the route from the new URL.
 

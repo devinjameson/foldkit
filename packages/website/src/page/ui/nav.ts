@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S, pipe } from 'effect'
+import { Array, Option, Schema, pipe } from 'effect'
 import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import type { Url } from 'foldkit/url'
 
@@ -9,7 +9,7 @@ import type { Message } from './message'
 
 // DEMO CONTENT
 
-const NavDemoSection = S.Literals(['Home', 'Search', 'Library', 'Profile'])
+const NavDemoSection = Schema.Literals(['Home', 'Search', 'Library', 'Profile'])
 type NavDemoSection = typeof NavDemoSection.Type
 
 const demoSections: ReadonlyArray<NavDemoSection> = [

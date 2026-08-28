@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, Message, update,
 // and view definitions.
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -22,7 +22,7 @@ const Message = defineMessageUnion({
 // registered with Effect.acquireRelease. Construct the resource inside the
 // acquire body, never before it, or it leaks on interruption:
 const AnchorPanel = Mount.define('AnchorPanel', {
-  args: { buttonId: S.String, anchor: AnchorConfig },
+  args: { buttonId: Schema.String, anchor: AnchorConfig },
   messages: [Message.CompletedAnchorPanel],
   execute: ({ element, buttonId, anchor }) =>
     Effect.gen(function* () {

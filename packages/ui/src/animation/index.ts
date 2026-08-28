@@ -1,4 +1,4 @@
-import { Match as M } from 'effect'
+import { Match } from 'effect'
 import type { ChildAttribute, Html, TagName } from 'foldkit/html'
 import { defineView } from 'foldkit/submodel'
 
@@ -55,26 +55,26 @@ export const view = defineView<Model, Message, ViewInputs>(
 
     const transitionAttributes: ReadonlyArray<
       ReturnType<typeof h.DataAttribute>
-    > = M.value(transitionState).pipe(
-      M.when('EnterStart', () => [
+    > = Match.value(transitionState).pipe(
+      Match.when('EnterStart', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('EnterAnimating', () => [
+      Match.when('EnterAnimating', () => [
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveStart', () => [
+      Match.when('LeaveStart', () => [
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveAnimating', () => [
+      Match.when('LeaveAnimating', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.orElse(() => []),
+      Match.orElse(() => []),
     )
 
     if (animateSize) {

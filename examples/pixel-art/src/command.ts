@@ -1,4 +1,4 @@
-import { Array, Effect, Predicate, Schema as S } from 'effect'
+import { Array, Effect, Predicate, Schema } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Command } from 'foldkit'
 
@@ -14,8 +14,8 @@ import { PALETTE_THEMES, resolveColor } from './palette'
 export const SaveCanvas = Command.define('SaveCanvas', {
   args: {
     grid: Grid,
-    gridSize: S.Number,
-    paletteThemeIndex: S.Number,
+    gridSize: Schema.Number,
+    paletteThemeIndex: Schema.Number,
     selectedColorIndex: PaletteIndex,
   },
   messages: [Message.CompletedSaveCanvas],
@@ -28,7 +28,10 @@ export const SaveCanvas = Command.define('SaveCanvas', {
         paletteThemeIndex,
         selectedColorIndex,
       }
-      yield* store.set(STORAGE_KEY, S.encodeSync(SavedCanvasJsonString)(data))
+      yield* store.set(
+        STORAGE_KEY,
+        Schema.encodeSync(SavedCanvasJsonString)(data),
+      )
       return Message.CompletedSaveCanvas()
     }).pipe(
       Effect.catch(() => Effect.succeed(Message.CompletedSaveCanvas())),
@@ -45,7 +48,11 @@ export const saveCanvas = (model: Model) =>
   })
 
 export const ExportPng = Command.define('ExportPng', {
-  args: { grid: Grid, gridSize: S.Number, paletteThemeIndex: S.Number },
+  args: {
+    grid: Grid,
+    gridSize: Schema.Number,
+    paletteThemeIndex: Schema.Number,
+  },
   messages: [Message.SucceededExportPng, Message.FailedExportPng],
   execute: ({ grid, gridSize, paletteThemeIndex }) =>
     Effect.gen(function* () {

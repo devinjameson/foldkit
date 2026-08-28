@@ -1,4 +1,4 @@
-import { Match as M, Schema as S } from 'effect'
+import { Match, Schema } from 'effect'
 import { Html, type HtmlBuilder } from 'foldkit/html'
 
 import { Nav } from '@foldkit/ui'
@@ -14,23 +14,23 @@ import {
 
 // HEADER NAV
 
-const HeaderSection = S.Literals(['Docs', 'Blog'])
+const HeaderSection = Schema.Literals(['Docs', 'Blog'])
 type HeaderSection = typeof HeaderSection.Type
 
 const headerSections: ReadonlyArray<HeaderSection> = HeaderSection.literals
 
 const isSectionCurrent = (route: AppRoute, section: HeaderSection): boolean =>
-  M.value(section).pipe(
-    M.when('Docs', () => isDocsSectionRoute(route)),
-    M.when('Blog', () => isBlogRoute(route)),
-    M.exhaustive,
+  Match.value(section).pipe(
+    Match.when('Docs', () => isDocsSectionRoute(route)),
+    Match.when('Blog', () => isBlogRoute(route)),
+    Match.exhaustive,
   )
 
 const sectionToHref = (section: HeaderSection): string =>
-  M.value(section).pipe(
-    M.when('Docs', () => coreArchitectureRouter()),
-    M.when('Blog', () => blogRouter()),
-    M.exhaustive,
+  Match.value(section).pipe(
+    Match.when('Docs', () => coreArchitectureRouter()),
+    Match.when('Blog', () => blogRouter()),
+    Match.exhaustive,
   )
 
 const linkClassName =

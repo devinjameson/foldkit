@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import { type Attribute, Html, inertHtml as ih } from 'foldkit/html'
 
 import type { Alignment } from '@foldkit/markdown'
@@ -50,13 +50,13 @@ const tableCellClassName =
 const alignmentAttributes = (
   alignment: Alignment,
 ): ReadonlyArray<Attribute<never>> =>
-  M.value(alignment).pipe(
-    M.withReturnType<ReadonlyArray<Attribute<never>>>(),
-    M.when('None', () => []),
-    M.when('Left', () => [ih.Style({ 'text-align': 'left' })]),
-    M.when('Center', () => [ih.Style({ 'text-align': 'center' })]),
-    M.when('Right', () => [ih.Style({ 'text-align': 'right' })]),
-    M.exhaustive,
+  Match.value(alignment).pipe(
+    Match.withReturnType<ReadonlyArray<Attribute<never>>>(),
+    Match.when('None', () => []),
+    Match.when('Left', () => [ih.Style({ 'text-align': 'left' })]),
+    Match.when('Center', () => [ih.Style({ 'text-align': 'center' })]),
+    Match.when('Right', () => [ih.Style({ 'text-align': 'right' })]),
+    Match.exhaustive,
   )
 
 const titleAttributes = (
@@ -98,10 +98,10 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
         onSome: () => stripHeadingIdMarker(content),
       })
 
-      return M.value(heading.level).pipe(
-        M.withReturnType<Html>(),
-        M.when(1, () => pageTitle(config.pageId, text)),
-        M.when(2, () =>
+      return Match.value(heading.level).pipe(
+        Match.withReturnType<Html>(),
+        Match.when(1, () => pageTitle(config.pageId, text)),
+        Match.when(2, () =>
           headingWithContent(
             'h2',
             id,
@@ -110,7 +110,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
             config.renderHeadingLink,
           ),
         ),
-        M.when(3, () =>
+        Match.when(3, () =>
           headingWithContent(
             'h3',
             id,
@@ -119,7 +119,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
             config.renderHeadingLink,
           ),
         ),
-        M.when(4, () =>
+        Match.when(4, () =>
           headingWithContent(
             'h4',
             id,
@@ -128,7 +128,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
             config.renderHeadingLink,
           ),
         ),
-        M.when(5, () =>
+        Match.when(5, () =>
           headingWithContent(
             'h5',
             id,
@@ -137,7 +137,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
             config.renderHeadingLink,
           ),
         ),
-        M.when(6, () =>
+        Match.when(6, () =>
           headingWithContent(
             'h6',
             id,
@@ -146,7 +146,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
             config.renderHeadingLink,
           ),
         ),
-        M.exhaustive,
+        Match.exhaustive,
       )
     },
 

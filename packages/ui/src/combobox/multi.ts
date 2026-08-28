@@ -1,4 +1,4 @@
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { type Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 import type { View as SubmodelView } from 'foldkit/submodel'
@@ -18,7 +18,7 @@ import {
 // MODEL
 
 /** Schema for the multi-select combobox's private interaction state (open/closed status, active item, activation trigger, typed input value). The selection is owned by the parent and passed in via `ViewInputs.selectedValues`. */
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   ...BaseModel.fields,
 })
 

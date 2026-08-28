@@ -1,4 +1,4 @@
-import { Effect, Option, Schema as S, Stream } from 'effect'
+import { Effect, Option, Schema, Stream } from 'effect'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -7,8 +7,8 @@ import { defineMessageUnion } from '../message/index.js'
 import * as Mount from './index.js'
 
 const Message = defineMessageUnion({
-  CompletedMeasurePanel: { panelId: S.String, width: S.Number },
-  ScrolledPanel: { scroll: S.Number },
+  CompletedMeasurePanel: { panelId: Schema.String, width: Schema.Number },
+  ScrolledPanel: { scroll: Schema.Number },
 })
 
 const PANEL_WIDTH = 320
@@ -29,7 +29,7 @@ if (false) {
   Mount.define('MeasurePanel', {
     // @ts-expect-error `element` names the live element execute receives, so an arg cannot claim it
     args: {
-      element: S.String,
+      element: Schema.String,
     },
     messages: [Message.CompletedMeasurePanel],
     execute: ({ element }) =>
@@ -48,7 +48,7 @@ describe('Mount.define defers its execute body', () => {
       let bodyRunCount = 0
 
       const MeasurePanel = Mount.define('MeasurePanel', {
-        args: { panelId: S.String },
+        args: { panelId: Schema.String },
         messages: [Message.CompletedMeasurePanel],
         execute: ({ element, panelId }) => {
           bodyRunCount = bodyRunCount + 1
@@ -82,7 +82,7 @@ describe('Mount.define defers its execute body', () => {
     let bodyRunCount = 0
 
     const MeasurePanel = Mount.define('MeasurePanel', {
-      args: { panelId: S.String },
+      args: { panelId: Schema.String },
       messages: [Message.CompletedMeasurePanel],
       execute: ({ element, panelId }) => {
         bodyRunCount = bodyRunCount + 1
@@ -128,7 +128,7 @@ describe('Mount.defineStream defers its execute body', () => {
       let bodyRunCount = 0
 
       const WatchPanelScroll = Mount.defineStream('WatchPanelScroll', {
-        args: { initialScroll: S.Number },
+        args: { initialScroll: Schema.Number },
         messages: [Message.ScrolledPanel],
         execute: ({ element, initialScroll }) => {
           bodyRunCount = bodyRunCount + 1

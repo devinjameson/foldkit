@@ -3,10 +3,10 @@ import {
   Array,
   Clock,
   Effect,
-  Match as M,
+  Match,
   Option,
   Random,
-  Schema as S,
+  Schema,
   String,
 } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
@@ -25,31 +25,31 @@ const TODOS_STORAGE_KEY = 'todos'
 
 // MODEL
 
-const Todo = S.Struct({
-  id: S.String,
-  text: S.String,
-  completed: S.Boolean,
-  createdAt: S.Number,
+const Todo = Schema.Struct({
+  id: Schema.String,
+  text: Schema.String,
+  completed: Schema.Boolean,
+  createdAt: Schema.Number,
 })
 type Todo = typeof Todo.Type
 
-const Todos = S.Array(Todo)
+const Todos = Schema.Array(Todo)
 type Todos = typeof Todos.Type
 
-const TodosJsonString = S.fromJsonString(S.toCodecJson(Todos))
+const TodosJsonString = Schema.fromJsonString(Schema.toCodecJson(Todos))
 
-const Filter = S.Literals(['All', 'Active', 'Completed'])
+const Filter = Schema.Literals(['All', 'Active', 'Completed'])
 type Filter = typeof Filter.Type
 
 export const EditingState = defineTaggedUnion({
   NotEditing: {},
-  Editing: { id: S.String, text: S.String },
+  Editing: { id: Schema.String, text: Schema.String },
 })
 export type EditingState = typeof EditingState.Type
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   todos: Todos,
-  newTodoText: S.String,
+  newTodoText: Schema.String,
   filter: Filter,
   editing: EditingState,
 })
@@ -58,13 +58,17 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedNewTodo: { text: S.String },
-  UpdatedEditingTodo: { text: S.String },
+  UpdatedNewTodo: { text: Schema.String },
+  UpdatedEditingTodo: { text: Schema.String },
   AddedTodo: {},
-  CompletedGenerateTodo: { id: S.String, timestamp: S.Number, text: S.String },
-  DeletedTodo: { id: S.String },
-  ToggledTodo: { id: S.String },
-  StartedEditing: { id: S.String },
+  CompletedGenerateTodo: {
+    id: Schema.String,
+    timestamp: Schema.Number,
+    text: Schema.String,
+  },
+  DeletedTodo: { id: Schema.String },
+  ToggledTodo: { id: Schema.String },
+  StartedEditing: { id: Schema.String },
   SavedEdit: {},
   CancelledEdit: {},
   ToggledAll: {},
@@ -77,8 +81,8 @@ export type Message = typeof Message.Type
 
 // FLAGS
 
-export const Flags = S.Struct({
-  todos: S.Option(Todos),
+export const Flags = Schema.Struct({
+  todos: Schema.Option(Todos),
 })
 export type Flags = typeof Flags.Type
 
@@ -267,7 +271,7 @@ export const update = (model: Model, message: Message) =>
 // COMMAND
 
 export const GenerateTodo = Command.define('GenerateTodo', {
-  args: { text: S.String },
+  args: { text: Schema.String },
   messages: [Message.CompletedGenerateTodo],
   execute: ({ text }) =>
     Effect.gen(function* () {
@@ -285,7 +289,10 @@ export const SaveTodos = Command.define('SaveTodos', {
   execute: ({ todos }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
-      yield* store.set(TODOS_STORAGE_KEY, S.encodeSync(TodosJsonString)(todos))
+      yield* store.set(
+        TODOS_STORAGE_KEY,
+        Schema.encodeSync(TodosJsonString)(todos),
+      )
       return Message.SucceededSaveTodos({ todos })
     }).pipe(
       Effect.catch(() => Effect.succeed(Message.FailedSaveTodos())),
@@ -541,11 +548,11 @@ const footerView = (
   })
 
 const filterTodos = (todos: Todos, filter: Filter): Todos =>
-  M.value(filter).pipe(
-    M.when('All', () => todos),
-    M.when('Active', () => Array.filter(todos, todo => !todo.completed)),
-    M.when('Completed', () => Array.filter(todos, todo => todo.completed)),
-    M.exhaustive,
+  Match.value(filter).pipe(
+    Match.when('All', () => todos),
+    Match.when('Active', () => Array.filter(todos, todo => !todo.completed)),
+    Match.when('Completed', () => Array.filter(todos, todo => todo.completed)),
+    Match.exhaustive,
   )
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
@@ -615,11 +622,11 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
               h.div(
                 [h.Class('text-center text-gray-500 py-8')],
                 [
-                  M.value(model.filter).pipe(
-                    M.when('All', () => 'No todos yet. Add one above!'),
-                    M.when('Active', () => 'No active todos'),
-                    M.when('Completed', () => 'No completed todos'),
-                    M.exhaustive,
+                  Match.value(model.filter).pipe(
+                    Match.when('All', () => 'No todos yet. Add one above!'),
+                    Match.when('Active', () => 'No active todos'),
+                    Match.when('Completed', () => 'No completed todos'),
+                    Match.exhaustive,
                   ),
                 ],
               ),
@@ -649,7 +656,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     Option.fromNullishOr(yield* store.get(TODOS_STORAGE_KEY)),
   )
 
-  const decodeTodos = S.decodeEffect(TodosJsonString)
+  const decodeTodos = Schema.decodeEffect(TodosJsonString)
   const todos = yield* decodeTodos(todosJson)
 
   return { todos: Option.some(todos) }

@@ -128,7 +128,7 @@ Declare the whole Message union with `defineMessageUnion()`, then put `type Mess
 ```ts
 const Message = defineMessageUnion({
   ClickedSubmit: {},
-  UpdatedEmail: { value: S.String },
+  UpdatedEmail: { value: Schema.String },
 })
 type Message = typeof Message.Type
 ```

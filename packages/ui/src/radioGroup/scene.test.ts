@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
@@ -41,9 +41,9 @@ const modelWith = (maybeSelectedValue: Option.Option<string>): Model => ({
 
 const nothingSelected = modelWith(Option.none())
 
-const foldRadioGroupOutMessage = M.type<RadioGroupOutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldRadioGroupOutMessage = Match.type<RadioGroupOutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({

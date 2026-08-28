@@ -1,13 +1,5 @@
 import { FileSystem } from 'effect'
-import {
-  Array,
-  Console,
-  Effect,
-  Match as M,
-  Option,
-  String as String_,
-  pipe,
-} from 'effect'
+import { Array, Console, Effect, Match, Option, String, pipe } from 'effect'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { type Browser } from 'playwright'
@@ -206,11 +198,11 @@ const urlPathToSlug = (urlPath: string): string => {
 // COVER IMAGES
 
 const maybeRoutePostEntry = (route: AppRoute): Option.Option<BlogPostEntry> =>
-  M.value(route).pipe(
-    M.tag('BlogPost', ({ postSlug }) =>
+  Match.value(route).pipe(
+    Match.tag('BlogPost', ({ postSlug }) =>
       Array.findFirst(blogPosts, ({ slug }) => slug === postSlug),
     ),
-    M.orElse(() => Option.none()),
+    Match.orElse(() => Option.none()),
   )
 
 const maybeRouteCover = (route: AppRoute): Option.Option<PostCover> =>
@@ -346,7 +338,10 @@ const renderOgImage =
         yield* Console.log(`  ✓ og/${slug}.png`)
       }),
       Effect.mapError(
-        error => new Error(`og/${slug}.png failed to render: ${String(error)}`),
+        error =>
+          new Error(
+            `og/${slug}.png failed to render: ${globalThis.String(error)}`,
+          ),
       ),
     )
   }
@@ -489,12 +484,12 @@ const sitePageJsonLd = (
   })
 
 const maybeSitePageSchemaType = (route: AppRoute): Option.Option<string> =>
-  M.value(route).pipe(
-    M.withReturnType<Option.Option<string>>(),
-    M.tag('About', () => Option.some('AboutPage')),
-    M.tag('Contact', () => Option.some('ContactPage')),
-    M.tag('Privacy', () => Option.some('WebPage')),
-    M.orElse(() => Option.none()),
+  Match.value(route).pipe(
+    Match.withReturnType<Option.Option<string>>(),
+    Match.tag('About', () => Option.some('AboutPage')),
+    Match.tag('Contact', () => Option.some('ContactPage')),
+    Match.tag('Privacy', () => Option.some('WebPage')),
+    Match.orElse(() => Option.none()),
   )
 
 const blogPostingJsonLd = (
@@ -549,7 +544,7 @@ export const injectMetaTags = (
   const ogImageAlt = pipe(
     maybeRouteCover(route),
     Option.map(cover => cover.alt),
-    Option.filter(String_.isNonEmpty),
+    Option.filter(String.isNonEmpty),
     Option.getOrElse(() => generatedOgImageAlt(metadata)),
   )
 

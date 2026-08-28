@@ -1,4 +1,4 @@
-import { Duration, Effect, Schema as S, Stream } from 'effect'
+import { Duration, Effect, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
@@ -11,9 +11,9 @@ type Message = typeof Message.Type
 
 // MODEL
 
-const Model = S.Struct({
-  isRunning: S.Boolean,
-  elapsed: S.Number,
+const Model = Schema.Struct({
+  isRunning: Schema.Boolean,
+  elapsed: Schema.Number,
 })
 
 type Model = typeof Model.Type
@@ -22,7 +22,7 @@ type Model = typeof Model.Type
 
 const subscriptions = Subscription.make<Model, Message>()(entry => ({
   tick: entry(
-    { isRunning: S.Boolean },
+    { isRunning: Schema.Boolean },
     {
       modelToDependencies: model => ({ isRunning: model.isRunning }),
       dependenciesToStream: ({ isRunning }) =>

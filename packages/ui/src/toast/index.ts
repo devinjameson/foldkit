@@ -1,4 +1,4 @@
-import { Match as M, Schema as S } from 'effect'
+import { Match, Schema } from 'effect'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { defineView } from 'foldkit/submodel'
 
@@ -25,13 +25,13 @@ export { Message, Variant, Position, WaitBeforeDismissal }
 type VariantRole = 'status' | 'alert'
 
 const variantToRole = (variant: Variant): VariantRole =>
-  M.value(variant).pipe(
-    M.withReturnType<VariantRole>(),
-    M.when('Info', () => 'status'),
-    M.when('Success', () => 'status'),
-    M.when('Warning', () => 'alert'),
-    M.when('Error', () => 'alert'),
-    M.exhaustive,
+  Match.value(variant).pipe(
+    Match.withReturnType<VariantRole>(),
+    Match.when('Info', () => 'status'),
+    Match.when('Success', () => 'status'),
+    Match.when('Warning', () => 'alert'),
+    Match.when('Error', () => 'alert'),
+    Match.exhaustive,
   )
 
 const positionToContainerStyle = (
@@ -48,47 +48,47 @@ const positionToContainerStyle = (
     zIndex: '2147483600',
   }
 
-  return M.value(position).pipe(
-    M.withReturnType<Readonly<Record<string, string>>>(),
-    M.when('TopLeft', () => ({
+  return Match.value(position).pipe(
+    Match.withReturnType<Readonly<Record<string, string>>>(),
+    Match.when('TopLeft', () => ({
       ...base,
       top: '0',
       left: '0',
       flexDirection: 'column-reverse',
     })),
-    M.when('TopCenter', () => ({
+    Match.when('TopCenter', () => ({
       ...base,
       top: '0',
       left: '50%',
       transform: 'translateX(-50%)',
       flexDirection: 'column-reverse',
     })),
-    M.when('TopRight', () => ({
+    Match.when('TopRight', () => ({
       ...base,
       top: '0',
       right: '0',
       flexDirection: 'column-reverse',
     })),
-    M.when('BottomLeft', () => ({
+    Match.when('BottomLeft', () => ({
       ...base,
       bottom: '0',
       left: '0',
       flexDirection: 'column',
     })),
-    M.when('BottomCenter', () => ({
+    Match.when('BottomCenter', () => ({
       ...base,
       bottom: '0',
       left: '50%',
       transform: 'translateX(-50%)',
       flexDirection: 'column',
     })),
-    M.when('BottomRight', () => ({
+    Match.when('BottomRight', () => ({
       ...base,
       bottom: '0',
       right: '0',
       flexDirection: 'column',
     })),
-    M.exhaustive,
+    Match.exhaustive,
   )
 }
 
@@ -123,17 +123,17 @@ const DEFAULT_ARIA_LABEL = 'Notifications'
  *
  *  @example
  *  ```ts
- *  const ToastPayload = S.Struct({
- *    bodyText: S.String,
- *    maybeLink: S.Option(S.Struct({
- *      href: S.String,
- *      text: S.String,
+ *  const ToastPayload = Schema.Struct({
+ *    bodyText: Schema.String,
+ *    maybeLink: Schema.Option(Schema.Struct({
+ *      href: Schema.String,
+ *      text: Schema.String,
  *    })),
  *  })
  *  export const Toast = Toast.make(ToastPayload)
  *  ```
  */
-export const make = <A, I>(payloadSchema: S.Codec<A, I>) => {
+export const make = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
   const runtime = makeRuntime(payloadSchema)
   type Entry = typeof runtime.Entry.Type
 
@@ -179,26 +179,26 @@ export const make = <A, I>(payloadSchema: S.Codec<A, I>) => {
       const renderEntryItem = (entry: Entry): Html => {
         const { transitionState } = entry.animation
 
-        const animationAttributes = M.value(transitionState).pipe(
-          M.when('EnterStart', () => [
+        const animationAttributes = Match.value(transitionState).pipe(
+          Match.when('EnterStart', () => [
             h.DataAttribute('closed', ''),
             h.DataAttribute('enter', ''),
             h.DataAttribute('transition', ''),
           ]),
-          M.when('EnterAnimating', () => [
+          Match.when('EnterAnimating', () => [
             h.DataAttribute('enter', ''),
             h.DataAttribute('transition', ''),
           ]),
-          M.when('LeaveStart', () => [
+          Match.when('LeaveStart', () => [
             h.DataAttribute('leave', ''),
             h.DataAttribute('transition', ''),
           ]),
-          M.when('LeaveAnimating', () => [
+          Match.when('LeaveAnimating', () => [
             h.DataAttribute('closed', ''),
             h.DataAttribute('leave', ''),
             h.DataAttribute('transition', ''),
           ]),
-          M.orElse(() => []),
+          Match.orElse(() => []),
         )
 
         const itemAttributes = [

@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import {
   Html,
   type HtmlBuilder,
@@ -310,17 +310,17 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
   )
 
   const buttonLabelFor = (tab: DemoTab.Tab): string =>
-    M.value(tab).pipe(
-      M.when('Architecture', () => 'Async Counter'),
-      M.when('Note Player', () => 'Note Player'),
-      M.exhaustive,
+    Match.value(tab).pipe(
+      Match.when('Architecture', () => 'Async Counter'),
+      Match.when('Note Player', () => 'Note Player'),
+      Match.exhaustive,
     )
 
   const panelFor = (tab: DemoTab.Tab) =>
-    M.value(tab).pipe(
-      M.when('Architecture', () => asyncCounterDemoView),
-      M.when('Note Player', () => notePlayerDemoView),
-      M.exhaustive,
+    Match.value(tab).pipe(
+      Match.when('Architecture', () => asyncCounterDemoView),
+      Match.when('Note Player', () => notePlayerDemoView),
+      Match.exhaustive,
     )
 
   const demoTabsView = h.submodel({

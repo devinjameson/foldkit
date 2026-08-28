@@ -12,6 +12,26 @@ Foldkit projects use `oxlint` for general linting and `@foldkit/oxlint-plugin` f
 
 Override an individual rule in the project's `rules` block when an application needs a narrower policy. The complete rule set is grouped by the part of the architecture it protects below.
 
+## Effect Imports
+
+### foldkit/prefer-effect-module-names {#prefer-effect-module-names}
+
+The recommended and all presets require PascalCase modules imported from `effect` to keep their exported names. Write `import { Match, Schema, String } from 'effect'`, not abbreviated or trailing-underscore aliases such as `Match as M`, `Schema as S`, or `String as String_`.
+
+When an Effect module shares a name with a JavaScript or TypeScript global, keep the Effect import unchanged and qualify the global through `globalThis`, such as `globalThis.String`, `globalThis.Array`, or `globalThis.Record`. If an existing local or public binding must retain the module name, give the Effect import an explicit prefix such as `Order as EffectOrder`. Aliases for lowercase functions and type-only imports remain valid.
+
+The rule safely fixes a binding and its references when the exported name is available. It reports without fixing when a rename could change binding resolution, compete with another alias for the same exported name, change an object shorthand key or named re-export, or discard a comment in the import specifier.
+
+Disable the rule when a project deliberately keeps Effect module aliases:
+
+```json
+{
+  "rules": {
+    "foldkit/prefer-effect-module-names": "off"
+  }
+}
+```
+
 ## Server Portability
 
 ### foldkit/no-nonportable-server-globals {#no-nonportable-server-globals}

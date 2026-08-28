@@ -7,7 +7,7 @@ import {
   Function,
   Option,
   Record,
-  Schema as S,
+  Schema,
   Stream,
 } from 'effect'
 
@@ -164,14 +164,14 @@ export type Child = Html | string
 
 /** Whether an event handler leaves the browser's default action in place or
  *  prevents it synchronously. */
-export const DefaultAction = S.Literals(['Allow', 'Prevent'])
+export const DefaultAction = Schema.Literals(['Allow', 'Prevent'])
 /** Whether an event handler leaves the browser's default action in place or
  *  prevents it synchronously. */
 export type DefaultAction = typeof DefaultAction.Type
 
 /** Whether an event continues through its DOM propagation path or stops after
  *  the handlers on its current element have run. */
-export const EventPropagation = S.Literals(['Bubble', 'Stop'])
+export const EventPropagation = Schema.Literals(['Bubble', 'Stop'])
 /** Whether an event continues through its DOM propagation path or stops after
  *  the handlers on its current element have run. */
 export type EventPropagation = typeof EventPropagation.Type
@@ -179,10 +179,10 @@ export type EventPropagation = typeof EventPropagation.Type
 /** Declarative controls for an `OnClick` handler. Omitted
  *  fields keep the browser default, allow the click to bubble, and leave focus
  *  unchanged. */
-export const ClickOptions = S.Struct({
-  defaultAction: S.optional(DefaultAction),
-  propagation: S.optional(EventPropagation),
-  focusSelector: S.optional(S.String),
+export const ClickOptions = Schema.Struct({
+  defaultAction: Schema.optional(DefaultAction),
+  propagation: Schema.optional(EventPropagation),
+  focusSelector: Schema.optional(Schema.String),
 })
 /** Declarative controls for an `OnClick` handler. Omitted
  *  fields keep the browser default, allow the click to bubble, and leave focus
@@ -191,7 +191,7 @@ export type ClickOptions = typeof ClickOptions.Type
 
 /** Text direction for the document root, applied to `dir` on the `<html>`
  *  element. `Auto` defers to the browser's first-strong-character heuristic. */
-export const TextDirection = S.Literals(['Ltr', 'Rtl', 'Auto'])
+export const TextDirection = Schema.Literals(['Ltr', 'Rtl', 'Auto'])
 /** Text direction for the document root, applied to `dir` on the `<html>`
  *  element. `Auto` defers to the browser's first-strong-character heuristic. */
 export type TextDirection = typeof TextDirection.Type

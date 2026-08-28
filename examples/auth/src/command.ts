@@ -1,4 +1,4 @@
-import { Console, Effect, Schema as S } from 'effect'
+import { Console, Effect, Schema } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Command } from 'foldkit'
 
@@ -16,7 +16,7 @@ export const SaveSession = Command.define('SaveSession', {
       const store = yield* KeyValueStore.KeyValueStore
       yield* store.set(
         SESSION_STORAGE_KEY,
-        S.encodeSync(SessionJsonString)(session),
+        Schema.encodeSync(SessionJsonString)(session),
       )
       return Message.SucceededSaveSession()
     }).pipe(
@@ -42,7 +42,7 @@ export const ClearSession = Command.define('ClearSession', {
 })
 
 export const LogError = Command.define('LogError', {
-  args: { entries: S.Array(S.Unknown) },
+  args: { entries: Schema.Array(Schema.Unknown) },
   messages: [Message.CompletedLogError],
   execute: ({ entries }) =>
     Console.error(...entries).pipe(Effect.as(Message.CompletedLogError())),

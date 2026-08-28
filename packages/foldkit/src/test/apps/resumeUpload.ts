@@ -1,4 +1,4 @@
-import { Effect, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Match, Option, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import * as File from '../../file/index.js'
@@ -9,10 +9,10 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  maybeResume: S.Option(File.File),
-  maybePreviewDataUrl: S.Option(S.String),
-  readStatus: S.Literals(['Idle', 'Reading', 'Failed']),
+export const Model = Schema.Struct({
+  maybeResume: Schema.Option(File.File),
+  maybePreviewDataUrl: Schema.Option(Schema.String),
+  readStatus: Schema.Literals(['Idle', 'Reading', 'Failed']),
 })
 
 export type Model = typeof Model.Type
@@ -23,7 +23,7 @@ export const Message = defineMessageUnion({
   ClickedChooseResume: {},
   CompletedSelectResume: { file: File.File },
   CancelledSelectResume: {},
-  SucceededReadPreview: { dataUrl: S.String },
+  SucceededReadPreview: { dataUrl: Schema.String },
   FailedReadPreview: {},
   ClickedRemoveResume: {},
 })
@@ -100,16 +100,16 @@ const previewView = (model: Model, h: HtmlBuilder<Message>): Html => {
   return Option.match(model.maybePreviewDataUrl, {
     onSome: dataUrl => h.img([h.Src(dataUrl), h.Alt('Resume preview')]),
     onNone: () =>
-      M.value(model.readStatus).pipe(
-        M.withReturnType<Html>(),
-        M.when('Reading', () =>
+      Match.value(model.readStatus).pipe(
+        Match.withReturnType<Html>(),
+        Match.when('Reading', () =>
           h.keyed('p')('reading', [h.Role('status')], ['Reading preview...']),
         ),
-        M.when('Failed', () =>
+        Match.when('Failed', () =>
           h.keyed('p')('failed', [h.Role('alert')], ['Could not read preview']),
         ),
-        M.when('Idle', () => h.empty),
-        M.exhaustive,
+        Match.when('Idle', () => h.empty),
+        Match.exhaustive,
       ),
   })
 }

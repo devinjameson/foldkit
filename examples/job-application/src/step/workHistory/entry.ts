@@ -1,4 +1,4 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Match, Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import { CalendarDate } from 'foldkit/calendar'
 import {
@@ -31,28 +31,28 @@ const validateTitle = validate(titleRules)
 
 // MODEL
 
-export const Model = S.Struct({
-  id: S.String,
-  company: Field(S.String),
-  title: Field(S.String),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  company: Field(Schema.String),
+  title: Field(Schema.String),
   startDate: DatePicker.Model,
-  maybeStartDate: S.Option(CalendarDate),
+  maybeStartDate: Schema.Option(CalendarDate),
   endDate: DatePicker.Model,
-  maybeEndDate: S.Option(CalendarDate),
-  isCurrentlyEmployed: S.Boolean,
-  description: S.String,
+  maybeEndDate: Schema.Option(CalendarDate),
+  isCurrentlyEmployed: Schema.Boolean,
+  description: Schema.String,
 })
 export type Model = typeof Model.Type
 
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedCompany: { value: S.String },
-  UpdatedTitle: { value: S.String },
+  UpdatedCompany: { value: Schema.String },
+  UpdatedTitle: { value: Schema.String },
   GotStartDateMessage: { message: DatePicker.Message },
   GotEndDateMessage: { message: DatePicker.Message },
-  ToggledCurrentlyEmployed: { isChecked: S.Boolean },
-  UpdatedDescription: { value: S.String },
+  ToggledCurrentlyEmployed: { isChecked: Schema.Boolean },
+  UpdatedDescription: { value: Schema.String },
   ClickedRemoveSelf: {},
 })
 
@@ -84,9 +84,9 @@ export const init = (entryId: string, today: CalendarDate): Model => ({
 
 // UPDATE
 
-const foldStartDateOutMessage = M.type<DatePicker.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldStartDateOutMessage = Match.type<DatePicker.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     ChangedViewMonth: () => model => ({ model }),
     SelectedDate:
       ({ date }) =>
@@ -114,9 +114,9 @@ const foldStartDate = Update.foldChild({
   foldOutMessage: foldStartDateOutMessage,
 })
 
-const foldEndDateOutMessage = M.type<DatePicker.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldEndDateOutMessage = Match.type<DatePicker.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     ChangedViewMonth: () => model => ({ model }),
     SelectedDate:
       ({ date }) =>

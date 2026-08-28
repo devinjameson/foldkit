@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { CustomElement } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -19,26 +19,26 @@ import '@shoelace-style/shoelace/dist/components/qr-code/qr-code.js'
 const hexColorPicker = CustomElement.define({
   tag: 'hex-color-picker',
   properties: {
-    color: S.String,
+    color: Schema.String,
   },
   events: {
-    'color-changed': S.Struct({ value: S.String }),
+    'color-changed': Schema.Struct({ value: Schema.String }),
   },
 })
 
 const qrCode = CustomElement.define({
   tag: 'sl-qr-code',
   properties: {
-    value: S.String,
-    fill: S.String,
-    background: S.String,
-    size: S.Number,
+    value: Schema.String,
+    fill: Schema.String,
+    background: Schema.String,
+    size: Schema.Number,
   },
   events: {},
 })
 
 const Message = defineMessageUnion({
-  ChangedFillColor: { value: S.String },
+  ChangedFillColor: { value: Schema.String },
 })
 type Message = typeof Message.Type
 

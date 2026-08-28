@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { Effect, Fiber, Schema as S } from 'effect'
+import { Effect, Fiber, Schema } from 'effect'
 import { type Update } from 'foldkit'
 import { brandViewResult } from 'foldkit/brand'
 import { type Html, inertHtml } from 'foldkit/html'
@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { transformViewIdentity } from '../src/viewIdentity.ts'
 
-const Model = S.Struct({ mode: S.Literals(['Viewing', 'Editing']) })
+const Model = Schema.Struct({ mode: Schema.Literals(['Viewing', 'Editing']) })
 type Model = typeof Model.Type
 
 const Message = defineMessageUnion({

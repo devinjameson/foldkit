@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { defineRouteUnion, defineTaggedUnion } from './index.js'
@@ -6,14 +6,14 @@ import { defineRouteUnion, defineTaggedUnion } from './index.js'
 const Submission = defineTaggedUnion({
   NotSubmitted: {},
   Submitting: {},
-  Failed: { error: S.String },
+  Failed: { error: Schema.String },
 })
 type Submission = typeof Submission.Type
 
 const AppRoute = defineRouteUnion({
   Home: {},
-  Person: { personId: S.Number },
-  NotFound: { path: S.String },
+  Person: { personId: Schema.Number },
+  NotFound: { path: Schema.String },
 })
 
 describe('defineTaggedUnion', () => {
@@ -30,12 +30,17 @@ describe('defineTaggedUnion', () => {
 
   it('decodes a member of the union', () => {
     expect(
-      S.decodeUnknownSync(Submission)({ _tag: 'Failed', error: 'timeout' }),
+      Schema.decodeUnknownSync(Submission)({
+        _tag: 'Failed',
+        error: 'timeout',
+      }),
     ).toStrictEqual({ _tag: 'Failed', error: 'timeout' })
   })
 
   it('rejects a tag the union does not declare', () => {
-    expect(() => S.decodeUnknownSync(Submission)({ _tag: 'Unknown' })).toThrow()
+    expect(() =>
+      Schema.decodeUnknownSync(Submission)({ _tag: 'Unknown' }),
+    ).toThrow()
   })
 
   it('works with exhaustive tag matching', () => {
@@ -85,9 +90,11 @@ describe('subsets', () => {
 
   it('builds a Schema from only the named variants', () => {
     expect(
-      S.decodeUnknownSync(Settled)({ _tag: 'Failed', error: 'timeout' }),
+      Schema.decodeUnknownSync(Settled)({ _tag: 'Failed', error: 'timeout' }),
     ).toStrictEqual({ _tag: 'Failed', error: 'timeout' })
-    expect(() => S.decodeUnknownSync(Settled)({ _tag: 'Submitting' })).toThrow()
+    expect(() =>
+      Schema.decodeUnknownSync(Settled)({ _tag: 'Submitting' }),
+    ).toThrow()
 
     expect(Settled.members).toStrictEqual([
       Submission.NotSubmitted,
@@ -117,12 +124,12 @@ describe('defineRouteUnion', () => {
     const person = AppRoute.Person({ personId: 42 })
 
     expect(person).toStrictEqual({ _tag: 'Person', personId: 42 })
-    expect(S.is(AppRoute)(person)).toBe(true)
+    expect(Schema.is(AppRoute)(person)).toBe(true)
   })
 
   it('exposes each variant as a schema in its own right', () => {
     expect(
-      S.decodeUnknownSync(AppRoute.NotFound)({
+      Schema.decodeUnknownSync(AppRoute.NotFound)({
         _tag: 'NotFound',
         path: '/missing',
       }),
@@ -132,8 +139,10 @@ describe('defineRouteUnion', () => {
   it('builds a Route subset Schema', () => {
     const PublicRoute = AppRoute.subset(['Home', 'NotFound'])
 
-    expect(S.is(PublicRoute)(AppRoute.Home())).toBe(true)
-    expect(S.is(PublicRoute)(AppRoute.Person({ personId: 42 }))).toBe(false)
+    expect(Schema.is(PublicRoute)(AppRoute.Home())).toBe(true)
+    expect(Schema.is(PublicRoute)(AppRoute.Person({ personId: 42 }))).toBe(
+      false,
+    )
     expectTypeOf(PublicRoute.Type).toEqualTypeOf<
       typeof AppRoute.Home.Type | typeof AppRoute.NotFound.Type
     >()

@@ -2,10 +2,10 @@ import {
   Array,
   Duration,
   Effect,
-  Match as M,
+  Match,
   Number,
   Option,
-  Schema as S,
+  Schema,
   pipe,
 } from 'effect'
 import * as Command from 'foldkit/command'
@@ -52,9 +52,9 @@ export type ShowInput<A> = Readonly<{
  *  payload. */
 export const WaitBeforeDismissal = Command.define('WaitBeforeDismissal', {
   args: {
-    entryId: S.String,
-    version: S.Number,
-    duration: S.DurationFromMillis,
+    entryId: Schema.String,
+    version: Schema.Number,
+    duration: Schema.DurationFromMillis,
   },
   messages: [StaticMessage.CompletedWaitBeforeDismissal],
   execute: ({ entryId, version, duration }) =>
@@ -74,7 +74,7 @@ const DEFAULT_VARIANT: Variant = 'Info'
  *
  *  @internal Consumers should use `Toast.make(PayloadSchema)`. This is
  *  only exported so `index.ts` can wire the view into the bound runtime. */
-export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
+export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
   const EntrySchema = makeEntry(payloadSchema)
   const ModelSchema = makeModel(payloadSchema)
   const MessageSchema = makeMessage(payloadSchema)
@@ -155,9 +155,9 @@ export const makeRuntime = <A, I>(payloadSchema: S.Codec<A, I>) => {
   const toDismissedToastOutMessage: (
     payload: A,
   ) => (outMessage: AnimationOutMessage) => OutMessage | undefined = payload =>
-    M.type<AnimationOutMessage>().pipe(
-      M.withReturnType<OutMessage | undefined>(),
-      M.tagsExhaustive({
+    Match.type<AnimationOutMessage>().pipe(
+      Match.withReturnType<OutMessage | undefined>(),
+      Match.tagsExhaustive({
         StartedLeaveAnimating: () => undefined,
         TransitionedOut: () => OutMessageSchema.DismissedToast({ payload }),
       }),

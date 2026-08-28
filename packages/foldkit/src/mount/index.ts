@@ -208,7 +208,7 @@ const wrapEffectAsStream =
  * @example With args
  * ```ts
  * const AnchorPopover = Mount.define('AnchorPopover', {
- *   args: { buttonId: S.String, anchor: AnchorConfig },
+ *   args: { buttonId: Schema.String, anchor: AnchorConfig },
  *   messages: [CompletedAnchorPopover],
  *   execute: ({ element, buttonId, anchor }) =>
  *     Effect.gen(function* () {

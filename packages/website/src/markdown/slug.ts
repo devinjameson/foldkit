@@ -1,12 +1,4 @@
-import {
-  Array,
-  Match as M,
-  Option,
-  Predicate,
-  String,
-  flow,
-  pipe,
-} from 'effect'
+import { Array, Match, Option, Predicate, String, flow, pipe } from 'effect'
 import type { Html } from 'foldkit/html'
 
 import type { Inline } from '@foldkit/markdown'
@@ -22,9 +14,9 @@ export const inlineToText = (content: ReadonlyArray<Inline>): string =>
   pipe(
     content,
     Array.map(inline =>
-      M.value(inline).pipe(
-        M.withReturnType<string>(),
-        M.tagsExhaustive({
+      Match.value(inline).pipe(
+        Match.withReturnType<string>(),
+        Match.tagsExhaustive({
           Text: ({ value }) => value,
           InlineCode: ({ value }) => value,
           HardBreak: () => ' ',

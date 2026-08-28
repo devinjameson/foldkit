@@ -1,4 +1,4 @@
-import { Array, Schema as S } from 'effect'
+import { Array, Schema } from 'effect'
 import { type Update } from 'foldkit'
 import * as File from 'foldkit/file'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
@@ -14,9 +14,9 @@ import { defineView } from 'foldkit/submodel'
  * drag is hovering. The html layer's `OnDragEnter`/`OnDragLeave` handlers
  * track the per-element active state internally so transitions between
  * children of the zone do not flicker the boolean off-and-on. */
-export const Model = S.Struct({
-  id: S.String,
-  isDragOver: S.Boolean,
+export const Model = Schema.Struct({
+  id: Schema.String,
+  isDragOver: Schema.Boolean,
 })
 export type Model = typeof Model.Type
 
@@ -26,7 +26,7 @@ export type Model = typeof Model.Type
 export const Message = defineMessageUnion({
   EnteredDragZone: {},
   LeftDragZone: {},
-  DroppedFiles: { files: S.NonEmptyArray(File.File) },
+  DroppedFiles: { files: Schema.NonEmptyArray(File.File) },
   DroppedNonFiles: {},
 })
 export type Message = typeof Message.Type
@@ -36,7 +36,7 @@ export type Message = typeof Message.Type
 /** The file-drop component's OutMessages: `ReceivedFiles` on the happy
  * path and `RejectedNonFiles` when a drop event fires without files. */
 export const OutMessage = defineMessageUnion({
-  ReceivedFiles: { files: S.NonEmptyArray(File.File) },
+  ReceivedFiles: { files: Schema.NonEmptyArray(File.File) },
   RejectedNonFiles: {},
 })
 export type OutMessage = typeof OutMessage.Type

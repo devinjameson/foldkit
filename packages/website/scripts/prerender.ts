@@ -3,11 +3,11 @@ import {
   Console,
   DateTime,
   Effect,
-  Match as M,
+  Match,
   Option,
   Record,
-  Schema as S,
-  String as String_,
+  Schema,
+  String,
   pipe,
 } from 'effect'
 import { FileSystem } from 'effect'
@@ -482,7 +482,7 @@ const renderRoutePage = (serverEntry: typeof ServerEntry, route: AppRoute) =>
 
 // PRERENDER
 
-const ApiDocJson = S.fromJsonString(TypeDocJson)
+const ApiDocJson = Schema.fromJsonString(TypeDocJson)
 
 // NOTE: The core and UI TypeDoc projects are merged here the same way
 // vite.config.ts merges them for the client. Reading only api.json drops every
@@ -494,8 +494,8 @@ const readApiModules = Effect.gen(function* () {
     fs.readFileString(API_JSON_PATH),
     fs.readFileString(API_UI_JSON_PATH),
   ])
-  const coreApiDoc = yield* S.decodeUnknownEffect(ApiDocJson)(coreRaw)
-  const uiApiDoc = yield* S.decodeUnknownEffect(ApiDocJson)(uiRaw)
+  const coreApiDoc = yield* Schema.decodeUnknownEffect(ApiDocJson)(coreRaw)
+  const uiApiDoc = yield* Schema.decodeUnknownEffect(ApiDocJson)(uiRaw)
 
   return parseTypedocJson({
     ...coreApiDoc,
@@ -577,7 +577,9 @@ const prerenderRoute =
     }).pipe(
       Effect.catch(error =>
         Effect.as(
-          Console.warn(`  ✗ ${routeToUrlPath(route)}: ${String(error)}`),
+          Console.warn(
+            `  ✗ ${routeToUrlPath(route)}: ${globalThis.String(error)}`,
+          ),
           Option.none<PrerenderResult>(),
         ),
       ),
@@ -684,8 +686,8 @@ const SITE_URL = 'https://foldkit.dev'
 const formatDateIso = (dateTime: DateTime.DateTime): string => {
   const { year, month, day } = DateTime.toPartsUtc(dateTime)
   return pipe(
-    [String(year), String(month), String(day)],
-    Array.map(String_.padStart(2, '0')),
+    [globalThis.String(year), globalThis.String(month), globalThis.String(day)],
+    Array.map(String.padStart(2, '0')),
     Array.join('-'),
   )
 }
@@ -741,9 +743,9 @@ export const extractPostArticleHtml = (
   pageHtml: string,
 ): Option.Option<string> =>
   pipe(
-    String_.indexOf('<article')(pageHtml),
+    String.indexOf('<article')(pageHtml),
     Option.flatMap(startIndex =>
-      Option.map(String_.indexOf('</article>')(pageHtml), endIndex =>
+      Option.map(String.indexOf('</article>')(pageHtml), endIndex =>
         pageHtml.slice(startIndex, endIndex + '</article>'.length),
       ),
     ),
@@ -765,14 +767,14 @@ const escapeCdataContent = (html: string): string =>
 const maybeFeedArticleEntry = (
   result: PrerenderResult,
 ): Option.Option<readonly [string, string]> =>
-  M.value(result.route).pipe(
-    M.tag('BlogPost', ({ postSlug }) =>
+  Match.value(result.route).pipe(
+    Match.tag('BlogPost', ({ postSlug }) =>
       Option.map(
         extractPostArticleHtml(result.html),
         articleHtml => [postSlug, toFeedArticleHtml(articleHtml)] as const,
       ),
     ),
-    M.orElse(() => Option.none()),
+    Match.orElse(() => Option.none()),
   )
 
 const blogPostRssItem = (

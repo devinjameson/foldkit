@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
@@ -12,9 +12,9 @@ export const Message = defineMessageUnion({
   ClickedLink: { request: UrlRequest },
   ChangedUrl: { url: Url },
   SucceededSaveSession: {},
-  FailedSaveSession: { error: S.String },
+  FailedSaveSession: { error: Schema.String },
   SucceededClearSession: {},
-  FailedClearSession: { error: S.String },
+  FailedClearSession: { error: Schema.String },
   GotLoggedOutMessage: { message: LoggedOut.Message },
   GotLoggedInMessage: { message: LoggedIn.Message },
 })

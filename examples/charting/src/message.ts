@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import { RadioGroup } from '@foldkit/ui'
@@ -11,13 +11,13 @@ export const Message = defineMessageUnion({
   GotPeriodRadioGroupMessage: { message: RadioGroup.Message },
   ClickedRefresh: {},
   ClickedRetry: {},
-  ClickedChartDatum: { datumId: S.String },
+  ClickedChartDatum: { datumId: Schema.String },
   SucceededFetchTelemetry: { telemetry: Telemetry },
-  FailedFetchTelemetry: { error: S.String },
-  SucceededMountChart: { hostId: S.String },
-  FailedMountChart: { reason: S.String },
+  FailedFetchTelemetry: { error: Schema.String },
+  SucceededMountChart: { hostId: Schema.String },
+  FailedMountChart: { reason: Schema.String },
   SucceededSyncChart: {},
-  FailedSyncChart: { reason: S.String },
+  FailedSyncChart: { reason: Schema.String },
 })
 
 export type Message = typeof Message.Type

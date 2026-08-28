@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
 
 // VIEW
@@ -95,9 +95,9 @@ export const view = <Message>(
   const nextChecked = !isChecked
 
   const handleKeyUp = (key: string): Option.Option<Message> =>
-    M.value(key).pipe(
-      M.when(' ', () => Option.some(onToggle(nextChecked))),
-      M.orElse(() => Option.none()),
+    Match.value(key).pipe(
+      Match.when(' ', () => Option.some(onToggle(nextChecked))),
+      Match.orElse(() => Option.none()),
     )
 
   const checkedAttributes = isChecked ? [h.DataAttribute('checked', '')] : []

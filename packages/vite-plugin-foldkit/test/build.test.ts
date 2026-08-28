@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { execFile } from 'node:child_process'
 import { readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
@@ -339,7 +339,7 @@ describe('the build manifest', () => {
       prerender: true,
     })
 
-    const manifest = S.decodeUnknownSync(FoldkitBuildManifest)(
+    const manifest = Schema.decodeUnknownSync(FoldkitBuildManifest)(
       JSON.parse(await readFile(resolve(server, 'foldkit.build.json'), 'utf8')),
     )
 
@@ -349,7 +349,7 @@ describe('the build manifest', () => {
 
   it('refuses a manifest from a version it does not know', () => {
     const decode = () =>
-      S.decodeUnknownSync(FoldkitBuildManifest)({
+      Schema.decodeUnknownSync(FoldkitBuildManifest)({
         schemaVersion: 2,
         client: 'dist/client',
         server: 'dist/server',
@@ -362,7 +362,7 @@ describe('the build manifest', () => {
 
   it('refuses a manifest missing its version', () => {
     const decode = () =>
-      S.decodeUnknownSync(FoldkitBuildManifest)({
+      Schema.decodeUnknownSync(FoldkitBuildManifest)({
         client: 'dist/client',
         server: 'dist/server',
         serverEntry: 'entry.server.js',
@@ -380,7 +380,7 @@ describe('the build manifest', () => {
       clientOutDir: resolve(FIXTURE_ROOT, 'dist-test/manifest-absolute/client'),
     })
 
-    const manifest = S.decodeUnknownSync(FoldkitBuildManifest)(
+    const manifest = Schema.decodeUnknownSync(FoldkitBuildManifest)(
       JSON.parse(await readFile(resolve(server, 'foldkit.build.json'), 'utf8')),
     )
 

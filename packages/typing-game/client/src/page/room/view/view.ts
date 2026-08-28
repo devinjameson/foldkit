@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import { AsyncData, Submodel } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 
@@ -115,8 +115,8 @@ const gameContent = (
     findFirstWrongCharIndex(userGameText),
   )
 
-  return M.value(room.status).pipe(
-    M.tagsExhaustive({
+  return Match.value(room.status).pipe(
+    Match.tagsExhaustive({
       Waiting: () => waiting(room.players, room.hostId, maybeSession, h),
       GetReady: () => getReady(maybeGameText, h),
       Countdown: ({ secondsLeft }) => countdown(secondsLeft, maybeGameText, h),

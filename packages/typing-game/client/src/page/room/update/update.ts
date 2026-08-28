@@ -1,12 +1,4 @@
-import {
-  Array,
-  Effect,
-  Match as M,
-  Number,
-  Option,
-  String as Str,
-  pipe,
-} from 'effect'
+import { Array, Effect, Match, Number, Option, String, pipe } from 'effect'
 import { AsyncData, Command, type Update } from 'foldkit'
 import { pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
@@ -40,7 +32,7 @@ const NavigateHome = Command.define('NavigateHome', {
 })
 
 export type UpdateReturn = Update.Return<Model, Message, RoomsClient>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+const withUpdateReturn = Match.withReturnType<UpdateReturn>()
 
 /** Per-dispatch parent state the Room page needs from the root.
  *  `roomId` comes from the current Room route when the user is on the
@@ -66,7 +58,7 @@ export const update = (model: Model, message: Message, context: Context) =>
       const userGameText = validateUserTextInput(value, maybeGameText)
 
       const newCharsTyped = pipe(
-        Str.length(userGameText) - Str.length(model.userGameText),
+        String.length(userGameText) - String.length(model.userGameText),
         Number.max(0),
       )
       const nextCharsTyped = model.charsTyped + newCharsTyped
@@ -107,7 +99,7 @@ export const update = (model: Model, message: Message, context: Context) =>
     }),
 
     SubmittedJoinRoomFromPage: () => {
-      const maybeJoinRoom = optionWhen(Str.isNonEmpty(model.username), () =>
+      const maybeJoinRoom = optionWhen(String.isNonEmpty(model.username), () =>
         JoinRoom({ username: model.username, roomId: context.roomId }),
       )
 
@@ -213,11 +205,11 @@ const handleKeyPressed =
     Option.match(AsyncData.getData(model.roomAsyncData), {
       onNone: () => ({ model }),
       onSome: room =>
-        M.value(room.status).pipe(
+        Match.value(room.status).pipe(
           withUpdateReturn,
-          M.tag('Waiting', () => whenWaiting(model, key, room)),
-          M.tag('Finished', () => whenFinished(model, key, room)),
-          M.orElse(() => ({ model })),
+          Match.tag('Waiting', () => whenWaiting(model, key, room)),
+          Match.tag('Finished', () => whenFinished(model, key, room)),
+          Match.orElse(() => ({ model })),
         ),
     })
 
@@ -226,11 +218,11 @@ const whenWaiting = (
   key: string,
   room: Shared.Room,
 ): UpdateReturn =>
-  M.value(key).pipe(
+  Match.value(key).pipe(
     withUpdateReturn,
-    M.when('Backspace', () => leaveRoom(model)),
-    M.when('Enter', handleStartGame(model, room)),
-    M.orElse(() => ({ model })),
+    Match.when('Backspace', () => leaveRoom(model)),
+    Match.when('Enter', handleStartGame(model, room)),
+    Match.orElse(() => ({ model })),
   )
 
 const whenFinished = (
@@ -238,13 +230,13 @@ const whenFinished = (
   key: string,
   room: Shared.Room,
 ): UpdateReturn =>
-  M.value(key).pipe(
+  Match.value(key).pipe(
     withUpdateReturn,
-    M.when('Backspace', () =>
+    Match.when('Backspace', () =>
       model.exitCountdownSecondsLeft === 0 ? leaveRoom(model) : { model },
     ),
-    M.when('Enter', handleStartGame(model, room)),
-    M.orElse(() => ({ model })),
+    Match.when('Enter', handleStartGame(model, room)),
+    Match.orElse(() => ({ model })),
   )
 
 const leaveRoom = (model: Model): UpdateReturn => ({

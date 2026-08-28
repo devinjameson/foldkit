@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, Record as Record_ } from 'effect'
+import { Array, Match, Option, Record } from 'effect'
 
 import type { Island, MarkdownDocument } from '@foldkit/markdown'
 
@@ -24,7 +24,7 @@ const demoLabelEntry = (
 ): Option.Option<DemoLabelEntry> => {
   if (island.name === DEMO_ISLAND_NAME) {
     return Option.map(
-      Option.all([Record_.get(island.attributes, 'name'), maybeHeadingId]),
+      Option.all([Record.get(island.attributes, 'name'), maybeHeadingId]),
       ([demoName, headingId]) => [demoName, headingId],
     )
   } else {
@@ -51,13 +51,13 @@ export const collectDemoLabels = (
         entries: Array.empty<DemoLabelEntry>(),
       },
       (walk: DemoLabelWalk, block) =>
-        M.value(block).pipe(
-          M.withReturnType<DemoLabelWalk>(),
-          M.tag('Heading', heading => ({
+        Match.value(block).pipe(
+          Match.withReturnType<DemoLabelWalk>(),
+          Match.tag('Heading', heading => ({
             maybeHeadingId: Option.fromNullishOr(idByHeading.get(heading)),
             entries: walk.entries,
           })),
-          M.tag('Island', island =>
+          Match.tag('Island', island =>
             Option.match(demoLabelEntry(island, walk.maybeHeadingId), {
               onNone: () => walk,
               onSome: entry => ({
@@ -66,7 +66,7 @@ export const collectDemoLabels = (
               }),
             }),
           ),
-          M.orElse(() => walk),
+          Match.orElse(() => walk),
         ),
     ).entries,
   )

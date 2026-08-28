@@ -1,15 +1,15 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { defineRouteUnion, int, literal, rest, slash } from 'foldkit/route'
 
 export const AppRoute = defineRouteUnion({
   Home: {},
   Nested: {},
-  People: { searchText: S.Option(S.String) },
-  Person: { personId: S.Number },
+  People: { searchText: Schema.Option(Schema.String) },
+  Person: { personId: Schema.Number },
   FilesIndex: {},
-  Files: { path: S.NonEmptyArray(S.String) },
-  NotFound: { path: S.String },
+  Files: { path: Schema.NonEmptyArray(Schema.String) },
+  NotFound: { path: Schema.String },
 })
 
 export type AppRoute = typeof AppRoute.Type
@@ -29,8 +29,8 @@ export const nestedRouter = pipe(
 export const peopleRouter = pipe(
   literal('people'),
   Route.query(
-    S.Struct({
-      searchText: S.OptionFromOptional(S.String),
+    Schema.Struct({
+      searchText: Schema.OptionFromOptional(Schema.String),
     }),
   ),
   Route.mapTo(AppRoute.People),

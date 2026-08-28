@@ -1,4 +1,4 @@
-import { Effect, Match as M, Option, Schema as S, pipe } from 'effect'
+import { Effect, Match, Option, Schema, pipe } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
@@ -25,12 +25,12 @@ import { idSelector } from '../internal/selectors.js'
 // MODEL
 
 /** Schema for the dialog component's state, tracking its unique ID, open/closed status, animation support, and animation lifecycle phase. */
-export const Model = S.Struct({
-  id: S.String,
-  isOpen: S.Boolean,
-  isAnimated: S.Boolean,
+export const Model = Schema.Struct({
+  id: Schema.String,
+  isOpen: Schema.Boolean,
+  isAnimated: Schema.Boolean,
   animation: AnimationModel,
-  maybeFocusSelector: S.Option(S.String),
+  maybeFocusSelector: Schema.Option(Schema.String),
 })
 
 export type Model = typeof Model.Type
@@ -132,7 +132,7 @@ type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
  *  this close, the dialog would render open with no lock and no focus trap.
  *  The lock is also released if the Command is interrupted while it waits. */
 export const ShowDialog = Command.define('ShowDialog', {
-  args: { id: S.String, focusSelector: S.String },
+  args: { id: Schema.String, focusSelector: Schema.String },
   messages: [Message.SucceededShowDialog, Message.FailedShowDialog],
   execute: ({ id, focusSelector }) =>
     Dom.lockScroll.pipe(
@@ -155,7 +155,7 @@ export const ShowDialog = Command.define('ShowDialog', {
  *  releases the scroll lock, focus trap, return focus, and stack entry if the
  *  dialog still holds them. */
 export const CloseDialog = Command.define('CloseDialog', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedCloseDialog],
   execute: ({ id }) =>
     Dom.closeDialog(dialogSelector(id)).pipe(
@@ -172,7 +172,7 @@ export const CloseDialog = Command.define('CloseDialog', {
  *  purposeful close. Idempotent: a no-op if the dialog already released its
  *  resources through `CloseDialog`. */
 export const ReleaseDialogResources = Command.define('ReleaseDialogResources', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedReleaseDialogResources],
   execute: ({ id }) =>
     Dom.releaseDialogResources(id).pipe(
@@ -419,26 +419,26 @@ export const view = defineView<Model, Message, ViewInputs>(
 
     const isVisible = isOpen || isLeaving(model)
 
-    const animationAttributes = M.value(transitionState).pipe(
-      M.when('EnterStart', () => [
+    const animationAttributes = Match.value(transitionState).pipe(
+      Match.when('EnterStart', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('EnterAnimating', () => [
+      Match.when('EnterAnimating', () => [
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveStart', () => [
+      Match.when('LeaveStart', () => [
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveAnimating', () => [
+      Match.when('LeaveAnimating', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.orElse(() => []),
+      Match.orElse(() => []),
     )
 
     const dialogAttributes = [

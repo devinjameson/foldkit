@@ -1,4 +1,4 @@
-import { Array, Match as M, Number } from 'effect'
+import { Array, Match, Number } from 'effect'
 import { File, Submodel } from 'foldkit'
 import type { Html } from 'foldkit/html'
 
@@ -28,13 +28,13 @@ const BYTES_PER_KB = 1024
 const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB
 
 const formatFileSize = (bytes: number): string =>
-  M.value(bytes).pipe(
-    M.when(Number.isLessThan(BYTES_PER_KB), () => `${bytes} B`),
-    M.when(
+  Match.value(bytes).pipe(
+    Match.when(Number.isLessThan(BYTES_PER_KB), () => `${bytes} B`),
+    Match.when(
       Number.isLessThan(BYTES_PER_MB),
       () => `${(bytes / BYTES_PER_KB).toFixed(1)} KB`,
     ),
-    M.orElse(() => `${(bytes / BYTES_PER_MB).toFixed(1)} MB`),
+    Match.orElse(() => `${(bytes / BYTES_PER_MB).toFixed(1)} MB`),
   )
 
 const fileKey = (file: File.File): string =>

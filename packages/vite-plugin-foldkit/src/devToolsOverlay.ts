@@ -1,4 +1,4 @@
-import { Array, Option, Record, Schema as S } from 'effect'
+import { Array, Option, Record, Schema } from 'effect'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
 import type { Plugin } from 'vite'
@@ -33,16 +33,18 @@ import { __setDevToolsOverlay } from '${DEV_TOOLS_HOST_IMPORT_SPECIFIER}'
 __setDevToolsOverlay(overlay)
 `
 
-const ApplicationPackageJson = S.Struct({
-  dependencies: S.optional(S.Record(S.String, S.String)),
+const ApplicationPackageJson = Schema.Struct({
+  dependencies: Schema.optional(Schema.Record(Schema.String, Schema.String)),
 })
 
-const DevToolsPackageJson = S.Struct({
-  exports: S.optional(S.Record(S.String, S.Unknown)),
+const DevToolsPackageJson = Schema.Struct({
+  exports: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 })
 
-const decodeApplicationPackageJson = S.decodeUnknownSync(ApplicationPackageJson)
-const decodeDevToolsPackageJson = S.decodeUnknownSync(DevToolsPackageJson)
+const decodeApplicationPackageJson = Schema.decodeUnknownSync(
+  ApplicationPackageJson,
+)
+const decodeDevToolsPackageJson = Schema.decodeUnknownSync(DevToolsPackageJson)
 
 const readPackageJson = <A>(
   decode: (raw: unknown) => A,

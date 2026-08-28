@@ -40,7 +40,7 @@ Variants set but never observed by the view or other updates. Fields written but
 
 The **no-op startup Command**: `init` returns `{ model: DEFAULT_MODEL, commands: [triggerApplicationStarted] }`, the Command resolves to `ApplicationStarted()`, and the handler is `ApplicationStarted: () => ({ model })`. Give the Command real work (load preferences, fetch initial data, focus first input, restore session) or delete the Command and the Message together.
 
-The **navigate-before-save**: a handler returning BOTH a save Command and a navigation Command races the save against the navigation. (`pushUrl` is an `Effect`, not a Command; it reaches a handler wrapped in one, as `Command.define('PushUrl', { args: { url: S.String }, messages: [Message.CompletedPushUrl], execute: ({ url }) => pushUrl(url).pipe(Effect.as(Message.CompletedPushUrl())) })`.) Which one lands first is timing, not something the handler decides, and a navigation is local while a save is a round trip, so the route has almost always changed by the time the save resolves. The failure Message still arrives and the handler still runs; the error just renders on a route the user didn't submit from, or on one whose view doesn't render it at all. Idiomatic: emit the save only, then navigate in the `Succeeded*` handler, so errors surface on the page the user is still looking at.
+The **navigate-before-save**: a handler returning BOTH a save Command and a navigation Command races the save against the navigation. (`pushUrl` is an `Effect`, not a Command; it reaches a handler wrapped in one, as `Command.define('PushUrl', { args: { url: Schema.String }, messages: [Message.CompletedPushUrl], execute: ({ url }) => pushUrl(url).pipe(Effect.as(Message.CompletedPushUrl())) })`.) Which one lands first is timing, not something the handler decides, and a navigation is local while a save is a round trip, so the route has almost always changed by the time the save resolves. The failure Message still arrives and the handler still runs; the error just renders on a route the user didn't submit from, or on one whose view doesn't render it at all. Idiomatic: emit the save only, then navigate in the `Succeeded*` handler, so errors surface on the page the user is still looking at.
 
 For every union variant, trace whether the view branches on it and whether that branch is reachable. For every Model field, trace whether anything reads it besides its own writes.
 
@@ -48,7 +48,7 @@ For every union variant, trace whether the view branches on it and whether that 
 
 ### `repeated-scaffolding`
 
-Three or four handlers sharing the same 5-line scaffold (`M.tag` + `M.orElse`, `Option.match` + fallback) want a named helper. Genuinely duplicated decision logic, not coincidentally similar shape.
+Three or four handlers sharing the same 5-line scaffold (`Match.tag` + `Match.orElse`, `Option.match` + fallback) want a named helper. Genuinely duplicated decision logic, not coincidentally similar shape.
 
 Specific case: an `UpdateReturn` alias used only by one `Message.match`. Inline the type at that matcher:
 
@@ -99,7 +99,7 @@ A counter feature exporting `counter(model)` reads as `Counter.counter(model)` a
 
 ### `unearned-type-aliases`
 
-`export const Model = S.Struct({...})` followed by `export type Model = typeof Model.Type`.
+`export const Model = Schema.Struct({...})` followed by `export type Model = typeof Model.Type`.
 
 **Do not flag this by default.** It is idiomatic the moment the decoded type is referenced across modules in handler or parameter positions: `typeof Foo` is the constructor type Command consumes, so any consumer needing the decoded shape must otherwise write `typeof Foo.Type` at every call site. The exemplars export these aliases extensively for exactly that reason. Library exports whose type is part of a public API (e.g. `ViewConfig` callback parameters) are the same case.
 

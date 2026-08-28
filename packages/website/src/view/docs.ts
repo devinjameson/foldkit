@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { Match as M, Option, String as S } from 'effect'
+import { Match, Option, String } from 'effect'
 import { AsyncData } from 'foldkit'
 import {
   Html,
@@ -295,16 +295,16 @@ const pageNavigationView = (tag: string, h: HtmlBuilder<Message>) => {
 // SEARCH WEIGHT
 
 export const searchWeight = (tag: string): string =>
-  M.value(tag).pipe(
-    M.when(S.startsWith('Core'), () => '10'),
-    M.whenOr('GettingStarted', 'Manifesto', () => '8'),
-    M.whenOr(
-      S.startsWith('Patterns'),
-      S.startsWith('BestPractices'),
-      S.startsWith('Tooling'),
+  Match.value(tag).pipe(
+    Match.when(String.startsWith('Core'), () => '10'),
+    Match.whenOr('GettingStarted', 'Manifesto', () => '8'),
+    Match.whenOr(
+      String.startsWith('Patterns'),
+      String.startsWith('BestPractices'),
+      String.startsWith('Tooling'),
       () => '7',
     ),
-    M.whenOr(
+    Match.whenOr(
       'RoutingAndNavigation',
       'FieldValidation',
       'ProjectOrganization',
@@ -316,13 +316,13 @@ export const searchWeight = (tag: string): string =>
       'WhyNoJsx',
       'Performance',
       'Roadmap',
-      S.startsWith('Testing'),
+      String.startsWith('Testing'),
       () => '6',
     ),
-    M.whenOr(S.startsWith('Ui'), S.startsWith('Ai'), () => '5'),
-    M.when('ApiModule', () => '3'),
-    M.whenOr('Examples', 'ExampleDetail', 'TypingTerminal', () => '2'),
-    M.orElse(() => '4'),
+    Match.whenOr(String.startsWith('Ui'), String.startsWith('Ai'), () => '5'),
+    Match.when('ApiModule', () => '3'),
+    Match.whenOr('Examples', 'ExampleDetail', 'TypingTerminal', () => '2'),
+    Match.orElse(() => '4'),
   )
 
 // CONTENT ROUTING
@@ -383,11 +383,11 @@ export const docsView = (
   const renderCopyButton = defaultRenderCopyButton(model.copiedSnippets, h)
   const renderHeadingLink = defaultRenderHeadingLink(h)
 
-  const { content, tableOfContents: currentPageTableOfContents } = M.value(
+  const { content, tableOfContents: currentPageTableOfContents } = Match.value(
     docsRoute,
   ).pipe(
-    M.withReturnType<DocsPageView>(),
-    M.tagsExhaustive({
+    Match.withReturnType<DocsPageView>(),
+    Match.tagsExhaustive({
       Manifesto: () =>
         withTableOfContents(
           Page.Manifesto.view(h),
@@ -1143,12 +1143,12 @@ export const docsView = (
                 onNone: () => h.empty,
               }),
               h.keyed('div')(
-                M.value(docsRoute).pipe(
-                  M.tag(
+                Match.value(docsRoute).pipe(
+                  Match.tag(
                     'ApiModule',
                     ({ moduleSlug }) => `ApiModule-${moduleSlug}`,
                   ),
-                  M.orElse(({ _tag }) => _tag),
+                  Match.orElse(({ _tag }) => _tag),
                 ),
                 [
                   PagefindBody,

@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option, Schema as S } from 'effect'
+import { Match, Option, Schema } from 'effect'
 import { File, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -10,9 +10,9 @@ import { evo } from 'foldkit/struct'
 import { FileDrop } from '@foldkit/ui'
 
 // Add the FileDrop Submodel to your Model, plus a list of accepted files:
-const Model = S.Struct({
+const Model = Schema.Struct({
   uploader: FileDrop.Model,
-  uploadedFiles: S.Array(File.File),
+  uploadedFiles: Schema.Array(File.File),
   // ...your other fields
 })
 
@@ -34,9 +34,9 @@ const Message = defineMessageUnion({
 // drop or input change) into your own Model. Each arm returns an Update.Step
 // over the parent Model, which already has the next FileDrop Model written
 // back:
-const foldFileDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldFileDropOutMessage = Match.type<FileDrop.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     ReceivedFiles:
       ({ files }) =>
       model => ({

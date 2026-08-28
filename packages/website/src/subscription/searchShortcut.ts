@@ -1,4 +1,4 @@
-import { Effect, Option, Schema as S, Stream } from 'effect'
+import { Effect, Option, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 
 import type { Model } from '../main'
@@ -7,7 +7,7 @@ import { Message as SearchMessage } from '../search'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   searchShortcut: entry(
-    { isDocsPage: S.Boolean },
+    { isDocsPage: Schema.Boolean },
     {
       modelToDependencies: model => ({
         isDocsPage:

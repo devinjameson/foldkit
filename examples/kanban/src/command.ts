@@ -1,4 +1,4 @@
-import { Crypto, Effect, Schema as S } from 'effect'
+import { Crypto, Effect, Schema } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Command, Dom } from 'foldkit'
 
@@ -10,7 +10,7 @@ import { Message } from './message'
 import { SavedBoardJsonString } from './model'
 
 export const GenerateCardId = Command.define('GenerateCardId', {
-  args: { columnId: S.String, title: S.String },
+  args: { columnId: Schema.String, title: Schema.String },
   messages: [Message.CompletedGenerateCardId],
   execute: ({ columnId, title }) =>
     Effect.gen(function* () {
@@ -21,14 +21,14 @@ export const GenerateCardId = Command.define('GenerateCardId', {
 })
 
 export const SaveBoard = Command.define('SaveBoard', {
-  args: { columns: S.Array(Column.Column) },
+  args: { columns: Schema.Array(Column.Column) },
   messages: [Message.CompletedSaveBoard],
   execute: ({ columns }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
       yield* store.set(
         STORAGE_KEY,
-        S.encodeSync(SavedBoardJsonString)({ columns }),
+        Schema.encodeSync(SavedBoardJsonString)({ columns }),
       )
       return Message.CompletedSaveBoard()
     }).pipe(

@@ -1,12 +1,4 @@
-import {
-  Array,
-  DateTime,
-  Option,
-  Record as Record_,
-  Schema as S,
-  String as String_,
-  pipe,
-} from 'effect'
+import { Array, DateTime, Option, Record, Schema, String, pipe } from 'effect'
 
 import { PostFrontmatter } from './frontmatter'
 import { byDateThenSlugDescending } from './meta'
@@ -35,16 +27,16 @@ export type BlogPost = Readonly<{
   document: unknown
 }>
 
-const decodePostFrontmatter = S.decodeUnknownSync(PostFrontmatter)
+const decodePostFrontmatter = Schema.decodeUnknownSync(PostFrontmatter)
 
 const pathToSlug = (path: string): string =>
-  pipe(path, String_.replace('./post/', ''), String_.replace(/\.md$/, ''))
+  pipe(path, String.replace('./post/', ''), String.replace(/\.md$/, ''))
 
 // NOTE: the plugin emits `frontmatter` as `undefined` for a document with no
 // frontmatter block, so the glob has the key with an undefined value rather
 // than no key. Both spellings mean the post declared no frontmatter.
 const maybePostFrontmatter = (path: string): Option.Option<{}> =>
-  Option.flatMap(Record_.get(frontmatterByPath, path), Option.fromNullishOr)
+  Option.flatMap(Record.get(frontmatterByPath, path), Option.fromNullishOr)
 
 const toBlogPost = (path: string, document: unknown): BlogPost => ({
   slug: pathToSlug(path),

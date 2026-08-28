@@ -1,4 +1,4 @@
-import { Effect, Fiber, Option, Schema as S } from 'effect'
+import { Effect, Fiber, Option, Schema } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { type DevToolsStore, INIT_INDEX } from '../devTools/store.js'
@@ -168,7 +168,7 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({ label: S.String })
+const Model = Schema.Struct({ label: Schema.String })
 type Model = typeof Model.Type
 
 const h = __htmlBuilder<Message>()

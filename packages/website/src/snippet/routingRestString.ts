@@ -1,10 +1,10 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { defineRouteUnion, literal, restString, slash } from 'foldkit/route'
 
 const AppRoute = defineRouteUnion({
   VaultIndex: {},
-  VaultNote: { path: S.String },
+  VaultNote: { path: Schema.String },
 })
 
 // Matches: /vault

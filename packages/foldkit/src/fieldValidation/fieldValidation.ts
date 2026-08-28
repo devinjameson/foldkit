@@ -1,12 +1,4 @@
-import {
-  Array,
-  Function,
-  Option,
-  Result,
-  Schema as S,
-  String,
-  pipe,
-} from 'effect'
+import { Array, Function, Option, Result, Schema, String, pipe } from 'effect'
 
 import { type Rule, type RuleMessage, resolveMessage } from './rule.js'
 
@@ -65,19 +57,19 @@ export const Invalid = <A>(
 /** Builds the four-state `Field` Schema for a value of the given Schema. Put the
  *  result in your Model. The value Schema should match what the control
  *  actually holds as the user edits, not the type you parse it into:
- *  `Field(S.String)` for text inputs, `Field(S.Array(S.String))` for a
+ *  `Field(Schema.String)` for text inputs, `Field(Schema.Array(Schema.String))` for a
  *  multi-select. A scalar like a checkbox's boolean usually stays plain
- *  `S.Boolean` in the Model; wrap it in `Field` only when it needs the
+ *  `Schema.Boolean` in the Model; wrap it in `Field` only when it needs the
  *  validation lifecycle. Validation rules stay separate, in a `makeRules`
  *  bundle. */
-export const Field = <A, I>(valueSchema: S.Codec<A, I>) =>
-  S.Union([
-    S.TaggedStruct('NotValidated', { value: valueSchema }),
-    S.TaggedStruct('Validating', { value: valueSchema }),
-    S.TaggedStruct('Valid', { value: valueSchema }),
-    S.TaggedStruct('Invalid', {
+export const Field = <A, I>(valueSchema: Schema.Codec<A, I>) =>
+  Schema.Union([
+    Schema.TaggedStruct('NotValidated', { value: valueSchema }),
+    Schema.TaggedStruct('Validating', { value: valueSchema }),
+    Schema.TaggedStruct('Valid', { value: valueSchema }),
+    Schema.TaggedStruct('Invalid', {
       value: valueSchema,
-      errors: S.NonEmptyArray(S.String),
+      errors: Schema.NonEmptyArray(Schema.String),
     }),
   ])
 

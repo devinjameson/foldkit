@@ -1,7 +1,7 @@
 import {
+  Order as EffectOrder,
   type Equivalence as Equivalence_,
   Function,
-  Order as Order_,
 } from 'effect'
 
 import type { CalendarDate } from './calendarDate.js'
@@ -24,10 +24,10 @@ import type { CalendarDate } from './calendarDate.js'
  * Array.sort(dates, Calendar.Order)
  * ```
  */
-export const Order: Order_.Order<CalendarDate> = Order_.Struct({
-  year: Order_.Number,
-  month: Order_.Number,
-  day: Order_.Number,
+export const Order: EffectOrder.Order<CalendarDate> = EffectOrder.Struct({
+  year: EffectOrder.Number,
+  month: EffectOrder.Number,
+  day: EffectOrder.Number,
 })
 
 /**

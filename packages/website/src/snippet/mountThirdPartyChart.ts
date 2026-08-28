@@ -1,11 +1,11 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 
 const Message = defineMessageUnion({
   SucceededMountChart: {},
-  FailedMountChart: { reason: S.String },
+  FailedMountChart: { reason: Schema.String },
 })
 
 // Mount.define gives the action a name and constrains what Messages it can
@@ -14,7 +14,7 @@ const Message = defineMessageUnion({
 // live element on insert, runs the Effect to produce one Message, dispatches
 // it, and closes the scope on destroy (firing any acquireRelease finalizers).
 
-const ChartData = S.Array(S.Number)
+const ChartData = Schema.Array(Schema.Number)
 type ChartData = typeof ChartData.Type
 
 const MountChart = Mount.define('MountChart', {

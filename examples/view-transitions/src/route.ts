@@ -1,11 +1,11 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { defineRouteUnion, int, literal, slash } from 'foldkit/route'
 
 export const AppRoute = defineRouteUnion({
   Gallery: {},
-  Artwork: { artworkId: S.Number },
-  NotFound: { path: S.String },
+  Artwork: { artworkId: Schema.Number },
+  NotFound: { path: Schema.String },
 })
 
 export type AppRoute = typeof AppRoute.Type

@@ -101,12 +101,12 @@ type EntryCallbacksWithKeepAlive<Model, Message, Dependencies, Services> = {
 /**
  * Builds a single subscription entry from a field map and callbacks.
  *
- * The field map is the same shape you would pass to `S.Struct`. Reading the
+ * The field map is the same shape you would pass to `Schema.Struct`. Reading the
  * schema as a positional argument (rather than a property on the entry
  * literal) lets TypeScript fully resolve the `Dependencies` type before
  * contextually typing `modelToDependencies` and `dependenciesToStream`, so
  * destructuring patterns like `({ maybeMapHostId })` are inferred correctly
- * even when the field schemas use transforms (e.g. `S.Option`).
+ * even when the field schemas use transforms (e.g. `Schema.Option`).
  *
  * Two overloads, one per `keepAliveEquivalence` presence:
  *
@@ -153,7 +153,7 @@ export type EntryBuilder<Model, Message, Services> = <
  * ```ts
  * Subscription.make<Model, Message>()(entry => ({
  *   tick: entry(
- *     { isRunning: S.Boolean },
+ *     { isRunning: Schema.Boolean },
  *     {
  *       modelToDependencies: model => ({ isRunning: model.isRunning }),
  *       dependenciesToStream: ({ isRunning }) =>

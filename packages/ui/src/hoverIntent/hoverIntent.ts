@@ -1,11 +1,4 @@
-import {
-  Duration,
-  Effect,
-  Match as M,
-  Number,
-  Option,
-  Schema as S,
-} from 'effect'
+import { Duration, Effect, Match, Number, Option, Schema } from 'effect'
 import * as Command from 'foldkit/command'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { evo } from 'foldkit/struct'
@@ -16,20 +9,20 @@ import { Message, OutMessage } from './message.js'
 
 // MODEL
 
-const FocusLocation = S.Literals(['Trigger', 'Panel'])
+const FocusLocation = Schema.Literals(['Trigger', 'Panel'])
 type FocusLocation = typeof FocusLocation.Type
 
 /** Schema for HoverIntent state. It tracks pointer and focus engagement over a trigger and its panel, visibility, delay timers, and Escape dismissal. */
-export const Model = S.Struct({
-  isOpen: S.Boolean,
-  isTriggerHovered: S.Boolean,
-  isPanelHovered: S.Boolean,
-  maybeFocusLocation: S.Option(FocusLocation),
-  isDismissed: S.Boolean,
-  openDelay: S.DurationFromMillis,
-  closeDelay: S.DurationFromMillis,
-  pendingOpenVersion: S.Number,
-  pendingCloseVersion: S.Number,
+export const Model = Schema.Struct({
+  isOpen: Schema.Boolean,
+  isTriggerHovered: Schema.Boolean,
+  isPanelHovered: Schema.Boolean,
+  maybeFocusLocation: Schema.Option(FocusLocation),
+  isDismissed: Schema.Boolean,
+  openDelay: Schema.DurationFromMillis,
+  closeDelay: Schema.DurationFromMillis,
+  pendingOpenVersion: Schema.Number,
+  pendingCloseVersion: Schema.Number,
 })
 export type Model = typeof Model.Type
 
@@ -65,7 +58,7 @@ export const init = (config: InitConfig = {}): Model => ({
 
 /** Waits before opening, then emits the version that scheduled the wait. */
 export const WaitBeforeOpening = Command.define('WaitBeforeOpening', {
-  args: { delay: S.DurationFromMillis, version: S.Number },
+  args: { delay: Schema.DurationFromMillis, version: Schema.Number },
   messages: [Message.CompletedWaitBeforeOpening],
   execute: ({ delay, version }) =>
     Effect.sleep(delay).pipe(
@@ -75,7 +68,7 @@ export const WaitBeforeOpening = Command.define('WaitBeforeOpening', {
 
 /** Waits before closing, then emits the version that scheduled the wait. */
 export const WaitBeforeClosing = Command.define('WaitBeforeClosing', {
-  args: { delay: S.DurationFromMillis, version: S.Number },
+  args: { delay: Schema.DurationFromMillis, version: Schema.Number },
   messages: [Message.CompletedWaitBeforeClosing],
   execute: ({ delay, version }) =>
     Effect.sleep(delay).pipe(
@@ -301,25 +294,25 @@ export const view = defineView<Model, Message, ViewInputs>(
     const toPressedEscape =
       (source: 'Trigger' | 'Panel') =>
       (key: string): Option.Option<typeof Message.PressedEscape.Type> =>
-        M.value(key).pipe(
-          M.when('Escape', () =>
+        Match.value(key).pipe(
+          Match.when('Escape', () =>
             Option.some(Message.PressedEscape({ source })),
           ),
-          M.orElse(() => Option.none()),
+          Match.orElse(() => Option.none()),
         )
 
     const panelEscapeHandler =
       focusTriggerSelector === undefined
         ? h.OnKeyDownPreventDefault(toPressedEscape('Panel'))
         : h.OnKeyDownFocus(key =>
-            M.value(key).pipe(
-              M.when('Escape', () =>
+            Match.value(key).pipe(
+              Match.when('Escape', () =>
                 Option.some({
                   focusSelector: focusTriggerSelector,
                   message: Message.PressedEscape({ source: 'Panel' }),
                 }),
               ),
-              M.orElse(() => Option.none()),
+              Match.orElse(() => Option.none()),
             ),
           )
 

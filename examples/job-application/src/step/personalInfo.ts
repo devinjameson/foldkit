@@ -1,12 +1,4 @@
-import {
-  Array,
-  Duration,
-  Effect,
-  Match as M,
-  Number,
-  Option,
-  Schema as S,
-} from 'effect'
+import { Array, Duration, Effect, Match, Number, Option, Schema } from 'effect'
 import { Command, Update } from 'foldkit'
 import { CalendarDate } from 'foldkit/calendar'
 import {
@@ -32,35 +24,35 @@ import { revealFieldErrors } from './validation'
 
 const PronounsListbox = Listbox.create<string>()
 
-export const Model = S.Struct({
-  firstName: Field(S.String),
-  lastName: Field(S.String),
-  email: Field(S.String),
-  emailValidationId: S.Number,
-  phone: Field(S.String),
+export const Model = Schema.Struct({
+  firstName: Field(Schema.String),
+  lastName: Field(Schema.String),
+  email: Field(Schema.String),
+  emailValidationId: Schema.Number,
+  phone: Field(Schema.String),
   pronouns: Listbox.Model,
-  maybeSelectedPronoun: S.Option(S.String),
-  customPronouns: S.String,
-  portfolioUrl: Field(S.String),
+  maybeSelectedPronoun: Schema.Option(Schema.String),
+  customPronouns: Schema.String,
+  portfolioUrl: Field(Schema.String),
   availableDate: DatePicker.Model,
-  maybeAvailableDate: S.Option(CalendarDate),
+  maybeAvailableDate: Schema.Option(CalendarDate),
 })
 export type Model = typeof Model.Type
 
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedFirstName: { value: S.String },
-  UpdatedLastName: { value: S.String },
-  UpdatedEmail: { value: S.String },
+  UpdatedFirstName: { value: Schema.String },
+  UpdatedLastName: { value: Schema.String },
+  UpdatedEmail: { value: Schema.String },
   CompletedValidateEmailAsync: {
-    validationId: S.Number,
-    field: Field(S.String),
+    validationId: Schema.Number,
+    field: Field(Schema.String),
   },
-  UpdatedPhone: { value: S.String },
+  UpdatedPhone: { value: Schema.String },
   GotPronounsMessage: { message: Listbox.Message },
-  UpdatedCustomPronouns: { value: S.String },
-  UpdatedPortfolioUrl: { value: S.String },
+  UpdatedCustomPronouns: { value: Schema.String },
+  UpdatedPortfolioUrl: { value: Schema.String },
   GotAvailableDateMessage: { message: DatePicker.Message },
 })
 
@@ -140,7 +132,7 @@ const isEmailTaken = (emailInput: string): Effect.Effect<boolean> =>
   })
 
 export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
-  args: { emailInput: S.String, validationId: S.Number },
+  args: { emailInput: Schema.String, validationId: Schema.Number },
   messages: [Message.CompletedValidateEmailAsync],
   execute: ({ emailInput, validationId }) =>
     Effect.gen(function* () {
@@ -164,9 +156,9 @@ export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
 
 type UpdateReturn = Update.Return<Model, Message>
 
-const foldPronounsOutMessage = M.type<Listbox.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldPronounsOutMessage = Match.type<Listbox.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({
@@ -183,9 +175,9 @@ const foldPronouns = Update.foldChild({
   foldOutMessage: foldPronounsOutMessage,
 })
 
-const foldAvailableDateOutMessage = M.type<DatePicker.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldAvailableDateOutMessage = Match.type<DatePicker.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     SelectedDate:
       ({ date }) =>
       model => ({
@@ -219,16 +211,16 @@ export const update = (model: Model, message: Message) =>
 
     UpdatedEmail: ({ value }) => {
       const validationId = Number.increment(model.emailValidationId)
-      return M.value(validateEmail(value)).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.tag('Valid', () => ({
+      return Match.value(validateEmail(value)).pipe(
+        Match.withReturnType<UpdateReturn>(),
+        Match.tag('Valid', () => ({
           model: evo(model, {
             email: () => Validating({ value }),
             emailValidationId: () => validationId,
           }),
           commands: [ValidateEmailAsync({ emailInput: value, validationId })],
         })),
-        M.orElse(syncResult => ({
+        Match.orElse(syncResult => ({
           model: evo(model, {
             email: () => syncResult,
             emailValidationId: () => validationId,

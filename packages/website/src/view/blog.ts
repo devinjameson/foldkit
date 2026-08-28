@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { type Model } from '../main'
@@ -24,9 +24,9 @@ export const blogView = (
   blogRoute: BlogRoute | BlogPostRoute,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const content = M.value(blogRoute).pipe(
-    M.withReturnType<Html>(),
-    M.tagsExhaustive({
+  const content = Match.value(blogRoute).pipe(
+    Match.withReturnType<Html>(),
+    Match.tagsExhaustive({
       Blog: () => Page.Blog.BlogIndex.view(),
       BlogPost: ({ postSlug }) =>
         Option.match(Page.Blog.findPostBySlug(postSlug), {
@@ -37,9 +37,9 @@ export const blogView = (
     }),
   )
 
-  const contentKey = M.value(blogRoute).pipe(
-    M.tag('BlogPost', ({ postSlug }) => `BlogPost-${postSlug}`),
-    M.orElse(({ _tag }) => _tag),
+  const contentKey = Match.value(blogRoute).pipe(
+    Match.tag('BlogPost', ({ postSlug }) => `BlogPost-${postSlug}`),
+    Match.orElse(({ _tag }) => _tag),
   )
 
   return h.div(

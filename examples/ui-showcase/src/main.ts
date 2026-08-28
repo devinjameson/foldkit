@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Array, Effect, Match as M, Option, Schema as S, pipe } from 'effect'
+import { Array, Effect, Match, Option, Schema, pipe } from 'effect'
 import {
   Calendar,
   Command,
@@ -55,7 +55,7 @@ export const AppRoute = defineRouteUnion({
   Tooltip: {},
   Animation: {},
   VirtualList: {},
-  NotFound: { path: S.String },
+  NotFound: { path: Schema.String },
 })
 
 export type AppRoute = typeof AppRoute.Type
@@ -144,7 +144,7 @@ const urlToAppRoute = Route.parseUrlWithFallback(routeParser, AppRoute.NotFound)
 
 // MODEL
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   route: AppRoute,
   uiModel: UiModel,
 })
@@ -166,14 +166,14 @@ export type Message = typeof Message.Type
 // COMMAND
 
 const NavigateInternal = Command.define('NavigateInternal', {
-  args: { url: S.String },
+  args: { url: Schema.String },
   messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
     pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
-  args: { href: S.String },
+  args: { href: Schema.String },
   messages: [Message.CompletedLoadExternal],
   execute: ({ href }) =>
     load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
@@ -181,7 +181,7 @@ const LoadExternal = Command.define('LoadExternal', {
 
 // INIT
 
-export const Flags = S.Struct({
+export const Flags = Schema.Struct({
   today: Calendar.CalendarDate,
 })
 
@@ -226,9 +226,9 @@ const foldUi = Update.foldChild({
   toParentMessage: toUiMessage,
 })
 
-const foldMobileMenuDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldMobileMenuDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Opened: () => model => ({ model }),
     Closed: () => model => ({ model }),
   }),
@@ -626,9 +626,9 @@ const contentView = (model: Model, h: HtmlBuilder<Message>): Html => {
 }
 
 const routeTitle = (route: Model['route']): string =>
-  M.value(route).pipe(
-    M.tag('Home', () => 'Foldkit UI Showcase'),
-    M.orElse(({ _tag }) => `${_tag} | Foldkit UI Showcase`),
+  Match.value(route).pipe(
+    Match.tag('Home', () => 'Foldkit UI Showcase'),
+    Match.orElse(({ _tag }) => `${_tag} | Foldkit UI Showcase`),
   )
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({

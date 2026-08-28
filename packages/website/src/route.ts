@@ -1,4 +1,4 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import {
   defineRouteUnion,
   literal,
@@ -32,16 +32,16 @@ export const AppRoute = defineRouteUnion({
   TestingStory: {},
   TestingScene: {},
   Examples: {},
-  ExampleDetail: { exampleSlug: S.String },
+  ExampleDetail: { exampleSlug: Schema.String },
   TypingTerminal: {},
-  Playground: { exampleSlug: S.String },
+  Playground: { exampleSlug: Schema.String },
   BestPracticesSideEffects: {},
   BestPracticesMessages: {},
   BestPracticesKeying: {},
   BestPracticesImmutability: {},
   ProjectOrganization: {},
   ToolingLinting: {},
-  ApiModule: { moduleSlug: S.String },
+  ApiModule: { moduleSlug: Schema.String },
   CoreArchitecture: {},
   CoreCounterExample: {},
   CoreModel: {},
@@ -112,8 +112,8 @@ export const AppRoute = defineRouteUnion({
   AiMcp: {},
   Newsletter: {},
   Blog: {},
-  BlogPost: { postSlug: S.String },
-  NotFound: { path: S.String },
+  BlogPost: { postSlug: Schema.String },
+  NotFound: { path: Schema.String },
 })
 export type AppRoute = typeof AppRoute.Type
 
@@ -223,7 +223,7 @@ export const isPlaygroundRoute = AppRoute.isAnyOf(['Playground'])
 
 export const isBlogRoute = AppRoute.isAnyOf(['Blog', 'BlogPost'])
 
-const isDocsUnionRoute = S.is(DocsRoute)
+const isDocsUnionRoute = Schema.is(DocsRoute)
 
 /**
  * Whether a route belongs to the documentation section, which is what the
@@ -625,7 +625,7 @@ export const blogPostRouter = pipe(
   slash(
     schemaSegment(
       'postSlug',
-      S.String.check(S.isPattern(BLOG_POST_SLUG_PATTERN)),
+      Schema.String.check(Schema.isPattern(BLOG_POST_SLUG_PATTERN)),
     ),
   ),
   mapTo(AppRoute.BlogPost),

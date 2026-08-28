@@ -1,8 +1,8 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 
 import { Tabs } from '@foldkit/ui'
 
-export const Tab = S.Literals(['Architecture', 'Note Player'])
+export const Tab = Schema.Literals(['Architecture', 'Note Player'])
 export type Tab = typeof Tab.Type
 
 export const DemoTabs = Tabs.create<Tab>()

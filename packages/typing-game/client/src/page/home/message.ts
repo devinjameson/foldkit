@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import * as Shared from '@typing-game/shared'
@@ -7,23 +7,23 @@ export const Message = defineMessageUnion({
   CompletedFocusUsernameInput: {},
   CompletedFocusRoomIdInput: {},
   SubmittedUsernameForm: {},
-  ChangedUsername: { value: S.String },
+  ChangedUsername: { value: Schema.String },
   BlurredUsernameInput: {},
-  ChangedRoomId: { value: S.String },
+  ChangedRoomId: { value: Schema.String },
   BlurredRoomIdInput: {},
   SubmittedJoinRoomForm: {},
-  SucceededCreateRoom: { roomId: S.String, player: Shared.Player },
-  SucceededJoinRoom: { roomId: S.String, player: Shared.Player },
-  FailedCreateRoom: { error: S.String },
-  FailedJoinRoom: { error: S.String },
-  PressedKey: { key: S.String },
+  SucceededCreateRoom: { roomId: Schema.String, player: Shared.Player },
+  SucceededJoinRoom: { roomId: Schema.String, player: Shared.Player },
+  FailedCreateRoom: { error: Schema.String },
+  FailedJoinRoom: { error: Schema.String },
+  PressedKey: { key: Schema.String },
 })
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
 export const OutMessage = defineMessageUnion({
-  CreatedRoom: { roomId: S.String, player: Shared.Player },
-  JoinedRoom: { roomId: S.String, player: Shared.Player },
+  CreatedRoom: { roomId: Schema.String, player: Shared.Player },
+  JoinedRoom: { roomId: Schema.String, player: Shared.Player },
 })
 export type OutMessage = typeof OutMessage.Type

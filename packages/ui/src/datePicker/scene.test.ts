@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import * as Calendar from 'foldkit/calendar'
 import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
@@ -23,8 +23,8 @@ const acknowledgePopoverBackdrop = Scene.Mount.resolve(
 const today = Calendar.make(2026, 4, 13)
 
 const testToCalendarView = (attrs: UiCalendar.CalendarAttributes) =>
-  M.value(attrs).pipe(
-    M.tagsExhaustive({
+  Match.value(attrs).pipe(
+    Match.tagsExhaustive({
       Days: days =>
         ih.div(days.root, [
           ih.div(

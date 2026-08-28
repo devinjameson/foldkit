@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -29,10 +29,12 @@ export const update = (model: Model, message: Message) =>
     ChangedUrl: ({ url }) => {
       const nextRoute = urlToAppRoute(url)
 
-      const routeSteps = M.value(nextRoute).pipe(
-        M.withReturnType<ReadonlyArray<Update.Step<Model, Message>>>(),
-        M.tag('People', peopleRoute => [foldPeopleRouteChanged(peopleRoute)]),
-        M.orElse(() => []),
+      const routeSteps = Match.value(nextRoute).pipe(
+        Match.withReturnType<ReadonlyArray<Update.Step<Model, Message>>>(),
+        Match.tag('People', peopleRoute => [
+          foldPeopleRouteChanged(peopleRoute),
+        ]),
+        Match.orElse(() => []),
       )
 
       return Update.combine(model, [setRoute(nextRoute), ...routeSteps])

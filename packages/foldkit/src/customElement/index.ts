@@ -165,10 +165,10 @@ const eventFactoryName = (eventName: string): string =>
  * const hexColorPicker = CustomElement.define({
  *   tag: 'hex-color-picker',
  *   properties: {
- *     color: S.String,
+ *     color: Schema.String,
  *   },
  *   events: {
- *     'color-changed': S.Struct({ value: S.String }),
+ *     'color-changed': Schema.Struct({ value: Schema.String }),
  *   },
  * })
  *

@@ -1,13 +1,13 @@
-import { Array, Schema as S } from 'effect'
+import { Array, Schema } from 'effect'
 import { type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
 // MODEL
 
-const Filter = S.Literals(['All', 'Active', 'Done'])
+const Filter = Schema.Literals(['All', 'Active', 'Done'])
 
-export const Model = S.Struct({
-  todos: S.Array(Todo),
+export const Model = Schema.Struct({
+  todos: Schema.Array(Todo),
   filter: Filter,
 })
 type Model = typeof Model.Type

@@ -1,30 +1,30 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import { Slider } from '@foldkit/ui'
 
 const generatedParticleFields = {
-  x: S.Number,
-  y: S.Number,
-  baseHue: S.Number,
-  hueDriftPerSecond: S.Number,
-  lifespanMs: S.Number,
-  speed: S.Number,
-  initialAngle: S.Option(S.Number),
-  initialSpeedScale: S.Number,
+  x: Schema.Number,
+  y: Schema.Number,
+  baseHue: Schema.Number,
+  hueDriftPerSecond: Schema.Number,
+  lifespanMs: Schema.Number,
+  speed: Schema.Number,
+  initialAngle: Schema.Option(Schema.Number),
+  initialSpeedScale: Schema.Number,
 }
 
 export const Message = defineMessageUnion({
-  TickedFrame: { deltaTimeMs: S.Number },
+  TickedFrame: { deltaTimeMs: Schema.Number },
   CompletedGenerateAmbientParticle: generatedParticleFields,
   CompletedGenerateBurstParticle: generatedParticleFields,
   PressedCanvas: {
-    x: S.Number,
-    y: S.Number,
+    x: Schema.Number,
+    y: Schema.Number,
   },
   MovedPointer: {
-    x: S.Number,
-    y: S.Number,
+    x: Schema.Number,
+    y: Schema.Number,
   },
   ClickedTogglePlay: {},
   ClickedReset: {},

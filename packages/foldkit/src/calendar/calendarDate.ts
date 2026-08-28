@@ -1,4 +1,4 @@
-import { Effect, Schema as S, SchemaIssue, SchemaTransformation } from 'effect'
+import { Effect, Schema, SchemaIssue, SchemaTransformation } from 'effect'
 
 /**
  * Determines if a year is a leap year in the Gregorian calendar.
@@ -58,18 +58,18 @@ export const daysInMonth = (year: number, month: number): number => {
  * @example
  * ```ts
  * import { Calendar } from 'foldkit'
- * import { Schema as S } from 'effect'
+ * import { Schema } from 'effect'
  *
  * const date = Calendar.make(2026, 4, 13)
- * S.decodeUnknownSync(Calendar.CalendarDate)({ year: 2026, month: 4, day: 13 })
+ * Schema.decodeUnknownSync(Calendar.CalendarDate)({ year: 2026, month: 4, day: 13 })
  * ```
  */
-export const CalendarDate = S.Struct({
-  year: S.Int,
-  month: S.Int.check(S.isBetween({ minimum: 1, maximum: 12 })),
-  day: S.Int.check(S.isBetween({ minimum: 1, maximum: 31 })),
+export const CalendarDate = Schema.Struct({
+  year: Schema.Int,
+  month: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 12 })),
+  day: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 31 })),
 }).check(
-  S.makeFilter(
+  Schema.makeFilter(
     ({ year, month, day }) =>
       day <= daysInMonth(year, month) ? undefined : 'invalid calendar date',
     {
@@ -96,7 +96,7 @@ export type CalendarDate = typeof CalendarDate.Type
  * ```
  */
 export const isCalendarDate: (value: unknown) => value is CalendarDate =
-  S.is(CalendarDate)
+  Schema.is(CalendarDate)
 
 /**
  * Constructs a `CalendarDate`, validating via Schema.
@@ -113,7 +113,7 @@ export const isCalendarDate: (value: unknown) => value is CalendarDate =
  * ```
  */
 export const make = (year: number, month: number, day: number): CalendarDate =>
-  S.decodeUnknownSync(CalendarDate)({ year, month, day })
+  Schema.decodeUnknownSync(CalendarDate)({ year, month, day })
 
 /**
  * Constructs a `CalendarDate` without Schema validation. Only for inputs the
@@ -199,17 +199,17 @@ const isoPattern = /^(\d{4})-(\d{2})-(\d{2})$/
  * @example
  * ```ts
  * import { Calendar } from 'foldkit'
- * import { Schema as S } from 'effect'
+ * import { Schema } from 'effect'
  *
- * const decode = S.decodeUnknownSync(Calendar.CalendarDateFromIsoString)
- * const encode = S.encodeSync(Calendar.CalendarDateFromIsoString)
+ * const decode = Schema.decodeUnknownSync(Calendar.CalendarDateFromIsoString)
+ * const encode = Schema.encodeSync(Calendar.CalendarDateFromIsoString)
  *
  * decode('2026-04-13') // { year: 2026, month: 4, day: 13 }
  * encode(Calendar.make(2026, 4, 13)) // "2026-04-13"
  * ```
  */
-export const CalendarDateFromIsoString = S.String.pipe(
-  S.decodeTo(
+export const CalendarDateFromIsoString = Schema.String.pipe(
+  Schema.decodeTo(
     CalendarDate,
     SchemaTransformation.transformOrFail({
       decode: input => {

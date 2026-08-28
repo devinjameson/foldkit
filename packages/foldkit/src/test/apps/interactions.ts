@@ -1,4 +1,4 @@
-import { Number, Schema as S } from 'effect'
+import { Number, Schema } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
@@ -7,12 +7,12 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  clicks: S.Number,
-  doubleClicks: S.Number,
-  hovered: S.Boolean,
-  focused: S.Boolean,
-  changed: S.String,
+export const Model = Schema.Struct({
+  clicks: Schema.Number,
+  doubleClicks: Schema.Number,
+  hovered: Schema.Boolean,
+  focused: Schema.Boolean,
+  changed: Schema.String,
 })
 export type Model = typeof Model.Type
 
@@ -24,7 +24,7 @@ export const Message = defineMessageUnion({
   HoveredTarget: {},
   FocusedInput: {},
   BlurredInput: {},
-  ChangedSelect: { value: S.String },
+  ChangedSelect: { value: Schema.String },
 })
 
 export type Message = typeof Message.Type

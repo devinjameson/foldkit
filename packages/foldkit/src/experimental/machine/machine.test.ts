@@ -2,9 +2,9 @@ import {
   Context,
   Duration,
   Effect,
-  Match as M,
+  Match,
   Option,
-  Schema as S,
+  Schema,
   Stream,
 } from 'effect'
 import { describe, expect, expectTypeOf, it } from 'vitest'
@@ -22,15 +22,15 @@ import { define, otherwise, to, when } from './machine.js'
 const RemoteData = defineTaggedUnion({
   Idle: {},
   Loading: {},
-  Error: { error: S.String },
-  Ok: { data: S.String },
+  Error: { error: Schema.String },
+  Ok: { data: Schema.String },
 })
 type RemoteData = typeof RemoteData.Type
 
 const RemoteDataMessage = defineMessageUnion({
   ClickedFetch: {},
-  SucceededFetch: { data: S.String },
-  FailedFetch: { error: S.String },
+  SucceededFetch: { data: Schema.String },
+  FailedFetch: { error: Schema.String },
   ClickedRetry: {},
 })
 type RemoteDataMessage = typeof RemoteDataMessage.Type
@@ -79,10 +79,10 @@ const backoffDelayMillis = (attemptCount: number): number =>
 
 const ConnectionState = defineTaggedUnion({
   Disconnected: {},
-  Connecting: { attemptCount: S.Number },
-  Connected: { sessionId: S.String },
-  Reconnecting: { attemptCount: S.Number, delayMillis: S.Number },
-  Failed: { attemptCount: S.Number, reason: S.String },
+  Connecting: { attemptCount: Schema.Number },
+  Connected: { sessionId: Schema.String },
+  Reconnecting: { attemptCount: Schema.Number, delayMillis: Schema.Number },
+  Failed: { attemptCount: Schema.Number, reason: Schema.String },
   Suspended: {},
 })
 type ConnectionState = typeof ConnectionState.Type
@@ -90,9 +90,9 @@ type ConnectionState = typeof ConnectionState.Type
 const ConnectionMessage = defineMessageUnion({
   ClickedConnect: {},
   ClickedDisconnect: {},
-  SocketOpened: { sessionId: S.String },
-  SocketErrored: { reason: S.String },
-  SocketClosed: { reason: S.String },
+  SocketOpened: { sessionId: Schema.String },
+  SocketErrored: { reason: Schema.String },
+  SocketClosed: { reason: Schema.String },
   TimedOutBackoff: {},
   ReleasedSocket: {},
   CompletedLogTransition: {},
@@ -123,7 +123,7 @@ const connectingToMaybeNextAttempt = (
     : Option.none()
 
 const LogTransition = Command.define('LogTransition', {
-  args: { description: S.String },
+  args: { description: Schema.String },
   messages: [ConnectionMessage.CompletedLogTransition],
   execute: () => Effect.succeed(ConnectionMessage.CompletedLogTransition()),
 })
@@ -216,9 +216,9 @@ const connectionMachine = define({
 
 // INTEGRATION
 
-const AppModel = S.Struct({
+const AppModel = Schema.Struct({
   connection: ConnectionState,
-  isDebugPanelOpen: S.Boolean,
+  isDebugPanelOpen: Schema.Boolean,
 })
 type AppModel = typeof AppModel.Type
 
@@ -261,12 +261,12 @@ const Socket = ManagedResource.tag<WebSocket>()('Socket')
 
 const managedResources = ManagedResource.make<AppModel, ConnectionMessage>()(
   entry => ({
-    socket: entry(S.Option(S.Null), {
+    socket: entry(Schema.Option(Schema.Null), {
       resource: Socket,
       modelToMaybeRequirements: model =>
-        M.value(model.connection).pipe(
-          M.tag('Connecting', 'Connected', () => Option.some(null)),
-          M.orElse(() => Option.none()),
+        Match.value(model.connection).pipe(
+          Match.tag('Connecting', 'Connected', () => Option.some(null)),
+          Match.orElse(() => Option.none()),
         ),
       acquire: () =>
         Effect.callback<WebSocket, string>(resume => {
@@ -294,14 +294,14 @@ const managedResources = ManagedResource.make<AppModel, ConnectionMessage>()(
 const subscriptions = Subscription.make<AppModel, ConnectionMessage>()(
   entry => ({
     backoffTimer: entry(
-      { maybeDelayMillis: S.Option(S.Number) },
+      { maybeDelayMillis: Schema.Option(Schema.Number) },
       {
         modelToDependencies: model => ({
-          maybeDelayMillis: M.value(model.connection).pipe(
-            M.tag('Reconnecting', ({ delayMillis }) =>
+          maybeDelayMillis: Match.value(model.connection).pipe(
+            Match.tag('Reconnecting', ({ delayMillis }) =>
               Option.some(delayMillis),
             ),
-            M.orElse(() => Option.none()),
+            Match.orElse(() => Option.none()),
           ),
         }),
         dependenciesToStream: ({ maybeDelayMillis }) =>
@@ -485,10 +485,10 @@ const shadowedGuardMachine = define({
   },
 })
 
-const PlainIdle = S.Struct({ _tag: S.Literal('PlainIdle') })
-const PlainActive = S.Struct({ _tag: S.Literal('PlainActive') })
+const PlainIdle = Schema.Struct({ _tag: Schema.Literal('PlainIdle') })
+const PlainActive = Schema.Struct({ _tag: Schema.Literal('PlainActive') })
 
-const PlainState = S.Union([PlainIdle, PlainActive])
+const PlainState = Schema.Union([PlainIdle, PlainActive])
 type PlainState = typeof PlainState.Type
 
 const plainTagMachine = define({
@@ -532,8 +532,8 @@ type SubmitState = typeof SubmitState.Type
 
 const SubmitMessage = defineMessageUnion({
   ClickedSubmit: {},
-  SucceededPresign: { url: S.String },
-  SucceededPersist: { id: S.String },
+  SucceededPresign: { url: Schema.String },
+  SucceededPersist: { id: Schema.String },
 })
 type SubmitMessage = typeof SubmitMessage.Type
 

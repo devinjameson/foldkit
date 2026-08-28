@@ -1,13 +1,5 @@
 import { clsx } from 'clsx'
-import {
-  Array,
-  Duration,
-  Effect,
-  Match as M,
-  Number as N,
-  Schema as S,
-  pipe,
-} from 'effect'
+import { Array, Duration, Effect, Match, Number, Schema, pipe } from 'effect'
 import { Command, Submodel, type Update } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -26,14 +18,14 @@ const MIN_RESET_DURATION = 1
 const MAX_RESET_DURATION = 5
 
 const clampResetSeconds = (seconds: number): number =>
-  N.clamp(seconds, {
+  Number.clamp(seconds, {
     minimum: MIN_RESET_DURATION,
     maximum: MAX_RESET_DURATION,
   })
 
 // MODEL
 
-const AnimationPhase = S.Literals([
+const AnimationPhase = Schema.Literals([
   'Idle',
   'IncrementMessage',
   'IncrementUpdate',
@@ -51,13 +43,13 @@ const AnimationPhase = S.Literals([
 
 type AnimationPhase = typeof AnimationPhase.Type
 
-export const Model = S.Struct({
-  count: S.Number,
-  isResetting: S.Boolean,
-  resetDuration: S.Number,
+export const Model = Schema.Struct({
+  count: Schema.Number,
+  isResetting: Schema.Boolean,
+  resetDuration: Schema.Number,
   phase: AnimationPhase,
-  generation: S.Number,
-  messageLog: S.Array(S.String),
+  generation: Schema.Number,
+  messageLog: Schema.Array(Schema.String),
 })
 
 export type Model = typeof Model.Type
@@ -66,9 +58,9 @@ export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   ClickedDemoIncrement: {},
-  ChangedDemoResetDuration: { seconds: S.Number },
+  ChangedDemoResetDuration: { seconds: Schema.Number },
   ClickedDemoReset: {},
-  CompletedDelayAdvancePhase: { generation: S.Number },
+  CompletedDelayAdvancePhase: { generation: Schema.Number },
 })
 
 export type Message = typeof Message.Type
@@ -90,10 +82,10 @@ export const init = (): UpdateReturn => ({
 
 // UPDATE
 
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+const withUpdateReturn = Match.withReturnType<UpdateReturn>()
 
 export const DelayAdvancePhase = Command.define('DelayAdvancePhase', {
-  args: { generation: S.Number, duration: S.DurationFromMillis },
+  args: { generation: Schema.Number, duration: Schema.DurationFromMillis },
   messages: [Message.CompletedDelayAdvancePhase],
   execute: ({ generation, duration }) =>
     Effect.sleep(duration).pipe(
@@ -110,9 +102,9 @@ export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     ClickedDemoIncrement: () => {
       const nextModel = evo(model, {
-        count: N.increment,
+        count: Number.increment,
         phase: () => 'IncrementMessage',
-        generation: N.increment,
+        generation: Number.increment,
         messageLog: prependToLog('ClickedIncrement'),
       })
       return {
@@ -130,7 +122,7 @@ export const update = (model: Model, message: Message) =>
       const nextModel = evo(model, {
         resetDuration: () => clampResetSeconds(seconds),
         phase: () => 'DurationMessage',
-        generation: N.increment,
+        generation: Number.increment,
         messageLog: prependToLog(
           `ChangedResetDuration({ seconds: ${seconds} })`,
         ),
@@ -150,7 +142,7 @@ export const update = (model: Model, message: Message) =>
       const nextModel = evo(model, {
         isResetting: () => true,
         phase: () => 'ResetMessage',
-        generation: N.increment,
+        generation: Number.increment,
         messageLog: prependToLog('ClickedResetAfterDelay'),
       })
       return {
@@ -168,9 +160,9 @@ export const update = (model: Model, message: Message) =>
       if (generation !== model.generation) {
         return { model }
       } else {
-        return M.value(model.phase).pipe(
+        return Match.value(model.phase).pipe(
           withUpdateReturn,
-          M.when('IncrementMessage', () => ({
+          Match.when('IncrementMessage', () => ({
             model: evo(model, { phase: () => 'IncrementUpdate' }),
             commands: [
               DelayAdvancePhase({
@@ -179,7 +171,7 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('IncrementUpdate', () => ({
+          Match.when('IncrementUpdate', () => ({
             model: evo(model, { phase: () => 'IncrementModel' }),
             commands: [
               DelayAdvancePhase({
@@ -188,10 +180,10 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('IncrementModel', () => ({
+          Match.when('IncrementModel', () => ({
             model: evo(model, { phase: () => 'Idle' }),
           })),
-          M.when('DurationMessage', () => ({
+          Match.when('DurationMessage', () => ({
             model: evo(model, { phase: () => 'DurationUpdate' }),
             commands: [
               DelayAdvancePhase({
@@ -200,7 +192,7 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('DurationUpdate', () => ({
+          Match.when('DurationUpdate', () => ({
             model: evo(model, { phase: () => 'DurationModel' }),
             commands: [
               DelayAdvancePhase({
@@ -209,10 +201,10 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('DurationModel', () => ({
+          Match.when('DurationModel', () => ({
             model: evo(model, { phase: () => 'Idle' }),
           })),
-          M.when('ResetMessage', () => ({
+          Match.when('ResetMessage', () => ({
             model: evo(model, { phase: () => 'ResetUpdate' }),
             commands: [
               DelayAdvancePhase({
@@ -221,7 +213,7 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('ResetUpdate', () => ({
+          Match.when('ResetUpdate', () => ({
             model: evo(model, { phase: () => 'ResetCommand' }),
             commands: [
               DelayAdvancePhase({
@@ -232,7 +224,7 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('ResetCommand', () => ({
+          Match.when('ResetCommand', () => ({
             model: evo(model, { phase: () => 'ResetCommandMessage' }),
             commands: [
               DelayAdvancePhase({
@@ -241,7 +233,7 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('ResetCommandMessage', () => ({
+          Match.when('ResetCommandMessage', () => ({
             model: evo(model, {
               phase: () => 'ResetCommandUpdate',
               messageLog: prependToLog('CompletedDelayReset'),
@@ -253,7 +245,7 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('ResetCommandUpdate', () => ({
+          Match.when('ResetCommandUpdate', () => ({
             model: evo(model, {
               count: () => 0,
               isResetting: () => false,
@@ -266,11 +258,11 @@ export const update = (model: Model, message: Message) =>
               }),
             ],
           })),
-          M.when('ResetModel', () => ({
+          Match.when('ResetModel', () => ({
             model: evo(model, { phase: () => 'Idle' }),
           })),
-          M.when('Idle', () => ({ model })),
-          M.exhaustive,
+          Match.when('Idle', () => ({ model })),
+          Match.exhaustive,
         )
       }
     },
@@ -279,52 +271,57 @@ export const update = (model: Model, message: Message) =>
 // VIEW
 
 const phaseLabel = (phase: AnimationPhase): string =>
-  M.value(phase).pipe(
-    M.when('Idle', () => 'Idle'),
-    M.whenOr(
+  Match.value(phase).pipe(
+    Match.when('Idle', () => 'Idle'),
+    Match.whenOr(
       'IncrementMessage',
       'DurationMessage',
       'ResetMessage',
       'ResetCommandMessage',
       () => 'Message',
     ),
-    M.whenOr(
+    Match.whenOr(
       'IncrementUpdate',
       'DurationUpdate',
       'ResetUpdate',
       'ResetCommandUpdate',
       () => 'Update',
     ),
-    M.whenOr('IncrementModel', 'DurationModel', 'ResetModel', () => 'Model'),
-    M.when('ResetCommand', () => 'Command'),
-    M.exhaustive,
+    Match.whenOr(
+      'IncrementModel',
+      'DurationModel',
+      'ResetModel',
+      () => 'Model',
+    ),
+    Match.when('ResetCommand', () => 'Command'),
+    Match.exhaustive,
   )
 
 const phaseColorClass = (phase: AnimationPhase): string =>
-  M.value(phase).pipe(
-    M.when('Idle', () => 'text-gray-500 dark:text-gray-400'),
-    M.whenOr(
+  Match.value(phase).pipe(
+    Match.when('Idle', () => 'text-gray-500 dark:text-gray-400'),
+    Match.whenOr(
       'IncrementMessage',
       'DurationMessage',
       'ResetMessage',
       'ResetCommandMessage',
       () => 'text-emerald-600 dark:text-emerald-400',
     ),
-    M.whenOr(
+    Match.whenOr(
       'IncrementUpdate',
       'DurationUpdate',
       'ResetUpdate',
       'ResetCommandUpdate',
       () => 'text-amber-600 dark:text-amber-400',
     ),
-    M.whenOr(
+    Match.whenOr(
       'IncrementModel',
       'DurationModel',
       'ResetModel',
       () => 'text-accent-600 dark:text-accent-400',
     ),
-    M.when('ResetCommand', () => 'text-violet-600 dark:text-violet-400'),
-    M.exhaustive,
+    Match.when('ResetCommand', () => 'text-violet-600 dark:text-violet-400'),
+    Match.exhaustive,
   )
 
 export const view = Submodel.defineView<Model, Message>((model, h): Html =>

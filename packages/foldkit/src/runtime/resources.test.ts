@@ -5,7 +5,7 @@ import {
   Exit,
   Fiber,
   Layer,
-  Schema as S,
+  Schema,
   Stream,
 } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -19,14 +19,14 @@ import { makeApplication, makeElement, run } from './runtime.js'
 
 const Message = defineMessageUnion({
   ClickedReadValue: {},
-  SucceededReadValue: { value: S.String },
+  SucceededReadValue: { value: Schema.String },
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({ label: S.String })
+const Model = Schema.Struct({ label: Schema.String })
 type Model = typeof Model.Type
 
-const Flags = S.Struct({ initialLabel: S.String })
+const Flags = Schema.Struct({ initialLabel: Schema.String })
 type Flags = typeof Flags.Type
 
 type ResourceShape = Readonly<{ value: string }>

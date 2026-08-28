@@ -1,4 +1,4 @@
-import { Array, Effect, Match as M, Option, Schema as S } from 'effect'
+import { Array, Effect, Match, Option, Schema } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -28,7 +28,7 @@ export { AppRoute } from './route'
 
 // MODEL
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   route: AppRoute,
   peoplePage: People.Model,
 })
@@ -54,9 +54,9 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 ) => {
   const route = urlToAppRoute(url)
 
-  const initialPeopleRoute = M.value(route).pipe(
-    M.tag('People', peopleRoute => peopleRoute),
-    M.orElse(() => AppRoute.People({ searchText: Option.none() })),
+  const initialPeopleRoute = Match.value(route).pipe(
+    Match.tag('People', peopleRoute => peopleRoute),
+    Match.orElse(() => AppRoute.People({ searchText: Option.none() })),
   )
 
   const peopleInit = People.init(initialPeopleRoute)
@@ -71,14 +71,14 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 // COMMAND
 
 const NavigateInternal = Command.define('NavigateInternal', {
-  args: { url: S.String },
+  args: { url: Schema.String },
   messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
     pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
-  args: { href: S.String },
+  args: { href: Schema.String },
   messages: [Message.CompletedLoadExternal],
   execute: ({ href }) =>
     load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
@@ -127,10 +127,12 @@ export const update = (model: Model, message: Message) =>
     ChangedUrl: ({ url }) => {
       const nextRoute = urlToAppRoute(url)
 
-      const routeSteps = M.value(nextRoute).pipe(
-        M.withReturnType<ReadonlyArray<Update.Step<Model, Message>>>(),
-        M.tag('People', peopleRoute => [foldPeopleRouteChanged(peopleRoute)]),
-        M.orElse(() => []),
+      const routeSteps = Match.value(nextRoute).pipe(
+        Match.withReturnType<ReadonlyArray<Update.Step<Model, Message>>>(),
+        Match.tag('People', peopleRoute => [
+          foldPeopleRouteChanged(peopleRoute),
+        ]),
+        Match.orElse(() => []),
       )
 
       return Update.combine(model, [setRoute(nextRoute), ...routeSteps])
@@ -372,8 +374,8 @@ const entryListView = (
             ],
             [entry.name],
           ),
-          M.value(entry).pipe(
-            M.tagsExhaustive({
+          Match.value(entry).pipe(
+            Match.tagsExhaustive({
               File: file =>
                 h.span(
                   [h.Class('text-sm text-gray-500')],
@@ -484,8 +486,8 @@ const filesView = (
   const content = Option.match(maybeEntry, {
     onNone: () => missingEntryView(path, h),
     onSome: entry =>
-      M.value(entry).pipe(
-        M.tagsExhaustive({
+      Match.value(entry).pipe(
+        Match.tagsExhaustive({
           File: file => fileDetailView(file, h),
           Directory: directory => entryListView(path, directory.entries, h),
         }),
@@ -518,15 +520,15 @@ const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
   )
 
 const routeTitle = (route: Model['route']): string =>
-  M.value(route).pipe(
-    M.tag('Home', () => 'Routing'),
-    M.tag('Person', ({ personId }) => `Person ${personId} | Routing`),
-    M.tag('FilesIndex', () => 'Files | Routing'),
-    M.tag(
+  Match.value(route).pipe(
+    Match.tag('Home', () => 'Routing'),
+    Match.tag('Person', ({ personId }) => `Person ${personId} | Routing`),
+    Match.tag('FilesIndex', () => 'Files | Routing'),
+    Match.tag(
       'Files',
       ({ path }) => `${Array.lastNonEmpty(path)} | Files | Routing`,
     ),
-    M.orElse(({ _tag }) => `${_tag} | Routing`),
+    Match.orElse(({ _tag }) => `${_tag} | Routing`),
   )
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {

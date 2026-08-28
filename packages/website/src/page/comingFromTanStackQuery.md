@@ -14,7 +14,7 @@ Here is how common TanStack Query concepts map onto Foldkit:
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `useQuery`                                                 | An [AsyncData](/core/async-data) field in the Model plus a fetch Command                      |
 | `data` / `error` / `status` / `fetchStatus`                | The six `AsyncData` states, mapped below                                                      |
-| Query cache (keyed by query key)                           | Model state: one `AsyncData` field, or an `S.HashMap` of them keyed by id                     |
+| Query cache (keyed by query key)                           | Model state: one `AsyncData` field, or an `Schema.HashMap` of them keyed by id                |
 | `placeholderData: keepPreviousData` / stale data on screen | `Refreshing` and `Stale`, which retain the previous data                                      |
 | `staleTime` / background refetch                           | A Subscription gated on a Model condition, applying `AsyncData.revalidate`                    |
 | `staleTime: Infinity`                                      | `AsyncData.loadIfMissing`, followed by explicit revalidation when the application requires it |
@@ -29,7 +29,7 @@ Here is how common TanStack Query concepts map onto Foldkit:
 
 `AsyncData<A, E>` is a union of six states: `Idle`, `Loading`, `Refreshing`, `Failure`, `Stale`, and `Success`. `Refreshing` holds the previous data while a refetch is in flight. `Stale` holds the previous data after that refetch fails. Those variants make stale-while-revalidate and keep-stale-on-failure part of the value instead of conditions derived from several flags.
 
-There is no separate query cache. The Model is the cache. A single resource lives in one `AsyncData` field. A collection of resources keyed by id lives in an `S.HashMap` of those fields. A cache hit is data the application already holds.
+There is no separate query cache. The Model is the cache. A single resource lives in one `AsyncData` field. A collection of resources keyed by id lives in an `Schema.HashMap` of those fields. A cache hit is data the application already holds.
 
 Here is the complete shape of a simple query. It uses one field, one Command, and two `update` arms:
 
@@ -88,7 +88,7 @@ There is no equivalent hook, and you do not assemble one. A query is an [AsyncDa
 
 ### How do I cache responses? {#faq-caching}
 
-Keep them in the Model. Use one `AsyncData` field for one resource or an `S.HashMap` keyed by id for many resources. A cache hit is a field for which `AsyncData.hasData` is true. See the [API Cache example](/example-apps/api-cache).
+Keep them in the Model. Use one `AsyncData` field for one resource or an `Schema.HashMap` keyed by id for many resources. A cache hit is a field for which `AsyncData.hasData` is true. See the [API Cache example](/example-apps/api-cache).
 
 ### How do I deduplicate identical requests? {#faq-dedup}
 

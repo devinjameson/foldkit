@@ -1,12 +1,4 @@
-import {
-  Array,
-  Match as M,
-  Option,
-  Predicate,
-  Record,
-  Schema,
-  pipe,
-} from 'effect'
+import { Array, Match, Option, Predicate, Record, Schema, pipe } from 'effect'
 
 import type { Command } from '../../command/index.js'
 import type * as Update from '../../update/index.js'
@@ -810,8 +802,8 @@ export const define =
 
     const toMermaid = (): string => {
       const guardLabel = (guard: EdgeGuard): string =>
-        M.value(guard).pipe(
-          M.tagsExhaustive({
+        Match.value(guard).pipe(
+          Match.tagsExhaustive({
             Unguarded: () => '',
             When: ({ position }) => ` [when ${position + 1}]`,
             Otherwise: () => ' [otherwise]',

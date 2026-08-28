@@ -1,4 +1,4 @@
-import { Array, Option, Record as Record_, Result, String, pipe } from 'effect'
+import { Array, Option, Record, Result, String, pipe } from 'effect'
 import cssSnippets from 'virtual:css-snippets'
 
 // SNIPPETS
@@ -36,11 +36,11 @@ const snippetName = (path: string): Option.Option<string> =>
 // query, so a `?highlighted` CSS file gets parsed as stylesheet source and
 // breaks the bundle. Highlighting them at config time and handing over a plain
 // record sidesteps the pipeline entirely.
-const registry: Record<string, Snippet> = pipe(
-  Record_.toEntries(rawByPath),
+const registry: globalThis.Record<string, Snippet> = pipe(
+  Record.toEntries(rawByPath),
   Array.filterMap(([path, raw]) =>
     pipe(
-      Option.all([snippetName(path), Record_.get(highlightedByPath, path)]),
+      Option.all([snippetName(path), Record.get(highlightedByPath, path)]),
       Option.map(([name, highlighted]): SnippetEntry => [
         name,
         { raw, highlighted },
@@ -48,7 +48,7 @@ const registry: Record<string, Snippet> = pipe(
       Result.fromOption(() => undefined),
     ),
   ),
-  Record_.fromEntries,
+  Record.fromEntries,
   existing => ({ ...existing, ...cssSnippets }),
 )
 
@@ -57,4 +57,4 @@ const registry: Record<string, Snippet> = pipe(
  * `"counterCommands"` for `src/snippet/counterCommands.ts`.
  */
 export const lookupSnippet = (name: string): Option.Option<Snippet> =>
-  Record_.get(registry, name)
+  Record.get(registry, name)

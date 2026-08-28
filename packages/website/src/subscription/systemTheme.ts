@@ -1,4 +1,4 @@
-import { Effect, Option, Queue, Schema as S, Stream } from 'effect'
+import { Effect, Option, Queue, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 
 import { type Model } from '../main'
@@ -6,7 +6,7 @@ import { Message } from '../message'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   systemTheme: entry(
-    { isSystemPreference: S.Boolean },
+    { isSystemPreference: Schema.Boolean },
     {
       modelToDependencies: model => ({
         isSystemPreference: Option.exists(

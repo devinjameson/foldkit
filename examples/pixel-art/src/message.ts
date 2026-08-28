@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import { Dialog, Listbox, RadioGroup } from '@foldkit/ui'
@@ -6,23 +6,23 @@ import { Dialog, Listbox, RadioGroup } from '@foldkit/ui'
 import { PaletteIndex, Tool } from './model'
 
 export const Message = defineMessageUnion({
-  PressedCell: { x: S.Number, y: S.Number },
-  EnteredCell: { x: S.Number, y: S.Number },
+  PressedCell: { x: Schema.Number, y: Schema.Number },
+  EnteredCell: { x: Schema.Number, y: Schema.Number },
   LeftCanvas: {},
   ReleasedMouse: {},
   SelectedColor: { colorIndex: PaletteIndex },
   SelectedTool: { tool: Tool },
-  SelectedGridSize: { size: S.Number },
+  SelectedGridSize: { size: Schema.Number },
   ToggledMirrorHorizontal: {},
   ToggledMirrorVertical: {},
   ClickedUndo: {},
   ClickedRedo: {},
-  ClickedHistoryStep: { stepIndex: S.Number },
-  ClickedRedoStep: { stepIndex: S.Number },
+  ClickedHistoryStep: { stepIndex: Schema.Number },
+  ClickedRedoStep: { stepIndex: Schema.Number },
   ClickedClear: {},
   ClickedExport: {},
   SucceededExportPng: {},
-  FailedExportPng: { error: S.String },
+  FailedExportPng: { error: Schema.String },
   GotErrorDialogMessage: { message: Dialog.Message },
   GotThemeListboxMessage: { message: Listbox.Message },
   GotToolRadioGroupMessage: { message: RadioGroup.Message },

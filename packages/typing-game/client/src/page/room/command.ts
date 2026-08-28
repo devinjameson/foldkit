@@ -1,4 +1,4 @@
-import { Effect, Option, Schema as S } from 'effect'
+import { Effect, Option, Schema } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Command, Dom } from 'foldkit'
 
@@ -14,7 +14,7 @@ import { Message } from './message'
 import { RoomPlayerSession, RoomPlayerSessionJsonString } from './model'
 
 export const FetchRoom = Command.define('FetchRoom', {
-  args: { roomId: S.String },
+  args: { roomId: Schema.String },
   messages: [Message.SucceededFetchRoom, Message.FailedFetchRoom],
   execute: ({ roomId }) =>
     Effect.gen(function* () {
@@ -25,7 +25,7 @@ export const FetchRoom = Command.define('FetchRoom', {
 })
 
 export const LoadSession = Command.define('LoadSession', {
-  args: { roomId: S.String },
+  args: { roomId: Schema.String },
   messages: [Message.CompletedLoadSession],
   execute: ({ roomId }) =>
     Effect.gen(function* () {
@@ -35,7 +35,7 @@ export const LoadSession = Command.define('LoadSession', {
       const sessionJson = yield* Effect.fromOption(
         Option.fromNullishOr(maybeSessionJson),
       )
-      const decodeSession = S.decodeEffect(RoomPlayerSessionJsonString)
+      const decodeSession = Schema.decodeEffect(RoomPlayerSessionJsonString)
 
       return yield* decodeSession(sessionJson).pipe(
         Effect.map(session =>
@@ -58,7 +58,7 @@ export const LoadSession = Command.define('LoadSession', {
 })
 
 export const JoinRoom = Command.define('JoinRoom', {
-  args: { username: S.String, roomId: S.String },
+  args: { username: Schema.String, roomId: Schema.String },
   messages: [Message.SucceededJoinRoom, Message.FailedJoinRoom],
   execute: ({ username, roomId }) =>
     Effect.gen(function* () {
@@ -69,7 +69,7 @@ export const JoinRoom = Command.define('JoinRoom', {
 })
 
 export const StartGame = Command.define('StartGame', {
-  args: { roomId: S.String, playerId: S.String },
+  args: { roomId: Schema.String, playerId: Schema.String },
   messages: [Message.SucceededStartGame, Message.FailedStartGame],
   execute: ({ roomId, playerId }) =>
     Effect.gen(function* () {
@@ -81,10 +81,10 @@ export const StartGame = Command.define('StartGame', {
 
 export const UpdatePlayerProgress = Command.define('UpdatePlayerProgress', {
   args: {
-    playerId: S.String,
-    gameId: S.String,
-    userGameText: S.String,
-    charsTyped: S.Number,
+    playerId: Schema.String,
+    gameId: Schema.String,
+    userGameText: Schema.String,
+    charsTyped: Schema.Number,
   },
   messages: [Message.CompletedUpdatePlayerProgress],
   execute: ({ playerId, gameId, userGameText, charsTyped }) =>
@@ -105,7 +105,7 @@ export const UpdatePlayerProgress = Command.define('UpdatePlayerProgress', {
 })
 
 export const CopyRoomId = Command.define('CopyRoomId', {
-  args: { roomId: S.String },
+  args: { roomId: Schema.String },
   messages: [Message.SucceededCopyRoomId, Message.FailedCopyRoomId],
   execute: ({ roomId }) =>
     Effect.tryPromise({
@@ -147,7 +147,7 @@ export const SavePlayerSession = Command.define('SavePlayerSession', {
   execute: ({ session }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
-      const encodeSession = S.encodeEffect(RoomPlayerSessionJsonString)
+      const encodeSession = Schema.encodeEffect(RoomPlayerSessionJsonString)
       const sessionJson = yield* encodeSession(session)
       yield* store.set(ROOM_PLAYER_SESSION_KEY, sessionJson)
       return Message.CompletedSavePlayerSession()

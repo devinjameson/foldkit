@@ -1,12 +1,12 @@
-import { Match as M, Schema as S } from 'effect'
+import { Match, Schema } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { defineMessageUnion } from './index.js'
 
 const Message = defineMessageUnion({
   ClickedReset: {},
-  ChangedCount: { count: S.Number },
-  SelectedItem: { id: S.String, label: S.String },
+  ChangedCount: { count: Schema.Number },
+  SelectedItem: { id: Schema.String, label: Schema.String },
 })
 type Message = typeof Message.Type
 
@@ -38,32 +38,34 @@ describe('defineMessageUnion', () => {
 
   it('produces the same value as the equivalent TaggedStruct constructor', () => {
     expect(Message.SelectedItem({ id: 'a', label: 'Alpha' })).toStrictEqual(
-      S.TaggedStruct('SelectedItem', {
-        id: S.String,
-        label: S.String,
+      Schema.TaggedStruct('SelectedItem', {
+        id: Schema.String,
+        label: Schema.String,
       }).make({ id: 'a', label: 'Alpha' }),
     )
   })
 
   it('decodes a member of the union', () => {
     expect(
-      S.decodeUnknownSync(Message)({ _tag: 'ChangedCount', count: 2 }),
+      Schema.decodeUnknownSync(Message)({ _tag: 'ChangedCount', count: 2 }),
     ).toStrictEqual({ _tag: 'ChangedCount', count: 2 })
   })
 
   it('rejects a tag the union does not declare', () => {
-    expect(() => S.decodeUnknownSync(Message)({ _tag: 'Unknown' })).toThrow()
+    expect(() =>
+      Schema.decodeUnknownSync(Message)({ _tag: 'Unknown' }),
+    ).toThrow()
   })
 
   it('rejects a member whose field has the wrong type', () => {
     expect(() =>
-      S.decodeUnknownSync(Message)({ _tag: 'ChangedCount', count: 'two' }),
+      Schema.decodeUnknownSync(Message)({ _tag: 'ChangedCount', count: 'two' }),
     ).toThrow()
   })
 
   it('exposes each variant as a schema in its own right', () => {
     expect(
-      S.decodeUnknownSync(Message.ChangedCount)({
+      Schema.decodeUnknownSync(Message.ChangedCount)({
         _tag: 'ChangedCount',
         count: 3,
       }),
@@ -143,9 +145,9 @@ describe('defineMessageUnion', () => {
 
   it('works with a single handler across several tags', () => {
     const isInteraction = (message: Message): boolean =>
-      M.value(message).pipe(
-        M.tag('ClickedReset', 'SelectedItem', () => true),
-        M.orElse(() => false),
+      Match.value(message).pipe(
+        Match.tag('ClickedReset', 'SelectedItem', () => true),
+        Match.orElse(() => false),
       )
 
     expect(isInteraction(Message.ClickedReset())).toBe(true)
@@ -157,9 +159,9 @@ describe('defineMessageUnion', () => {
 
   it('works with partial tag matching and a fallback', () => {
     const describeMessage = (message: Message): string =>
-      M.value(message).pipe(
-        M.tags({ ChangedCount: ({ count }) => `count ${count}` }),
-        M.orElse(() => 'other'),
+      Match.value(message).pipe(
+        Match.tags({ ChangedCount: ({ count }) => `count ${count}` }),
+        Match.orElse(() => 'other'),
       )
 
     expect(describeMessage(Message.ChangedCount({ count: 5 }))).toBe('count 5')

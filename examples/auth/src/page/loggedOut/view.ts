@@ -1,4 +1,4 @@
-import { Match as M } from 'effect'
+import { Match } from 'effect'
 import { Submodel } from 'foldkit'
 
 import { notFoundView } from '../../notFoundView'
@@ -12,8 +12,8 @@ export const view = Submodel.defineView<Model, Message>((model, h) =>
   h.div(
     [h.Class('py-8')],
     [
-      M.value(model.route).pipe(
-        M.tagsExhaustive({
+      Match.value(model.route).pipe(
+        Match.tagsExhaustive({
           Home: () => Home.view(h),
           Login: () =>
             h.submodel({

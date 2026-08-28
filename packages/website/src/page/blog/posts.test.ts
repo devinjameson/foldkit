@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S, pipe } from 'effect'
+import { Array, Option, Schema, pipe } from 'effect'
 import { imageSize } from 'image-size'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -142,7 +142,7 @@ describe('formatPostDate', () => {
 })
 
 describe('PostFrontmatter dates', () => {
-  const decodePostFrontmatter = S.decodeUnknownSync(PostFrontmatter)
+  const decodePostFrontmatter = Schema.decodeUnknownSync(PostFrontmatter)
 
   const withDate = (date: string) => ({
     title: 'Title',
@@ -171,7 +171,7 @@ describe('PostFrontmatter dates', () => {
 })
 
 describe('PostFrontmatter covers', () => {
-  const decodePostFrontmatter = S.decodeUnknownSync(PostFrontmatter)
+  const decodePostFrontmatter = Schema.decodeUnknownSync(PostFrontmatter)
 
   const withoutCover = {
     title: 'Title',
@@ -246,7 +246,7 @@ describe('PostFrontmatter covers', () => {
 })
 
 describe('maybePostCover', () => {
-  const decodePostFrontmatter = S.decodeUnknownSync(PostFrontmatter)
+  const decodePostFrontmatter = Schema.decodeUnknownSync(PostFrontmatter)
 
   test('returns the cover a post declares', () => {
     const frontmatter = decodePostFrontmatter({

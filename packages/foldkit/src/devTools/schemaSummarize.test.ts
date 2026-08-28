@@ -1,4 +1,4 @@
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { defineMessageUnion, taggedStruct } from '../schema/index.js'
@@ -17,13 +17,13 @@ const ChildMessage = defineMessageUnion({ Opened: {}, Closed: {} })
 
 const Message = defineMessageUnion({
   Completed: {},
-  ScrolledSidebar: { scroll: S.Number },
-  ClickedLink: { href: S.String },
+  ScrolledSidebar: { scroll: Schema.Number },
+  ClickedLink: { href: Schema.String },
   GotChildMessage: { message: ChildMessage },
-  WithMaybeNote: { maybeNote: S.Option(S.String) },
+  WithMaybeNote: { maybeNote: Schema.Option(Schema.String) },
 })
 
-const document = S.toJsonSchemaDocument(Message)
+const document = Schema.toJsonSchemaDocument(Message)
 
 describe('indexMessageSchemaDocument', () => {
   it('returns one entry per top-level variant', () => {
@@ -59,7 +59,7 @@ describe('indexMessageSchemaDocument', () => {
     ])
   })
 
-  it('flags S.Option payload fields via unionFields because they render as tagged unions', () => {
+  it('flags Schema.Option payload fields via unionFields because they render as tagged unions', () => {
     const entries = expectSome(indexMessageSchemaDocument(document))
     expect(entries).toContainEqual(
       expect.objectContaining({
@@ -70,7 +70,9 @@ describe('indexMessageSchemaDocument', () => {
   })
 
   it('returns None for non-discriminated documents', () => {
-    const plain = S.toJsonSchemaDocument(S.Struct({ name: S.String }))
+    const plain = Schema.toJsonSchemaDocument(
+      Schema.Struct({ name: Schema.String }),
+    )
     expect(indexMessageSchemaDocument(plain)).toEqual(Option.none())
   })
 })
@@ -162,8 +164,8 @@ describe('narrowToVariant', () => {
       message: ChildMessage,
       fallback: ChildMessage,
     })
-    const unionWithTwoUnions = S.Union([TwoUnions])
-    const twoUnionDoc = S.toJsonSchemaDocument(unionWithTwoUnions)
+    const unionWithTwoUnions = Schema.Union([TwoUnions])
+    const twoUnionDoc = Schema.toJsonSchemaDocument(unionWithTwoUnions)
     expect(narrowToVariant(twoUnionDoc, 'TwoUnions.Opened')).toEqual(
       Option.none(),
     )
@@ -174,17 +176,17 @@ describe('narrowToVariant', () => {
   })
 
   it('collapses discriminated unions inside the definitions block', () => {
-    const SharedUnion = S.Union([
-      S.TaggedStruct('Alpha', { value: S.String }),
-      S.TaggedStruct('Beta', { value: S.Number }),
+    const SharedUnion = Schema.Union([
+      Schema.TaggedStruct('Alpha', { value: Schema.String }),
+      Schema.TaggedStruct('Beta', { value: Schema.Number }),
     ]).annotate({ identifier: 'SharedUnion' })
 
-    const SharedDocMessage = S.Union([
-      S.TaggedStruct('UsesA', { shared: SharedUnion }),
-      S.TaggedStruct('UsesB', { shared: SharedUnion }),
+    const SharedDocMessage = Schema.Union([
+      Schema.TaggedStruct('UsesA', { shared: SharedUnion }),
+      Schema.TaggedStruct('UsesB', { shared: SharedUnion }),
     ])
 
-    const sharedDoc = S.toJsonSchemaDocument(SharedDocMessage)
+    const sharedDoc = Schema.toJsonSchemaDocument(SharedDocMessage)
     const narrowed = expectSome(narrowToVariant(sharedDoc, 'UsesA'))
     expect(narrowed).toMatchObject({
       definitions: {

@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match as M, Option, Schema as S } from 'effect'
+import { Array, Match, Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -9,7 +9,7 @@ import { evo } from 'foldkit/struct'
 
 import { Combobox } from '@foldkit/ui'
 
-const City = S.Literals(['Johannesburg', 'Kyiv', 'Oxford', 'Wellington'])
+const City = Schema.Literals(['Johannesburg', 'Kyiv', 'Oxford', 'Wellington'])
 type City = typeof City.Type
 
 // Declare a typed Combobox once at module scope:
@@ -18,8 +18,8 @@ const CityCombobox = Combobox.create<City>()
 // Add a field to your Model for the Combobox Submodel, plus a field for
 // the selected value your app actually cares about. Using the `City`
 // Schema keeps the field literal-typed end to end:
-const Model = S.Struct({
-  maybeCity: S.Option(City),
+const Model = Schema.Struct({
+  maybeCity: Schema.Option(City),
   combobox: Combobox.Model,
   // ...your other fields
 })
@@ -44,9 +44,9 @@ const Message = defineMessageUnion({
 // keeps its selection there and the fold stays exhaustive. Each arm returns
 // an Update.Step over the parent Model, which already has the next Combobox
 // Model written back:
-const foldComboboxOutMessage = M.type<Combobox.OutMessage<City>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldComboboxOutMessage = Match.type<Combobox.OutMessage<City>>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({ model: evo(model, { maybeCity: () => Option.some(value) }) }),
