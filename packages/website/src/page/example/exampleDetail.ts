@@ -104,13 +104,11 @@ const isExampleUrlMessageFromIframe = (
   event.data.type === BRIDGE_MESSAGE_TYPE &&
   typeof event.data.url === 'string'
 
-const ObserveExampleUrlMessages = Mount.defineStream(
-  'ObserveExampleUrlMessages',
-  Message.ChangedExampleUrl,
-)(element => {
+const observeExampleUrlMessages = (element: Element) => {
   if (!(element instanceof HTMLIFrameElement)) {
     return Stream.empty
   }
+
   return Stream.callback<typeof Message.ChangedExampleUrl.Type>(queue =>
     Effect.acquireRelease(
       Effect.sync(() => {
@@ -118,11 +116,13 @@ const ObserveExampleUrlMessages = Mount.defineStream(
           if (!isExampleUrlMessageFromIframe(event, element)) {
             return
           }
+
           Queue.offerUnsafe(
             queue,
             Message.ChangedExampleUrl({ url: event.data.url }),
           )
         }
+
         window.addEventListener('message', handler)
         return handler
       }),
@@ -130,7 +130,15 @@ const ObserveExampleUrlMessages = Mount.defineStream(
         Effect.sync(() => window.removeEventListener('message', handler)),
     ).pipe(Effect.flatMap(() => Effect.never)),
   )
-})
+}
+
+const ObserveExampleUrlMessages = Mount.defineStream(
+  'ObserveExampleUrlMessages',
+  {
+    messages: [Message.ChangedExampleUrl],
+    execute: ({ element }) => observeExampleUrlMessages(element),
+  },
+)
 
 // INIT
 

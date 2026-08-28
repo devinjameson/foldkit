@@ -310,61 +310,58 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
 
 // MAP MOUNT
 
-export const MountMap = Mount.define(
-  'MountMap',
-  { hostId: S.String },
-  Message.SucceededMountMap,
-  Message.FailedMountMap,
-)(
-  ({ hostId }) =>
-    element =>
-      Effect.gen(function* () {
-        if (!(element instanceof HTMLElement)) {
-          return Message.FailedMountMap({
-            reason: 'Map host is not an HTMLElement.',
+const mountMap = (element: Element, hostId: string) =>
+  Effect.gen(function* () {
+    if (!(element instanceof HTMLElement)) {
+      return Message.FailedMountMap({
+        reason: 'Map host is not an HTMLElement.',
+      })
+    }
+
+    return yield* Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.gen(function* () {
+          const maplibre = yield* Effect.tryPromise(() => import('maplibre-gl'))
+          const map = new maplibre.Map({
+            container: element,
+            style: 'https://demotiles.maplibre.org/style.json',
+            center: [0, 20],
+            zoom: INITIAL_MAP_ZOOM,
           })
-        }
-        return yield* Effect.gen(function* () {
-          yield* Effect.acquireRelease(
-            Effect.gen(function* () {
-              const maplibre = yield* Effect.tryPromise(
-                () => import('maplibre-gl'),
-              )
-              const map = new maplibre.Map({
-                container: element,
-                style: 'https://demotiles.maplibre.org/style.json',
-                center: [0, 20],
-                zoom: INITIAL_MAP_ZOOM,
-              })
 
-              Array.forEach(featuredLocations, ({ id, lng, lat }) => {
-                const markerElement = document.createElement('button')
-                markerElement.setAttribute('data-location-id', id)
-                markerElement.setAttribute('aria-label', `Marker: ${id}`)
-                markerElement.className = markerStyle
-                new maplibre.Marker({ element: markerElement })
-                  .setLngLat([lng, lat])
-                  .addTo(map)
-              })
+          Array.forEach(featuredLocations, ({ id, lng, lat }) => {
+            const markerElement = document.createElement('button')
+            markerElement.setAttribute('data-location-id', id)
+            markerElement.setAttribute('aria-label', `Marker: ${id}`)
+            markerElement.className = markerStyle
+            new maplibre.Marker({ element: markerElement })
+              .setLngLat([lng, lat])
+              .addTo(map)
+          })
 
-              setMap(hostId, map)
-              return map
-            }),
-            () => Effect.sync(() => removeMap(hostId)),
-          )
+          setMap(hostId, map)
+          return map
+        }),
+        () => Effect.sync(() => removeMap(hostId)),
+      )
 
-          return Message.SucceededMountMap({ hostId })
-        }).pipe(
-          Effect.catch(error =>
-            Effect.succeed(
-              Message.FailedMountMap({
-                reason: error instanceof Error ? error.message : `${error}`,
-              }),
-            ),
-          ),
-        )
-      }),
-)
+      return Message.SucceededMountMap({ hostId })
+    }).pipe(
+      Effect.catch(error =>
+        Effect.succeed(
+          Message.FailedMountMap({
+            reason: error instanceof Error ? error.message : `${error}`,
+          }),
+        ),
+      ),
+    )
+  })
+
+export const MountMap = Mount.define('MountMap', {
+  args: { hostId: S.String },
+  messages: [Message.SucceededMountMap, Message.FailedMountMap],
+  execute: ({ element, hostId }) => mountMap(element, hostId),
+})
 
 // SUBSCRIPTIONS
 

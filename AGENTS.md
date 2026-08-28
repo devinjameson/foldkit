@@ -139,12 +139,12 @@ Don't add inline or block comments to explain code. If code needs explanation, r
 Five primitives: Command, Mount, Subscription, ManagedResource, CustomElement. Pick by what causes the side effect. The `skills/foldkit` skill and the docs at `packages/website/src/page/core/` cover this in depth. Read them when ambiguous. Quick rule:
 
 - A Message just dispatched? Command.
-- An element exists in the rendered tree, and the factory uses the element to do DOM work? Mount. Use `Mount.define` for one-shot acquire-with-cleanup, `Mount.defineStream` for continuous events from listeners or observers. Both require at least one declared result Message.
+- An element exists in the rendered tree, and `execute` uses the element to do DOM work? Mount. Use `Mount.define` for one-shot acquire-with-cleanup, `Mount.defineStream` for continuous events from listeners or observers. Both require at least one declared result Message.
 - An external event source gated by a Model condition? Subscription.
 - Model condition plus Commands need a stateful handle? ManagedResource.
 - Rendering a native web component? CustomElement.
 
-If a Mount factory doesn't read or write its element, you've misidentified the cause. Mount args are captured at mount, not refreshed across renders.
+If a Mount's `execute` doesn't read or write its element, you've misidentified the cause. Mount args are captured at mount, not refreshed across renders.
 
 ## Reference Repos
 
@@ -162,6 +162,7 @@ If a Mount factory doesn't read or write its element, you've misidentified the c
 - After any amend that changes files, re-audit the commit body against `git show --stat --name-status HEAD` and update it in the same amend when the final diff has drifted. Do this even for small follow-ups.
 - Stage the paths you changed, not `git add -A`. Amending with `-A` sweeps whatever else the working tree picked up, including build output a gate wrote, into a commit whose subject does not describe it.
 - Do not co-author or mention AI assistants in commit messages or release notes.
+- The commit author is the human the work is for, never an agent. Pass their identity with `git commit --author=...`, matching the identity already on `main`. Leave the committer alone: a sandbox sets `user.name` and `user.email` to the identity its commits are signed with, and overriding those costs the verified badge on GitHub without changing who the commit says wrote it.
 - Use the repo's commit helper when asked to create a commit: `/commit` in Claude Code, `.agents/skills/commit-changes` in Codex.
 - Treat every pull request title and description as the final squash commit message. The title is the Conventional Commit subject, and the description is the commit body. Keep review-only boilerplate, checklists, generated commit lists, and verification details out of the description. Put verification details in a pull request comment instead.
 - Before declaring a pull request merge-ready, audit its title and description against the full diff and changeset. If any consumer code must change, the title must include `!` after the scope, even when a pre-1.0 package receives a `minor` changeset. Do not treat the changeset bump alone as evidence that a change is non-breaking.
