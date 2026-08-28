@@ -38,7 +38,7 @@ const POPOVER_ANCHOR: AnchorConfig = {
 
 const POPOVER_ARROW_ANCHOR: AnchorConfig = {
   placement: 'bottom-start',
-  gap: 8,
+  gap: 10,
   padding: 8,
 }
 
@@ -102,9 +102,28 @@ const popoverDemo = (
                               [
                                 ...arrow,
                                 h.Class('popover-arrow'),
-                                h.ViewBox('0 0 12 12'),
+                                h.ViewBox('0 0 16 16'),
                               ],
-                              [h.path([h.D('M 0.5 5.5 L 6 0.5 L 11.5 5.5')])],
+                              [
+                                h.path([
+                                  h.Class('popover-arrow-fill'),
+                                  h.D('M 0.5 8 L 8 0.5 L 15.5 8 V 10 H 0.5 Z'),
+                                ]),
+                                h.svg(
+                                  [
+                                    h.Class('popover-arrow-outline-clip'),
+                                    h.Width('16'),
+                                    h.Height('8'),
+                                    h.ViewBox('0 0 16 8'),
+                                  ],
+                                  [
+                                    h.path([
+                                      h.Class('popover-arrow-outline'),
+                                      h.D('M 0.5 8 L 8 0.5 L 15.5 8'),
+                                    ]),
+                                  ],
+                                ),
+                              ],
                             ),
                           ]
                         : []),

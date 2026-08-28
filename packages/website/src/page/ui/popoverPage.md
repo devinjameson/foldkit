@@ -65,7 +65,7 @@ When `isAnimated` is true, enter/leave animations flow through the [Animation](/
 
 Write a rule for every side the panel can use because a `bottom` placement can flip to `top`, and a `left` placement can flip to `right`. The direct-child selector keeps a nested popover tied to its own panel. Pass `arrowPadding` to keep the arrow clear of rounded corners.
 
-The square SVG keeps its measurements stable when the placement flips, while the path draws only the outward-facing half. At `top: -6px`, the path ends at the panel edge instead of extending beneath its border. Its tip reaches 6px past the panel, so the demo uses `gap: 8` to keep it clear of the trigger.
+The square SVG keeps its measurements stable when the placement flips. Its fill extends 2px into the panel to mask the border beneath it, while a separate path outlines only the two outward-facing edges. The 16px arrow reaches 8px past the panel, so the demo uses `gap: 10` to keep it clear of the trigger. Anchor centers the arrow on the trigger along the panel's edge.
 
 ### Scrollable Panels with an Arrow
 
