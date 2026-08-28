@@ -468,6 +468,23 @@ describe('showDialog', () => {
     return event
   }
 
+  it.effect(
+    'closeDialog reports whether it released the hygiene showDialog installed',
+    () =>
+      Effect.gen(function* () {
+        makeDialog('solo')
+
+        expect(yield* closeDialog('#solo')).toBe(false)
+
+        yield* showDialog('#solo')
+
+        expect(yield* closeDialog('#solo')).toBe(true)
+        expect(yield* closeDialog('#solo')).toBe(false)
+
+        document.body.innerHTML = ''
+      }),
+  )
+
   it.effect('routes Escape to a single open dialog', () =>
     Effect.gen(function* () {
       makeDialog('solo')

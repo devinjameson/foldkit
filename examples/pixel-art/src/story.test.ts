@@ -304,7 +304,7 @@ describe('grid size', () => {
       update,
       given(paintedModel),
       message(Message.SelectedGridSize({ size: 8 })),
-      Command.resolve(Dialog.ShowDialog, DialogMessage.CompletedShowDialog()),
+      Command.resolve(Dialog.ShowDialog, DialogMessage.SucceededShowDialog()),
       model(model => {
         expect(model.maybePendingGridSize).toEqual(Option.some(8))
         expect(model.gridSizeConfirmDialog.isOpen).toBe(true)
@@ -449,7 +449,7 @@ describe('export failure', () => {
       message(
         Message.FailedExportPng({ error: 'Canvas 2D context not available' }),
       ),
-      Command.resolve(Dialog.ShowDialog, DialogMessage.CompletedShowDialog()),
+      Command.resolve(Dialog.ShowDialog, DialogMessage.SucceededShowDialog()),
       model(model => {
         expect(model.maybeExportError).toEqual(
           Option.some('Canvas 2D context not available'),
@@ -466,7 +466,7 @@ describe('export failure', () => {
       message(
         Message.FailedExportPng({ error: 'Canvas 2D context not available' }),
       ),
-      Command.resolve(Dialog.ShowDialog, DialogMessage.CompletedShowDialog()),
+      Command.resolve(Dialog.ShowDialog, DialogMessage.SucceededShowDialog()),
       message(
         Message.GotErrorDialogMessage({
           message: DialogMessage.RequestedClose(),

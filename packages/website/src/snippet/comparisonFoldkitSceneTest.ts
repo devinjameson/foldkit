@@ -12,7 +12,7 @@ test('failed export shows error dialog that can be dismissed', () => {
       ExportPng,
       FailedExportPng({ error: 'Canvas 2D context not available' }),
     ),
-    Command.resolve(Dialog.ShowDialog, DialogMessage.CompletedShowDialog()),
+    Command.resolve(Dialog.ShowDialog, DialogMessage.SucceededShowDialog()),
     // The error dialog is open. Find elements by role and text content:
     // no CSS selectors, no test IDs, no DOM.
     expect(text('Export Failed')).toExist(),
