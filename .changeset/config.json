@@ -12,6 +12,7 @@
   },
   "ignore": [
     "website",
+    "@foldkit/api-reference-generator",
     "@typing-game/client",
     "@typing-game/server",
     "@typing-game/shared",

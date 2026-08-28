@@ -62,7 +62,10 @@
         "e2e/livePlaygrounds.ts"
       ],
       "ignore": ["src/snippet/**", "public/**"],
-      "ignoreDependencies": ["@foldkit/devtools"]
+      "ignoreDependencies": [
+        "@foldkit/api-reference-generator",
+        "@foldkit/devtools"
+      ]
     },
     "packages/typing-game/client": {
       "ignoreDependencies": ["@foldkit/devtools"]
@@ -122,6 +125,9 @@
     },
     "internal/lustre-benchmark": {
       "entry": ["src/main.ts", "src/entry.optimised.ts", "bench/*.mjs"]
+    },
+    "internal/api-reference-generator": {
+      "ignoreDependencies": ["@foldkit/ui", "foldkit"]
     },
     "internal/performance-harness": {
       "entry": ["src/main.ts"],
