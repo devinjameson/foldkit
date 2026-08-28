@@ -10,6 +10,9 @@ const changesetReadme = readFileSync(
   resolve(REPO_ROOT, '.changeset/README.md'),
   'utf8',
 )
+const changesetConfig = JSON.parse(
+  readFileSync(resolve(REPO_ROOT, '.changeset/config.json'), 'utf8'),
+)
 const releasingGuide = readFileSync(resolve(REPO_ROOT, 'RELEASING.md'), 'utf8')
 const workflow = readFileSync(
   resolve(REPO_ROOT, '.github/workflows/release.yml'),
@@ -36,6 +39,17 @@ const job = (name, nextName) =>
     workflow.indexOf(`\n  ${name}:`),
     workflow.indexOf(`\n  ${nextName}:`),
   )
+
+test('package changelogs credit pull request authors', () => {
+  assert.deepEqual(changesetConfig.changelog, [
+    '@changesets/changelog-github',
+    { repo: 'foldkit/foldkit' },
+  ])
+  assert.ok(rootPackage.devDependencies['@changesets/changelog-github'])
+
+  const versionJob = job('version', 'stable')
+  assert.match(versionJob, /GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/)
+})
 
 test('Changesets only versions packages and cannot parse publisher output', () => {
   assert.equal(
