@@ -59,58 +59,23 @@ When `isAnimated` is true, enter/leave animations flow through the [Animation](/
 
 `toView` receives an `arrow` bundle carrying the element's id. Popover does not draw the arrow. Spread the bundle onto your own element, a direct child of the panel, and place it with the custom properties Anchor publishes:
 
-```css
-.popover-arrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: inherit;
-  transform: rotate(45deg);
-  left: var(--arrow-x);
-  top: var(--arrow-y);
-}
+::Snippet{name="uiPopoverArrowStyles" label="popover arrow styles"}
 
-.popover-panel[data-placement='top'] > .popover-arrow {
-  bottom: -4px;
-}
+`--arrow-x` and `--arrow-y` position the arrow along the panel edge. Anchor sets one of them for each placement, while the matching `data-placement` rule pins the arrow to the correct side.
 
-.popover-panel[data-placement='bottom'] > .popover-arrow {
-  top: -4px;
-}
+Write a rule for every side the panel can use because a `bottom` placement can flip to `top`, and a `left` placement can flip to `right`. The direct-child selector keeps a nested popover tied to its own panel. Pass `arrowPadding` to keep the arrow clear of rounded corners.
 
-.popover-panel[data-placement='left'] > .popover-arrow {
-  right: -4px;
-}
+The square SVG keeps its measurements stable when the placement flips, while the path draws only the outward-facing half. At `top: -6px`, the path ends at the panel edge instead of extending beneath its border. Its tip reaches 6px past the panel, so the demo uses `gap: 8` to keep it clear of the trigger.
 
-.popover-panel[data-placement='right'] > .popover-arrow {
-  left: -4px;
-}
-```
+### Scrollable Panels with an Arrow
 
-`--arrow-x` and `--arrow-y` are the offset along the panel edge, so exactly one of them is set for any given placement. The side offset is yours: `data-placement` tells you which edge the panel currently sits on, and the rule for that side pins the arrow to it. Write a rule for every side a popover in your app can sit on. A panel placed on `bottom` can flip to `top`, and one placed on `left` can flip to `right`. The side with no rule leaves that axis at `auto`, so on that axis the arrow takes its static position, the top or left of the panel's content box for a first child, and sits inside the panel instead of on its edge. The side rules use `>` so that a `portal: false` popover nested inside another panel answers only to its own panel's `data-placement`, not the outer one's. Pass `arrowPadding` to keep the arrow clear of a rounded corner.
+An arrow sits outside the panel, so scrolling the panel itself would clip it. Anchor leaves the panel unclipped when an arrow resolves and still writes its `max-height`. If the content can outgrow that height, make the panel a flex column and scroll an inner container:
 
-The arrow also needs room between the panel and the trigger. An 8px square rotated 45° at `top: -4px` reaches about 5px past the panel's border, so `anchor.gap` needs more than that or the tip lands on the trigger. The demo uses `gap: 8`.
+::Snippet{name="uiPopoverScrollablePanel" label="scrollable popover panel styles"}
 
-An arrow sits half outside the panel, so a panel that scrolls would clip it away: `overflow-y: auto` makes `overflow-x` compute to `auto` too, and the panel then clips on every side. Anchor handles this by leaving the panel unclipped as soon as an arrow resolves. It still writes the `max-height`, so if your content can outgrow the viewport, put the scroll container inside the panel instead. Make the panel a flex column and let the scrolling child take the space that is left:
+`min-height: 0` lets the child shrink below its content height so it can scroll. `box-sizing: border-box` keeps the panel's padding and border within the height Anchor measured.
 
-```css
-.popover-panel {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-}
-
-.popover-content {
-  min-height: 0;
-  overflow-y: auto;
-}
-```
-
-`min-height: 0` is what lets the child shrink. A flex item defaults to `min-height: auto` and refuses to go below its content height, which would push the panel past its `max-height` and scroll nothing. `box-sizing: border-box` makes `max-height` bound the panel's padding and border along with its content. Under the default `content-box`, `max-height` bounds only the content, and the padding and border are added on top of the room Anchor measured.
-
-Do not reach for `max-height: inherit` on the child instead. Anchor's `max-height` is the room Floating UI measured for the whole panel, and `inherit` copies that number onto the child's box, leaving the panel's own padding and border outside it. A panel with `padding: 1rem` and a `1px` border ends up 34px taller than the space it was given, so its bottom edge runs past the viewport padding. The flex column needs no such arithmetic.
-
-Spreading the `arrow` bundle is all the markup needs, so you never write the arrow's id yourself. A Scene test that asserts the panel Mount's `arrowId` argument does need it on its own. Take it from `Popover.arrowId(id)` rather than hardcoding the `-arrow` convention.
+Do not put `max-height: inherit` on the child. That copies the panel's full measured height without accounting for the panel's padding and border. The flex layout avoids that arithmetic.
 
 ## Keyboard Interaction
 
@@ -129,6 +94,10 @@ The button receives `aria-expanded` and `aria-controls` linking to the panel. Th
 Give the trigger an accessible name. For a visible label, wire a native `<label for>` that targets the trigger id with `Popover.buttonId(id)` rather than hardcoding the `-button` convention. The `for` association makes the trigger properly labeled: assistive technology announces it by the visible label text, and clicking the label opens the popover. That is why it is the recommended pattern.
 
 Two ViewConfig fields cover the cases a `<label for>` does not. Pass `ariaLabel` for an icon-only trigger with no visible label, or `ariaLabelledBy` when the element that names the trigger is not a `<label>` you can point `for` at.
+
+## Testing
+
+Spreading the `arrow` bundle supplies the arrow id in application markup. A Scene test that asserts the panel Mount's `arrowId` argument needs to construct that value directly. Use `Popover.arrowId(id)` rather than hardcoding the `-arrow` convention.
 
 ## API Reference
 

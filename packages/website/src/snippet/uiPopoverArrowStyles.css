@@ -1,0 +1,37 @@
+.popover-panel {
+  --popover-background: white;
+  --popover-border: #e5e7eb;
+  background: var(--popover-background);
+  border-color: var(--popover-border);
+}
+
+.popover-arrow {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  fill: var(--popover-background);
+  stroke: var(--popover-border);
+  stroke-linejoin: round;
+  stroke-width: 1px;
+  left: var(--arrow-x);
+  top: var(--arrow-y);
+}
+
+.popover-panel[data-placement='top'] > .popover-arrow {
+  bottom: -6px;
+  transform: rotate(180deg);
+}
+
+.popover-panel[data-placement='bottom'] > .popover-arrow {
+  top: -6px;
+}
+
+.popover-panel[data-placement='left'] > .popover-arrow {
+  right: -6px;
+  transform: rotate(90deg);
+}
+
+.popover-panel[data-placement='right'] > .popover-arrow {
+  left: -6px;
+  transform: rotate(-90deg);
+}

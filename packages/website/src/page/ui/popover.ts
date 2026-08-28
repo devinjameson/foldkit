@@ -97,7 +97,16 @@ const popoverDemo = (
                     [...panel, h.Class(panelClassNames[panelVariant])],
                     [
                       ...(isArrowDrawn
-                        ? [h.div([...arrow, h.Class('popover-arrow')])]
+                        ? [
+                            h.svg(
+                              [
+                                ...arrow,
+                                h.Class('popover-arrow'),
+                                h.ViewBox('0 0 12 12'),
+                              ],
+                              [h.path([h.D('M 0.5 5.5 L 6 0.5 L 11.5 5.5')])],
+                            ),
+                          ]
                         : []),
                       panelContent(),
                     ],

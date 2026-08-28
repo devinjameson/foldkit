@@ -10,7 +10,7 @@ const view = (h: HtmlBuilder<Message>) =>
     model: model.popover,
     view: Popover.view,
     viewInputs: {
-      // Leave room for the arrow tip, which reaches about 5px past the panel:
+      // Leave room for the arrow tip, which reaches 6px past the panel:
       anchor: { placement: 'bottom-start', gap: 8, padding: 8 },
       // Keep the arrow clear of the panel's rounded corners:
       arrowPadding: 12,
@@ -40,8 +40,16 @@ const view = (h: HtmlBuilder<Message>) =>
                     ],
                     [
                       // Spread the bundle onto your own element, inside the
-                      // panel:
-                      h.div([...arrow, h.Class('popover-arrow')]),
+                      // panel. The path draws only the outward-facing half of
+                      // its square view box:
+                      h.svg(
+                        [
+                          ...arrow,
+                          h.Class('popover-arrow'),
+                          h.ViewBox('0 0 12 12'),
+                        ],
+                        [h.path([h.D('M 0.5 5.5 L 6 0.5 L 11.5 5.5')])],
+                      ),
                       h.h3([h.Class('font-medium')], ['Analytics']),
                       h.p(
                         [h.Class('text-sm text-gray-500')],
