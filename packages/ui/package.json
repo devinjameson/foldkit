@@ -130,18 +130,18 @@
     "foldkit": ">=0.155.0"
   },
   "dependencies": {
-    "@floating-ui/dom": "^1.7.6"
+    "@floating-ui/dom": "^1.8.0"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.0-rc.112",
     "@foldkit/vite-plugin": "workspace:*",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",
-    "happy-dom": "^20.10.4",
+    "happy-dom": "^20.11.7",
     "rimraf": "^6.1.3",
-    "typedoc": "^0.28.19",
+    "typedoc": "^0.28.20",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   },
   "keywords": [
     "foldkit",

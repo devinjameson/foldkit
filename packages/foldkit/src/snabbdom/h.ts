@@ -4,13 +4,7 @@ import { type VNode, type VNodeData, vnode } from './vnode.js'
 
 export type VNodes = Array<VNode>
 export type VNodeChildElement =
-  | VNode
-  | string
-  | number
-  | String
-  | Number
-  | undefined
-  | null
+  VNode | string | number | String | Number | undefined | null
 export type ArrayOrElement<T> = T | Array<T>
 export type VNodeChildren = ArrayOrElement<VNodeChildElement>
 

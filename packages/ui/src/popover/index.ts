@@ -548,9 +548,7 @@ export const view = defineView<Model, Message, ViewInputs>(
       Option.some(Message.PressedPointerOnButton({ pointerType, button }))
 
     const handleButtonClick = ():
-      | RequestedOpen
-      | RequestedClose
-      | IgnoredMouseClick => {
+      RequestedOpen | RequestedClose | IgnoredMouseClick => {
       const isMouse = Option.exists(
         maybeLastButtonPointerType,
         type => type === 'mouse',

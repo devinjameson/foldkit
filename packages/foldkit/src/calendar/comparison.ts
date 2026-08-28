@@ -126,10 +126,8 @@ export const isAfterOrEqual: {
 export const min: {
   (that: CalendarDate): (self: CalendarDate) => CalendarDate
   (self: CalendarDate, that: CalendarDate): CalendarDate
-} = Function.dual(
-  2,
-  (self: CalendarDate, that: CalendarDate): CalendarDate =>
-    Order(self, that) <= 0 ? self : that,
+} = Function.dual(2, (self: CalendarDate, that: CalendarDate): CalendarDate =>
+  Order(self, that) <= 0 ? self : that,
 )
 
 /**
@@ -138,10 +136,8 @@ export const min: {
 export const max: {
   (that: CalendarDate): (self: CalendarDate) => CalendarDate
   (self: CalendarDate, that: CalendarDate): CalendarDate
-} = Function.dual(
-  2,
-  (self: CalendarDate, that: CalendarDate): CalendarDate =>
-    Order(self, that) >= 0 ? self : that,
+} = Function.dual(2, (self: CalendarDate, that: CalendarDate): CalendarDate =>
+  Order(self, that) >= 0 ? self : that,
 )
 
 /**

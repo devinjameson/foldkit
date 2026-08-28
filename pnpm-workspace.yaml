@@ -19,8 +19,11 @@ minimumReleaseAgeExclude:
   - effect@4.0.0-rc.112
 
 overrides:
+  '@mapbox/jsonlint-lines-primitives': 2.0.2
+  '@types/node': 25.9.5
   effect: 4.0.0-rc.112
   '@effect/platform-browser': 4.0.0-rc.112
   '@effect/platform-node': 4.0.0-rc.112
   '@effect/platform-node-shared': 4.0.0-rc.112
   '@effect/vitest': 4.0.0-rc.112
+  'monaco-editor>dompurify': 3.4.14

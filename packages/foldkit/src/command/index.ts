@@ -53,7 +53,7 @@ export interface CommandDefinitionNoArgs<
   Eff extends Effect.Effect<any, any, any>,
 > {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
-  readonly name: Name;
+  readonly name: Name
   (): Readonly<{ name: Name; effect: Eff }>
 }
 
@@ -64,7 +64,7 @@ export interface CommandDefinitionWithArgs<
   Eff extends Effect.Effect<any, any, any>,
 > {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
-  readonly name: Name;
+  readonly name: Name
   (args: Schema.Schema.Type<Schema.Struct<Fields>>): Readonly<{
     name: Name
     args: Schema.Schema.Type<Schema.Struct<Fields>>

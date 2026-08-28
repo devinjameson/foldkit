@@ -740,10 +740,8 @@ const findAllImpl =
 export const find: {
   (html: VNode, selectorString: string): Option.Option<VNode>
   (selectorString: string): (html: VNode) => Option.Option<VNode>
-} = dual(
-  2,
-  (html: VNode, selectorString: string): Option.Option<VNode> =>
-    pipe(html, findAllImpl(selectorString), Array.head),
+} = dual(2, (html: VNode, selectorString: string): Option.Option<VNode> =>
+  pipe(html, findAllImpl(selectorString), Array.head),
 )
 
 /** Finds all VNodes matching the CSS selector. */
@@ -1269,13 +1267,11 @@ export const selector = (css: string): Locator =>
 export const within: {
   (parent: Locator, child: Locator): Locator
   (child: Locator): (parent: Locator) => Locator
-} = dual(
-  2,
-  (parent: Locator, child: Locator): Locator =>
-    makeLocator(
-      flow(parent, Option.flatMap(child)),
-      `${child.description} within ${parent.description}`,
-    ),
+} = dual(2, (parent: Locator, child: Locator): Locator =>
+  makeLocator(
+    flow(parent, Option.flatMap(child)),
+    `${child.description} within ${parent.description}`,
+  ),
 )
 
 // LOCATOR-ALL FACTORIES
@@ -1350,13 +1346,11 @@ export const last = (locatorAll: LocatorAll): Locator =>
 export const nth: {
   (locatorAll: LocatorAll, index: number): Locator
   (index: number): (locatorAll: LocatorAll) => Locator
-} = dual(
-  2,
-  (locatorAll: LocatorAll, index: number): Locator =>
-    makeLocator(
-      flow(locatorAll, Array.get(index)),
-      `nth(${index}) of ${locatorAll.description}`,
-    ),
+} = dual(2, (locatorAll: LocatorAll, index: number): Locator =>
+  makeLocator(
+    flow(locatorAll, Array.get(index)),
+    `nth(${index}) of ${locatorAll.description}`,
+  ),
 )
 
 type FilterOptions = Readonly<{
@@ -1383,30 +1377,28 @@ const describeFilterOptions = (options: FilterOptions): string => {
 export const filter: {
   (locatorAll: LocatorAll, options: FilterOptions): LocatorAll
   (options: FilterOptions): (locatorAll: LocatorAll) => LocatorAll
-} = dual(
-  2,
-  (locatorAll: LocatorAll, options: FilterOptions): LocatorAll =>
-    makeLocatorAll(
-      html =>
-        Array.filter(locatorAll(html), match => {
-          if (options.has && Option.isNone(options.has(match))) return false
-          if (options.hasNot && Option.isSome(options.hasNot(match))) {
+} = dual(2, (locatorAll: LocatorAll, options: FilterOptions): LocatorAll =>
+  makeLocatorAll(
+    html =>
+      Array.filter(locatorAll(html), match => {
+        if (options.has && Option.isNone(options.has(match))) return false
+        if (options.hasNot && Option.isSome(options.hasNot(match))) {
+          return false
+        }
+        if (options.hasText !== undefined) {
+          if (!String_.includes(options.hasText)(textContent(match))) {
             return false
           }
-          if (options.hasText !== undefined) {
-            if (!String_.includes(options.hasText)(textContent(match))) {
-              return false
-            }
+        }
+        if (options.hasNotText !== undefined) {
+          if (String_.includes(options.hasNotText)(textContent(match))) {
+            return false
           }
-          if (options.hasNotText !== undefined) {
-            if (String_.includes(options.hasNotText)(textContent(match))) {
-              return false
-            }
-          }
-          return true
-        }),
-      `${locatorAll.description} filtered by (${describeFilterOptions(options)})`,
-    ),
+        }
+        return true
+      }),
+    `${locatorAll.description} filtered by (${describeFilterOptions(options)})`,
+  ),
 )
 
 /** Resolves a target (CSS selector string or Locator) against a VNode tree. */

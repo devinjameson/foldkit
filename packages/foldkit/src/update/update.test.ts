@@ -33,8 +33,7 @@ const Message = defineMessageUnion({
 })
 
 type TestMessage =
-  | typeof Message.IncrementedCount.Type
-  | typeof Message.CompletedLoad.Type
+  typeof Message.IncrementedCount.Type | typeof Message.CompletedLoad.Type
 
 type TestModel = Readonly<{ count: number }>
 
@@ -330,8 +329,7 @@ describe('refresh', () => {
 type CounterModel = Readonly<{ value: number }>
 
 type CounterMessage =
-  | typeof Message.BumpedValue.Type
-  | typeof Message.CompletedSaveCount.Type
+  typeof Message.BumpedValue.Type | typeof Message.CompletedSaveCount.Type
 
 const saveCount: Command<CounterMessage> = {
   name: 'SaveCount',

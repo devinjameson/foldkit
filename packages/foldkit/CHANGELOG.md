@@ -2925,9 +2925,7 @@ for ancestor`. The root's destroy hook ran after the next render had
     slotId: 'agree-to-terms',
     model: model.agreeToTerms,
     view: Ui.Checkbox.view,
-    viewInputs: {
-      /* ... slot content if needed */
-    },
+    viewInputs: {/* ... slot content if needed */},
     toParentMessage: message => GotCheckboxMessage({ message }),
   })
 

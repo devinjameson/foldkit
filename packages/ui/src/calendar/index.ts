@@ -807,9 +807,7 @@ export type YearsModeAttributes = Readonly<{
  * matches `model.viewMode`. Pattern-match on `_tag` with `M.tagsExhaustive`
  * to render each mode. */
 export type CalendarAttributes =
-  | DaysModeAttributes
-  | MonthsModeAttributes
-  | YearsModeAttributes
+  DaysModeAttributes | MonthsModeAttributes | YearsModeAttributes
 
 /** Per-render view inputs passed to `view` via `h.submodel`'s `viewInputs` field.
  *

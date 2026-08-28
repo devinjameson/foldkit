@@ -186,8 +186,7 @@ export const OutMessage = defineMessageUnion({
  *  `Selected` OutMessage from the factory's `update`, instead of
  *  `value: string`. Defaults to `string`. */
 export type OutMessage<Value extends string = string> =
-  | Selected<Value>
-  | ClearedSelection
+  Selected<Value> | ClearedSelection
 
 // SELECTORS
 

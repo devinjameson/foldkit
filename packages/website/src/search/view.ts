@@ -241,61 +241,59 @@ const keyboardWarmupInput: Html = ih.input([
   ih.Class('fixed top-0 left-0 w-px h-px opacity-0 pointer-events-none -z-10'),
 ])
 
-export const view = Submodel.defineView<Model, Message>(
-  (model, h): Html =>
-    h.div(
-      [],
-      [
-        keyboardWarmupInput,
-        h.submodel({
-          slotId: model.dialog.id,
-          model: model.dialog,
-          view: Dialog.view,
-          viewInputs: {
-            toView: ({ dialog, backdrop, panel, title, isVisible }) =>
-              h.dialog(
-                [...dialog],
-                isVisible
-                  ? [
-                      h.div([
-                        ...backdrop,
-                        h.Class(
-                          'fixed inset-0 z-[59] bg-black/50 dark:bg-black/70',
-                        ),
-                      ]),
-                      h.div(
-                        [
-                          ...panel,
-                          h.Class(
-                            'fixed inset-0 z-[60] overflow-y-auto px-4 sm:px-6 pointer-events-none [&>*]:pointer-events-auto',
-                          ),
-                        ],
-                        [
-                          h.div(
-                            [
-                              h.Class(
-                                'w-full max-w-xl mx-auto mt-[15vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl dark:shadow-black/50 border border-gray-200 dark:border-gray-700 overflow-hidden',
-                              ),
-                            ],
-                            [
-                              h.span(
-                                [...title, h.Class('sr-only')],
-                                ['Search documentation'],
-                              ),
-                              searchInputView(model, h),
-                              resultsListView(model, h),
-                              resultCountAnnouncement(model),
-                            ],
-                          ),
-                        ],
+export const view = Submodel.defineView<Model, Message>((model, h): Html =>
+  h.div(
+    [],
+    [
+      keyboardWarmupInput,
+      h.submodel({
+        slotId: model.dialog.id,
+        model: model.dialog,
+        view: Dialog.view,
+        viewInputs: {
+          toView: ({ dialog, backdrop, panel, title, isVisible }) =>
+            h.dialog(
+              [...dialog],
+              isVisible
+                ? [
+                    h.div([
+                      ...backdrop,
+                      h.Class(
+                        'fixed inset-0 z-[59] bg-black/50 dark:bg-black/70',
                       ),
-                    ]
-                  : [],
-              ),
-          },
-          toParentMessage: message =>
-            Message.GotSearchDialogMessage({ message }),
-        }),
-      ],
-    ),
+                    ]),
+                    h.div(
+                      [
+                        ...panel,
+                        h.Class(
+                          'fixed inset-0 z-[60] overflow-y-auto px-4 sm:px-6 pointer-events-none [&>*]:pointer-events-auto',
+                        ),
+                      ],
+                      [
+                        h.div(
+                          [
+                            h.Class(
+                              'w-full max-w-xl mx-auto mt-[15vh] bg-white dark:bg-gray-900 rounded-xl shadow-2xl dark:shadow-black/50 border border-gray-200 dark:border-gray-700 overflow-hidden',
+                            ),
+                          ],
+                          [
+                            h.span(
+                              [...title, h.Class('sr-only')],
+                              ['Search documentation'],
+                            ),
+                            searchInputView(model, h),
+                            resultsListView(model, h),
+                            resultCountAnnouncement(model),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ]
+                : [],
+            ),
+        },
+        toParentMessage: message => Message.GotSearchDialogMessage({ message }),
+      }),
+    ],
+  ),
 )
