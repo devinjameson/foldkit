@@ -109,10 +109,20 @@ const popoverDemo = (
                                   h.Class('popover-arrow-fill'),
                                   h.D('M 0.5 8 L 8 0.5 L 15.5 8 V 10 H 0.5 Z'),
                                 ]),
-                                h.path([
-                                  h.Class('popover-arrow-outline'),
-                                  h.D('M 0.5 8 L 8 0.5 L 15.5 8'),
-                                ]),
+                                h.svg(
+                                  [
+                                    h.Class('popover-arrow-outline-clip'),
+                                    h.Width('16'),
+                                    h.Height('8'),
+                                    h.ViewBox('0 0 16 8'),
+                                  ],
+                                  [
+                                    h.path([
+                                      h.Class('popover-arrow-outline'),
+                                      h.D('M 0.5 8 L 8 0.5 L 15.5 8'),
+                                    ]),
+                                  ],
+                                ),
                               ],
                             ),
                           ]

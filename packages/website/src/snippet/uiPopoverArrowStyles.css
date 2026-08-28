@@ -18,6 +18,10 @@
   stroke: none;
 }
 
+.popover-arrow-outline-clip {
+  overflow: hidden;
+}
+
 .popover-arrow-outline {
   fill: none;
   stroke: var(--popover-border);
