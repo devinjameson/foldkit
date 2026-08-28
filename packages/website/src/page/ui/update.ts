@@ -10,6 +10,7 @@ import {
   Dialog,
   DragAndDrop,
   FileDrop,
+  HoverIntent,
   Listbox,
   Menu,
   Popover,
@@ -705,6 +706,36 @@ const foldTooltipDemo = Update.foldChild({
   foldOutMessage: foldTooltipOutMessage,
 })
 
+const foldHoverIntentOutMessage = M.type<HoverIntent.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Opened: () => model => ({ model }),
+    Closed: () => model => ({ model }),
+  }),
+)
+
+const foldHoverIntentCardDemo = Update.foldChild({
+  update: HoverIntent.update,
+  read: (model: Model) => Option.some(model.hoverIntentCardDemo),
+  write: (model, nextHoverIntentCardDemo) =>
+    evo(model, { hoverIntentCardDemo: () => nextHoverIntentCardDemo }),
+  toParentMessage: message =>
+    Message.GotHoverIntentCardDemoMessage({ message }),
+  foldOutMessage: foldHoverIntentOutMessage,
+})
+
+const foldHoverIntentNavigationDemo = Update.foldChild({
+  update: HoverIntent.update,
+  read: (model: Model) => Option.some(model.hoverIntentNavigationDemo),
+  write: (model, nextHoverIntentNavigationDemo) =>
+    evo(model, {
+      hoverIntentNavigationDemo: () => nextHoverIntentNavigationDemo,
+    }),
+  toParentMessage: message =>
+    Message.GotHoverIntentNavigationDemoMessage({ message }),
+  foldOutMessage: foldHoverIntentOutMessage,
+})
+
 const foldToastDemoOutMessage = M.type<typeof Toast.OutMessage.Type>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
@@ -1079,6 +1110,12 @@ export const update = (model: Model, message: Message) =>
       foldVerticalTabsDemo(model, message),
 
     GotTooltipDemoMessage: ({ message }) => foldTooltipDemo(model, message),
+
+    GotHoverIntentCardDemoMessage: ({ message }) =>
+      foldHoverIntentCardDemo(model, message),
+
+    GotHoverIntentNavigationDemoMessage: ({ message }) =>
+      foldHoverIntentNavigationDemo(model, message),
 
     GotToastDemoMessage: ({ message }) => foldToastDemo(model, message),
 

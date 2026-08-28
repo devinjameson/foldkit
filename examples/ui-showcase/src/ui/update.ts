@@ -10,6 +10,7 @@ import {
   Dialog,
   DragAndDrop,
   FileDrop,
+  HoverIntent,
   Listbox,
   Menu,
   Popover,
@@ -117,6 +118,14 @@ const foldTooltipOutMessage = M.type<Tooltip.OutMessage>().pipe(
   M.tagsExhaustive({
     Shown: () => model => ({ model }),
     Hidden: () => model => ({ model }),
+  }),
+)
+
+const foldHoverIntentOutMessage = M.type<HoverIntent.OutMessage>().pipe(
+  M.withReturnType<Update.Step<UiModel, UiMessage>>(),
+  M.tagsExhaustive({
+    Opened: () => model => ({ model }),
+    Closed: () => model => ({ model }),
   }),
 )
 
@@ -825,6 +834,15 @@ const foldTooltipNoDelayDemo = Update.foldChild({
   foldOutMessage: foldTooltipOutMessage,
 })
 
+const foldHoverIntentDemo = Update.foldChild({
+  update: HoverIntent.update,
+  read: (model: UiModel) => Option.some(model.hoverIntentDemo),
+  write: (model, nextHoverIntentDemo) =>
+    evo(model, { hoverIntentDemo: () => nextHoverIntentDemo }),
+  toParentMessage: message => UiMessage.GotHoverIntentDemoMessage({ message }),
+  foldOutMessage: foldHoverIntentOutMessage,
+})
+
 const foldAnimationDemoOutMessage: (
   outMessage: Animation.OutMessage,
   context: Update.FoldContext<Animation.Message, UiMessage>,
@@ -1132,6 +1150,9 @@ export const uiUpdate = (model: UiModel, message: UiMessage) =>
 
     GotTooltipNoDelayDemoMessage: ({ message }) =>
       foldTooltipNoDelayDemo(model, message),
+
+    GotHoverIntentDemoMessage: ({ message }) =>
+      foldHoverIntentDemo(model, message),
 
     GotAnimationDemoMessage: ({ message }) => foldAnimationDemo(model, message),
 

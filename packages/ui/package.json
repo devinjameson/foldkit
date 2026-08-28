@@ -59,6 +59,10 @@
       "types": "./dist/fileDrop/public.d.ts",
       "import": "./dist/fileDrop/public.js"
     },
+    "./hoverIntent": {
+      "types": "./dist/hoverIntent/public.d.ts",
+      "import": "./dist/hoverIntent/public.js"
+    },
     "./input": {
       "types": "./dist/input/public.d.ts",
       "import": "./dist/input/public.js"

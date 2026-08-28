@@ -46,6 +46,7 @@ The Kind column below identifies each component category.
 | [Calendar](/ui/calendar)           | Submodel | Inline calendar grid with 2D keyboard navigation, locale-aware headers, min/max constraints, and disabled-date support. Foundation for date pickers.                                                 |
 | [Date Picker](/ui/date-picker)     | Submodel | Input paired with a popover Calendar. Inherits the calendar’s constraint and keyboard-navigation support, with programmatic open/close and setters.                                                  |
 | [Animation](/ui/animation)         | Submodel | Coordinates CSS enter/leave animations via a state machine and data attributes. Works with both CSS transitions and CSS keyframe animations. Sends an OutMessage when the leave animation completes. |
+| [Hover Intent](/ui/hover-intent)   | Submodel | Behavior-only delayed hover and focus reveal across a trigger and panel. It leaves semantics, positioning, and styling to the composed component.                                                    |
 
 Underneath the floating components sits [Anchor](/ui/anchor), the positioning runtime Listbox, Combobox, Menu, Popover, Tooltip, and Date Picker share. It is neither a helper nor a Submodel, so it has no row above. Reach for it directly only when you are building an anchored component none of those cover.
 

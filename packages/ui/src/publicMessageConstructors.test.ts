@@ -12,6 +12,7 @@ import * as Disclosure from './disclosure/public.js'
 import * as DragAndDrop from './dragAndDrop/public.js'
 import * as Fieldset from './fieldset/public.js'
 import * as FileDrop from './fileDrop/public.js'
+import * as HoverIntent from './hoverIntent/public.js'
 import * as Input from './input/public.js'
 import * as Listbox from './listbox/public.js'
 import * as Menu from './menu/public.js'
@@ -47,6 +48,7 @@ const barrelsByComponent: Readonly<Record<string, Record<string, unknown>>> = {
   dragAndDrop: DragAndDrop,
   fieldset: Fieldset,
   fileDrop: FileDrop,
+  hoverIntent: HoverIntent,
   input: Input,
   listbox: Listbox,
   menu: Menu,
@@ -71,6 +73,7 @@ const COMPONENTS_WITH_A_MESSAGE_UNION = [
   'dialog',
   'dragAndDrop',
   'fileDrop',
+  'hoverIntent',
   'listbox',
   'menu',
   'popover',

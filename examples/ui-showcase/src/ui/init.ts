@@ -8,6 +8,7 @@ import {
   Dialog,
   DragAndDrop,
   FileDrop,
+  HoverIntent,
   Listbox,
   Menu,
   Popover,
@@ -107,6 +108,7 @@ export const uiInit = (today: Calendar.CalendarDate): InitReturn => ({
     ],
     fileDropBasicDemo: FileDrop.init({ id: 'file-drop-basic-demo' }),
     fileDropBasicDemoFiles: [],
+    hoverIntentDemo: HoverIntent.init(),
     listboxDemo: Listbox.init({ id: 'listbox-demo' }),
     maybeListboxDemoSelectedItem: Option.none(),
     listboxMultiDemo: Listbox.Multi.init({
