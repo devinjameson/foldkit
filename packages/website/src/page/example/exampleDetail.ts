@@ -104,34 +104,39 @@ const isExampleUrlMessageFromIframe = (
   event.data.type === BRIDGE_MESSAGE_TYPE &&
   typeof event.data.url === 'string'
 
+const observeExampleUrlMessages = (element: Element) => {
+  if (!(element instanceof HTMLIFrameElement)) {
+    return Stream.empty
+  }
+
+  return Stream.callback<typeof Message.ChangedExampleUrl.Type>(queue =>
+    Effect.acquireRelease(
+      Effect.sync(() => {
+        const handler = (event: MessageEvent) => {
+          if (!isExampleUrlMessageFromIframe(event, element)) {
+            return
+          }
+
+          Queue.offerUnsafe(
+            queue,
+            Message.ChangedExampleUrl({ url: event.data.url }),
+          )
+        }
+
+        window.addEventListener('message', handler)
+        return handler
+      }),
+      handler =>
+        Effect.sync(() => window.removeEventListener('message', handler)),
+    ).pipe(Effect.flatMap(() => Effect.never)),
+  )
+}
+
 const ObserveExampleUrlMessages = Mount.defineStream(
   'ObserveExampleUrlMessages',
   {
     messages: [Message.ChangedExampleUrl],
-    execute: ({ element }) => {
-      if (!(element instanceof HTMLIFrameElement)) {
-        return Stream.empty
-      }
-      return Stream.callback<typeof Message.ChangedExampleUrl.Type>(queue =>
-        Effect.acquireRelease(
-          Effect.sync(() => {
-            const handler = (event: MessageEvent) => {
-              if (!isExampleUrlMessageFromIframe(event, element)) {
-                return
-              }
-              Queue.offerUnsafe(
-                queue,
-                Message.ChangedExampleUrl({ url: event.data.url }),
-              )
-            }
-            window.addEventListener('message', handler)
-            return handler
-          }),
-          handler =>
-            Effect.sync(() => window.removeEventListener('message', handler)),
-        ).pipe(Effect.flatMap(() => Effect.never)),
-      )
-    },
+    execute: ({ element }) => observeExampleUrlMessages(element),
   },
 )
 
