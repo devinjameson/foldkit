@@ -440,29 +440,38 @@
   }
 
   .popover-arrow {
-    @apply absolute w-3 h-3 fill-cream stroke-gray-200 dark:fill-gray-800 dark:stroke-gray-700;
-    stroke-linejoin: round;
-    stroke-width: 1px;
+    @apply absolute w-4 h-4;
     left: var(--arrow-x);
     top: var(--arrow-y);
   }
 
+  .popover-arrow-fill {
+    @apply fill-cream dark:fill-gray-800;
+    stroke: none;
+  }
+
+  .popover-arrow-outline {
+    @apply fill-none stroke-gray-200 dark:stroke-gray-700;
+    stroke-linejoin: round;
+    stroke-width: 1px;
+  }
+
   .popover-panel[data-placement='top'] > .popover-arrow {
-    bottom: -6px;
+    bottom: -8px;
     transform: rotate(180deg);
   }
 
   .popover-panel[data-placement='bottom'] > .popover-arrow {
-    top: -6px;
+    top: -8px;
   }
 
   .popover-panel[data-placement='left'] > .popover-arrow {
-    right: -6px;
+    right: -8px;
     transform: rotate(90deg);
   }
 
   .popover-panel[data-placement='right'] > .popover-arrow {
-    left: -6px;
+    left: -8px;
     transform: rotate(-90deg);
   }
 
