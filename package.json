@@ -97,6 +97,7 @@
     "@foldkit/oxlint-plugin": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/node": "^25.9.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",
     "knip": "^6.32.3",
@@ -106,7 +107,7 @@
     "semver": "^7.8.5",
     "simple-git-hooks": "^2.13.1",
     "tsx": "^4.23.12",
-    "typescript": "^6.0.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite": "^8.2.2"
   },
   "simple-git-hooks": {

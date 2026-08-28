@@ -23,7 +23,7 @@
     "chalk": "^5.6.2",
     "effect": "4.0.0-rc.112",
     "rimraf": "^6.1.3",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.0-rc.112",

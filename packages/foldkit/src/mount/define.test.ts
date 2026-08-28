@@ -27,16 +27,15 @@ const measuredWidth = (element: Element): number =>
 // named `element` ever stops being an error at the definition site.
 if (false) {
   Mount.define('MeasurePanel', {
+    // @ts-expect-error `element` names the live element execute receives, so an arg cannot claim it
     args: {
-      // @ts-expect-error `element` names the live element execute receives, so an arg cannot claim it
       element: S.String,
-      panelId: S.String,
     },
     messages: [Message.CompletedMeasurePanel],
-    execute: ({ element, panelId }) =>
+    execute: ({ element }) =>
       Effect.succeed(
         Message.CompletedMeasurePanel({
-          panelId,
+          panelId: 'panel',
           width: measuredWidth(element),
         }),
       ),

@@ -10,9 +10,14 @@ const require = createRequire(import.meta.url)
 
 describe('CSS_STYLE_PROPERTIES', () => {
   it('matches the pinned TypeScript CSSStyleProperties interface', () => {
-    const typescriptEntry = require.resolve('typescript')
+    const typescriptPackage = require.resolve('typescript/package.json')
+    const typescriptRequire = createRequire(typescriptPackage)
+    const typescriptPlatformPackage = `@typescript/typescript-${process.platform}-${process.arch}`
+    const typescriptPlatformPackageJson = typescriptRequire.resolve(
+      `${typescriptPlatformPackage}/package.json`,
+    )
     const libDom = readFileSync(
-      join(dirname(typescriptEntry), 'lib.dom.d.ts'),
+      join(dirname(typescriptPlatformPackageJson), 'lib', 'lib.dom.d.ts'),
       'utf8',
     )
     const interfaceMatch =
