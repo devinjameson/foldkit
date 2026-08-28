@@ -1,7 +1,9 @@
 import { Schema as S } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
-/** Union of all messages the hover-intent component can produce. */
+// MESSAGE
+
+/** Union of all Messages the HoverIntent component can produce. */
 export const Message = defineMessageUnion({
   EnteredTrigger: {},
   LeftTrigger: {},
@@ -11,13 +13,11 @@ export const Message = defineMessageUnion({
   BlurredTrigger: {},
   FocusedPanel: {},
   BlurredPanel: {},
-  PressedEscape: {
-    source: S.Literals(['Trigger', 'Panel']),
-    isFocusReturnedToTrigger: S.Boolean,
-  },
+  PressedEscape: { source: S.Literals(['Trigger', 'Panel']) },
   CompletedWaitBeforeOpening: { version: S.Number },
   CompletedWaitBeforeClosing: { version: S.Number },
 })
+export type Message = typeof Message.Type
 
 export type EnteredTrigger = typeof Message.EnteredTrigger.Type
 export type LeftTrigger = typeof Message.LeftTrigger.Type
@@ -32,14 +32,15 @@ export type CompletedWaitBeforeOpening =
   typeof Message.CompletedWaitBeforeOpening.Type
 export type CompletedWaitBeforeClosing =
   typeof Message.CompletedWaitBeforeClosing.Type
-export type Message = typeof Message.Type
 
-/** Union of visibility transitions emitted by hover intent. */
+// OUT MESSAGE
+
+/** Union of visibility-transition OutMessages emitted by HoverIntent. */
 export const OutMessage = defineMessageUnion({
   Opened: {},
   Closed: {},
 })
+export type OutMessage = typeof OutMessage.Type
 
 export type Opened = typeof OutMessage.Opened.Type
 export type Closed = typeof OutMessage.Closed.Type
-export type OutMessage = typeof OutMessage.Type

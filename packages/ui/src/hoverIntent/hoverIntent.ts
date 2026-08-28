@@ -1,4 +1,11 @@
-import { Duration, Effect, Match as M, Option, Schema as S } from 'effect'
+import {
+  Duration,
+  Effect,
+  Match as M,
+  Number,
+  Option,
+  Schema as S,
+} from 'effect'
 import * as Command from 'foldkit/command'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 import { evo } from 'foldkit/struct'
@@ -9,12 +16,15 @@ import { Message, OutMessage } from './message.js'
 
 // MODEL
 
-/** Schema for hover-intent state. It tracks pointer and focus engagement over a trigger and its panel, visibility, delay timers, and Escape dismissal. */
+const FocusLocation = S.Literals(['Trigger', 'Panel'])
+type FocusLocation = typeof FocusLocation.Type
+
+/** Schema for HoverIntent state. It tracks pointer and focus engagement over a trigger and its panel, visibility, delay timers, and Escape dismissal. */
 export const Model = S.Struct({
   isOpen: S.Boolean,
   isTriggerHovered: S.Boolean,
   isPanelHovered: S.Boolean,
-  isFocused: S.Boolean,
+  maybeFocusLocation: S.Option(FocusLocation),
   isDismissed: S.Boolean,
   openDelay: S.DurationFromMillis,
   closeDelay: S.DurationFromMillis,
@@ -26,18 +36,18 @@ export type Model = typeof Model.Type
 const DEFAULT_OPEN_DELAY = Duration.millis(200)
 const DEFAULT_CLOSE_DELAY = Duration.millis(300)
 
-/** Configuration for creating a hover-intent model. */
+/** Configuration for creating a HoverIntent Model. */
 export type InitConfig = Readonly<{
   openDelay?: Duration.Input
   closeDelay?: Duration.Input
 }>
 
-/** Creates a hover-intent model. Pointer entry opens after 200 milliseconds and full disengagement closes after 300 milliseconds by default. */
+/** Creates a HoverIntent Model. Pointer entry opens after 200 milliseconds and full disengagement closes after 300 milliseconds by default. */
 export const init = (config: InitConfig = {}): Model => ({
   isOpen: false,
   isTriggerHovered: false,
   isPanelHovered: false,
-  isFocused: false,
+  maybeFocusLocation: Option.none(),
   isDismissed: false,
   openDelay:
     config.openDelay === undefined
@@ -79,7 +89,7 @@ const isPointerOver = (model: Model): boolean =>
   model.isTriggerHovered || model.isPanelHovered
 
 const isEngaged = (model: Model): boolean =>
-  isPointerOver(model) || model.isFocused
+  isPointerOver(model) || Option.isSome(model.maybeFocusLocation)
 
 const open = (model: Model): UpdateReturn => {
   if (model.isOpen) {
@@ -104,7 +114,7 @@ const close = (model: Model): UpdateReturn => {
 }
 
 const scheduleOpen = (model: Model): UpdateReturn => {
-  const version = model.pendingOpenVersion + 1
+  const version = Number.increment(model.pendingOpenVersion)
   return {
     model: evo(model, { pendingOpenVersion: () => version }),
     commands: [WaitBeforeOpening({ delay: model.openDelay, version })],
@@ -112,7 +122,7 @@ const scheduleOpen = (model: Model): UpdateReturn => {
 }
 
 const scheduleClose = (model: Model): UpdateReturn => {
-  const version = model.pendingCloseVersion + 1
+  const version = Number.increment(model.pendingCloseVersion)
   return {
     model: evo(model, { pendingCloseVersion: () => version }),
     commands: [WaitBeforeClosing({ delay: model.closeDelay, version })],
@@ -121,7 +131,7 @@ const scheduleClose = (model: Model): UpdateReturn => {
 
 const entered = (model: Model): UpdateReturn => {
   const enteredModel = evo(model, {
-    pendingCloseVersion: currentVersion => currentVersion + 1,
+    pendingCloseVersion: Number.increment,
   })
 
   if (enteredModel.isOpen || enteredModel.isDismissed) {
@@ -133,7 +143,7 @@ const entered = (model: Model): UpdateReturn => {
 
 const left = (model: Model): UpdateReturn => {
   const leftModel = evo(model, {
-    pendingOpenVersion: currentVersion => currentVersion + 1,
+    pendingOpenVersion: Number.increment,
   })
 
   if (isEngaged(leftModel)) {
@@ -151,11 +161,11 @@ const left = (model: Model): UpdateReturn => {
   return scheduleClose(leftModel)
 }
 
-const focused = (model: Model): UpdateReturn => {
+const focused = (model: Model, focusLocation: FocusLocation): UpdateReturn => {
   const focusedModel = evo(model, {
-    isFocused: () => true,
-    pendingOpenVersion: currentVersion => currentVersion + 1,
-    pendingCloseVersion: currentVersion => currentVersion + 1,
+    maybeFocusLocation: () => Option.some(focusLocation),
+    pendingOpenVersion: Number.increment,
+    pendingCloseVersion: Number.increment,
   })
 
   if (focusedModel.isDismissed) {
@@ -167,8 +177,8 @@ const focused = (model: Model): UpdateReturn => {
 
 const blurred = (model: Model): UpdateReturn => {
   const blurredModel = evo(model, {
-    isFocused: () => false,
-    pendingOpenVersion: currentVersion => currentVersion + 1,
+    maybeFocusLocation: () => Option.none(),
+    pendingOpenVersion: Number.increment,
   })
 
   if (isEngaged(blurredModel)) {
@@ -186,33 +196,36 @@ const blurred = (model: Model): UpdateReturn => {
   return scheduleClose(blurredModel)
 }
 
-/** Processes a hover-intent Message and returns the next Model, optional Commands, and an optional OutMessage. */
+/** Processes a HoverIntent Message and returns the next Model, optional Commands, and an optional OutMessage. */
 export const update = (model: Model, message: Message): UpdateReturn =>
   Message.match<UpdateReturn>(message, {
     EnteredTrigger: () => entered(evo(model, { isTriggerHovered: () => true })),
-
     LeftTrigger: () => left(evo(model, { isTriggerHovered: () => false })),
-
     EnteredPanel: () => entered(evo(model, { isPanelHovered: () => true })),
-
     LeftPanel: () => left(evo(model, { isPanelHovered: () => false })),
-
-    FocusedTrigger: () => focused(model),
-
+    FocusedTrigger: () => focused(model, 'Trigger'),
     BlurredTrigger: () => blurred(model),
-
-    FocusedPanel: () => focused(model),
-
+    FocusedPanel: () => focused(model, 'Panel'),
     BlurredPanel: () => blurred(model),
 
-    PressedEscape: ({ source, isFocusReturnedToTrigger }) => {
+    PressedEscape: ({ source }) => {
+      const isTriggerFocused =
+        source === 'Trigger' ||
+        Option.exists(
+          model.maybeFocusLocation,
+          focusLocation => focusLocation === 'Trigger',
+        )
+      const maybeFocusLocation = isTriggerFocused
+        ? Option.some<FocusLocation>('Trigger')
+        : Option.none<FocusLocation>()
+      const isDismissed = model.isTriggerHovered || isTriggerFocused
       const dismissedModel = evo(model, {
         isOpen: () => false,
         isPanelHovered: () => false,
-        isFocused: () => source === 'Trigger' || isFocusReturnedToTrigger,
-        isDismissed: () => true,
-        pendingOpenVersion: currentVersion => currentVersion + 1,
-        pendingCloseVersion: currentVersion => currentVersion + 1,
+        maybeFocusLocation: () => maybeFocusLocation,
+        isDismissed: () => isDismissed,
+        pendingOpenVersion: Number.increment,
+        pendingCloseVersion: Number.increment,
       })
 
       if (model.isOpen) {
@@ -223,11 +236,11 @@ export const update = (model: Model, message: Message): UpdateReturn =>
     },
 
     CompletedWaitBeforeOpening: ({ version }) => {
-      if (
-        version !== model.pendingOpenVersion ||
-        model.isDismissed ||
-        !isEngaged(model)
-      ) {
+      if (version !== model.pendingOpenVersion) {
+        return { model }
+      }
+
+      if (model.isDismissed || !isEngaged(model)) {
         return { model }
       }
 
@@ -258,37 +271,33 @@ export type RenderInfo = Readonly<{
 
 /** Per-render view inputs passed to `view` via `h.submodel`'s `viewInputs` field. */
 export type ViewInputs = Readonly<{
+  /** Selector for the trigger to focus before Escape removes panel content. If it does not resolve to a focusable element, HoverIntent leaves fallback focus behavior to the browser. */
   focusTriggerSelector?: string
   toView: (render: RenderInfo) => Html
 }>
 
-/** Renders headless hover-intent event bundles. It deliberately owns no markup, ARIA semantics, positioning, or styling. */
+/** Renders headless HoverIntent event bundles. It owns no markup, ARIA semantics, positioning, or styling. */
 export const view = defineView<Model, Message, ViewInputs>(
   (model, { focusTriggerSelector, toView }, h): Html => {
     const toPressedEscape =
-      (source: 'Trigger' | 'Panel', isFocusReturnedToTrigger: boolean) =>
+      (source: 'Trigger' | 'Panel') =>
       (key: string): Option.Option<typeof Message.PressedEscape.Type> =>
         M.value(key).pipe(
           M.when('Escape', () =>
-            Option.some(
-              Message.PressedEscape({ source, isFocusReturnedToTrigger }),
-            ),
+            Option.some(Message.PressedEscape({ source })),
           ),
           M.orElse(() => Option.none()),
         )
 
     const panelEscapeHandler =
       focusTriggerSelector === undefined
-        ? h.OnKeyDownPreventDefault(toPressedEscape('Panel', false))
+        ? h.OnKeyDownPreventDefault(toPressedEscape('Panel'))
         : h.OnKeyDownFocus(key =>
             M.value(key).pipe(
               M.when('Escape', () =>
                 Option.some({
                   focusSelector: focusTriggerSelector,
-                  message: Message.PressedEscape({
-                    source: 'Panel',
-                    isFocusReturnedToTrigger: true,
-                  }),
+                  message: Message.PressedEscape({ source: 'Panel' }),
                 }),
               ),
               M.orElse(() => Option.none()),
@@ -301,7 +310,7 @@ export const view = defineView<Model, Message, ViewInputs>(
         h.OnMouseLeave(Message.LeftTrigger()),
         h.OnFocus(Message.FocusedTrigger()),
         h.OnBlur(Message.BlurredTrigger()),
-        h.OnKeyDownPreventDefault(toPressedEscape('Trigger', false)),
+        h.OnKeyDownPreventDefault(toPressedEscape('Trigger')),
       ]),
       panel: childAttributes([
         h.OnMouseEnter(Message.EnteredPanel()),

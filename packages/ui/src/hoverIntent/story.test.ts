@@ -1,4 +1,4 @@
-import { Duration, flow } from 'effect'
+import { Duration, Option, flow } from 'effect'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
 
@@ -48,7 +48,7 @@ describe('HoverIntent', () => {
         isOpen: false,
         isTriggerHovered: false,
         isPanelHovered: false,
-        isFocused: false,
+        maybeFocusLocation: Option.none(),
         isDismissed: false,
         openDelay: Duration.millis(200),
         closeDelay: Duration.millis(300),
@@ -168,7 +168,7 @@ describe('HoverIntent', () => {
         Story.expectOutMessage(OutMessage.Opened()),
         Story.model(model => {
           expect(model.isOpen).toBe(true)
-          expect(model.isFocused).toBe(true)
+          expect(model.maybeFocusLocation).toStrictEqual(Option.some('Trigger'))
         }),
       )
     })
@@ -185,7 +185,7 @@ describe('HoverIntent', () => {
         Story.message(Message.CompletedWaitBeforeClosing({ version: 2 })),
         Story.model(model => {
           expect(model.isOpen).toBe(true)
-          expect(model.isFocused).toBe(true)
+          expect(model.maybeFocusLocation).toStrictEqual(Option.some('Panel'))
         }),
         Story.expectNoOutMessage(),
       )
@@ -200,7 +200,7 @@ describe('HoverIntent', () => {
         Story.Command.expectNone(),
         Story.model(model => {
           expect(model.isOpen).toBe(true)
-          expect(model.isFocused).toBe(false)
+          expect(model.maybeFocusLocation).toStrictEqual(Option.none())
         }),
         Story.message(Message.LeftTrigger()),
         Story.Command.resolve(
@@ -217,12 +217,7 @@ describe('HoverIntent', () => {
       Story.story(
         update,
         withPointerOpen,
-        Story.message(
-          Message.PressedEscape({
-            source: 'Trigger',
-            isFocusReturnedToTrigger: false,
-          }),
-        ),
+        Story.message(Message.PressedEscape({ source: 'Trigger' })),
         Story.expectOutMessage(OutMessage.Closed()),
         Story.message(Message.EnteredTrigger()),
         Story.Command.expectNone(),
@@ -233,22 +228,41 @@ describe('HoverIntent', () => {
       )
     })
 
-    it('clears focused state when Escape dismisses the panel', () => {
+    it('allows fresh intent after Escape removes a focused panel', () => {
       Story.story(
         update,
         withFocusedOpen,
         Story.message(Message.FocusedPanel()),
         Story.message(Message.EnteredPanel()),
-        Story.message(
-          Message.PressedEscape({
-            source: 'Panel',
-            isFocusReturnedToTrigger: false,
-          }),
-        ),
+        Story.message(Message.PressedEscape({ source: 'Panel' })),
         Story.model(model => {
-          expect(model.isFocused).toBe(false)
+          expect(model.maybeFocusLocation).toStrictEqual(Option.none())
           expect(model.isPanelHovered).toBe(false)
+          expect(model.isDismissed).toBe(false)
+        }),
+        Story.message(Message.EnteredTrigger()),
+        Story.Command.expectHas(WaitBeforeOpening),
+        resolveStaleOpen,
+      )
+    })
+
+    it('keeps focus dismissal until a restored trigger disengages', () => {
+      Story.story(
+        update,
+        withFocusedOpen,
+        Story.message(Message.FocusedPanel()),
+        Story.message(Message.BlurredPanel()),
+        resolveStaleClose,
+        Story.message(Message.FocusedTrigger()),
+        Story.message(Message.PressedEscape({ source: 'Panel' })),
+        Story.model(model => {
+          expect(model.maybeFocusLocation).toStrictEqual(Option.some('Trigger'))
           expect(model.isDismissed).toBe(true)
+        }),
+        Story.message(Message.BlurredTrigger()),
+        Story.model(model => {
+          expect(model.maybeFocusLocation).toStrictEqual(Option.none())
+          expect(model.isDismissed).toBe(false)
         }),
       )
     })
@@ -258,12 +272,7 @@ describe('HoverIntent', () => {
         update,
         withFocusedOpen,
         Story.message(Message.EnteredTrigger()),
-        Story.message(
-          Message.PressedEscape({
-            source: 'Trigger',
-            isFocusReturnedToTrigger: false,
-          }),
-        ),
+        Story.message(Message.PressedEscape({ source: 'Trigger' })),
         Story.message(Message.BlurredTrigger()),
         Story.model(model => {
           expect(model.isDismissed).toBe(true)
@@ -284,12 +293,7 @@ describe('HoverIntent', () => {
         withHidden,
         Story.message(Message.EnteredTrigger()),
         resolveStaleOpen,
-        Story.message(
-          Message.PressedEscape({
-            source: 'Trigger',
-            isFocusReturnedToTrigger: false,
-          }),
-        ),
+        Story.message(Message.PressedEscape({ source: 'Trigger' })),
         Story.message(Message.CompletedWaitBeforeOpening({ version: 1 })),
         Story.model(model => {
           expect(model.isOpen).toBe(false)

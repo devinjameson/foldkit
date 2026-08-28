@@ -40,6 +40,7 @@ export const AppRoute = defineRouteUnion({
   DragAndDrop: {},
   Fieldset: {},
   FileDrop: {},
+  HoverIntent: {},
   Input: {},
   Listbox: {},
   Menu: {},
@@ -82,6 +83,10 @@ const fileDropRouter = pipe(
   literal('file-drop'),
   Route.mapTo(AppRoute.FileDrop),
 )
+const hoverIntentRouter = pipe(
+  literal('hover-intent'),
+  Route.mapTo(AppRoute.HoverIntent),
+)
 const inputRouter = pipe(literal('input'), Route.mapTo(AppRoute.Input))
 const listboxRouter = pipe(literal('listbox'), Route.mapTo(AppRoute.Listbox))
 const menuRouter = pipe(literal('menu'), Route.mapTo(AppRoute.Menu))
@@ -117,6 +122,7 @@ const routeParser = Route.oneOf(
   dragAndDropRouter,
   fieldsetRouter,
   fileDropRouter,
+  hoverIntentRouter,
   inputRouter,
   listboxRouter,
   menuRouter,
@@ -296,6 +302,11 @@ const NAV_ITEMS: ReadonlyArray<NavItem> = [
   },
   { label: 'Fieldset', routeTag: 'Fieldset', href: fieldsetRouter() },
   { label: 'File Drop', routeTag: 'FileDrop', href: fileDropRouter() },
+  {
+    label: 'Hover Intent',
+    routeTag: 'HoverIntent',
+    href: hoverIntentRouter(),
+  },
   { label: 'Input', routeTag: 'Input', href: inputRouter() },
   { label: 'Listbox', routeTag: 'Listbox', href: listboxRouter() },
   { label: 'Menu', routeTag: 'Menu', href: menuRouter() },
@@ -599,6 +610,7 @@ const contentView = (model: Model, h: HtmlBuilder<Message>): Html => {
       DragAndDrop: () => embedUi('ui-drag-and-drop', View.dragAndDrop),
       Fieldset: () => embedUi('ui-fieldset', View.fieldset),
       FileDrop: () => embedUi('ui-file-drop', View.fileDrop),
+      HoverIntent: () => embedUi('ui-hover-intent', View.hoverIntent),
       Input: () => embedUi('ui-input', View.input),
       Listbox: () => embedUi('ui-listbox', View.listbox),
       Menu: () => embedUi('ui-menu', View.menu),

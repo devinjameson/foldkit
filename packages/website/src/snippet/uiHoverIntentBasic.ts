@@ -48,7 +48,7 @@ const foldHoverIntent = Update.foldChild({
 GotHoverIntentMessage: ({ message }) => foldHoverIntent(model, message)
 
 // Spread trigger attributes on the activator. Spread panel attributes on the
-// content. Hover Intent owns events only, so this component chooses the role,
+// content. HoverIntent owns events only, so this component chooses the role,
 // anchor, and styles around those elements.
 const triggerId = 'account-preview-trigger'
 const panelId = 'account-preview-panel'
