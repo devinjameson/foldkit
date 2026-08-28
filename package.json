@@ -96,7 +96,7 @@
     "@changesets/cli": "^2.31.1",
     "@foldkit/oxlint-plugin": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/node": "^25.9.5",
+    "@types/node": "^26.4.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",

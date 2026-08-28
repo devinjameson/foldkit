@@ -46,7 +46,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "esbuild": "^0.28.2",
-    "happy-dom": "^20.11.7",
+    "happy-dom": "^20.11.8",
     "image-size": "^2.0.2",
     "pagefind": "^1.5.2",
     "playwright": "^1.62.1",
