@@ -3601,24 +3601,24 @@ type DocumentMetadataElements = {
   ogUrl?: HTMLMetaElement
 }
 
-type AppliedDocumentMetadata = Readonly<{
+type ResolvedDocumentMetadata = Readonly<{
   title: string
   lang: string | undefined
-  dir: string | undefined
-  canonical: string
+  dirAttribute: string | undefined
+  canonicalUrl: string
   ogUrl: string
 }>
 
-type DocumentMetadataMutationState = { isDirty: boolean }
+type DocumentMetadataInvalidation = { isInvalidated: boolean }
 
 type DocumentMetadataState = {
   readonly elements: DocumentMetadataElements
   readonly observer: MutationObserver
-  readonly mutationState: DocumentMetadataMutationState
+  readonly invalidation: DocumentMetadataInvalidation
   observedHead: HTMLHeadElement
-  applied?: AppliedDocumentMetadata
-  locationHref?: string
-  locationCanonical?: string
+  lastApplied?: ResolvedDocumentMetadata
+  cachedLocationHref?: string
+  cachedLocationCanonical?: string
 }
 
 const documentMetadataStates = new WeakMap<
@@ -3626,7 +3626,7 @@ const documentMetadataStates = new WeakMap<
   DocumentMetadataState
 >()
 
-const observeDocumentMetadata = (
+const observeDocumentMetadataMutations = (
   observer: MutationObserver,
 ): HTMLHeadElement => {
   const observedHead = document.head
@@ -3644,33 +3644,33 @@ const observeDocumentMetadata = (
   return observedHead
 }
 
-const metadataStateForDocument = (): DocumentMetadataState => {
-  const existing = documentMetadataStates.get(document)
-  if (existing !== undefined) {
-    return existing
+const getOrCreateDocumentMetadataState = (): DocumentMetadataState => {
+  const existingState = documentMetadataStates.get(document)
+  if (existingState !== undefined) {
+    return existingState
   }
 
-  const mutationState: DocumentMetadataMutationState = { isDirty: true }
+  const invalidation: DocumentMetadataInvalidation = { isInvalidated: true }
   const observer = new MutationObserver(() => {
-    mutationState.isDirty = true
+    invalidation.isInvalidated = true
   })
-  const state: DocumentMetadataState = {
+  const metadataState: DocumentMetadataState = {
     elements: {},
     observer,
-    mutationState,
-    observedHead: observeDocumentMetadata(observer),
+    invalidation,
+    observedHead: observeDocumentMetadataMutations(observer),
   }
-  documentMetadataStates.set(document, state)
-  return state
+  documentMetadataStates.set(document, metadataState)
+  return metadataState
 }
 
-const metadataElementsForDocument = (
-  state: DocumentMetadataState,
+const findOrCreateDocumentMetadataElements = (
+  metadataState: DocumentMetadataState,
 ): Readonly<{
   canonical: HTMLLinkElement
   ogUrl: HTMLMetaElement
 }> => {
-  const { elements } = state
+  const { elements } = metadataState
 
   let canonical = elements.canonical
   if (canonical === undefined || canonical.parentNode !== document.head) {
@@ -3691,16 +3691,84 @@ const metadataElementsForDocument = (
   return { canonical, ogUrl }
 }
 
-const currentLocationUrlForState = (state: DocumentMetadataState): string => {
-  const href = window.location.href
-  if (state.locationHref === href && state.locationCanonical !== undefined) {
-    return state.locationCanonical
+const readOrCacheCurrentLocationUrl = (
+  metadataState: DocumentMetadataState,
+): string => {
+  const currentLocationHref = window.location.href
+  if (
+    metadataState.cachedLocationHref === currentLocationHref &&
+    metadataState.cachedLocationCanonical !== undefined
+  ) {
+    return metadataState.cachedLocationCanonical
   }
 
-  const canonical = currentLocationUrl()
-  state.locationHref = href
-  state.locationCanonical = canonical
-  return canonical
+  const canonicalUrl = currentLocationUrl()
+  metadataState.cachedLocationHref = currentLocationHref
+  metadataState.cachedLocationCanonical = canonicalUrl
+  return canonicalUrl
+}
+
+const rebindDocumentMetadataObserverToCurrentHead = (
+  metadataState: DocumentMetadataState,
+): void => {
+  // NOTE: a MutationObserver remains attached to a detached head after
+  // document.head is replaced. Rebind it and invalidate the metadata snapshot
+  // before the next unchanged guard.
+  metadataState.observer.disconnect()
+  metadataState.observedHead = observeDocumentMetadataMutations(
+    metadataState.observer,
+  )
+  metadataState.invalidation.isInvalidated = true
+}
+
+const reconcileDocumentMetadata = (
+  metadataState: DocumentMetadataState,
+  nextMetadata: ResolvedDocumentMetadata,
+): void => {
+  if (document.title !== nextMetadata.title) {
+    document.title = nextMetadata.title
+  }
+
+  const { documentElement } = document
+
+  if (
+    nextMetadata.lang !== undefined &&
+    documentElement.lang !== nextMetadata.lang
+  ) {
+    documentElement.lang = nextMetadata.lang
+  }
+
+  if (
+    nextMetadata.dirAttribute !== undefined &&
+    documentElement.dir !== nextMetadata.dirAttribute
+  ) {
+    documentElement.dir = nextMetadata.dirAttribute
+  }
+
+  const metadataElements = findOrCreateDocumentMetadataElements(metadataState)
+
+  if (metadataElements.canonical.getAttribute('rel') !== 'canonical') {
+    metadataElements.canonical.setAttribute('rel', 'canonical')
+  }
+  if (
+    metadataElements.canonical.getAttribute('href') !==
+    nextMetadata.canonicalUrl
+  ) {
+    metadataElements.canonical.setAttribute('href', nextMetadata.canonicalUrl)
+  }
+  if (metadataElements.ogUrl.getAttribute('property') !== 'og:url') {
+    metadataElements.ogUrl.setAttribute('property', 'og:url')
+  }
+  if (metadataElements.ogUrl.getAttribute('content') !== nextMetadata.ogUrl) {
+    metadataElements.ogUrl.setAttribute('content', nextMetadata.ogUrl)
+  }
+
+  metadataState.lastApplied = nextMetadata
+  metadataState.invalidation.isInvalidated = false
+  // NOTE: clear the records produced by Foldkit's own writes before the
+  // observer callback runs. Otherwise the next unchanged render would be
+  // marked dirty and repeat every DOM read this cache is meant to avoid.
+  metadataState.observer.takeRecords()
 }
 
 const applyDocumentMetadata = (
@@ -3711,77 +3779,47 @@ const applyDocumentMetadata = (
     return
   }
 
-  const state = metadataStateForDocument()
-  if (state.observedHead !== document.head) {
-    state.observer.disconnect()
-    state.observedHead = observeDocumentMetadata(state.observer)
-    state.mutationState.isDirty = true
+  const metadataState = getOrCreateDocumentMetadataState()
+
+  if (metadataState.observedHead !== document.head) {
+    rebindDocumentMetadataObserverToCurrentHead(metadataState)
   }
-  const canonical = nextDocument.canonical ?? currentLocationUrlForState(state)
-  const ogUrl = nextDocument.ogUrl ?? canonical
-  const dir =
+
+  const canonicalUrl =
+    nextDocument.canonical ?? readOrCacheCurrentLocationUrl(metadataState)
+  const ogUrl = nextDocument.ogUrl ?? canonicalUrl
+  const dirAttribute =
     nextDocument.dir === undefined
       ? undefined
       : textDirectionToAttribute(nextDocument.dir)
-  if (Array.isArrayNonEmpty(state.observer.takeRecords())) {
-    state.mutationState.isDirty = true
+
+  // NOTE: MutationObserver callbacks are asynchronous. Consume queued records
+  // synchronously before trusting the unchanged fast path.
+  if (Array.isArrayNonEmpty(metadataState.observer.takeRecords())) {
+    metadataState.invalidation.isInvalidated = true
   }
-  const applied = state.applied
-  if (
-    !state.mutationState.isDirty &&
-    applied !== undefined &&
-    applied.title === nextDocument.title &&
-    applied.lang === nextDocument.lang &&
-    applied.dir === dir &&
-    applied.canonical === canonical &&
-    applied.ogUrl === ogUrl
-  ) {
+
+  const lastApplied = metadataState.lastApplied
+  const isAppliedMetadataCurrent =
+    !metadataState.invalidation.isInvalidated &&
+    lastApplied !== undefined &&
+    lastApplied.title === nextDocument.title &&
+    lastApplied.lang === nextDocument.lang &&
+    lastApplied.dirAttribute === dirAttribute &&
+    lastApplied.canonicalUrl === canonicalUrl &&
+    lastApplied.ogUrl === ogUrl
+
+  if (isAppliedMetadataCurrent) {
     return
   }
 
-  if (document.title !== nextDocument.title) {
-    document.title = nextDocument.title
-  }
-
-  const { documentElement } = document
-
-  if (
-    nextDocument.lang !== undefined &&
-    documentElement.lang !== nextDocument.lang
-  ) {
-    documentElement.lang = nextDocument.lang
-  }
-
-  if (dir !== undefined && documentElement.dir !== dir) {
-    documentElement.dir = dir
-  }
-
-  const metadataElements = metadataElementsForDocument(state)
-
-  if (metadataElements.canonical.getAttribute('rel') !== 'canonical') {
-    metadataElements.canonical.setAttribute('rel', 'canonical')
-  }
-  if (metadataElements.canonical.getAttribute('href') !== canonical) {
-    metadataElements.canonical.setAttribute('href', canonical)
-  }
-  if (metadataElements.ogUrl.getAttribute('property') !== 'og:url') {
-    metadataElements.ogUrl.setAttribute('property', 'og:url')
-  }
-  if (metadataElements.ogUrl.getAttribute('content') !== ogUrl) {
-    metadataElements.ogUrl.setAttribute('content', ogUrl)
-  }
-  state.applied = {
+  reconcileDocumentMetadata(metadataState, {
     title: nextDocument.title,
     lang: nextDocument.lang,
-    dir,
-    canonical,
+    dirAttribute,
+    canonicalUrl,
     ogUrl,
-  }
-  state.mutationState.isDirty = false
-  // NOTE: clear the records produced by Foldkit's own writes before the
-  // observer callback runs. Otherwise the next unchanged render would be
-  // marked dirty and repeat every DOM read this cache is meant to avoid.
-  state.observer.takeRecords()
+  })
 }
 
 const renderCrashView = <Model, Message>(

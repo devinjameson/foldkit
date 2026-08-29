@@ -344,9 +344,9 @@ describe('makeApplication', () => {
   })
 
   it('invalidates the default canonical cache when the location changes', async () => {
-    const originalUrl = window.location.href
-    const nextUrl = new URL('/next?mode=fast#ignored', originalUrl)
-    const nextCanonical = `${nextUrl.origin}${nextUrl.pathname}${nextUrl.search}`
+    const originalHref = window.location.href
+    const nextUrl = new URL('/next?mode=fast#ignored', originalHref)
+    const nextCanonicalUrl = `${nextUrl.origin}${nextUrl.pathname}${nextUrl.search}`
     const application = makeApplication({
       Model,
       init: () => ({ model: { label: 'hello' } }),
@@ -362,9 +362,11 @@ describe('makeApplication', () => {
 
     try {
       await awaitBodyText('hello')
-      const canonical = document.head.querySelector('link[rel="canonical"]')
+      const canonicalElement = document.head.querySelector(
+        'link[rel="canonical"]',
+      )
       const button = document.body.querySelector('button')
-      if (!(canonical instanceof HTMLLinkElement) || button === null) {
+      if (!(canonicalElement instanceof HTMLLinkElement) || button === null) {
         throw new Error('expected application canonical metadata and button')
       }
 
@@ -372,10 +374,10 @@ describe('makeApplication', () => {
       button.click()
 
       await vi.waitFor(() => {
-        expect(canonical.getAttribute('href')).toBe(nextCanonical)
+        expect(canonicalElement.getAttribute('href')).toBe(nextCanonicalUrl)
       })
     } finally {
-      history.replaceState(null, '', originalUrl)
+      history.replaceState(null, '', originalHref)
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
   })

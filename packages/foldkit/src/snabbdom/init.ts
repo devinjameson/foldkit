@@ -144,13 +144,13 @@ export function init(
     }
   }
 
-  const areCreateModulesMasked = moduleDataMasks.create.every(
+  const isCreateModuleDataMaskCoverageComplete = moduleDataMasks.create.every(
     dataMask => dataMask !== undefined,
   )
-  const areUpdateModulesMasked = moduleDataMasks.update.every(
+  const isUpdateModuleDataMaskCoverageComplete = moduleDataMasks.update.every(
     dataMask => dataMask !== undefined,
   )
-  const areDestroyModulesMasked = moduleDataMasks.destroy.every(
+  const isDestroyModuleDataMaskCoverageComplete = moduleDataMasks.destroy.every(
     dataMask => dataMask !== undefined,
   )
 
@@ -224,7 +224,11 @@ export function init(
         )
       }
       const dataMask = data?.[vnodeDataMaskKey]
-      if (!areCreateModulesMasked || dataMask === undefined || dataMask !== 0) {
+      if (
+        !isCreateModuleDataMaskCoverageComplete ||
+        dataMask === undefined ||
+        dataMask !== 0
+      ) {
         for (
           let moduleIndex = 0;
           moduleIndex < moduleHooks.create.length;
@@ -269,7 +273,11 @@ export function init(
         api.createDocumentFragment ?? documentFragmentIsNotSupported
       )()
       const dataMask = data?.[vnodeDataMaskKey]
-      if (!areCreateModulesMasked || dataMask === undefined || dataMask !== 0) {
+      if (
+        !isCreateModuleDataMaskCoverageComplete ||
+        dataMask === undefined ||
+        dataMask !== 0
+      ) {
         for (
           let moduleIndex = 0;
           moduleIndex < moduleHooks.create.length;
@@ -330,7 +338,7 @@ export function init(
       data?.hook?.destroy?.(vnode)
       const dataMask = data[vnodeDataMaskKey]
       if (
-        !areDestroyModulesMasked ||
+        !isDestroyModuleDataMaskCoverageComplete ||
         dataMask === undefined ||
         dataMask !== 0
       ) {
@@ -626,7 +634,7 @@ export function init(
       const oldDataMask = oldVnode.data[vnodeDataMaskKey]
       const dataMask = vnode.data[vnodeDataMaskKey]
       if (
-        !areUpdateModulesMasked ||
+        !isUpdateModuleDataMaskCoverageComplete ||
         oldDataMask === undefined ||
         dataMask === undefined ||
         (oldDataMask | dataMask) !== 0

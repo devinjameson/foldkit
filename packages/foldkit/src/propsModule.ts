@@ -26,8 +26,8 @@ const writeProperty = (element: object, name: string, value: unknown): void => {
     })
   } else {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    const properties = element as Record<string, unknown>
-    properties[name] = value
+    const elementProperties = element as Record<string, unknown>
+    elementProperties[name] = value
   }
 }
 
