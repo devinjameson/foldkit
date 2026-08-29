@@ -3445,10 +3445,12 @@ const makeRuntime = <
 
             const release = (value: unknown) =>
               Effect.gen(function* () {
-                yield* config.release(value)
+                yield* config
+                  .release(value)
+                  .pipe(Effect.catchCause(() => Effect.void))
                 yield* Ref.set(resourceRef, Option.none())
                 yield* enqueueMessageEffect(config.onReleased())
-              }).pipe(Effect.catchCause(() => Effect.void))
+              })
 
             return pipe(
               Stream.scoped(
