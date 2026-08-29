@@ -92,28 +92,30 @@
     "check:published-versions": "tsx scripts/check-published-versions.ts"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.1",
     "@foldkit/oxlint-plugin": "workspace:*",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/node": "^25.9.3",
+    "@types/node": "^26.4.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",
-    "knip": "^6.12.2",
+    "knip": "^6.32.3",
     "madge": "^8.0.0",
-    "oxlint": "^1.70.0",
-    "prettier": "^3.8.4",
-    "semver": "^7.7.4",
+    "oxlint": "^1.80.0",
+    "prettier": "^3.9.6",
+    "semver": "^7.8.5",
     "simple-git-hooks": "^2.13.1",
-    "tsx": "^4.22.4",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.16"
+    "tsx": "^4.23.12",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vite": "^8.2.2"
   },
   "simple-git-hooks": {
     "commit-msg": "if grep -q 'Co-Authored-By.*[Cc]laude' \"$1\"; then echo '\\n❌ Commit message contains a Claude Co-Authored-By line. Remove it and try again.' && exit 1; fi",
     "pre-push": "bash scripts/run-pre-push.sh"
   },
   "engines": {
-    "node": ">=20.19.0 || >=22.12.0",
+    "node": "^22.22.2 || ^24.0.0 || >=26.0.0",
     "pnpm": ">=11"
   },
   "keywords": [

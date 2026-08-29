@@ -223,11 +223,13 @@ The target must be in the rendered tree with that event handler attached. A miss
 
 ## OutMessages
 
-When the update under test can return an OutMessage, Scene tracks the optional `outMessage` field. `expectOutMessage(expected)` asserts the emitted value. `expectNoOutMessage()` asserts that the field was absent.
+When the update under test can return an OutMessage, Scene tracks every OutMessage produced by the latest update-producing step. `expectOutMessage(expected)` asserts that the step emitted exactly one. `expectOutMessages(first, second, ...rest)` asserts several in runtime order. `expectNoOutMessage()` asserts that it emitted none.
 
 ::Snippet{name="sceneOutMessageAssertions" label="OutMessage assertions example"}
 
-Scene replaces the tracked OutMessage after every update. A branch with no `outMessage` clears the previous value, so `expectNoOutMessage()` describes the current transition instead of inheriting an earlier result.
+A single interaction can drive several updates. A click may invoke a target handler, ancestor handlers, and then a form's submit handler. Scene collects their OutMessages in that same order.
+
+Scene replaces the tracked sequence after every step that drives update. A step whose updates omit `outMessage` clears the previous sequence, so `expectNoOutMessage()` describes the current transition instead of inheriting an earlier result. Assertions and other steps that do not drive update leave the sequence in place.
 
 ## Submodels with ViewInputs
 

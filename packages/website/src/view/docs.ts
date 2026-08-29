@@ -790,6 +790,17 @@ export const docsView = (
           ]),
           Page.UiPages.AnchorPage.tableOfContents,
         ),
+      UiHoverIntent: () =>
+        withTableOfContents(
+          h.submodel({
+            slotId: 'ui-HoverIntent',
+            model: model.uiPages,
+            view: Page.UiPages.HoverIntentPage.view,
+            viewInputs: { renderCopyButton, renderHeadingLink },
+            toParentMessage: toUiPageMessage,
+          }),
+          Page.UiPages.HoverIntentPage.tableOfContents,
+        ),
       UiButton: () =>
         withTableOfContents(
           h.submodel({

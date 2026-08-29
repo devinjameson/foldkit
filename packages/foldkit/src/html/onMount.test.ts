@@ -43,9 +43,8 @@ const WAIT_FOR_INTERRUPT_PROPAGATION_MS = 50
 
 /** Test fixture that constructs a Mounted MountAction directly with a custom
  *  Stream factory. Each test wires up its own factory body, so the production
- *  `Mount.define(...)(factory)` shape (which binds a single factory at
- *  definition time) doesn't fit. The runtime only reads `name`, `args`,
- *  and `f` from a MountAction. */
+ *  `Mount.define` shape (which binds one `execute` at definition time) doesn't
+ *  fit. The runtime only reads `name`, `args`, and `f` from a MountAction. */
 const makeMounted = <E = never>(
   f: (element: Element) => Stream.Stream<typeof Message.MountedRoot.Type, E>,
 ): MountAction<typeof Message.MountedRoot.Type, E> => ({ name: 'Mounted', f })
@@ -508,23 +507,22 @@ describe('OnMount', () => {
     let acquired = false
     let released = false
 
-    const WrappedEffect = Mount.define(
-      'WrappedEffect',
-      Message.MountedRoot,
-    )(() =>
-      Effect.gen(function* () {
-        yield* Effect.acquireRelease(
-          Effect.sync(() => {
-            acquired = true
-          }),
-          () =>
+    const WrappedEffect = Mount.define('WrappedEffect', {
+      messages: [Message.MountedRoot],
+      execute: () =>
+        Effect.gen(function* () {
+          yield* Effect.acquireRelease(
             Effect.sync(() => {
-              released = true
+              acquired = true
             }),
-        )
-        return Message.MountedRoot()
-      }),
-    )
+            () =>
+              Effect.sync(() => {
+                released = true
+              }),
+          )
+          return Message.MountedRoot()
+        }),
+    })
 
     const withChild = () => h.div([], [h.span([h.OnMount(WrappedEffect())])])
     const withoutChild = () => h.div([])

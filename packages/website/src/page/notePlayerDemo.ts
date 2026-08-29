@@ -551,17 +551,16 @@ const durationButtonClass = (
       !isSelected && isDisabled,
   })
 
-export const view = Submodel.defineView<Model, Message>(
-  (model, h): Html =>
-    DemoView.demoViewShell(
-      DemoView.codePanelView(
-        'note-demo-code-panel',
-        'note-demo-phase',
-        model.highlightPhase,
-        notePlayerDemoCodeHtml,
-      ),
-      appPanel(model, h),
+export const view = Submodel.defineView<Model, Message>((model, h): Html =>
+  DemoView.demoViewShell(
+    DemoView.codePanelView(
+      'note-demo-code-panel',
+      'note-demo-phase',
+      model.highlightPhase,
+      notePlayerDemoCodeHtml,
     ),
+    appPanel(model, h),
+  ),
 )
 
 const appPanel = (model: Model, h: HtmlBuilder<Message>): Html => {

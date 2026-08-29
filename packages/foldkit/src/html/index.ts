@@ -532,7 +532,6 @@ export type Attribute<Message> = Data.TaggedEnum<{
   Popovertarget: { readonly value: string }
   Popovertargetaction: { readonly value: string }
   OnClick: { readonly message: Message; readonly options?: ClickOptions }
-  OnClickFocus: { readonly focusSelector: string; readonly message: Message }
   OnDoubleClick: { readonly message: Message }
   OnMouseDown: { readonly message: Message }
   OnMouseUp: { readonly message: Message }
@@ -909,7 +908,6 @@ const {
   Popovertarget,
   Popovertargetaction,
   OnClick,
-  OnClickFocus,
   OnDoubleClick,
   OnMouseDown,
   OnMouseUp,
@@ -1252,12 +1250,16 @@ const writeDataProp = (
 ): Record<string, unknown> => {
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   const props = (ctx.data.props ??= {}) as Record<string, unknown>
-  Object.defineProperty(props, key, {
-    configurable: true,
-    enumerable: true,
-    value,
-    writable: true,
-  })
+  if (key === '__proto__') {
+    Object.defineProperty(props, key, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    })
+  } else {
+    props[key] = value
+  }
   addVNodeDataMask(ctx, VNodeDataMask.Props)
   return props
 }
@@ -1352,8 +1354,7 @@ const updateDataOn = (ctx: BuildContext, on: On): void => {
   for (const key of Object.keys(on)) {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const existingHandler = (existing as Record<string, unknown>)[key] as
-      | ((...args: ReadonlyArray<unknown>) => void)
-      | undefined
+      ((...args: ReadonlyArray<unknown>) => void) | undefined
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const newHandler = (on as Record<string, unknown>)[key] as (
       ...args: ReadonlyArray<unknown>
@@ -1574,14 +1575,6 @@ const attributeHandlers: AttributeHandlers = {
         if (focusTarget instanceof HTMLElement) {
           focusTarget.focus()
         }
-      }
-      ctx.dispatch(message)
-    }),
-  OnClickFocus: ({ focusSelector, message }, ctx: BuildContext) =>
-    addDataOn(ctx, 'click', () => {
-      const focusTarget = document.querySelector(focusSelector)
-      if (focusTarget instanceof HTMLElement) {
-        focusTarget.focus()
       }
       ctx.dispatch(message)
     }),
@@ -2573,8 +2566,7 @@ const buildVNodeData = <Message>(
   let mainCtx: BuildContext | undefined
   let boundaryCtxByDispatch: Map<DispatchSync, BuildContext> | undefined
   let sharedPostpatchProps:
-    | Array<Readonly<{ propName: string; value: unknown }>>
-    | undefined
+    Array<Readonly<{ propName: string; value: unknown }>> | undefined
   const getSharedPostpatchProps = (): Array<
     Readonly<{ propName: string; value: unknown }>
   > => (sharedPostpatchProps ??= [])
@@ -3563,18 +3555,6 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'OnClick'
     readonly message: Message
     readonly options?: ClickOptions
-  }
-  /** Synchronously focuses the element matching `focusSelector`, then
-   *  dispatches `message`.
-   *
-   *  @deprecated Use {@link HtmlBuilder.OnClick} with `focusSelector`. */
-  OnClickFocus: (
-    focusSelector: string,
-    message: Message,
-  ) => {
-    readonly _tag: 'OnClickFocus'
-    readonly focusSelector: string
-    readonly message: Message
   }
   OnDoubleClick: (message: Message) => {
     readonly _tag: 'OnDoubleClick'
@@ -4677,8 +4657,6 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
     options === undefined
       ? OnClick({ message })
       : OnClick({ message, options }),
-  OnClickFocus: (focusSelector: string, message: Message) =>
-    OnClickFocus({ focusSelector, message }),
   OnDoubleClick: (message: Message) => OnDoubleClick({ message }),
   OnMouseDown: (message: Message) => OnMouseDown({ message }),
   OnMouseUp: (message: Message) => OnMouseUp({ message }),

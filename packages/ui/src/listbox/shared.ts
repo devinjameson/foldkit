@@ -613,43 +613,39 @@ export const makeUpdate = <Model extends BaseModel>(
  *
  *  Exposed so Scene tests can call
  *  `Scene.Mount.resolve(AnchorListbox, CompletedAnchorListbox())`. */
-export const AnchorListbox = Mount.define(
-  'AnchorListbox',
-  { buttonId: S.String, anchor: AnchorConfig },
-  Message.CompletedAnchorListbox,
-)(
-  ({ buttonId, anchor }) =>
-    element =>
-      Effect.gen(function* () {
-        yield* Effect.acquireRelease(
-          Effect.sync(() =>
-            anchorSetup(element, {
-              buttonId,
-              anchor,
-              focusAfterPosition: true,
-            }),
-          ),
-          cleanup => Effect.sync(cleanup),
-        )
-        return Message.CompletedAnchorListbox()
-      }),
-)
+export const AnchorListbox = Mount.define('AnchorListbox', {
+  args: { buttonId: S.String, anchor: AnchorConfig },
+  messages: [Message.CompletedAnchorListbox],
+  execute: ({ element, buttonId, anchor }) =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          anchorSetup(element, {
+            buttonId,
+            anchor,
+            focusAfterPosition: true,
+          }),
+        ),
+        cleanup => Effect.sync(cleanup),
+      )
+      return Message.CompletedAnchorListbox()
+    }),
+})
 
 /** The backdrop-portaling Mount this Listbox renders. Exposed so Scene tests can
  *  call `Scene.Mount.resolve(PortalListboxBackdrop, CompletedPortalListboxBackdrop())` to
  *  acknowledge the mount produced by the rendered backdrop. */
-export const PortalListboxBackdrop = Mount.define(
-  'PortalListboxBackdrop',
-  Message.CompletedPortalListboxBackdrop,
-)(element =>
-  Effect.gen(function* () {
-    yield* Effect.acquireRelease(
-      Effect.sync(() => portalToContainingRoot(element)),
-      cleanup => Effect.sync(cleanup),
-    )
-    return Message.CompletedPortalListboxBackdrop()
-  }),
-)
+export const PortalListboxBackdrop = Mount.define('PortalListboxBackdrop', {
+  messages: [Message.CompletedPortalListboxBackdrop],
+  execute: ({ element }) =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => portalToContainingRoot(element)),
+        cleanup => Effect.sync(cleanup),
+      )
+      return Message.CompletedPortalListboxBackdrop()
+    }),
+})
 
 // VIEW TYPES
 

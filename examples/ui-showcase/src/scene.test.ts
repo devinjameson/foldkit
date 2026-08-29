@@ -23,6 +23,7 @@ describe('view', () => {
       expect(role('link', { name: 'Button' })).toExist(),
       expect(role('link', { name: 'Calendar' })).toExist(),
       expect(role('link', { name: 'Dialog' })).toExist(),
+      expect(role('link', { name: 'Hover Intent' })).toExist(),
       expect(role('link', { name: 'Toast' })).toExist(),
       expect(role('link', { name: 'Virtual List' })).toExist(),
     )
@@ -47,6 +48,7 @@ describe('view', () => {
       AppRoute.Checkbox(),
       AppRoute.Disclosure(),
       AppRoute.Fieldset(),
+      AppRoute.HoverIntent(),
       AppRoute.Input(),
       AppRoute.RadioGroup(),
       AppRoute.Select(),
@@ -62,6 +64,15 @@ describe('view', () => {
         expect(role('link', { name: 'Button' })).toExist(),
       )
     })
+  })
+
+  test('the Hover Intent route renders its interactive trigger', () => {
+    scene(
+      { update, view },
+      given(modelForRoute(AppRoute.HoverIntent())),
+      expect(role('heading', { name: 'Hover Intent' })).toExist(),
+      expect(role('button', { name: 'Preview account' })).toExist(),
+    )
   })
 
   test('the Disclosure panel stays mounted while collapsed so it can animate', () => {

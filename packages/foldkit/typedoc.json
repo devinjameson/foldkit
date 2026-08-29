@@ -20,6 +20,7 @@
     "DependenciesSchema",
     "DevToolsStore",
     "DispatchSync",
+    "ElementFieldIsReserved",
     "ElementFunction",
     "Entry",
     "EntryBrand",

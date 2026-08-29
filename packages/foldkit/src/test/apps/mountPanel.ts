@@ -31,37 +31,34 @@ export type Message = typeof Message.Type
 // MOUNT
 
 // NOTE: these Mounts are runtime/Scene fixtures, not idiomatic examples of
-// Mount work. Their factory bodies skip the DOM measurement/manipulation that
-// real Mounts perform (e.g. `element.getBoundingClientRect()` for measurement,
-// `element.focus()` for focus) and emit synthetic result Messages so tests can
-// pin specific values. See `ui/popover/popover.ts`, `ui/listbox/shared.ts`,
-// etc. for production-shaped Mounts that read or write the element handle.
+// Mount work. Their `execute` bodies skip the DOM measurement/manipulation
+// that real Mounts perform (e.g. `element.getBoundingClientRect()` for
+// measurement, `element.focus()` for focus) and emit synthetic result Messages
+// so tests can pin specific values. See `ui/popover/index.ts`,
+// `ui/listbox/shared.ts`, etc. for production-shaped Mounts that read or write
+// the element handle.
 
-export const MeasurePanel = Mount.define(
-  'MeasurePanel',
-  Message.MeasuredPanel,
-  Message.FailedMountSidebar,
-)(() => Effect.succeed(Message.MeasuredPanel({ width: 320 })))
+export const MeasurePanel = Mount.define('MeasurePanel', {
+  messages: [Message.MeasuredPanel, Message.FailedMountSidebar],
+  execute: () => Effect.succeed(Message.MeasuredPanel({ width: 320 })),
+})
 
-export const FocusButton = Mount.define(
-  'FocusButton',
-  Message.CompletedFocusButton,
-)(() => Effect.succeed(Message.CompletedFocusButton()))
+export const FocusButton = Mount.define('FocusButton', {
+  messages: [Message.CompletedFocusButton],
+  execute: () => Effect.succeed(Message.CompletedFocusButton()),
+})
 
-export const ScrollList = Mount.define(
-  'ScrollList',
-  { offset: S.Number },
-  Message.ScrolledTo,
-)(
-  ({ offset }) =>
-    element =>
-      Effect.sync(() => {
-        if (element instanceof HTMLElement) {
-          element.scrollTop = offset
-        }
-        return Message.ScrolledTo({ offset })
-      }),
-)
+export const ScrollList = Mount.define('ScrollList', {
+  args: { offset: S.Number },
+  messages: [Message.ScrolledTo],
+  execute: ({ element, offset }) =>
+    Effect.sync(() => {
+      if (element instanceof HTMLElement) {
+        element.scrollTop = offset
+      }
+      return Message.ScrolledTo({ offset })
+    }),
+})
 
 // INIT
 

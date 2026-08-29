@@ -25,9 +25,9 @@ const writeProperty = (element: object, name: string, value: unknown): void => {
       writable: true,
     })
   } else {
-    if (!Reflect.set(element, name, value)) {
-      throw new TypeError(`[foldkit] Cannot assign DOM property ${name}.`)
-    }
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const elementProperties = element as Record<string, unknown>
+    elementProperties[name] = value
   }
 }
 
@@ -99,8 +99,7 @@ function updateProps(
   const elm = vnode.elm as any
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   let oldProps = (oldVnode.data as any)?.props as
-    | Record<string, any>
-    | undefined
+    Record<string, any> | undefined
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   let props = (vnode.data as any)?.props as Record<string, any> | undefined
   if (!oldProps && !props) {

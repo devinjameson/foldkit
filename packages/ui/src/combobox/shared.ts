@@ -186,8 +186,7 @@ export const OutMessage = defineMessageUnion({
  *  `Selected` OutMessage from the factory's `update`, instead of
  *  `value: string`. Defaults to `string`. */
 export type OutMessage<Value extends string = string> =
-  | Selected<Value>
-  | ClearedSelection
+  Selected<Value> | ClearedSelection
 
 // SELECTORS
 
@@ -638,39 +637,36 @@ export const makeUpdate = <Model extends BaseModel>(
  *  capture listener that prevents input blur on item presses. Exposed so
  *  Scene tests can call
  *  `Scene.Mount.resolve(AnchorCombobox, CompletedAnchorCombobox())`. */
-export const AnchorCombobox = Mount.define(
-  'AnchorCombobox',
-  { buttonId: S.String, anchor: AnchorConfig },
-  Message.CompletedAnchorCombobox,
-)(
-  ({ buttonId, anchor }) =>
-    element =>
-      Effect.gen(function* () {
-        yield* Effect.acquireRelease(
-          Effect.sync(() => {
-            const preventBlur = (event: Event) => {
-              event.preventDefault()
-            }
-            element.addEventListener('pointerdown', preventBlur, {
+export const AnchorCombobox = Mount.define('AnchorCombobox', {
+  args: { buttonId: S.String, anchor: AnchorConfig },
+  messages: [Message.CompletedAnchorCombobox],
+  execute: ({ element, buttonId, anchor }) =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          const preventBlur = (event: Event) => {
+            event.preventDefault()
+          }
+          element.addEventListener('pointerdown', preventBlur, {
+            capture: true,
+          })
+          const teardownAnchor = anchorSetup(element, {
+            buttonId,
+            anchor,
+            interceptTab: false,
+          })
+          return () => {
+            element.removeEventListener('pointerdown', preventBlur, {
               capture: true,
             })
-            const teardownAnchor = anchorSetup(element, {
-              buttonId,
-              anchor,
-              interceptTab: false,
-            })
-            return () => {
-              element.removeEventListener('pointerdown', preventBlur, {
-                capture: true,
-              })
-              teardownAnchor()
-            }
-          }),
-          cleanup => Effect.sync(cleanup),
-        )
-        return Message.CompletedAnchorCombobox()
-      }),
-)
+            teardownAnchor()
+          }
+        }),
+        cleanup => Effect.sync(cleanup),
+      )
+      return Message.CompletedAnchorCombobox()
+    }),
+})
 
 /** The Mount this Combobox renders to install a `pointerdown`-cancelling
  *  capture listener that prevents blur on item presses. Exposed so Scene
@@ -678,26 +674,28 @@ export const AnchorCombobox = Mount.define(
  *  `Scene.Mount.resolve(AttachComboboxPreventBlur, CompletedAttachComboboxPreventBlur())`. */
 export const AttachComboboxPreventBlur = Mount.define(
   'AttachComboboxPreventBlur',
-  Message.CompletedAttachComboboxPreventBlur,
-)(element =>
-  Effect.gen(function* () {
-    yield* Effect.acquireRelease(
-      Effect.sync(() => {
-        const handler = (event: Event) => {
-          event.preventDefault()
-        }
-        element.addEventListener('pointerdown', handler, { capture: true })
-        return handler
-      }),
-      handler =>
-        Effect.sync(() =>
-          element.removeEventListener('pointerdown', handler, {
-            capture: true,
+  {
+    messages: [Message.CompletedAttachComboboxPreventBlur],
+    execute: ({ element }) =>
+      Effect.gen(function* () {
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            const handler = (event: Event) => {
+              event.preventDefault()
+            }
+            element.addEventListener('pointerdown', handler, { capture: true })
+            return handler
           }),
-        ),
-    )
-    return Message.CompletedAttachComboboxPreventBlur()
-  }),
+          handler =>
+            Effect.sync(() =>
+              element.removeEventListener('pointerdown', handler, {
+                capture: true,
+              }),
+            ),
+        )
+        return Message.CompletedAttachComboboxPreventBlur()
+      }),
+  },
 )
 
 /** The Mount this Combobox renders to install the input's select-on-focus
@@ -705,41 +703,42 @@ export const AttachComboboxPreventBlur = Mount.define(
  *  `Scene.Mount.resolve(AttachComboboxSelectOnFocus, CompletedAttachComboboxSelectOnFocus())`. */
 export const AttachComboboxSelectOnFocus = Mount.define(
   'AttachComboboxSelectOnFocus',
-  Message.CompletedAttachComboboxSelectOnFocus,
-)(element =>
-  Effect.gen(function* () {
-    yield* Effect.acquireRelease(
-      Effect.sync(() => {
-        const handler = () => {
-          if (element instanceof HTMLInputElement) {
-            element.select()
-          }
-        }
-        element.addEventListener('focus', handler)
-        return handler
+  {
+    messages: [Message.CompletedAttachComboboxSelectOnFocus],
+    execute: ({ element }) =>
+      Effect.gen(function* () {
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            const handler = () => {
+              if (element instanceof HTMLInputElement) {
+                element.select()
+              }
+            }
+            element.addEventListener('focus', handler)
+            return handler
+          }),
+          handler =>
+            Effect.sync(() => element.removeEventListener('focus', handler)),
+        )
+        return Message.CompletedAttachComboboxSelectOnFocus()
       }),
-      handler =>
-        Effect.sync(() => element.removeEventListener('focus', handler)),
-    )
-    return Message.CompletedAttachComboboxSelectOnFocus()
-  }),
+  },
 )
 
 /** The backdrop-portaling Mount this Combobox renders. Exposed so Scene tests can
  *  call `Scene.Mount.resolve(PortalComboboxBackdrop, CompletedPortalComboboxBackdrop())` to
  *  acknowledge the mount produced by the rendered backdrop. */
-export const PortalComboboxBackdrop = Mount.define(
-  'PortalComboboxBackdrop',
-  Message.CompletedPortalComboboxBackdrop,
-)(element =>
-  Effect.gen(function* () {
-    yield* Effect.acquireRelease(
-      Effect.sync(() => portalToContainingRoot(element)),
-      cleanup => Effect.sync(cleanup),
-    )
-    return Message.CompletedPortalComboboxBackdrop()
-  }),
-)
+export const PortalComboboxBackdrop = Mount.define('PortalComboboxBackdrop', {
+  messages: [Message.CompletedPortalComboboxBackdrop],
+  execute: ({ element }) =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => portalToContainingRoot(element)),
+        cleanup => Effect.sync(cleanup),
+      )
+      return Message.CompletedPortalComboboxBackdrop()
+    }),
+})
 
 // VIEW TYPES
 

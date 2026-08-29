@@ -56,9 +56,7 @@ type PositionedNode = Readonly<{
 type DirectiveNode = Readonly<{
   name: string
   attributes?:
-    | Readonly<Record<string, string | null | undefined>>
-    | null
-    | undefined
+    Readonly<Record<string, string | null | undefined>> | null | undefined
   position?: Position | undefined
 }>
 
@@ -101,9 +99,7 @@ const unsupported = (node: PositionedNode): never => {
 
 const normalizeAttributes = (
   attributes:
-    | Readonly<Record<string, string | null | undefined>>
-    | null
-    | undefined,
+    Readonly<Record<string, string | null | undefined>> | null | undefined,
 ): Record<string, string> =>
   Object.fromEntries(
     Object.entries(attributes ?? {}).map(([name, value]) => [

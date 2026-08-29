@@ -236,6 +236,11 @@ const trapFocusWithinDialog = (
  * Cleans up the keyboard handlers installed by `showDialog` and restores focus to
  * the element that was focused before the dialog opened (the trigger, or the
  * dialog beneath it when closing a stacked dialog).
+ * Resolves to `true` when it released the keyboard handlers, the return
+ * focus, and the stack entry.
+ * Resolves to `false` when the dialog held none, for example when the close
+ * runs before `showDialog` has installed them. A caller that unlocks page
+ * scroll after the close should unlock only when the result is `true`.
  * Fails with `ElementNotFound` if the selector does not match an `HTMLDialogElement`.
  *
  * @example
@@ -245,13 +250,12 @@ const trapFocusWithinDialog = (
  */
 export const closeDialog = (
   selector: string,
-): Effect.Effect<void, ElementNotFound> =>
+): Effect.Effect<boolean, ElementNotFound> =>
   Effect.suspend(() => {
     const element = document.querySelector(selector)
     if (element instanceof HTMLDialogElement) {
       element.close()
-      releaseDialogHygieneById(element.id)
-      return Effect.void
+      return Effect.succeed(releaseDialogHygieneById(element.id))
     }
     return Effect.fail(new ElementNotFound({ selector }))
   })
@@ -281,9 +285,10 @@ const releaseDialogHygieneById = (id: string): boolean => {
  * z-index counter, and one page scroll lock. Use this as a backstop for the
  * case where a dialog's element is removed from the DOM without a purposeful
  * close, the classic example being navigation away from a route-keyed subtree
- * that contains the dialog. The normal close path (`closeDialog` plus the
- * Dialog component's `unlockScroll` Command) already releases these, so this
- * is the missing teardown when no close Message ever flows through `update`.
+ * that contains the dialog. The normal close path already releases these.
+ * That path is `closeDialog` first, then the Dialog component's scroll unlock
+ * when `closeDialog` reports a release. This function is the cleanup for the
+ * case where no close Message ever reaches `update`.
  *
  * Addressed by the dialog's id, not a selector, because the element is
  * typically already gone from the DOM by the time this runs (that is the whole

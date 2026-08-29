@@ -97,6 +97,7 @@ export const AppRoute = defineRouteUnion({
   UiFieldset: {},
   UiDragAndDrop: {},
   UiFileDrop: {},
+  UiHoverIntent: {},
   UiToast: {},
   UiTooltip: {},
   UiAnimation: {},
@@ -197,6 +198,7 @@ export const DocsRoute = AppRoute.subset([
   'UiFieldset',
   'UiDragAndDrop',
   'UiFileDrop',
+  'UiHoverIntent',
   'UiToast',
   'UiTooltip',
   'UiAnimation',
@@ -456,6 +458,7 @@ export const uiTextareaRouter = ui('textarea', AppRoute.UiTextarea)
 export const uiFieldsetRouter = ui('fieldset', AppRoute.UiFieldset)
 export const uiDragAndDropRouter = ui('drag-and-drop', AppRoute.UiDragAndDrop)
 export const uiFileDropRouter = ui('file-drop', AppRoute.UiFileDrop)
+export const uiHoverIntentRouter = ui('hover-intent', AppRoute.UiHoverIntent)
 export const uiToastRouter = ui('toast', AppRoute.UiToast)
 export const uiTooltipRouter = ui('tooltip', AppRoute.UiTooltip)
 export const uiAnimationRouter = ui('animation', AppRoute.UiAnimation)
@@ -572,6 +575,7 @@ const uiParser = oneOf(
   uiFieldsetRouter,
   uiDragAndDropRouter,
   uiFileDropRouter,
+  uiHoverIntentRouter,
   uiToastRouter,
   uiTooltipRouter,
   uiAnimationRouter,

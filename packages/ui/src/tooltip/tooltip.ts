@@ -86,27 +86,24 @@ export const WaitBeforeShowing = Command.define('WaitBeforeShowing', {
 })
 
 /** The anchor-positioning Mount this Tooltip renders on its panel. */
-export const AnchorTooltip = Mount.define(
-  'AnchorTooltip',
-  { buttonId: S.String, anchor: AnchorConfig },
-  Message.CompletedAnchorTooltip,
-)(
-  ({ buttonId, anchor }) =>
-    element =>
-      Effect.gen(function* () {
-        yield* Effect.acquireRelease(
-          Effect.sync(() =>
-            anchorSetup(element, {
-              buttonId,
-              anchor,
-              interceptTab: false,
-            }),
-          ),
-          cleanup => Effect.sync(cleanup),
-        )
-        return Message.CompletedAnchorTooltip()
-      }),
-)
+export const AnchorTooltip = Mount.define('AnchorTooltip', {
+  args: { buttonId: S.String, anchor: AnchorConfig },
+  messages: [Message.CompletedAnchorTooltip],
+  execute: ({ element, buttonId, anchor }) =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          anchorSetup(element, {
+            buttonId,
+            anchor,
+            interceptTab: false,
+          }),
+        ),
+        cleanup => Effect.sync(cleanup),
+      )
+      return Message.CompletedAnchorTooltip()
+    }),
+})
 
 const computeUpdate = (model: Model, message: Message) =>
   Message.match<Update.Return<Model, Message>>(message, {

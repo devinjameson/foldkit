@@ -440,30 +440,43 @@
   }
 
   .popover-arrow {
-    @apply absolute w-2 h-2 rotate-45 border-gray-200 dark:border-gray-700;
-    background: inherit;
+    @apply absolute w-4 h-4;
     left: var(--arrow-x);
     top: var(--arrow-y);
   }
 
+  .popover-arrow-fill {
+    @apply fill-cream dark:fill-gray-800;
+    stroke: none;
+  }
+
+  .popover-arrow-outline-clip {
+    overflow: hidden;
+  }
+
+  .popover-arrow-outline {
+    @apply fill-none stroke-gray-200 dark:stroke-gray-700;
+    stroke-linejoin: round;
+    stroke-width: 1px;
+  }
+
   .popover-panel[data-placement='top'] > .popover-arrow {
-    @apply border-r border-b;
-    bottom: -4px;
+    bottom: -8px;
+    transform: rotate(180deg);
   }
 
   .popover-panel[data-placement='bottom'] > .popover-arrow {
-    @apply border-t border-l;
-    top: -4px;
+    top: -8px;
   }
 
   .popover-panel[data-placement='left'] > .popover-arrow {
-    @apply border-t border-r;
-    right: -4px;
+    right: -8px;
+    transform: rotate(90deg);
   }
 
   .popover-panel[data-placement='right'] > .popover-arrow {
-    @apply border-b border-l;
-    left: -4px;
+    left: -8px;
+    transform: rotate(-90deg);
   }
 
   @keyframes demo-pulse {

@@ -38,13 +38,13 @@ Use verb-first naming that mirrors the Command name: Command `LockScroll` → Me
 // RIGHT: verb first, matching the Command name
 CompletedFocusInput // Command: FocusInput
 CompletedLockScroll // Command: LockScroll
-CompletedShowDialog // Command: ShowDialog
+CompletedCloseDialog // Command: CloseDialog
 CompletedFocusItems // Command: FocusItems
 
 // WRONG: object first
 CompletedInputFocus
 CompletedScrollLock
-CompletedDialogShow
+CompletedDialogClose
 CompletedItemsFocus
 ```
 

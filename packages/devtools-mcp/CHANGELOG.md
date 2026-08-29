@@ -1,5 +1,11 @@
 # @foldkit/devtools-mcp
 
+## 0.19.1
+
+### Patch Changes
+
+- f59da51: Point each package's npm metadata at its Foldkit documentation page so developers and automated tools can identify the official setup guide.
+
 ## 0.19.0
 
 ### Minor Changes

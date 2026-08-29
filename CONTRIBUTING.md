@@ -12,7 +12,7 @@ Foldkit is a pnpm workspace.
 pnpm install
 ```
 
-Node `>=20.19.0` and pnpm `>=11`. The repository pins `pnpm@11.8.0` via `packageManager`, so Corepack will select the right version on its own.
+Node `^22.22.2 || ^24.0.0 || >=26.0.0` and pnpm `>=11`. The repository pins `pnpm@11.8.0` via `packageManager`, so Corepack will select the right version on its own.
 
 `pnpm install` also installs the git hooks. Two of them run:
 

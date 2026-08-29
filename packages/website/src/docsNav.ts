@@ -73,6 +73,7 @@ import {
   uiDragAndDropRouter,
   uiFieldsetRouter,
   uiFileDropRouter,
+  uiHoverIntentRouter,
   uiInputRouter,
   uiListboxRouter,
   uiMenuRouter,
@@ -524,6 +525,11 @@ export const docsSections: ReadonlyArray<DocsSection> = [
           _tag: 'UiTooltip',
           href: uiTooltipRouter(),
           label: 'Tooltip',
+        },
+        {
+          _tag: 'UiHoverIntent',
+          href: uiHoverIntentRouter(),
+          label: 'Hover Intent',
         },
         {
           _tag: 'UiToast',

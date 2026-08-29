@@ -170,6 +170,8 @@ export type SceneSimulation<Model, Message, OutMessage = undefined> = Readonly<{
   _phantom: [Model, Message]
   commands: ReadonlyArray<AnyCommand>
   mounts: ReadonlyArray<PendingMount>
+  /** The sole OutMessage from the latest update-producing Scene step.
+   *  Undefined when that step emitted none or more than one. */
   outMessage: OutMessage | undefined
   html: VNode
 }>
@@ -251,6 +253,8 @@ type InternalSceneSimulation<
     capturingDispatch: CapturingDispatch
     scope: Option.Option<Locator>
     mountSlots: ReadonlyArray<MountSlotState>
+    outMessages: ReadonlyArray<OutMessage>
+    outMessageRevision: number
     lastInteractionOutcome: InteractionOutcome
     maybeUnacknowledgedIgnored: Option.Option<IgnoredInteraction>
   }>
@@ -264,8 +268,7 @@ const collectRenderedSlots = (vnode: VNode): ReadonlyArray<PendingMount> => {
   const walk = (node: VNode): void => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const marker = node.data?.[FOLDKIT_MOUNT_KEY] as
-      | FoldkitMountMarker
-      | undefined
+      FoldkitMountMarker | undefined
     if (marker !== undefined) {
       const occurrence = counts.get(marker.name) ?? 0
       counts.set(marker.name, occurrence + 1)
@@ -359,6 +362,60 @@ const toInternal = <Model, Message, OutMessage>(
 ): InternalSceneSimulation<Model, Message, OutMessage> =>
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   simulation as InternalSceneSimulation<Model, Message, OutMessage>
+
+type OutMessageCapture<Model, Message, OutMessage> = Readonly<{
+  updateFn: (
+    model: Model,
+    message: Message,
+  ) => SimulationUpdateReturn<Model, OutMessage>
+  getOutMessages: () => ReadonlyArray<OutMessage>
+  isUpdateApplied: () => boolean
+}>
+
+const createOutMessageCapture = <Model, Message, OutMessage>(
+  updateFn: (
+    model: Model,
+    message: Message,
+  ) => SimulationUpdateReturn<Model, OutMessage>,
+): OutMessageCapture<Model, Message, OutMessage> => {
+  const outMessages: Array<OutMessage> = []
+  let isUpdateApplied = false
+
+  return {
+    updateFn: (model, message) => {
+      isUpdateApplied = true
+      const messageUpdate = updateFn(model, message)
+
+      if (!Predicate.isUndefined(messageUpdate.outMessage)) {
+        outMessages.push(messageUpdate.outMessage)
+      }
+
+      return messageUpdate
+    },
+    getOutMessages: () => outMessages,
+    isUpdateApplied: () => isUpdateApplied,
+  }
+}
+
+const withOutMessages = <Model, Message, OutMessage>(
+  simulation: SceneSimulation<Model, Message, OutMessage>,
+  outMessages: ReadonlyArray<OutMessage>,
+): SceneSimulation<Model, Message, OutMessage> => {
+  const internal = toInternal(simulation)
+  const outMessage = Array.matchLeft(outMessages, {
+    onEmpty: () => undefined,
+    onNonEmpty: (head, tail) =>
+      Array.isReadonlyArrayEmpty(tail) ? head : undefined,
+  })
+
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  return {
+    ...internal,
+    outMessage,
+    outMessages,
+    outMessageRevision: internal.outMessageRevision + 1,
+  } as unknown as SceneSimulation<Model, Message, OutMessage>
+}
 
 const applyScopeToTarget = (
   scope: Option.Option<Locator>,
@@ -573,46 +630,7 @@ const applyExternalMessages = <Model, Message, OutMessage>(
     context,
   )
 
-  const appliedMessages = Array.reduce(
-    messages,
-    {
-      simulation,
-      outMessages: Array.empty<OutMessage>(),
-    },
-    (current, message) => {
-      const nextSimulation = applyMessageWithoutBoundaryChecks(
-        current.simulation,
-        message,
-      )
-      const nextOutMessage = toInternal(nextSimulation).outMessage
-
-      return {
-        simulation: nextSimulation,
-        outMessages: Predicate.isUndefined(nextOutMessage)
-          ? current.outMessages
-          : Array.append(current.outMessages, nextOutMessage),
-      }
-    },
-  )
-
-  if (
-    Array.isReadonlyArrayNonEmpty(Array.drop(appliedMessages.outMessages, 1))
-  ) {
-    throw new Error(
-      'One interaction emitted multiple OutMessages, but Scene can expose only one OutMessage per step.\n\n' +
-        'Split the DOM handlers into separate interactions, or test this composition at the parent boundary where each OutMessage is folded.',
-    )
-  }
-
-  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-  return {
-    ...toInternal(appliedMessages.simulation),
-    outMessage: pipe(
-      appliedMessages.outMessages,
-      Array.head,
-      Option.getOrUndefined,
-    ),
-  } as unknown as SceneSimulation<Model, Message, OutMessage>
+  return Array.reduce(messages, simulation, applyMessageWithoutBoundaryChecks)
 }
 
 /** Clears the pending fall-through, marking it acknowledged. Paired with
@@ -1459,37 +1477,73 @@ export const CustomElement = {
   emit: emitCustomElementEvent,
 } as const
 
-/** Asserts by structural equality that update emitted the expected OutMessage,
- *  so callers can pass a freshly constructed expected value. */
+/** Asserts by structural equality that the latest update-producing Scene step
+ *  emitted exactly the expected OutMessage. */
 export const expectOutMessage =
   <Expected>(expected: Expected) =>
   <Model, Message, OutMessage>(
     simulation: SceneSimulation<Model, Message, OutMessage>,
   ): SceneSimulation<Model, Message, OutMessage> => {
     const internal = toInternal(simulation)
-    const outMessage = internal.outMessage
+    const maybeOutMessage = Array.head(internal.outMessages)
 
-    if (outMessage === undefined || !Equal.equals(outMessage, expected)) {
+    if (Option.isNone(maybeOutMessage)) {
       throw new Error(
-        `Expected OutMessage:\n\n    ${JSON.stringify(expected)}\n\nBut got:\n\n    ${JSON.stringify(outMessage)}`,
+        `Expected OutMessage:\n\n    ${JSON.stringify(expected)}\n\nBut got:\n\n    undefined`,
+      )
+    }
+
+    if (Array.isReadonlyArrayNonEmpty(Array.drop(internal.outMessages, 1))) {
+      throw new Error(
+        `Expected exactly one OutMessage but got multiple:\n\n    ${JSON.stringify(internal.outMessages)}`,
+      )
+    }
+
+    if (!Equal.equals(maybeOutMessage.value, expected)) {
+      throw new Error(
+        `Expected OutMessage:\n\n    ${JSON.stringify(expected)}\n\nBut got:\n\n    ${JSON.stringify(maybeOutMessage.value)}`,
       )
     }
 
     return simulation
   }
 
-/** Asserts that update emitted no OutMessage. */
+/** Asserts by structural equality that the latest update-producing Scene
+ *  step emitted two or more expected OutMessages in runtime order. */
+export const expectOutMessages =
+  <Expected extends readonly [unknown, unknown, ...ReadonlyArray<unknown>]>(
+    ...expected: Expected
+  ) =>
+  <Model, Message, OutMessage>(
+    simulation: SceneSimulation<Model, Message, OutMessage>,
+  ): SceneSimulation<Model, Message, OutMessage> => {
+    const actual = toInternal(simulation).outMessages
+
+    if (!Equal.equals(actual, expected)) {
+      throw new Error(
+        `Expected OutMessages:\n\n    ${JSON.stringify(expected)}\n\nBut got:\n\n    ${JSON.stringify(actual)}`,
+      )
+    }
+
+    return simulation
+  }
+
+/** Asserts that the latest update-producing Scene step emitted no OutMessages. */
 export const expectNoOutMessage =
   () =>
   <Model, Message, OutMessage>(
     simulation: SceneSimulation<Model, Message, OutMessage>,
   ): SceneSimulation<Model, Message, OutMessage> => {
     const internal = toInternal(simulation)
-    const outMessage = internal.outMessage
 
-    if (!Predicate.isUndefined(outMessage)) {
+    if (Array.isReadonlyArrayNonEmpty(internal.outMessages)) {
+      const actual = Array.isReadonlyArrayEmpty(
+        Array.drop(internal.outMessages, 1),
+      )
+        ? Array.headNonEmpty(internal.outMessages)
+        : internal.outMessages
       throw new Error(
-        `Expected no OutMessage but got:\n\n    ${JSON.stringify(outMessage)}`,
+        `Expected no OutMessage but got:\n\n    ${JSON.stringify(actual)}`,
       )
     }
 
@@ -1604,11 +1658,31 @@ const runSteps = <Model, Message, OutMessage>(
 ): SceneSimulation<Model, Message, OutMessage> =>
   /* eslint-disable @typescript-eslint/consistent-type-assertions */
   Array.reduce(steps, seed, (current, step) => {
-    const next = (
+    const currentInternal = toInternal(current)
+    const outMessageCapture = createOutMessageCapture(currentInternal.updateFn)
+    const capturingSimulation = {
+      ...currentInternal,
+      updateFn: outMessageCapture.updateFn,
+    } as unknown as SceneSimulation<Model, Message, OutMessage>
+    const stepResult = (
       step as (
         simulation: SceneSimulation<Model, Message, OutMessage>,
       ) => SceneSimulation<Model, Message, OutMessage>
-    )(current)
+    )(capturingSimulation)
+    const restoredSimulation = {
+      ...toInternal(stepResult),
+      updateFn: currentInternal.updateFn,
+    } as unknown as SceneSimulation<Model, Message, OutMessage>
+    const isSequenceUpdatedByNestedSteps =
+      toInternal(restoredSimulation).outMessageRevision !==
+      currentInternal.outMessageRevision
+    const next =
+      outMessageCapture.isUpdateApplied() && !isSequenceUpdatedByNestedSteps
+        ? withOutMessages(
+            restoredSimulation,
+            outMessageCapture.getOutMessages(),
+          )
+        : restoredSimulation
 
     const internal = toInternal(next)
 
@@ -2803,6 +2877,8 @@ export const scene: {
     mounts: [],
     mountSlots: [],
     outMessage: undefined,
+    outMessages: [],
+    outMessageRevision: 0,
     updateFn: config.update,
     resolvers: [],
     html: undefined as unknown,

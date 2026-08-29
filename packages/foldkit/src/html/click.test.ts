@@ -130,18 +130,4 @@ describe('OnClick', () => {
       Message.ClickedSecond(),
     ])
   })
-
-  it('keeps OnClickFocus focus-before-dispatch behavior', () => {
-    const h = __htmlBuilder<Message>()
-    const vnode = h.button([
-      h.OnClickFocus('#click-focus-target', Message.ClickedFirst()),
-    ])
-    const click = fakeClick()
-
-    clickHandlerOf(vnode)(click.event)
-
-    expect(document.activeElement).toBe(focusTarget)
-    expect(activeElementsAtDispatch).toEqual([focusTarget])
-    expect(dispatched).toEqual([Message.ClickedFirst()])
-  })
 })

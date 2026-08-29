@@ -121,10 +121,7 @@ const toCommandRecord = (
 
 /** Position of the DevTools badge and panel on screen. */
 export type DevToolsPosition =
-  | 'BottomRight'
-  | 'BottomLeft'
-  | 'TopRight'
-  | 'TopLeft'
+  'BottomRight' | 'BottomLeft' | 'TopRight' | 'TopLeft'
 
 /** Controls when a feature is shown. */
 export type Visibility = 'Development' | 'Always'
@@ -1432,10 +1429,9 @@ export type OutboundPortHandle<Encoded> = Readonly<{
 export type InboundPortHandles<InboundPorts> =
   InboundPorts extends Readonly<Record<string, Inbound<any, any>>>
     ? {
-        readonly [Name in keyof InboundPorts]: InboundPorts[Name] extends Inbound<
-          any,
-          infer Encoded
-        >
+        readonly [
+          Name in keyof InboundPorts
+        ]: InboundPorts[Name] extends Inbound<any, infer Encoded>
           ? InboundPortHandle<Encoded>
           : never
       }
@@ -1446,10 +1442,9 @@ export type InboundPortHandles<InboundPorts> =
 export type OutboundPortHandles<OutboundPorts> =
   OutboundPorts extends Readonly<Record<string, Outbound<any, any>>>
     ? {
-        readonly [Name in keyof OutboundPorts]: OutboundPorts[Name] extends Outbound<
-          any,
-          infer Encoded
-        >
+        readonly [
+          Name in keyof OutboundPorts
+        ]: OutboundPorts[Name] extends Outbound<any, infer Encoded>
           ? OutboundPortHandle<Encoded>
           : never
       }
@@ -3606,20 +3601,76 @@ type DocumentMetadataElements = {
   ogUrl?: HTMLMetaElement
 }
 
-const documentMetadataElements = new WeakMap<
+type ResolvedDocumentMetadata = Readonly<{
+  title: string
+  lang: string | undefined
+  dirAttribute: string | undefined
+  canonicalUrl: string
+  ogUrl: string
+}>
+
+type DocumentMetadataInvalidation = { isInvalidated: boolean }
+
+type DocumentMetadataState = {
+  readonly elements: DocumentMetadataElements
+  readonly observer: MutationObserver
+  readonly invalidation: DocumentMetadataInvalidation
+  observedHead: HTMLHeadElement
+  lastApplied?: ResolvedDocumentMetadata
+  cachedLocationHref?: string
+  cachedLocationCanonical?: string
+}
+
+const documentMetadataStates = new WeakMap<
   globalThis.Document,
-  DocumentMetadataElements
+  DocumentMetadataState
 >()
 
-const metadataElementsForDocument = (): Readonly<{
+const observeDocumentMetadataMutations = (
+  observer: MutationObserver,
+): HTMLHeadElement => {
+  const observedHead = document.head
+  observer.observe(observedHead, {
+    attributes: true,
+    attributeFilter: ['rel', 'href', 'property', 'content'],
+    childList: true,
+    characterData: true,
+    subtree: true,
+  })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['lang', 'dir'],
+  })
+  return observedHead
+}
+
+const getOrCreateDocumentMetadataState = (): DocumentMetadataState => {
+  const existingState = documentMetadataStates.get(document)
+  if (existingState !== undefined) {
+    return existingState
+  }
+
+  const invalidation: DocumentMetadataInvalidation = { isInvalidated: true }
+  const observer = new MutationObserver(() => {
+    invalidation.isInvalidated = true
+  })
+  const metadataState: DocumentMetadataState = {
+    elements: {},
+    observer,
+    invalidation,
+    observedHead: observeDocumentMetadataMutations(observer),
+  }
+  documentMetadataStates.set(document, metadataState)
+  return metadataState
+}
+
+const findOrCreateDocumentMetadataElements = (
+  metadataState: DocumentMetadataState,
+): Readonly<{
   canonical: HTMLLinkElement
   ogUrl: HTMLMetaElement
 }> => {
-  let elements = documentMetadataElements.get(document)
-  if (elements === undefined) {
-    elements = {}
-    documentMetadataElements.set(document, elements)
-  }
+  const { elements } = metadataState
 
   let canonical = elements.canonical
   if (canonical === undefined || canonical.parentNode !== document.head) {
@@ -3640,6 +3691,86 @@ const metadataElementsForDocument = (): Readonly<{
   return { canonical, ogUrl }
 }
 
+const readOrCacheCurrentLocationUrl = (
+  metadataState: DocumentMetadataState,
+): string => {
+  const currentLocationHref = window.location.href
+  if (
+    metadataState.cachedLocationHref === currentLocationHref &&
+    metadataState.cachedLocationCanonical !== undefined
+  ) {
+    return metadataState.cachedLocationCanonical
+  }
+
+  const canonicalUrl = currentLocationUrl()
+  metadataState.cachedLocationHref = currentLocationHref
+  metadataState.cachedLocationCanonical = canonicalUrl
+  return canonicalUrl
+}
+
+const rebindDocumentMetadataObserverToCurrentHead = (
+  metadataState: DocumentMetadataState,
+): void => {
+  // NOTE: a MutationObserver remains attached to a detached head after
+  // document.head is replaced. Rebind it and invalidate the metadata snapshot
+  // before the next unchanged guard.
+  metadataState.observer.disconnect()
+  metadataState.observedHead = observeDocumentMetadataMutations(
+    metadataState.observer,
+  )
+  metadataState.invalidation.isInvalidated = true
+}
+
+const reconcileDocumentMetadata = (
+  metadataState: DocumentMetadataState,
+  nextMetadata: ResolvedDocumentMetadata,
+): void => {
+  if (document.title !== nextMetadata.title) {
+    document.title = nextMetadata.title
+  }
+
+  const { documentElement } = document
+
+  if (
+    nextMetadata.lang !== undefined &&
+    documentElement.lang !== nextMetadata.lang
+  ) {
+    documentElement.lang = nextMetadata.lang
+  }
+
+  if (
+    nextMetadata.dirAttribute !== undefined &&
+    documentElement.dir !== nextMetadata.dirAttribute
+  ) {
+    documentElement.dir = nextMetadata.dirAttribute
+  }
+
+  const metadataElements = findOrCreateDocumentMetadataElements(metadataState)
+
+  if (metadataElements.canonical.getAttribute('rel') !== 'canonical') {
+    metadataElements.canonical.setAttribute('rel', 'canonical')
+  }
+  if (
+    metadataElements.canonical.getAttribute('href') !==
+    nextMetadata.canonicalUrl
+  ) {
+    metadataElements.canonical.setAttribute('href', nextMetadata.canonicalUrl)
+  }
+  if (metadataElements.ogUrl.getAttribute('property') !== 'og:url') {
+    metadataElements.ogUrl.setAttribute('property', 'og:url')
+  }
+  if (metadataElements.ogUrl.getAttribute('content') !== nextMetadata.ogUrl) {
+    metadataElements.ogUrl.setAttribute('content', nextMetadata.ogUrl)
+  }
+
+  metadataState.lastApplied = nextMetadata
+  metadataState.invalidation.isInvalidated = false
+  // NOTE: clear the records produced by Foldkit's own writes before the
+  // observer callback runs. Otherwise the next unchanged render would be
+  // marked dirty and repeat every DOM read this cache is meant to avoid.
+  metadataState.observer.takeRecords()
+}
+
 const applyDocumentMetadata = (
   nextDocument: Document,
   mountedRoot: Node | undefined,
@@ -3648,42 +3779,47 @@ const applyDocumentMetadata = (
     return
   }
 
-  if (document.title !== nextDocument.title) {
-    document.title = nextDocument.title
+  const metadataState = getOrCreateDocumentMetadataState()
+
+  if (metadataState.observedHead !== document.head) {
+    rebindDocumentMetadataObserverToCurrentHead(metadataState)
   }
 
-  const { documentElement } = document
+  const canonicalUrl =
+    nextDocument.canonical ?? readOrCacheCurrentLocationUrl(metadataState)
+  const ogUrl = nextDocument.ogUrl ?? canonicalUrl
+  const dirAttribute =
+    nextDocument.dir === undefined
+      ? undefined
+      : textDirectionToAttribute(nextDocument.dir)
 
-  if (
-    nextDocument.lang !== undefined &&
-    documentElement.lang !== nextDocument.lang
-  ) {
-    documentElement.lang = nextDocument.lang
-  }
-
-  if (nextDocument.dir !== undefined) {
-    const dir = textDirectionToAttribute(nextDocument.dir)
-    if (documentElement.dir !== dir) {
-      documentElement.dir = dir
-    }
+  // NOTE: MutationObserver callbacks are asynchronous. Consume queued records
+  // synchronously before trusting the unchanged fast path.
+  if (Array.isArrayNonEmpty(metadataState.observer.takeRecords())) {
+    metadataState.invalidation.isInvalidated = true
   }
 
-  const canonical = nextDocument.canonical ?? currentLocationUrl()
-  const ogUrl = nextDocument.ogUrl ?? canonical
-  const metadataElements = metadataElementsForDocument()
+  const lastApplied = metadataState.lastApplied
+  const isAppliedMetadataCurrent =
+    !metadataState.invalidation.isInvalidated &&
+    lastApplied !== undefined &&
+    lastApplied.title === nextDocument.title &&
+    lastApplied.lang === nextDocument.lang &&
+    lastApplied.dirAttribute === dirAttribute &&
+    lastApplied.canonicalUrl === canonicalUrl &&
+    lastApplied.ogUrl === ogUrl
 
-  if (metadataElements.canonical.getAttribute('rel') !== 'canonical') {
-    metadataElements.canonical.setAttribute('rel', 'canonical')
+  if (isAppliedMetadataCurrent) {
+    return
   }
-  if (metadataElements.canonical.getAttribute('href') !== canonical) {
-    metadataElements.canonical.setAttribute('href', canonical)
-  }
-  if (metadataElements.ogUrl.getAttribute('property') !== 'og:url') {
-    metadataElements.ogUrl.setAttribute('property', 'og:url')
-  }
-  if (metadataElements.ogUrl.getAttribute('content') !== ogUrl) {
-    metadataElements.ogUrl.setAttribute('content', ogUrl)
-  }
+
+  reconcileDocumentMetadata(metadataState, {
+    title: nextDocument.title,
+    lang: nextDocument.lang,
+    dirAttribute,
+    canonicalUrl,
+    ogUrl,
+  })
 }
 
 const renderCrashView = <Model, Message>(

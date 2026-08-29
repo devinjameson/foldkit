@@ -6,6 +6,7 @@ import {
   __htmlBuilder as attributeHtml,
   inertHtml,
 } from '../html/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { h } from '../snabbdom/index.js'
 import type { VNode } from '../snabbdom/index.js'
 import { defineView } from '../submodel/public.js'
@@ -97,6 +98,7 @@ import {
   FocusButton,
   MeasurePanel,
   Message as MountPanelMessage,
+  type Model as MountPanelModel,
   ScrollList,
   initialModel as mountInitialModel,
   scrollListView as mountScrollListView,
@@ -2969,16 +2971,111 @@ const outMessageBubblingView = (
     [h.button([h.OnClick(LogoutButtonMessage.ClickedLogout())], [model.label])],
   )
 
+const InteractionMessage = defineMessageUnion({
+  ClickedExpand: {},
+  ClickedRow: {},
+  SubmittedForm: {},
+  CompletedAction: {},
+})
+
+type InteractionMessage = typeof InteractionMessage.Type
+
+const InteractionOutMessage = defineMessageUnion({
+  RequestedExpand: {},
+  RequestedFocus: {},
+  RequestedMeasurement: {},
+  RequestedSelection: {},
+  RequestedSubmission: {},
+})
+
+type InteractionOutMessage = typeof InteractionOutMessage.Type
+
+const multipleOutMessagesUpdate = (
+  model: LogoutModel,
+  message: InteractionMessage,
+) =>
+  InteractionMessage.match<
+    Update.ReturnWithOutMessage<
+      LogoutModel,
+      InteractionMessage,
+      InteractionOutMessage
+    >
+  >(message, {
+    ClickedExpand: () => ({
+      model,
+      outMessage: InteractionOutMessage.RequestedExpand(),
+    }),
+    ClickedRow: () => ({
+      model,
+      outMessage: InteractionOutMessage.RequestedSelection(),
+    }),
+    SubmittedForm: () => ({
+      model,
+      outMessage: InteractionOutMessage.RequestedSubmission(),
+    }),
+    CompletedAction: () => ({ model }),
+  })
+
 const multipleOutMessagesView = (
   model: LogoutModel,
-  h: HtmlBuilder<LogoutMessage>,
+  h: HtmlBuilder<InteractionMessage>,
 ) =>
   h.div(
-    [h.OnClick(LogoutButtonMessage.ClickedLogout())],
-    [h.button([h.OnClick(LogoutButtonMessage.ClickedLogout())], [model.label])],
+    [h.OnClick(InteractionMessage.ClickedRow())],
+    [
+      h.button(
+        [h.OnClick(InteractionMessage.ClickedExpand()), h.Type('button')],
+        [model.label],
+      ),
+    ],
   )
 
-describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
+const clickAndSubmitOutMessagesView = (
+  model: LogoutModel,
+  h: HtmlBuilder<InteractionMessage>,
+) =>
+  h.form(
+    [h.OnSubmit(InteractionMessage.SubmittedForm())],
+    [
+      h.button(
+        [h.OnClick(InteractionMessage.ClickedExpand()), h.Type('submit')],
+        [model.label],
+      ),
+    ],
+  )
+
+const interactionInitialModel = LogoutModel.make({ label: 'Expand' })
+const submitInteractionInitialModel = LogoutModel.make({ label: 'Submit' })
+
+const multipleMountOutMessagesUpdate = (
+  model: MountPanelModel,
+  message: MountPanelMessage,
+) => {
+  const mountPanelUpdate = mountUpdate(model, message)
+
+  return MountPanelMessage.match<
+    Update.ReturnWithOutMessage<
+      MountPanelModel,
+      MountPanelMessage,
+      InteractionOutMessage
+    >
+  >(message, {
+    ClickedToggle: () => mountPanelUpdate,
+    MeasuredPanel: () => ({
+      ...mountPanelUpdate,
+      outMessage: InteractionOutMessage.RequestedMeasurement(),
+    }),
+    CompletedFocusButton: () => ({
+      ...mountPanelUpdate,
+      outMessage: InteractionOutMessage.RequestedFocus(),
+    }),
+    FailedMountSidebar: () => mountPanelUpdate,
+    ClickedIncrement: () => mountPanelUpdate,
+    ScrolledTo: () => mountPanelUpdate,
+  })
+}
+
+describe('Scene OutMessage assertions', () => {
   test('assert the OutMessage across steps', () => {
     Scene.scene(
       { update: logoutUpdate, view: logoutView },
@@ -3045,14 +3142,111 @@ describe('Scene.expectOutMessage and Scene.expectNoOutMessage', () => {
     )
   })
 
-  test('fails explicitly when one interaction emits multiple OutMessages', () => {
+  test('asserts target and ancestor OutMessages in runtime order', () => {
+    Scene.scene(
+      { update: multipleOutMessagesUpdate, view: multipleOutMessagesView },
+      Scene.given(interactionInitialModel),
+      Scene.click(Scene.role('button', { name: 'Expand' })),
+      Scene.expectOutMessages(
+        InteractionOutMessage.RequestedExpand(),
+        InteractionOutMessage.RequestedSelection(),
+      ),
+      Scene.tap(({ outMessage }) => {
+        expect(outMessage).toBeUndefined()
+      }),
+    )
+  })
+
+  test('preserves click and submit OutMessages in runtime order', () => {
+    Scene.scene(
+      {
+        update: multipleOutMessagesUpdate,
+        view: clickAndSubmitOutMessagesView,
+      },
+      Scene.given(submitInteractionInitialModel),
+      Scene.click(Scene.role('button', { name: 'Submit' })),
+      Scene.expectOutMessages(
+        InteractionOutMessage.RequestedExpand(),
+        InteractionOutMessage.RequestedSubmission(),
+      ),
+    )
+  })
+
+  test('preserves every OutMessage from Mount.resolveAll', () => {
+    Scene.scene(
+      { update: multipleMountOutMessagesUpdate, view: mountView },
+      Scene.given({ ...mountInitialModel, isOpen: true }),
+      Scene.Mount.resolveAll(
+        [FocusButton, MountPanelMessage.CompletedFocusButton()],
+        [MeasurePanel, MountPanelMessage.MeasuredPanel({ width: 100 })],
+      ),
+      Scene.expectOutMessages(
+        InteractionOutMessage.RequestedFocus(),
+        InteractionOutMessage.RequestedMeasurement(),
+      ),
+      Scene.tap(({ outMessage }) => {
+        expect(outMessage).toBeUndefined()
+      }),
+    )
+  })
+
+  test('a later update replaces every OutMessage from the previous step', () => {
+    Scene.scene(
+      { update: multipleOutMessagesUpdate, view: multipleOutMessagesView },
+      Scene.given(interactionInitialModel),
+      Scene.click(Scene.role('button', { name: 'Expand' })),
+      Scene.expectOutMessages(
+        InteractionOutMessage.RequestedExpand(),
+        InteractionOutMessage.RequestedSelection(),
+      ),
+      Scene.Subscription.emit(InteractionMessage.CompletedAction()),
+      Scene.expectNoOutMessage(),
+    )
+  })
+
+  test('inside preserves the sequence from its latest child step', () => {
+    Scene.scene(
+      { update: multipleOutMessagesUpdate, view: multipleOutMessagesView },
+      Scene.given(interactionInitialModel),
+      Scene.inside(
+        Scene.selector('div'),
+        Scene.Subscription.emit(InteractionMessage.ClickedExpand()),
+        Scene.Subscription.emit(InteractionMessage.ClickedRow()),
+      ),
+      Scene.expectOutMessage(InteractionOutMessage.RequestedSelection()),
+    )
+  })
+
+  test('expectOutMessage fails when multiple OutMessages were emitted', () => {
     expect(() =>
       Scene.scene(
-        { update: mixedArityUpdate, view: multipleOutMessagesView },
-        Scene.given(logoutInitialModel),
-        Scene.click(Scene.role('button', { name: 'Log out' })),
+        { update: multipleOutMessagesUpdate, view: multipleOutMessagesView },
+        Scene.given(interactionInitialModel),
+        Scene.click(Scene.role('button', { name: 'Expand' })),
+        Scene.expectOutMessage(InteractionOutMessage.RequestedExpand()),
       ),
-    ).toThrow('One interaction emitted multiple OutMessages')
+    ).toThrow('Expected exactly one OutMessage but got multiple')
+  })
+
+  test('expectOutMessages fails when the runtime order is wrong', () => {
+    expect(() =>
+      Scene.scene(
+        { update: multipleOutMessagesUpdate, view: multipleOutMessagesView },
+        Scene.given(interactionInitialModel),
+        Scene.click(Scene.role('button', { name: 'Expand' })),
+        Scene.expectOutMessages(
+          InteractionOutMessage.RequestedSelection(),
+          InteractionOutMessage.RequestedExpand(),
+        ),
+      ),
+    ).toThrow('Expected OutMessages:')
+  })
+
+  test('expectOutMessages requires at least two expected values', () => {
+    // @ts-expect-error use expectNoOutMessage to assert an empty sequence
+    Scene.expectOutMessages()
+    // @ts-expect-error use expectOutMessage to assert one value
+    Scene.expectOutMessages(InteractionOutMessage.RequestedExpand())
   })
 })
 

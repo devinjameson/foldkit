@@ -14,6 +14,6 @@
     "effect": "4.0.0-rc.112"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
