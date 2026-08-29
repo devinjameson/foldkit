@@ -1250,12 +1250,16 @@ const writeDataProp = (
 ): Record<string, unknown> => {
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   const props = (ctx.data.props ??= {}) as Record<string, unknown>
-  Object.defineProperty(props, key, {
-    configurable: true,
-    enumerable: true,
-    value,
-    writable: true,
-  })
+  if (key === '__proto__') {
+    Object.defineProperty(props, key, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    })
+  } else {
+    props[key] = value
+  }
   addVNodeDataMask(ctx, VNodeDataMask.Props)
   return props
 }

@@ -267,7 +267,7 @@ describe('makeApplication', () => {
       init: () => ({ model: { label: 'hello' } }),
       update,
       view: model => ({
-        title: model.label,
+        title: 'Metadata test',
         canonical: canonicalUrl,
         ogUrl: canonicalUrl,
         body: h.div(
@@ -297,6 +297,8 @@ describe('makeApplication', () => {
       }
 
       const querySelectorSpy = vi.spyOn(document.head, 'querySelector')
+      const canonicalGetAttributeSpy = vi.spyOn(canonical, 'getAttribute')
+      const ogUrlGetAttributeSpy = vi.spyOn(ogUrl, 'getAttribute')
       const canonicalSetAttributeSpy = vi.spyOn(canonical, 'setAttribute')
       const ogUrlSetAttributeSpy = vi.spyOn(ogUrl, 'setAttribute')
       try {
@@ -304,6 +306,8 @@ describe('makeApplication', () => {
         await awaitBodyText('world')
 
         expect(querySelectorSpy).not.toHaveBeenCalled()
+        expect(canonicalGetAttributeSpy).not.toHaveBeenCalled()
+        expect(ogUrlGetAttributeSpy).not.toHaveBeenCalled()
         expect(canonicalSetAttributeSpy).not.toHaveBeenCalled()
         expect(ogUrlSetAttributeSpy).not.toHaveBeenCalled()
 
@@ -329,10 +333,99 @@ describe('makeApplication', () => {
         )
       } finally {
         querySelectorSpy.mockRestore()
+        canonicalGetAttributeSpy.mockRestore()
+        ogUrlGetAttributeSpy.mockRestore()
         canonicalSetAttributeSpy.mockRestore()
         ogUrlSetAttributeSpy.mockRestore()
       }
     } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('invalidates the default canonical cache when the location changes', async () => {
+    const originalHref = window.location.href
+    const nextUrl = new URL('/next?mode=fast#ignored', originalHref)
+    const nextCanonicalUrl = `${nextUrl.origin}${nextUrl.pathname}${nextUrl.search}`
+    const application = makeApplication({
+      Model,
+      init: () => ({ model: { label: 'hello' } }),
+      update,
+      view: model => ({
+        title: model.label,
+        body: h.button([h.OnClick(Message.ClickedBump())], [model.label]),
+      }),
+      container,
+    })
+
+    const fiber = Effect.runFork(application.start())
+
+    try {
+      await awaitBodyText('hello')
+      const canonicalElement = document.head.querySelector(
+        'link[rel="canonical"]',
+      )
+      const button = document.body.querySelector('button')
+      if (!(canonicalElement instanceof HTMLLinkElement) || button === null) {
+        throw new Error('expected application canonical metadata and button')
+      }
+
+      history.pushState(null, '', nextUrl)
+      button.click()
+
+      await vi.waitFor(() => {
+        expect(canonicalElement.getAttribute('href')).toBe(nextCanonicalUrl)
+      })
+    } finally {
+      history.replaceState(null, '', originalHref)
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('rebuilds document metadata after the head is replaced', async () => {
+    const canonicalUrl = 'https://example.com/replaced-head'
+    const application = makeApplication({
+      Model,
+      init: () => ({ model: { label: 'hello' } }),
+      update,
+      view: model => ({
+        title: 'Metadata test',
+        canonical: canonicalUrl,
+        ogUrl: canonicalUrl,
+        body: h.button([h.OnClick(Message.ClickedBump())], [model.label]),
+      }),
+      container,
+    })
+    const fiber = Effect.runFork(application.start())
+    const originalHead = document.head
+
+    try {
+      await awaitBodyText('hello')
+      const button = document.body.querySelector('button')
+      if (button === null) {
+        throw new Error('expected application button')
+      }
+
+      originalHead.replaceWith(document.createElement('head'))
+      button.click()
+
+      await vi.waitFor(() => {
+        expect(document.title).toBe('Metadata test')
+        expect(
+          document.head
+            .querySelector('link[rel="canonical"]')
+            ?.getAttribute('href'),
+        ).toBe(canonicalUrl)
+        expect(
+          document.head
+            .querySelector('meta[property="og:url"]')
+            ?.getAttribute('content'),
+        ).toBe(canonicalUrl)
+      })
+    } finally {
+      if (document.head !== originalHead) {
+        document.head.replaceWith(originalHead)
+      }
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
   })

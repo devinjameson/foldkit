@@ -1,4 +1,4 @@
-import { Option, Predicate } from 'effect'
+import { Option } from 'effect'
 
 import { propsModule } from './propsModule.js'
 import {
@@ -146,12 +146,12 @@ export const __patchVNode = (
   container: HTMLElement,
   seen?: Set<object>,
 ): VNode => {
-  const dedupedVNode = Predicate.isNotNull(nextVNode)
-    ? dedupeSharedVNodes(nextVNode, seen)
-    : h('!')
+  const dedupedVNode =
+    nextVNode !== null ? dedupeSharedVNodes(nextVNode, seen) : h('!')
 
-  return Option.match(maybeCurrentVNode, {
-    onNone: () => patchFreshInto(container, dedupedVNode),
-    onSome: currentVNode => patch(currentVNode, dedupedVNode),
-  })
+  if (Option.isNone(maybeCurrentVNode)) {
+    return patchFreshInto(container, dedupedVNode)
+  }
+
+  return patch(maybeCurrentVNode.value, dedupedVNode)
 }
