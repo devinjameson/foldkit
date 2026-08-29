@@ -359,7 +359,7 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 <project>/node_modules/foldkit/dist/port/public.d.ts    # Port.inbound / outbound / emit / stream / subscription
 
 # If using forms
-<project>/node_modules/foldkit/dist/fieldValidation/public.d.ts # Field (tagged union), makeRules({required?, rules}), validate, allValid; rule constructors on the Rule namespace (Rule.url(options), Rule.email, Rule.minLength, Rule.pattern, Rule.fromSchema, ...)
+<project>/node_modules/foldkit/dist/fieldValidation/public.d.ts # Field (tagged union), makeRules({required?, rules}), match, validate, allValid; rule constructors on the Rule namespace (Rule.url(options), Rule.email, Rule.minLength, Rule.pattern, Rule.fromSchema, ...)
 # Rule.Rule is [Predicate, Rule.RuleMessage], NOT {test, message}. Field.Invalid has `errors: NonEmptyArray<string>`, not `error: string`.
 
 # If using any UI component (SEPARATE PACKAGE)

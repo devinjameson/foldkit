@@ -530,14 +530,12 @@ const PlayNote = Command.define('PlayNote', {
 // VIEW
 
 const inputBorderClass = (field: FieldValidation.Field<string>): string =>
-  M.value(field).pipe(
-    M.tagsExhaustive({
-      NotValidated: () => 'border-gray-300 dark:border-gray-600',
-      Validating: () => 'border-accent-300 dark:border-accent-600',
-      Valid: () => 'border-gray-300 dark:border-gray-600',
-      Invalid: () => 'border-red-500 dark:border-red-400',
-    }),
-  )
+  FieldValidation.match(field, {
+    onNotValidated: () => 'border-gray-300 dark:border-gray-600',
+    onValidating: () => 'border-accent-300 dark:border-accent-600',
+    onValid: () => 'border-gray-300 dark:border-gray-600',
+    onInvalid: () => 'border-red-500 dark:border-red-400',
+  })
 
 const durationButtonClass = (
   isSelected: boolean,
@@ -643,30 +641,28 @@ const noteInputView = (
               h.Maxlength(MAX_NOTES),
               h.Autocomplete('off'),
             ]),
-            M.value(model.noteInput).pipe(
-              M.tagsExhaustive({
-                NotValidated: () =>
-                  h.p(
-                    [h.Class('text-xs text-gray-400 dark:text-gray-500')],
-                    [`${MIN_NOTES}–${MAX_NOTES} notes, A through G`],
-                  ),
-                Validating: () =>
-                  h.p(
-                    [h.Class('text-xs text-gray-400 dark:text-gray-500')],
-                    [''],
-                  ),
-                Valid: () =>
-                  h.p(
-                    [h.Class('text-xs text-gray-500 dark:text-gray-400')],
-                    [`${parseNotes(model.noteInput.value).length} notes`],
-                  ),
-                Invalid: ({ errors }) =>
-                  h.p(
-                    [h.Class('text-xs text-red-600 dark:text-red-400')],
-                    [Array.headNonEmpty(errors)],
-                  ),
-              }),
-            ),
+            FieldValidation.match(model.noteInput, {
+              onNotValidated: () =>
+                h.p(
+                  [h.Class('text-xs text-gray-400 dark:text-gray-500')],
+                  [`${MIN_NOTES}–${MAX_NOTES} notes, A through G`],
+                ),
+              onValidating: () =>
+                h.p(
+                  [h.Class('text-xs text-gray-400 dark:text-gray-500')],
+                  [''],
+                ),
+              onValid: value =>
+                h.p(
+                  [h.Class('text-xs text-gray-500 dark:text-gray-400')],
+                  [`${parseNotes(value).length} notes`],
+                ),
+              onInvalid: ({ errors }) =>
+                h.p(
+                  [h.Class('text-xs text-red-600 dark:text-red-400')],
+                  [Array.headNonEmpty(errors)],
+                ),
+            }),
           ],
         ),
     },
@@ -900,14 +896,12 @@ const noteVisualizerView = (model: Model, notes: ReadonlyArray<Note>): Html => {
 }
 
 const noteInputLabel = (model: Model): string =>
-  M.value(model.noteInput).pipe(
-    M.tagsExhaustive({
-      Valid: ({ value }) => `Valid("${value}")`,
-      Invalid: ({ errors }) => `Invalid("${Array.headNonEmpty(errors)}")`,
-      NotValidated: ({ value }) => `NotValidated("${value}")`,
-      Validating: ({ value }) => `Validating("${value}")`,
-    }),
-  )
+  FieldValidation.match(model.noteInput, {
+    onNotValidated: value => `NotValidated("${value}")`,
+    onValidating: value => `Validating("${value}")`,
+    onValid: value => `Valid("${value}")`,
+    onInvalid: ({ errors }) => `Invalid("${Array.headNonEmpty(errors)}")`,
+  })
 
 const playbackStateLabel = (model: Model): string =>
   PlaybackState.match(model.playbackState, {

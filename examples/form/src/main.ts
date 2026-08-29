@@ -1,13 +1,6 @@
 import clsx from 'clsx'
-import {
-  Array,
-  Duration,
-  Effect,
-  Match as M,
-  Random,
-  Schema as S,
-} from 'effect'
-import { Command, Runtime, type Update } from 'foldkit'
+import { Array, Duration, Effect, Random, Schema as S } from 'effect'
+import { Command, FieldValidation, Runtime, type Update } from 'foldkit'
 import {
   Field,
   Invalid,
@@ -240,14 +233,12 @@ const LABEL_CLASS = 'text-sm font-medium text-gray-700'
 const DESCRIPTION_CLASS = 'text-sm mt-1'
 
 const borderClass = (field: Field<string>): string =>
-  M.value(field).pipe(
-    M.tagsExhaustive({
-      NotValidated: () => 'border-gray-300',
-      Validating: () => 'border-blue-300',
-      Valid: () => 'border-green-500',
-      Invalid: () => 'border-red-500',
-    }),
-  )
+  FieldValidation.match(field, {
+    onNotValidated: () => 'border-gray-300',
+    onValidating: () => 'border-blue-300',
+    onValid: () => 'border-green-500',
+    onInvalid: () => 'border-red-500',
+  })
 
 const inputClassName = (field: Field<string>): string =>
   clsx(
@@ -256,43 +247,39 @@ const inputClassName = (field: Field<string>): string =>
   )
 
 const statusIndicator = (field: Field<string>, h: HtmlBuilder<Message>): Html =>
-  M.value(field).pipe(
-    M.tagsExhaustive({
-      NotValidated: () => h.empty,
-      Validating: () =>
-        h.span([h.Class('text-blue-600 text-sm animate-spin')], ['◐']),
-      Valid: () => h.span([h.Class('text-green-600 text-sm')], ['✓']),
-      Invalid: () => h.empty,
-    }),
-  )
+  FieldValidation.match(field, {
+    onNotValidated: () => h.empty,
+    onValidating: () =>
+      h.span([h.Class('text-blue-600 text-sm animate-spin')], ['◐']),
+    onValid: () => h.span([h.Class('text-green-600 text-sm')], ['✓']),
+    onInvalid: () => h.empty,
+  })
 
 const descriptionView = (
   field: Field<string>,
   descriptionAttributes: ReadonlyArray<Attribute<Message>>,
   h: HtmlBuilder<Message>,
 ): Html =>
-  M.value(field).pipe(
-    M.tagsExhaustive({
-      NotValidated: () => h.empty,
-      Validating: () =>
-        h.span(
-          [
-            ...descriptionAttributes,
-            h.Class(clsx(DESCRIPTION_CLASS, 'text-blue-600')),
-          ],
-          ['Checking...'],
-        ),
-      Valid: () => h.empty,
-      Invalid: ({ errors }) =>
-        h.span(
-          [
-            ...descriptionAttributes,
-            h.Class(clsx(DESCRIPTION_CLASS, 'text-red-600')),
-          ],
-          [Array.headNonEmpty(errors)],
-        ),
-    }),
-  )
+  FieldValidation.match(field, {
+    onNotValidated: () => h.empty,
+    onValidating: () =>
+      h.span(
+        [
+          ...descriptionAttributes,
+          h.Class(clsx(DESCRIPTION_CLASS, 'text-blue-600')),
+        ],
+        ['Checking...'],
+      ),
+    onValid: () => h.empty,
+    onInvalid: ({ errors }) =>
+      h.span(
+        [
+          ...descriptionAttributes,
+          h.Class(clsx(DESCRIPTION_CLASS, 'text-red-600')),
+        ],
+        [Array.headNonEmpty(errors)],
+      ),
+  })
 
 const inputFieldView = (
   id: string,

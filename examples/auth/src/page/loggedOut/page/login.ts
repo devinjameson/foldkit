@@ -3,13 +3,12 @@ import {
   Array,
   Duration,
   Effect,
-  Match as M,
   Option,
   Schema as S,
   String,
   pipe,
 } from 'effect'
-import { Command, Submodel, type Update } from 'foldkit'
+import { Command, FieldValidation, Submodel, type Update } from 'foldkit'
 import {
   Field,
   Invalid,
@@ -168,14 +167,12 @@ export const update = (model: Model, message: Message) =>
 // VIEW
 
 const fieldToBorderClass = (field: Field<string>) =>
-  M.value(field).pipe(
-    M.tagsExhaustive({
-      NotValidated: () => 'border-gray-300',
-      Validating: () => 'border-blue-300',
-      Valid: () => 'border-green-500',
-      Invalid: () => 'border-red-500',
-    }),
-  )
+  FieldValidation.match(field, {
+    onNotValidated: () => 'border-gray-300',
+    onValidating: () => 'border-blue-300',
+    onValid: () => 'border-green-500',
+    onInvalid: () => 'border-red-500',
+  })
 
 const fieldView = (
   id: string,
@@ -213,34 +210,30 @@ const fieldView = (
                   ],
                   [labelText],
                 ),
-                M.value(field).pipe(
-                  M.tagsExhaustive({
-                    NotValidated: () => h.empty,
-                    Validating: () =>
-                      h.span([h.Class('text-blue-600 text-sm')], ['...']),
-                    Valid: () =>
-                      h.span([h.Class('text-green-600 text-sm')], ['✓']),
-                    Invalid: () => h.empty,
-                  }),
-                ),
+                FieldValidation.match(field, {
+                  onNotValidated: () => h.empty,
+                  onValidating: () =>
+                    h.span([h.Class('text-blue-600 text-sm')], ['...']),
+                  onValid: () =>
+                    h.span([h.Class('text-green-600 text-sm')], ['✓']),
+                  onInvalid: () => h.empty,
+                }),
               ],
             ),
             h.input([...attributes.input, h.Class(inputClass)]),
-            M.value(field).pipe(
-              M.tagsExhaustive({
-                NotValidated: () => h.empty,
-                Validating: () => h.empty,
-                Valid: () => h.empty,
-                Invalid: ({ errors }) =>
-                  h.div(
-                    [
-                      ...attributes.description,
-                      h.Class('text-red-600 text-sm mt-1'),
-                    ],
-                    [Array.headNonEmpty(errors)],
-                  ),
-              }),
-            ),
+            FieldValidation.match(field, {
+              onNotValidated: () => h.empty,
+              onValidating: () => h.empty,
+              onValid: () => h.empty,
+              onInvalid: ({ errors }) =>
+                h.div(
+                  [
+                    ...attributes.description,
+                    h.Class('text-red-600 text-sm mt-1'),
+                  ],
+                  [Array.headNonEmpty(errors)],
+                ),
+            }),
           ],
         ),
     },
