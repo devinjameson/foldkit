@@ -16,13 +16,15 @@ class EngineService extends Context.Service<EngineService, EngineShape>()(
   'EngineService',
 ) {}
 
-const FAIL_ID = 'fail'
+const ACQUIRE_FAILURE_ID = 'acquire-failure'
+const RELEASE_DEFECT_ID = 'release-defect'
 const LAYER_BUILD_ERROR = 'engine layer failed to build'
+const RELEASE_ERROR = 'engine release failed'
 
 let log: Array<string> = []
 
 const acquireEngine = (id: string): Effect.Effect<EngineShape, Error> => {
-  if (id === FAIL_ID) {
+  if (id === ACQUIRE_FAILURE_ID) {
     return Effect.fail(new Error(LAYER_BUILD_ERROR))
   } else {
     return Effect.sync(() => {
@@ -41,6 +43,19 @@ const makeEngineLayer = (id: string): Layer.Layer<EngineService, Error> =>
       }),
     ),
   )
+
+const releaseEngine = ({ id }: EngineShape) =>
+  Effect.gen(function* () {
+    yield* Effect.sync(() => {
+      log.push('release')
+    })
+
+    if (id === RELEASE_DEFECT_ID) {
+      yield* Effect.sync(() => {
+        throw new Error(RELEASE_ERROR)
+      })
+    }
+  })
 
 const Engine = ManagedResource.tag<EngineShape>()('Engine')
 type EngineServiceId = ManagedResource.ServiceOf<typeof Engine>
@@ -105,10 +120,7 @@ const managedResources = make<Model, Message>()(entry => ({
       Layer.build(makeEngineLayer(id)).pipe(
         Effect.map(context => Context.get(context, EngineService)),
       ),
-    release: () =>
-      Effect.sync(() => {
-        log.push('release')
-      }),
+    release: releaseEngine,
     onAcquired: () => Message.AcquiredEngine(),
     onReleased: () => Message.ReleasedEngine(),
     onAcquireError: error => Message.FailedEngine({ error: String(error) }),
@@ -241,7 +253,7 @@ describe('managed resource lifecycle with a Layer-built resource', () => {
   })
 
   it('dispatches onAcquireError and leaves the ref empty when acquire fails', async () => {
-    const element = startEngineApp(FAIL_ID)
+    const element = startEngineApp(ACQUIRE_FAILURE_ID)
     const fiber = Effect.runFork(element.start())
 
     try {
@@ -268,6 +280,25 @@ describe('managed resource lifecycle with a Layer-built resource', () => {
       await awaitLogEntry('finalize:a')
 
       expect(log).toStrictEqual(['build:a', 'release', 'finalize:a'])
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('clears the ref and dispatches onReleased after a release defect', async () => {
+    const element = startEngineApp(RELEASE_DEFECT_ID)
+    const fiber = Effect.runFork(element.start())
+
+    try {
+      await awaitBodyText('status:acquired')
+
+      clickButton('stop')
+      await awaitBodyText('status:released')
+
+      expect(document.body.textContent).not.toContain('Crash view')
+
+      clickButton('read')
+      await awaitBodyText('value:unavailable')
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
