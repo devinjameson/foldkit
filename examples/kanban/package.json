@@ -14,7 +14,7 @@
     "clsx": "^2.1.1",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",
-    "fractional-indexing": "^3.4.0"
+    "fractional-indexing": "^4.0.0"
   },
   "devDependencies": {
     "@foldkit/devtools": "workspace:*",
