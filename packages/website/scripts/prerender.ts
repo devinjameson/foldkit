@@ -11,6 +11,7 @@ import {
   pipe,
 } from 'effect'
 import { FileSystem } from 'effect'
+import type { PlatformError } from 'effect/PlatformError'
 import { Server } from 'foldkit/experimental'
 import { Window } from 'happy-dom'
 import { dirname, join, resolve } from 'node:path'
@@ -848,37 +849,45 @@ ${items}
 // build generate the same pages. The placeholder is the condition
 // `injectIntoTemplate` itself enforces, so a static render, which carries no
 // hydration stamp, is covered by the same test.
-const readTemplate = Effect.gen(function* () {
-  const fs = yield* FileSystem.FileSystem
+// Takes its paths so a test can drive it over a directory it controls; the
+// prerender itself always runs it over the build.
+export const readTemplateFrom = (
+  indexPath: string,
+  templateCopyPath: string,
+): Effect.Effect<string, PlatformError, FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
 
-  const isBuilt = yield* fs.exists(INDEX_PATH)
-  if (!isBuilt) {
-    return yield* Effect.die(
-      new Error(
-        `Cannot prerender without a client build: "${INDEX_PATH}" does not exist.`,
-      ),
-    )
-  }
+    const isBuilt = yield* fs.exists(indexPath)
+    if (!isBuilt) {
+      return yield* Effect.die(
+        new Error(
+          `Cannot prerender without a client build: "${indexPath}" does not exist.`,
+        ),
+      )
+    }
 
-  const builtIndex = yield* fs.readFileString(INDEX_PATH)
-  const isTemplate = builtIndex.includes(CONTAINER_PLACEHOLDER)
-  if (isTemplate) {
-    yield* fs.makeDirectory(dirname(TEMPLATE_COPY_PATH), { recursive: true })
-    yield* fs.writeFileString(TEMPLATE_COPY_PATH, builtIndex)
-    return builtIndex
-  }
+    const builtIndex = yield* fs.readFileString(indexPath)
+    const isTemplate = builtIndex.includes(CONTAINER_PLACEHOLDER)
+    if (isTemplate) {
+      yield* fs.makeDirectory(dirname(templateCopyPath), { recursive: true })
+      yield* fs.writeFileString(templateCopyPath, builtIndex)
+      return builtIndex
+    }
 
-  const hasTemplateCopy = yield* fs.exists(TEMPLATE_COPY_PATH)
-  if (!hasTemplateCopy) {
-    return yield* Effect.die(
-      new Error(
-        `Cannot prerender: "${INDEX_PATH}" no longer holds the ${CONTAINER_PLACEHOLDER} placeholder, and no copy of the template remains. Run the client build again.`,
-      ),
-    )
-  }
+    const hasTemplateCopy = yield* fs.exists(templateCopyPath)
+    if (!hasTemplateCopy) {
+      return yield* Effect.die(
+        new Error(
+          `Cannot prerender: "${indexPath}" no longer holds the ${CONTAINER_PLACEHOLDER} placeholder, and no copy of the template remains. Run the client build again.`,
+        ),
+      )
+    }
 
-  return yield* fs.readFileString(TEMPLATE_COPY_PATH)
-})
+    return yield* fs.readFileString(templateCopyPath)
+  })
+
+const readTemplate = readTemplateFrom(INDEX_PATH, TEMPLATE_COPY_PATH)
 
 // CONTENT API
 

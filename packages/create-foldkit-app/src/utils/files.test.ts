@@ -63,12 +63,10 @@ describe('applyPackageManager', () => {
 })
 
 describe('rendering templates', () => {
-  it('ssg overlays the base with a server entry, prerender script, and static build pipeline', () => {
+  it('ssg overlays the base with a server entry and a generating build', () => {
     expect(listTemplateFiles('rendering/ssg')).toEqual([
       'README.md',
       'package.json',
-      'scripts/build.mjs',
-      'scripts/prerender.ts',
       'src/entry.server.ts',
       'src/entry.ts',
       'src/main.ts',
@@ -80,22 +78,19 @@ describe('rendering templates', () => {
     ])
 
     const packageJson = readTemplatePackageJson('rendering/ssg/package.json')
-    expect(packageJson.scripts['build']).toBe('node scripts/build.mjs')
+    expect(packageJson.scripts['build']).toBe('vite build')
     expect(packageJson.scripts['preview']).toBe(
       'vite preview --outDir dist/client',
     )
 
-    expect(readTemplateFile('rendering/ssg/vite.config.ts')).toContain(
-      "ssr: { serverEntry: '/src/entry.server.ts' }",
-    )
+    const ssgViteConfig = readTemplateFile('rendering/ssg/vite.config.ts')
+    expect(ssgViteConfig).toContain("serverEntry: '/src/entry.server.ts'")
+    expect(ssgViteConfig).toContain('build: { prerender: true }')
     expect(readTemplateFile('rendering/ssg/src/entry.server.ts')).toContain(
       'export const prerenderPaths',
     )
     expect(readTemplateFile('rendering/ssg/src/entry.ts')).toContain(
       'Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })',
-    )
-    expect(readTemplateFile('rendering/ssg/scripts/prerender.ts')).toContain(
-      'Server.injectIntoTemplate',
     )
   })
 
@@ -103,7 +98,6 @@ describe('rendering templates', () => {
     expect(listTemplateFiles('rendering/ssr')).toEqual([
       'README.md',
       'package.json',
-      'scripts/build.mjs',
       'server/main.ts',
       'src/cookie.ts',
       'src/entry.server.ts',
@@ -116,12 +110,12 @@ describe('rendering templates', () => {
     ])
 
     const packageJson = readTemplatePackageJson('rendering/ssr/package.json')
-    expect(packageJson.scripts['build']).toBe('node scripts/build.mjs')
+    expect(packageJson.scripts['build']).toBe('vite build')
     expect(packageJson.scripts['start']).toBe('node dist/server/main.js')
 
-    expect(readTemplateFile('rendering/ssr/vite.config.ts')).toContain(
-      "ssr: { serverEntry: '/src/entry.server.ts' }",
-    )
+    const ssrViteConfig = readTemplateFile('rendering/ssr/vite.config.ts')
+    expect(ssrViteConfig).toContain("serverEntry: '/src/entry.server.ts'")
+    expect(ssrViteConfig).toContain("build: { entry: '/server/main.ts' }")
     expect(readTemplateFile('rendering/ssr/src/entry.server.ts')).toContain(
       'flags: flagsForRequest(',
     )
@@ -165,37 +159,42 @@ describe('rendering templates', () => {
     }
 
     expect(readTemplateTsconfig('rendering/ssg/tsconfig.json').include).toEqual(
-      ['src/**/*', 'scripts/**/*'],
+      ['src/**/*'],
     )
     expect(readTemplateTsconfig('rendering/ssr/tsconfig.json').include).toEqual(
       ['src/**/*', 'server/**/*'],
     )
   })
 
-  it('gives every step of one build the same generated build id', () => {
+  it('gives every environment of one build the same generated build id', () => {
     // A generated project must reach a working hydratable build through its own
     // documented build command. `renderToString` refuses a hydratable render
     // with no build id, and hydration rebuilds a page whose id is not the
-    // client's, so the client build and the server build of one run have to be
+    // client's, so the browser build and the server build of one run have to be
     // handed the same value without the author knowing the requirement exists.
+    // One `vite build` evaluates the config once, so the id it computes there
+    // reaches every environment that build produces.
     for (const rendering of ['ssg', 'ssr']) {
-      const buildScript = readTemplateFile(
-        `rendering/${rendering}/scripts/build.mjs`,
+      const packageJson = readTemplatePackageJson(
+        `rendering/${rendering}/package.json`,
       )
-      expect(buildScript).toContain('randomUUID()')
-      expect(buildScript).toContain(
-        'env: { ...process.env, FOLDKIT_BUILD_ID: buildId },',
+      expect(packageJson.scripts['build']).toBe('vite build')
+
+      const viteConfig = readTemplateFile(
+        `rendering/${rendering}/vite.config.ts`,
       )
+      expect(viteConfig).toContain('randomUUID()')
+      expect(viteConfig).toContain('buildId,')
     }
   })
 
   it('takes a build id supplied by the deployment over a generated one', () => {
     for (const rendering of ['ssg', 'ssr']) {
-      const buildScript = readTemplateFile(
-        `rendering/${rendering}/scripts/build.mjs`,
+      const viteConfig = readTemplateFile(
+        `rendering/${rendering}/vite.config.ts`,
       )
-      const generated = buildScript.indexOf('randomUUID()')
-      const supplied = buildScript.indexOf('process.env.FOLDKIT_BUILD_ID')
+      const generated = viteConfig.indexOf('randomUUID()')
+      const supplied = viteConfig.indexOf("process.env['FOLDKIT_BUILD_ID']")
       expect(supplied).toBeGreaterThanOrEqual(0)
       expect(supplied).toBeLessThan(generated)
     }
@@ -207,7 +206,7 @@ describe('rendering templates', () => {
     // as one and adopt a stale page's DOM for a client that no longer means the
     // same thing by it.
     for (const rendering of ['ssg', 'ssr']) {
-      const code = readTemplateFile(`rendering/${rendering}/scripts/build.mjs`)
+      const code = readTemplateFile(`rendering/${rendering}/vite.config.ts`)
         .split('\n')
         .filter(line => !line.trimStart().startsWith('//'))
         .join('\n')
@@ -218,15 +217,22 @@ describe('rendering templates', () => {
     }
   })
 
-  it('treats an empty FOLDKIT_BUILD_ID as unset', () => {
+  it('treats an empty FOLDKIT_BUILD_ID as unset and resolves one id per process', () => {
     // The plugin reads an empty string as no id at all, so taking it as a value
     // here would suppress the generated one and leave the build with none,
-    // failing later at the render rather than here.
+    // failing later at the render rather than here. `||=` covers that and the
+    // second requirement at once: Vite reads this file once per environment it
+    // builds, so the generated fallback has to be stored where the next read
+    // finds it. A fresh id per read gives the browser bundle and the server
+    // bundle different ids, and hydration then refuses every page of the
+    // deployment that just shipped.
     for (const rendering of ['ssg', 'ssr']) {
-      const buildScript = readTemplateFile(
-        `rendering/${rendering}/scripts/build.mjs`,
+      const viteConfig = readTemplateFile(
+        `rendering/${rendering}/vite.config.ts`,
       )
-      expect(buildScript).toContain("supplied === ''")
+      expect(viteConfig).toContain(
+        "process.env['FOLDKIT_BUILD_ID'] ||= randomUUID()",
+      )
     }
   })
 

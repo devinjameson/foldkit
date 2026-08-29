@@ -42,15 +42,17 @@ const runRequired = (
   }
 }
 
-const prerender = (label: string): void => {
-  runRequired(label, 'pnpm', ['exec', 'tsx', 'scripts/prerender.ts'])
+// One `vite build` owns the browser build, the server build and the pages, so
+// repeating the build is what repeating the generation means now. There is no
+// step that generates over output another command left behind.
+const build = (label: string): void => {
+  runRequired(label, 'pnpm', ['exec', 'vite', 'build'])
 }
 
-// NOTE: the cached template copy is the mechanism under test, and the build is
-// byte-identical between runs because the build id is pinned, so a copy left by
-// an earlier invocation is indistinguishable from the one the first run is
-// supposed to write. The whole cache directory goes rather than the one path
-// the prerender script names today, which the example is free to rename.
+// NOTE: the build is byte-identical between runs because the build id is
+// pinned, so output left by an earlier invocation is indistinguishable from
+// what this run writes. Both directories go so the first build starts from
+// nothing.
 const clearPriorState = (): void => {
   rmSync(DIST_DIR, { recursive: true, force: true })
   rmSync(CACHE_DIR, { recursive: true, force: true })
@@ -75,29 +77,14 @@ const readClientFiles = (): Readonly<Record<string, Buffer>> => {
   return files
 }
 
-// The prerender writes the generated `/` over the `index.html` the client build
-// left its template in, so that file changing is proof the step ran. Comparing
-// against the built template rather than testing for a placeholder literal
-// keeps this working when the example renames its container. Without it a
-// prerender that generates nothing compares untouched build output with itself
-// and agrees.
-const assertPrerenderRan = (builtTemplate: Buffer): void => {
-  if (readFileSync(INDEX_PATH).equals(builtTemplate)) {
+// The generated `/` replaces the template the browser build emits, so an
+// `index.html` still holding a placeholder means nothing was generated and the
+// comparisons below would be comparing untouched output with itself.
+const assertGenerated = (): void => {
+  const index = readFileSync(INDEX_PATH, 'utf8')
+  if (!index.includes(HYDRATION_STAMP_PREFIX)) {
     return fail(
-      `"${INDEX_PATH}" is unchanged from the client build, so the prerender generated no page over it`,
-    )
-  }
-}
-
-const assertCachedTemplate = (): void => {
-  const cached = readdirSync(CACHE_DIR, {
-    recursive: true,
-    withFileTypes: true,
-  })
-
-  if (!cached.some(entry => entry.isFile())) {
-    return fail(
-      `"${CACHE_DIR}" holds no cached template after the first prerender, so a re-run has nothing to read back`,
+      `"${INDEX_PATH}" carries no ${HYDRATION_STAMP_PREFIX} attribute, so the build generated no page over the template`,
     )
   }
 }
@@ -153,40 +140,23 @@ const stripHydrationStamps = (): void => {
 const main = (): void => {
   clearPriorState()
 
-  runRequired('Building the client', 'pnpm', [
-    'exec',
-    'vite',
-    'build',
-    '--outDir',
-    'dist/client',
-  ])
-  runRequired('Building the server entry', 'pnpm', [
-    'exec',
-    'vite',
-    'build',
-    '--ssr',
-    'src/entry.server.ts',
-    '--outDir',
-    'dist/server',
-  ])
-
-  const builtTemplate = readFileSync(INDEX_PATH)
-
-  prerender('Prerendering against a fresh client build')
-  assertPrerenderRan(builtTemplate)
-  assertCachedTemplate()
+  build('Building the project')
   const firstRun = readClientFiles()
+  assertGenerated()
 
-  prerender('Prerendering again against the same client build')
+  build('Building again over the first build')
   assertSameFiles(
-    're-run against one client build',
+    're-build over one output directory',
     firstRun,
     readClientFiles(),
   )
 
+  // A generated page carries hydration stamps and a template does not, so
+  // leaving one in place models a build finding output it wrote itself, which
+  // is what a template read off disk would then parse.
   stripHydrationStamps()
-  prerender('Prerendering again with the hydration stamps stripped')
-  assertSameFiles('re-run against static output', firstRun, readClientFiles())
+  build('Building again over stripped output')
+  assertSameFiles('re-build over static output', firstRun, readClientFiles())
 
   log('PASS')
 }

@@ -5,13 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build.mjs",
+    "build": "vite build",
     "preview": "vite preview --outDir dist/client",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@effect/platform-browser": "4.0.0-rc.112",
-    "@effect/platform-node": "4.0.0-rc.112",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*"
   },
@@ -22,7 +21,6 @@
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vite": "^8.2.2"
   }

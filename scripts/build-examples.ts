@@ -103,54 +103,22 @@ const buildSpaExample = async (
   ])
 }
 
-// NOTE: a prerendered example's prerender script reads its template from
-// dist/client and its compiled entry from dist/server, so the client build
-// lands in the example's own dist first and the finished output is copied to
-// the embed directory afterwards.
-//
-// NOTE: the embed needs its own base and output paths, so it runs the three
-// steps here rather than through the example's `scripts/build.mjs`. That makes
-// the build id this script's responsibility: a hydratable render refuses to run
-// without one, and the client bundle and the prerendered pages have to carry
-// the same one, so all three steps are given a single id generated here.
+// NOTE: one `vite build` produces the browser bundle, the server bundle and the
+// generated pages, so the embed runs the example's own build with its own base
+// and copies the finished browser output afterwards. The build id is still
+// supplied here: the embed wants one it can reproduce rather than the fresh one
+// the example's config generates when the variable is unset.
 const buildPrerenderedExample = async (
   exampleDir: string,
   slug: string,
   outputDir: string,
 ): Promise<void> => {
   rmSync(resolve(exampleDir, 'dist'), { recursive: true, force: true })
-  const environment = { FOLDKIT_BUILD_ID: buildIdForEmbed() }
   await runExampleCommand(
     exampleDir,
     slug,
-    [
-      'vite',
-      'build',
-      '--base',
-      `/example-apps-embed/${slug}/`,
-      '--outDir',
-      'dist/client',
-    ],
-    environment,
-  )
-  await runExampleCommand(
-    exampleDir,
-    slug,
-    [
-      'vite',
-      'build',
-      '--ssr',
-      'src/entry.server.ts',
-      '--outDir',
-      'dist/server',
-    ],
-    environment,
-  )
-  await runExampleCommand(
-    exampleDir,
-    slug,
-    ['tsx', 'scripts/prerender.ts'],
-    environment,
+    ['vite', 'build', '--base', `/example-apps-embed/${slug}/`],
+    { FOLDKIT_BUILD_ID: buildIdForEmbed() },
   )
   cpSync(resolve(exampleDir, 'dist/client'), outputDir, { recursive: true })
 }

@@ -41,12 +41,19 @@ import type {
 } from 'vite'
 import { type WebSocket, WebSocketServer } from 'ws'
 
+import { type FoldkitBuildOptions, foldkitBuild } from './build.js'
 import { foldkitBuildToken } from './buildToken.js'
 import { devToolsOverlayPlugin } from './devToolsOverlay.js'
 import { type FoldkitSsrOptions, foldkitSsr } from './ssr.js'
 import { foldkitViewIdentity } from './viewIdentity.js'
 
 export { type BrandDistResult, brandDistDirectory } from './brandDist.js'
+export {
+  FoldkitBuildManifest,
+  type FoldkitBuildOptions,
+  type FoldkitPrerenderOptions,
+  foldkitBuild,
+} from './build.js'
 export { type FoldkitSsrOptions, foldkitSsr } from './ssr.js'
 export {
   type ViewIdentityTransformResult,
@@ -69,7 +76,18 @@ export type FoldkitPluginOptions = Readonly<{
    * `renderPage` from the module at `ssr.serverEntry`. When `undefined` (the
    * default), the dev server serves the client entry only.
    */
-  ssr?: Omit<FoldkitSsrOptions, 'buildId'>
+  ssr?: Omit<FoldkitSsrOptions, 'buildId'> &
+    Readonly<{
+      /**
+       * Build the server entry alongside the browser build, and generate static
+       * HTML from it, inside this project's own `vite build`. `true` builds it
+       * with the default output directories and generates nothing.
+       *
+       * When this is absent, `vite build` builds the browser bundle only and
+       * the server build is a separate command the deployment runs itself.
+       */
+      build?: boolean | FoldkitBuildOptions
+    }>
   /**
    * The deployment this build belongs to, compiled into application code as
    * `import.meta.env.FOLDKIT_BUILD_ID` for the entries to pass to
@@ -82,6 +100,14 @@ export type FoldkitPluginOptions = Readonly<{
    * deployment already has, such as a commit or a release tag, and give the
    * client build and the server build the same one. It is published in the
    * page, so it must not be a secret.
+   *
+   * Whatever supplies it has to answer with the same value every time it is
+   * asked, because Vite reads a config file once per environment it builds. A
+   * config that computes a fresh value on each read — `randomUUID()`, a
+   * timestamp — gives the browser bundle and the server bundle different ids
+   * within one build, and every page of that deployment is then refused at
+   * hydration. Read it from the environment, or store a generated fallback
+   * back into the environment so later reads resolve the same id.
    */
   buildId?: string
 }>
@@ -683,6 +709,27 @@ const main = (
  * an array; Vite flattens nested plugin arrays, so `plugins: [foldkit()]`
  * keeps working.
  */
+// The container is named once, on `ssr`, and reaches both the dev host and the
+// build from there. A `build.prerender` that names its own wins, so a project
+// that needs them to differ still can.
+const withContainerId = (
+  build: FoldkitBuildOptions | true,
+  containerId: string | undefined,
+): FoldkitBuildOptions => {
+  const options: FoldkitBuildOptions = build === true ? {} : build
+  if (containerId === undefined || options.prerender === undefined) {
+    return options
+  }
+  const prerender = options.prerender === true ? {} : options.prerender
+  if (prerender === false) {
+    return options
+  }
+  return {
+    ...options,
+    prerender: { containerId, ...prerender },
+  }
+}
+
 export const foldkit = (options: FoldkitPluginOptions = {}): Array<Plugin> => {
   const events = Effect.runSync(Queue.unbounded<Event>())
 
@@ -743,23 +790,30 @@ export const foldkit = (options: FoldkitPluginOptions = {}): Array<Plugin> => {
     },
   }
 
-  return options.ssr === undefined
-    ? [
-        foldkitBuildToken(options.buildId),
-        foldkitViewIdentity(),
-        devToolsOverlayPlugin(),
-        hmrPlugin,
-      ]
-    : [
-        foldkitBuildToken(options.buildId),
-        foldkitViewIdentity(),
-        devToolsOverlayPlugin(),
-        hmrPlugin,
-        foldkitSsr({
-          ...options.ssr,
-          ...(options.buildId === undefined
-            ? {}
-            : { buildId: options.buildId }),
-        }),
-      ]
+  const shared = [
+    foldkitBuildToken(options.buildId),
+    foldkitViewIdentity(),
+    devToolsOverlayPlugin(),
+    hmrPlugin,
+  ]
+
+  if (options.ssr === undefined) {
+    return shared
+  }
+
+  const { build, ...ssr } = options.ssr
+  const servePages = foldkitSsr({
+    ...ssr,
+    ...(options.buildId === undefined ? {} : { buildId: options.buildId }),
+  })
+
+  if (build === undefined || build === false) {
+    return [...shared, servePages]
+  }
+
+  return [
+    ...shared,
+    servePages,
+    foldkitBuild(ssr.serverEntry, withContainerId(build, ssr.containerId)),
+  ]
 }
