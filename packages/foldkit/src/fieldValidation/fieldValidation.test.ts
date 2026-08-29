@@ -1,4 +1,4 @@
-import { Option, Schema as S } from 'effect'
+import { Array, Option, Schema as S } from 'effect'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -16,6 +16,7 @@ import {
   isRequired,
   isValid,
   makeRules,
+  match,
   validate,
   validateAll,
 } from './fieldValidation.js'
@@ -74,6 +75,35 @@ describe('Field schema', () => {
       value: true,
     })
     expect(Option.isSome(decoded)).toBe(true)
+  })
+})
+
+describe('match', () => {
+  const label = match<string, string>({
+    onNotValidated: value => `NotValidated(${value})`,
+    onValidating: value => `Validating(${value})`,
+    onValid: value => `Valid(${value})`,
+    onInvalid: ({ value, errors }) =>
+      `Invalid(${value}: ${Array.headNonEmpty(errors)})`,
+  })
+
+  it('dispatches each state to its handler', () => {
+    expect(label(NotValidated({ value: 'a' }))).toBe('NotValidated(a)')
+    expect(label(Validating({ value: 'b' }))).toBe('Validating(b)')
+    expect(label(Valid({ value: 'c' }))).toBe('Valid(c)')
+    expect(label(Invalid({ value: 'd', errors: ['bad'] }))).toBe(
+      'Invalid(d: bad)',
+    )
+  })
+
+  it('works data-first', () => {
+    const result = match(Valid({ value: 42 }), {
+      onNotValidated: () => 0,
+      onValidating: () => 0,
+      onValid: value => value,
+      onInvalid: () => 0,
+    })
+    expect(result).toBe(42)
   })
 })
 

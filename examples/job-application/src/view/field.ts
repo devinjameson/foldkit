@@ -1,19 +1,18 @@
 import clsx from 'clsx'
 import { Match as M } from 'effect'
+import { FieldValidation } from 'foldkit'
 import { type Field } from 'foldkit/fieldValidation'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Checkbox, Input, Textarea } from '@foldkit/ui'
 
 const borderClass = (field: Field<string>): string =>
-  M.value(field).pipe(
-    M.tagsExhaustive({
-      NotValidated: () => 'border-gray-300',
-      Validating: () => 'border-blue-300',
-      Valid: () => 'border-green-500',
-      Invalid: () => 'border-red-500',
-    }),
-  )
+  FieldValidation.match(field, {
+    onNotValidated: () => 'border-gray-300',
+    onValidating: () => 'border-blue-300',
+    onValid: () => 'border-green-500',
+    onInvalid: () => 'border-red-500',
+  })
 
 export const inputField = <ParentMessage>(
   config: Readonly<{

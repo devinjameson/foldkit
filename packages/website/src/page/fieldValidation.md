@@ -43,13 +43,13 @@ Use `validateAll(rules)` when you want to collect every failing rule into the `e
 
 ## Displaying Validation State
 
-Match exhaustively on the four tags to derive border colors, status indicators, and error messages. For a single-field submit gate, use `isValid(rules)(state)`. If the rules are required, only `Valid` passes; if they are optional, `NotValidated` also passes. `Validating` and `Invalid` never pass.
+Use `FieldValidation.match` to handle the four states and derive border colors, status indicators, and error messages. Each handler receives the state's `value`, and `onInvalid` also receives the `errors`. For a single-field submit gate, use `isValid(rules)(state)`. If the rules are required, only `Valid` passes; if they are optional, `NotValidated` also passes. `Validating` and `Invalid` never pass.
 
 For a form-level gate, pass `[state, rules]` pairs to `allValid`. A single call gates fields of one value type, so a form that mixes types calls `allValid` per type and combines the results with `&&`.
 
 ::Snippet{name="fieldValidationView" label="validation view example"}
 
-Because `Field` is a discriminated union, the exhaustive match ensures you handle every state.
+`FieldValidation.match` requires a handler for every state, so no rendering path can forget one. Reach for Effect `Match` only when a partial match with a fallback reads better, as in the async example below.
 
 Use `isInvalid(state)` or `anyInvalid(states)` when you specifically need to know whether validation has produced errors. They check for the `Invalid` tag. A required `NotValidated` field and a `Validating` field are not invalid, but they still fail an `isValid` submit gate.
 
