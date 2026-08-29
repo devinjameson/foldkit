@@ -53,7 +53,7 @@ jobs:
       contents: write
       pull-requests: write
     outputs:
-      has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
+      has_changesets: ${{ steps.changesets.outputs['has-changesets'] }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -78,11 +78,11 @@ jobs:
 
       - name: Create or update the Version Packages pull request
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
-          version: pnpm version-packages
+          version-script: pnpm version-packages
+          github-token: ${{ secrets.GITHUB_TOKEN }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SKIP_SIMPLE_GIT_HOOKS: '1'
 
   stable:
