@@ -431,10 +431,40 @@ const uniqueBrandAlias = (code: string): string => {
 
 // TRANSFORM
 
+// NOTE: MagicString 0.x declared `file` as a string even though generated maps
+// leave it undefined when no file is supplied. Keep that published type while
+// narrowing `sourcesContent` for Vite 7. `file` remains untouched at runtime.
+type ViteCompatibleSourceMap = SourceMap & {
+  file: string
+  sourcesContent: Array<string> | undefined
+}
+
+const isViteCompatibleSourceMap = (
+  sourceMap: SourceMap,
+): sourceMap is SourceMap & ViteCompatibleSourceMap =>
+  sourceMap.sourcesContent === undefined ||
+  sourceMap.sourcesContent.every(content => content !== null)
+
+const toViteCompatibleSourceMap = (
+  sourceMap: SourceMap,
+): ViteCompatibleSourceMap => {
+  if (sourceMap.sourcesContent !== undefined) {
+    sourceMap.sourcesContent = sourceMap.sourcesContent.map(
+      content => content ?? '',
+    )
+  }
+
+  if (isViteCompatibleSourceMap(sourceMap)) {
+    return sourceMap
+  }
+
+  throw new Error('Failed to normalize the generated source map')
+}
+
 /** Result of {@link transformViewIdentity}: rewritten code plus a source map. */
 export type ViewIdentityTransformResult = Readonly<{
   code: string
-  map: SourceMap
+  map: ViteCompatibleSourceMap
 }>
 
 /**
@@ -522,7 +552,9 @@ export const transformViewIdentity = (
   }
   return {
     code: sourceText.toString(),
-    map: sourceText.generateMap({ hires: 'boundary' }),
+    map: toViteCompatibleSourceMap(
+      sourceText.generateMap({ hires: 'boundary' }),
+    ),
   }
 }
 

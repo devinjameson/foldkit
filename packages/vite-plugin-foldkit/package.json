@@ -28,7 +28,7 @@
     "vite": "^7.0.0 || ^8.0.0"
   },
   "dependencies": {
-    "magic-string": "^0.30.21",
+    "magic-string": "^1.2.3",
     "ws": "^8.21.3"
   },
   "devDependencies": {
