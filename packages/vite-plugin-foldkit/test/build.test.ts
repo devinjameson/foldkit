@@ -8,13 +8,13 @@ import { type Plugin, createBuilder } from 'vite'
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest'
 
 import {
-  FoldkitBuildManifest,
   type FoldkitBuildOptions,
   foldkitBuild,
   manifestPath,
   renderTargetFor,
 } from '../src/build.ts'
 import { foldkitBuildToken } from '../src/buildToken.ts'
+import { FoldkitBuildManifest } from '../src/index.ts'
 
 const FIXTURE_ROOT = resolve(import.meta.dirname, 'fixtures/build')
 const SERVER_ENTRY = '/entry.server.ts'

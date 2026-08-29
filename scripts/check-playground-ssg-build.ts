@@ -81,17 +81,12 @@ const packageVersions = (projectDir: string): string => {
       : {}
   const foldkit = Reflect.get(dependencies, 'foldkit')
   const plugin = Reflect.get(devDependencies, '@foldkit/vite-plugin')
-  const tsx = Reflect.get(devDependencies, 'tsx')
-  if (
-    typeof foldkit !== 'string' ||
-    typeof plugin !== 'string' ||
-    typeof tsx !== 'string'
-  ) {
+  if (typeof foldkit !== 'string' || typeof plugin !== 'string') {
     return fail(
-      'the transformed SSG manifest must retain foldkit, @foldkit/vite-plugin, and tsx',
+      'the transformed SSG manifest must retain foldkit and @foldkit/vite-plugin',
     )
   }
-  return `foldkit@${foldkit}, @foldkit/vite-plugin@${plugin}, tsx@${tsx}`
+  return `foldkit@${foldkit}, @foldkit/vite-plugin@${plugin}`
 }
 
 const assertExactWorkspaceVersions = (

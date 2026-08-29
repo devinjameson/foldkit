@@ -49,7 +49,7 @@ import { foldkitViewIdentity } from './viewIdentity.js'
 
 export { type BrandDistResult, brandDistDirectory } from './brandDist.js'
 export {
-  type FoldkitBuildManifest,
+  FoldkitBuildManifest,
   type FoldkitBuildOptions,
   type FoldkitPrerenderOptions,
   foldkitBuild,

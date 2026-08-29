@@ -55,7 +55,9 @@ describe('server-rendered example build scripts', () => {
       for (const fileName of ['vite.config.ts', 'vite.config.playground.ts']) {
         const config = exampleFile(slug, fileName)
         expect(config, fileName).toContain('FOLDKIT_BUILD_ID')
-        expect(config, fileName).toContain('randomUUID()')
+        expect(config, fileName).toContain(
+          "process.env['FOLDKIT_BUILD_ID'] ||= randomUUID()",
+        )
         expect(config, fileName).toContain('buildId,')
       }
     })
