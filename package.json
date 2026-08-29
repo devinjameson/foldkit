@@ -115,7 +115,7 @@
     "pre-push": "bash scripts/run-pre-push.sh"
   },
   "engines": {
-    "node": "^22.22.2 || ^24.0.0 || >=26.0.0",
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
     "pnpm": ">=11"
   },
   "keywords": [
