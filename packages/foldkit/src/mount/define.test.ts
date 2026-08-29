@@ -1,4 +1,4 @@
-import { Effect, Option, Schema, Stream } from 'effect'
+import { Effect, Fiber, Option, Schema, Stream } from 'effect'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -22,14 +22,30 @@ const panelElement = (): Element => {
 const measuredWidth = (element: Element): number =>
   Number(element.getAttribute('data-width'))
 
-// NOTE: `if (false)` keeps this out of the run. The check is the
-// `@ts-expect-error` below: `pnpm typecheck` fails if declaring an args field
-// named `element` ever stops being an error at the definition site.
+// NOTE: `if (false)` keeps this out of the run. The checks are the
+// `@ts-expect-error` directives below: `pnpm typecheck` fails if declaring an
+// args field named `element` or `viewStateChanges` ever stops being an error at
+// the definition site.
 if (false) {
   Mount.define('MeasurePanel', {
     // @ts-expect-error `element` names the live element execute receives, so an arg cannot claim it
     args: {
       element: Schema.String,
+    },
+    messages: [Message.CompletedMeasurePanel],
+    execute: ({ element }) =>
+      Effect.succeed(
+        Message.CompletedMeasurePanel({
+          panelId: 'panel',
+          width: measuredWidth(element),
+        }),
+      ),
+  })
+
+  Mount.define('ObserveViewState', {
+    // @ts-expect-error `viewStateChanges` names the runtime Stream execute receives, so an arg cannot claim it
+    args: {
+      viewStateChanges: Schema.String,
     },
     messages: [Message.CompletedMeasurePanel],
     execute: ({ element }) =>
@@ -169,4 +185,32 @@ describe('Mount.defineStream defers its execute body', () => {
 
     expect(bodyRunCount).toBe(0)
   })
+
+  it.effect('keeps the fallback view-state Stream open after Live', () =>
+    Effect.gen(function* () {
+      const observedViewStates: Array<Mount.ViewState> = []
+
+      const WatchViewState = Mount.defineStream('WatchViewState', {
+        messages: [Message.ScrolledPanel],
+        execute: ({ viewStateChanges }) =>
+          viewStateChanges.pipe(
+            Stream.tap(viewState =>
+              Effect.sync(() => observedViewStates.push(viewState)),
+            ),
+            Stream.map(() => Message.ScrolledPanel({ scroll: 0 })),
+          ),
+      })
+
+      const fiber = yield* WatchViewState()
+        .f(panelElement())
+        .pipe(Stream.runCollect, Effect.forkChild)
+
+      yield* Effect.yieldNow
+
+      expect(observedViewStates).toEqual(['Live'])
+      expect(fiber.pollUnsafe()).toBeUndefined()
+
+      yield* Fiber.interrupt(fiber)
+    }),
+  )
 })

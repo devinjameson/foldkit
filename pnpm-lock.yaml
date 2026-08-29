@@ -1802,6 +1802,9 @@ importers:
       foldkit:
         specifier: workspace:*
         version: link:../foldkit
+      happy-dom:
+        specifier: ^20.11.13
+        version: 20.11.13
       rimraf:
         specifier: ^6.1.3
         version: 6.1.3

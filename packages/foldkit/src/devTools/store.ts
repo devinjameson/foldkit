@@ -303,33 +303,42 @@ export const createDevToolsStore = (
       commands: ReadonlyArray<CommandRecord>,
       isModelChanged: boolean,
     ) =>
-      SubscriptionRef.update(stateRef, state => {
-        const absoluteIndex = nextEntryIndex(state)
+      Effect.gen(function* () {
+        const didAutoResume = yield* SubscriptionRef.modify(stateRef, state => {
+          const absoluteIndex = nextEntryIndex(state)
 
-        const diff = isModelChanged
-          ? computeDiff(modelBeforeUpdate, modelAfterUpdate)
-          : emptyDiff
+          const diff = isModelChanged
+            ? computeDiff(modelBeforeUpdate, modelAfterUpdate)
+            : emptyDiff
 
-        const hasChangedFields = HashSet.size(diff.changedPaths) > 0
+          const hasChangedFields = HashSet.size(diff.changedPaths) > 0
 
-        const nextState = evo(state, {
-          entries: Array.append({
-            tag: message._tag,
-            message,
-            commands,
-            mountStarts: [],
-            mountEnds: [],
-            timestamp: performance.now(),
-            isModelChanged: hasChangedFields,
-            diff,
-          }),
-          keyframes: addKeyframeIfNeeded(absoluteIndex + 1, modelAfterUpdate),
-          maybeLatestModel: () => Option.some(modelAfterUpdate),
+          const nextState = evo(state, {
+            entries: Array.append({
+              tag: message._tag,
+              message,
+              commands,
+              mountStarts: [],
+              mountEnds: [],
+              timestamp: performance.now(),
+              isModelChanged: hasChangedFields,
+              diff,
+            }),
+            keyframes: addKeyframeIfNeeded(absoluteIndex + 1, modelAfterUpdate),
+            maybeLatestModel: () => Option.some(modelAfterUpdate),
+          })
+
+          const recordedState =
+            nextState.entries.length > maxEntries
+              ? evictOldestSegment(nextState)
+              : nextState
+
+          return [state.isPaused && !recordedState.isPaused, recordedState]
         })
 
-        return nextState.entries.length > maxEntries
-          ? evictOldestSegment(nextState)
-          : nextState
+        if (didAutoResume) {
+          yield* bridge.markRenderPending
+        }
       })
 
     /** Attaches Mount lifecycle events from the most recent render to the

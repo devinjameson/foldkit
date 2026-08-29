@@ -7,6 +7,7 @@ export type {
 export {
   MountDefinitionTypeId,
   MountTracker,
+  ViewState,
   define,
   defineStream,
   mapMessage,

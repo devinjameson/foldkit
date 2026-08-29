@@ -6,7 +6,7 @@ Most Foldkit code is declarative. The [view](/core/view) is a pure function from
 
 Mount is the escape hatch for work whose cause is a particular element existing in the DOM. `OnMount` supplies the live `Element`, starts the work when that element enters the DOM, and tears it down when the element leaves.
 
-Use `Mount.define` for work that produces one Message when it starts. Its `execute` receives the live element and returns an `Effect<Message>` that emits that Message, then its scope remains open until unmount so cleanup registered with `Effect.acquireRelease` runs at the right time. Use `Mount.defineStream` when listeners or observers on the element must emit a continuing `Stream<Message>`.
+Use `Mount.define` for work that produces one Message when it starts. Its `execute` receives the live element and the rendered view's state, then returns an `Effect<Message>` that emits that Message. Its scope remains open until unmount so cleanup registered with `Effect.acquireRelease` runs at the right time. Use `Mount.defineStream` when listeners or observers on the element must emit a continuing `Stream<Message>`.
 
 Both forms require at least one declared result Message. When no result needs to change the Model, return a descriptive `Completed*` Message and leave the Model unchanged in update. The Message keeps the effect visible to DevTools, Scene tests, and replay.
 
@@ -60,7 +60,7 @@ DevTools re-renders historical Models. Elements inserted during replay run their
 
 ## Per-Instance Args {#args}
 
-A Mount often needs an input that differs by element instance, such as an initial scroll position, chart data, or a stable host id. Declare those under `args`, using the same Schema record shape a [Command](/core/commands) takes. `args`, `messages`, and `execute` are all named fields on one config object. `execute` receives the live element as `element` alongside the declared args, so an args field named `element` is rejected where you declare it:
+A Mount often needs an input that differs by element instance, such as an initial scroll position, chart data, or a stable host id. Declare those under `args`, using the same Schema record shape a [Command](/core/commands) takes. `args`, `messages`, and `execute` are all named fields on one config object. `execute` receives the runtime fields `element` and `viewStateChanges` alongside the declared args, so those names are reserved and rejected under `args`:
 
 ::Snippet{name="mountDefineArgs" label="Mount args definition"}
 
@@ -77,6 +77,18 @@ DevTools shows the args beside the Mount name. Scene tests can target one instan
 :::
 
 When a later Message changes the Model and should trigger new DOM work, return a Command from that Message's update handler. A Subscription is appropriate when a Model dependency controls the lifetime of an external stream or a paired DOM state, or when a browser event must be handled synchronously, such as calling `preventDefault` inside its listener. Mount args are not reactive properties for either case.
+
+## Paused Historical Views
+
+Time travel pauses the rendered view, not the application. The live Model, history, Commands, Subscriptions, and ManagedResources continue normally behind the historical DOM. A Mount owns imperative behavior attached to an element in that rendered view, so its `execute` input includes `viewStateChanges`, a `Stream<'Live' | 'Paused'>`.
+
+Each subscriber immediately receives the current state, followed by changes. The Stream stays open for the Mount's lifetime. It reports only `Live` when time travel is unavailable. A surviving Mount is not restarted, interrupted, or reacquired when the view pauses. A Mount inserted by a historical render receives `Paused` as its first state. On resume, Mounts receive `Live` only after Foldkit has patched the latest live view back into the DOM.
+
+Use the Stream to update state owned by the imperative integration itself. For example, a rich-text editor can call its read-only API while the historical view is installed, then restore editing when the live view returns:
+
+::Snippet{name="mountViewStateChanges" label="Making an editor read-only during time travel"}
+
+Mount Messages emitted while the view is paused are suppressed. They do not reach update, change the live Model, or enter history. A suppressed result from a Mount inserted by a historical render is not delivered later merely because that element survives the live patch. The Mount fiber remains alive, so the integration keeps its handle and can still observe `viewStateChanges`. Do not translate this signal into an application Message. It describes which Model the DOM currently represents, not a change to application state.
 
 ## Third-Party Libraries
 

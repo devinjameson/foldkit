@@ -1,5 +1,6 @@
-import type { Context } from 'effect'
+import { Context, Option } from 'effect'
 
+import { MountRuntime } from '../mount/index.js'
 import {
   type BoundaryId,
   type BoundaryRegistry,
@@ -15,12 +16,26 @@ export type DispatchSync = (message: unknown) => void
 
 export type Frame = Readonly<{
   outerDispatch: DispatchSync
+  mountOuterDispatch: DispatchSync
   runtimeContext: Context.Context<never>
   boundaryRegistry: BoundaryRegistry
   boundaryId: BoundaryId
 }>
 
 const stack: Array<Frame> = []
+
+const requireFrame = (): Frame => {
+  const frame = stack[stack.length - 1]
+  if (frame === undefined) {
+    throw new Error(
+      'Foldkit: html element constructors must be called inside a runtime-driven ' +
+        'render. The element was built outside a view, or foldkit was loaded as ' +
+        'more than one instance (a bundler split foldkit and @foldkit/ui into ' +
+        'separate copies).',
+    )
+  }
+  return frame
+}
 
 /** Pushes a new dispatch and runtime context onto the singleton stack. The
  *  runtime calls this before invoking a user `view`, and any test or
@@ -38,8 +53,14 @@ export const setRuntime = (
   runtimeContext: Context.Context<never>,
   boundaryRegistry: BoundaryRegistry = createBoundaryRegistry(),
 ): void => {
+  const maybeMountRuntime = Context.getOption(runtimeContext, MountRuntime)
+  const mountOuterDispatch = Option.match(maybeMountRuntime, {
+    onNone: () => dispatch,
+    onSome: mountRuntime => mountRuntime.dispatch,
+  })
   stack.push({
     outerDispatch: dispatch,
+    mountOuterDispatch,
     runtimeContext,
     boundaryRegistry,
     boundaryId: ROOT_BOUNDARY,
@@ -59,6 +80,7 @@ export const pushBoundary = (boundaryId: BoundaryId): void => {
   }
   stack.push({
     outerDispatch: parent.outerDispatch,
+    mountOuterDispatch: parent.mountOuterDispatch,
     runtimeContext: parent.runtimeContext,
     boundaryRegistry: parent.boundaryRegistry,
     boundaryId,
@@ -106,18 +128,22 @@ export const clearRuntime = (): void => {
  *  is a cached per-boundary dispatcher that applies the wrapping chain at
  *  event-fire time. Throws when called outside of a runtime frame. */
 export const requireDispatch = (): DispatchSync => {
-  const frame = stack[stack.length - 1]
-  if (frame === undefined) {
-    throw new Error(
-      'Foldkit: html element constructors must be called inside a runtime-driven ' +
-        'render. The element was built outside a view, or foldkit was loaded as ' +
-        'more than one instance (a bundler split foldkit and @foldkit/ui into ' +
-        'separate copies).',
-    )
-  }
+  const frame = requireFrame()
   return getOrCreateBoundaryDispatch(
     frame.boundaryRegistry,
     frame.outerDispatch,
+    frame.boundaryId,
+  )
+}
+
+/** Returns the current boundary's dispatcher for Mount results. The runtime
+ *  supplies a live root dispatcher that drops results while a historical view
+ *  owns the DOM. Renderers without that service use the ordinary dispatcher. */
+export const requireMountDispatch = (): DispatchSync => {
+  const frame = requireFrame()
+  return getOrCreateBoundaryDispatch(
+    frame.boundaryRegistry,
+    frame.mountOuterDispatch,
     frame.boundaryId,
   )
 }
@@ -132,15 +158,7 @@ export type UnmountResolver = (message: unknown) => () => void
  *  dispatch thunk that survives the boundary being torn down during the same
  *  patch. Throws when called outside of a runtime frame. */
 export const requireUnmountResolver = (): UnmountResolver => {
-  const frame = stack[stack.length - 1]
-  if (frame === undefined) {
-    throw new Error(
-      'Foldkit: html element constructors must be called inside a runtime-driven ' +
-        'render. The element was built outside a view, or foldkit was loaded as ' +
-        'more than one instance (a bundler split foldkit and @foldkit/ui into ' +
-        'separate copies).',
-    )
-  }
+  const frame = requireFrame()
   return message =>
     resolveBoundaryDispatchThunk(
       frame.boundaryRegistry,
@@ -153,9 +171,9 @@ export const requireUnmountResolver = (): UnmountResolver => {
 /** Returns the current frame's Submodel wrapping chain (innermost first), or an
  *  empty array at the root boundary. `OnMount` calls this at build time to
  *  snapshot the lift a Submodel-embedded mount's result travels through in
- *  production (via `ctx.dispatch`), so the Scene test harness can replay it when
- *  the mount is resolved. Returns `[]` when there is no active frame, mirroring
- *  the lazy tolerance of handler-free Html built outside a render. */
+ *  production (via `ctx.mountDispatch`), so the Scene test harness can replay it
+ *  when the mount is resolved. Returns `[]` when there is no active frame,
+ *  mirroring the lazy tolerance of handler-free Html built outside a render. */
 export const requireBoundaryMappers = (): ReadonlyArray<
   (message: unknown) => unknown
 > => {
@@ -169,16 +187,7 @@ export const requireBoundaryMappers = (): ReadonlyArray<
 /** Returns the current runtime Effect Context, used by Mount integrations
  *  that fork message-producing Effects against the live runtime services. */
 export const requireRuntimeContext = (): Context.Context<never> => {
-  const frame = stack[stack.length - 1]
-  if (frame === undefined) {
-    throw new Error(
-      'Foldkit: html element constructors must be called inside a runtime-driven ' +
-        'render. The element was built outside a view, or foldkit was loaded as ' +
-        'more than one instance (a bundler split foldkit and @foldkit/ui into ' +
-        'separate copies).',
-    )
-  }
-  return frame.runtimeContext
+  return requireFrame().runtimeContext
 }
 
 /** Returns the current frame's boundary registry and boundary id. Used by

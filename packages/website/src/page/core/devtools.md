@@ -13,7 +13,7 @@ The panel lists every recorded Message, with the newest at the bottom. Select a 
 - `Commands` lists the Commands returned by update.
 - `Mounts` shows which Mounts started or ended during that render.
 
-The `Live` badge tells you whether the inspector shows the latest state or a past entry. In time-travel mode, selecting an earlier row pauses the app at that state. Select `Resume` to return to the latest state. `Clear` drops the recorded history without restarting the app.
+The `Live` badge tells you whether the inspector shows the latest state or a past entry. In time-travel mode, selecting an earlier row installs a paused historical view. It does not pause the live application behind that view. Select `Resume` to patch the latest live view back into the DOM. `Clear` drops the recorded history without restarting the app.
 
 :::Info{label="AI agent integration"}
 Foldkit also exposes DevTools to AI agents over the Model Context Protocol. See the [DevTools MCP](/ai/mcp) page for setup.
@@ -41,7 +41,7 @@ Controls where the badge and panel appear on screen. One of `'BottomRight'` (def
 
 ### mode
 
-`'TimeTravel'` (the default) pauses the app when you select an earlier Message and renders the corresponding state. User interaction is blocked while paused. Subscriptions continue running in the background, and their Messages keep appearing in the panel. Select `Resume` to return to the latest state.
+`'TimeTravel'` (the default) renders the state at an earlier Message and pauses that historical view. The live Model, history, Commands, Subscriptions, and ManagedResources continue normally. Their Messages and state changes keep appearing in the panel even though the historical DOM stays in place. Foldkit event handlers in that DOM cannot dispatch, the overlay blocks pointer interaction, and Mount Messages are suppressed. A surviving Mount can observe its `viewStateChanges` Stream and make an imperative integration read-only while paused. Select `Resume` to patch the latest live view back into the DOM.
 
 `'Inspect'` lets you browse recorded states without pausing the app. Use it when visitors can open DevTools in production or staging.
 

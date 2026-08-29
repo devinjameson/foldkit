@@ -155,6 +155,31 @@ describe('OnMount', () => {
     })
   })
 
+  it('contains synchronous Stream factory failures inside the Mount fiber', async () => {
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
+    const { dispatch } = createCapturingDispatch()
+
+    const view = () =>
+      h.div(
+        [],
+        [
+          h.span([
+            h.OnMount(
+              makeMounted(() => {
+                throw new Error('Stream factory failed')
+              }),
+            ),
+          ]),
+        ],
+      )
+    const vnode = renderView(view, dispatch)
+
+    expect(() => patch(toVNode(makeRootContainer()), vnode)).not.toThrow()
+    await vi.waitFor(() => {
+      expect(console.error).toHaveBeenCalledOnce()
+    })
+  })
+
   it('passes the inserted Element into the Stream factory', async () => {
     const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
     const { dispatch, dispatched } = createCapturingDispatch()

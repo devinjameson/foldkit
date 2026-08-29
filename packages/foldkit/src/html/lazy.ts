@@ -11,6 +11,7 @@ import {
   type DispatchSync,
   requireBoundary,
   requireDispatch,
+  requireMountDispatch,
 } from './runtimeSingleton.js'
 
 const argsEqual = (
@@ -32,6 +33,7 @@ type CacheEntry = Readonly<{
   fn: Function
   args: ReadonlyArray<unknown>
   dispatch: DispatchSync
+  mountDispatch: DispatchSync
   vnode: VNode | null
   // NOTE: boundaryIds and their call sites captured during the wrapped
   // function's run. On a later cache hit the same entry is replayed via
@@ -47,15 +49,17 @@ const resolveOrCache = <Args extends ReadonlyArray<unknown>>(
   onCache: (entry: CacheEntry) => void,
 ): VNode | null => {
   const dispatch = requireDispatch()
+  const mountDispatch = requireMountDispatch()
   const { registry } = requireBoundary()
-  // NOTE: dispatch identity in the cache key matters for the DevTools
-  // jumpTo path: a replay render installs `noOpDispatch`, and without
-  // this check a subsequent live render could return a vnode whose
-  // handlers still reference the noOp.
+  // NOTE: dispatcher identities in the cache key matter for time travel.
+  // Replay installs `noOpDispatch`, and resume temporarily installs a Mount
+  // dispatcher that preserves results from Mounts inserted by the live patch.
+  // A cache hit from another mode would retain stale handler closures.
   if (
     Predicate.isNotUndefined(previousEntry) &&
     previousEntry.fn === fn &&
     previousEntry.dispatch === dispatch &&
+    previousEntry.mountDispatch === mountDispatch &&
     argsEqual(previousEntry.args, args)
   ) {
     markSeenForLazyHit(registry, previousEntry.trackedBoundaries)
@@ -79,21 +83,28 @@ const resolveOrCache = <Args extends ReadonlyArray<unknown>>(
   if (Predicate.isNotNull(deduped)) {
     memoizedVNodes.add(deduped)
   }
-  onCache({ fn, args, dispatch, vnode: deduped, trackedBoundaries })
+  onCache({
+    fn,
+    args,
+    dispatch,
+    mountDispatch,
+    vnode: deduped,
+    trackedBoundaries,
+  })
   return deduped
 }
 
 /** Creates a memoization slot for a view function. On each render, if the
- *  function reference, dispatch, and all arguments are referentially equal
+ *  function reference, dispatchers, and all arguments are referentially equal
  *  (`===`) to the previous call, the cached VNode is returned without
  *  re-running the view function. Snabbdom's `patchVnode` short-circuits when
  *  it sees the same VNode reference, so both VNode construction and subtree
  *  diffing are skipped.
  *
- *  Dispatch is part of the cache key because event handlers in the cached
- *  VNode close over the dispatch active when the VNode was built. Returning
- *  a VNode built under a different dispatch would silently misroute every
- *  event from that subtree.
+ *  Dispatchers are part of the cache key because event handlers and Mounts in
+ *  the cached VNode close over the dispatchers active when the VNode was built.
+ *  Returning a VNode built under different dispatchers would silently
+ *  misroute events from that subtree.
  *
  *  The cached VNode must be rendered at a single position in the tree.
  *  Snabbdom tracks the real DOM through each VNode's mutable `.elm` field

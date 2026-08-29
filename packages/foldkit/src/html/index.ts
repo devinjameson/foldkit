@@ -25,7 +25,7 @@ import {
 } from '../domReflection.js'
 import type { File } from '../file/index.js'
 import type { MountAction } from '../mount/index.js'
-import { MountTracker } from '../mount/index.js'
+import { MountRuntime, MountTracker } from '../mount/index.js'
 import {
   hasTrustedInnerHtml,
   isClientOnlyProperty,
@@ -56,6 +56,7 @@ import {
   clearRuntime,
   requireBoundaryMappers,
   requireDispatch,
+  requireMountDispatch,
   requireRuntimeContext,
   requireUnmountResolver,
   setRuntime,
@@ -1205,14 +1206,15 @@ const {
 
 export { Prop, OnCustomEvent }
 
-// BUILD CONTEXT: per-VNode bag of mutable VNode data plus the dispatcher this
-// VNode's events route through. Allocated once per unique dispatcher in
-// `buildVNodeData`, typically once total (a second time when ChildAttribute
-// items route through a child Submodel's own dispatch).
+// BUILD CONTEXT: per-VNode bag of mutable VNode data plus the dispatchers this
+// VNode's events and Mount results route through. Allocated once per unique
+// dispatcher in `buildVNodeData`, typically once total (a second time when
+// ChildAttribute items route through a child Submodel's own dispatch).
 type BuildContext = Readonly<{
   data: VNodeData
   getPostpatchProps: () => Array<Readonly<{ propName: string; value: unknown }>>
   dispatch: DispatchSync
+  mountDispatch: DispatchSync
   resolveUnmount: UnmountResolver
   boundaryMappers: ReadonlyArray<(message: unknown) => unknown>
   getCapturedContext: () => Context.Context<never>
@@ -2335,6 +2337,7 @@ const attributeHandlers: AttributeHandlers = {
   OnMount: ({ action }, ctx: BuildContext) => {
     const capturedContext = ctx.getCapturedContext()
     const maybeTracker = Context.getOption(capturedContext, MountTracker)
+    const maybeMountRuntime = Context.getOption(capturedContext, MountRuntime)
     const notifyStarted = Option.isSome(maybeTracker)
       ? () => maybeTracker.value.started(action.name, action.args)
       : Function.constVoid
@@ -2359,8 +2362,17 @@ const attributeHandlers: AttributeHandlers = {
           const element = vnode.elm
           notifyStarted()
           const fiber = Effect.runForkWith(capturedContext)(
-            Stream.runForEach(action.f(element), message =>
-              Effect.sync(() => ctx.dispatch(message)),
+            Effect.suspend(() =>
+              Stream.runForEach(
+                action.f(
+                  element,
+                  Option.match(maybeMountRuntime, {
+                    onNone: () => undefined,
+                    onSome: ({ viewStateChanges }) => viewStateChanges,
+                  }),
+                ),
+                message => Effect.sync(() => ctx.mountDispatch(message)),
+              ),
             ).pipe(
               Effect.catchCause(cause =>
                 Effect.sync(() => {
@@ -2456,6 +2468,14 @@ const fallbackUnmountResolver: UnmountResolver = () => () => {
 const currentDispatchOrFallback = (): DispatchSync => {
   try {
     return requireDispatch()
+  } catch {
+    return fallbackDispatch
+  }
+}
+
+const currentMountDispatchOrFallback = (): DispatchSync => {
+  try {
+    return requireMountDispatch()
   } catch {
     return fallbackDispatch
   }
@@ -2580,6 +2600,7 @@ const buildVNodeData = <Message>(
           data,
           getPostpatchProps: getSharedPostpatchProps,
           dispatch: item.dispatch,
+          mountDispatch: item.mountDispatch,
           resolveUnmount: item.resolveUnmount,
           boundaryMappers: item.boundaryMappers,
           getCapturedContext: capturedContextOrEmpty,
@@ -2594,6 +2615,7 @@ const buildVNodeData = <Message>(
           data,
           getPostpatchProps: getSharedPostpatchProps,
           dispatch: currentDispatchOrFallback(),
+          mountDispatch: currentMountDispatchOrFallback(),
           resolveUnmount: currentUnmountResolverOrFallback(),
           boundaryMappers: requireBoundaryMappers(),
           getCapturedContext: capturedContextOrEmpty,

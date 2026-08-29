@@ -2,6 +2,7 @@ import {
   type DispatchSync,
   requireBoundaryMappers,
   requireDispatch,
+  requireMountDispatch,
   requireUnmountResolver,
 } from './runtimeSingleton.js'
 
@@ -28,6 +29,7 @@ export type ChildAttribute = Readonly<{
   readonly [BRAND]: true
   readonly attribute: unknown
   readonly dispatch: DispatchSync
+  readonly mountDispatch: DispatchSync
   readonly resolveUnmount: (message: unknown) => () => void
   readonly boundaryMappers: ReadonlyArray<(message: unknown) => unknown>
 }>
@@ -62,12 +64,14 @@ export const childAttributes = <Attribute>(
   attributes: ReadonlyArray<Attribute>,
 ): ReadonlyArray<ChildAttribute> => {
   const dispatch = requireDispatch()
+  const mountDispatch = requireMountDispatch()
   const resolveUnmount = requireUnmountResolver()
   const boundaryMappers = requireBoundaryMappers()
   return attributes.map(attribute => ({
     [BRAND]: true,
     attribute,
     dispatch,
+    mountDispatch,
     resolveUnmount,
     boundaryMappers,
   }))

@@ -426,7 +426,15 @@ describe('DevToolsStore', () => {
     })
 
     it('auto-resumes when paused index is evicted', () => {
-      const { store } = makeStore(undefined, 50)
+      let markedPendingCount = 0
+      const { store } = makeStore(
+        {
+          markRenderPending: Effect.sync(() => {
+            markedPendingCount += 1
+          }),
+        },
+        50,
+      )
 
       recordIncrements(store, 10)
       run(store.jumpTo(5))
@@ -435,6 +443,7 @@ describe('DevToolsStore', () => {
       recordIncrements(store, 45)
 
       expect(getState(store).isPaused).toBe(false)
+      expect(markedPendingCount).toBe(1)
     })
   })
 
