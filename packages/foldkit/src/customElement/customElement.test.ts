@@ -3,11 +3,15 @@ import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
+import { beginRender, createBoundaryRegistry } from '../html/boundary.js'
+import { type ChildAttribute, childAttributes } from '../html/childAttribute.js'
 import {
+  type Html,
   __htmlBuilder,
   __clearRuntime as clearHtmlRuntime,
   __setRuntime as setHtmlRuntime,
 } from '../html/index.js'
+import { defineView, submodel as submodelImpl } from '../html/submodel.js'
 import { defineMessageUnion } from '../message/index.js'
 import { MountTracker } from '../mount/index.js'
 import { propsModule } from '../propsModule.js'
@@ -196,6 +200,83 @@ describe('CustomElement.define', () => {
       'change-rating',
       'clear-rating',
     ])
+  })
+})
+
+describe('ElementBuilder ChildAttribute support', () => {
+  type ChildClicked = Readonly<{ _tag: 'ChildClicked' }>
+  type GotChild = Readonly<{ _tag: 'GotChild'; message: ChildClicked }>
+
+  const GotChild = (args: { message: ChildClicked }): GotChild => ({
+    _tag: 'GotChild',
+    ...args,
+  })
+
+  it('routes a published ChildAttribute OnClick through the Submodel boundary when spread into a custom element', () => {
+    // Mirrors the childAttributes scenario: a Submodel publishes an
+    // attribute group and the consumer spreads it into an element built
+    // in the parent's boundary. Here the consumer's element is a defined
+    // custom element rather than an html builder element, so this locks
+    // in both halves: the ElementBuilder signature accepts the union,
+    // and the runtime routes the handler through the Submodel's wrap.
+    const registry = createBoundaryRegistry()
+    const { dispatch, dispatched } = createCapturingDispatch()
+    const testContext = Context.make(Dispatch, dispatch).pipe(
+      Context.add(MountTracker, {
+        started: () => {},
+        ended: () => {},
+      }),
+    )
+
+    setHtmlRuntime(dispatch.dispatchSync, testContext, registry)
+    beginRender(registry)
+    try {
+      type ControlViewInputs = Readonly<{
+        toView: (attributes: { control: ReadonlyArray<ChildAttribute> }) => Html
+      }>
+
+      const fakeControlView = defineView<
+        object,
+        ChildClicked,
+        ControlViewInputs
+      >((_model, viewInputs) => {
+        const h = __htmlBuilder<ChildClicked>()
+        return viewInputs.toView({
+          control: childAttributes([h.OnClick({ _tag: 'ChildClicked' })]),
+        })
+      })
+
+      const result = submodelImpl(
+        {
+          slotId: 'fake-control',
+          model: {},
+          view: fakeControlView,
+          viewInputs: {
+            toView: attributes => {
+              const rating = emojiRating.withMessage(__htmlBuilder<Message>())
+              return rating([...attributes.control, rating.Value(3)])
+            },
+          },
+          toParentMessage: message => GotChild({ message }),
+        },
+        __htmlBuilder(),
+      )
+      if (result === null) {
+        throw new Error('submodel returned null Html')
+      }
+
+      const element = patchInto(result)
+      expect(element.tagName).toBe('FK-EMOJI-RATING')
+      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+      expect((element as unknown as { value: number }).value).toBe(3)
+
+      element.dispatchEvent(new Event('click'))
+      expect(dispatched).toStrictEqual([
+        { _tag: 'GotChild', message: { _tag: 'ChildClicked' } },
+      ])
+    } finally {
+      clearHtmlRuntime()
+    }
   })
 })
 
