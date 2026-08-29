@@ -48,7 +48,7 @@ test('package changelogs credit pull request authors', () => {
   assert.ok(rootPackage.devDependencies['@changesets/changelog-github'])
 
   const versionJob = job('version', 'stable')
-  assert.match(versionJob, /GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/)
+  assert.match(versionJob, /github-token: \$\{\{ secrets\.GITHUB_TOKEN \}\}/)
 })
 
 test('Changesets only versions packages and cannot parse publisher output', () => {
@@ -59,7 +59,7 @@ test('Changesets only versions packages and cannot parse publisher output', () =
   assert.doesNotMatch(rootPackage.scripts.release, /changeset publish/)
   assert.match(
     workflow,
-    /uses: changesets\/action@v1\n\s+with:\n\s+version: pnpm version-packages/,
+    /uses: changesets\/action@v2\n\s+with:\n\s+version-script: pnpm version-packages/,
   )
   assert.doesNotMatch(workflow, /publish: pnpm release/)
 
@@ -74,11 +74,11 @@ test('Changesets only versions packages and cannot parse publisher output', () =
   assert.doesNotMatch(versionJob, /run: pnpm release/)
   assert.match(
     versionJob,
-    /outputs:\n\s+has_changesets: \$\{\{ steps\.changesets\.outputs\.hasChangesets \}\}/,
+    /outputs:\n\s+has_changesets: \$\{\{ steps\.changesets\.outputs\['has-changesets'\] \}\}/,
   )
   assert.match(
     versionJob,
-    /uses: changesets\/action@v1\n\s+with:\n\s+version: pnpm version-packages\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}\n\s+SKIP_SIMPLE_GIT_HOOKS: '1'/,
+    /uses: changesets\/action@v2\n\s+with:\n\s+version-script: pnpm version-packages\n\s+github-token: \$\{\{ secrets\.GITHUB_TOKEN \}\}\n\s+env:\n\s+SKIP_SIMPLE_GIT_HOOKS: '1'/,
   )
   assert.deepEqual(
     versionJob
