@@ -199,7 +199,14 @@ const environmentNamed = (
   return environment
 }
 
-// The file a generated path is written to.
+// The validated render target: the URL the entry receives and the file its
+// page is written to, from one resolution — returned together so the request
+// can never be built from anything the validation did not see. Rendering runs
+// application code with the build's privileges and may fetch from
+// `Request.url`, so validation is the trust boundary and has to come first: a
+// protocol-relative path like `//169.254.169.254/x` resolves to that host, and
+// handing it to the entry before refusing it would let invalid path data
+// trigger side effects on the way to the error.
 //
 // A path reaches here from application code and may come from data, so it is
 // treated as a URL rather than as a filesystem path: `path.slice(1)` is a
@@ -211,12 +218,12 @@ const environmentNamed = (
 //
 // `pathApi` is the platform's `path` by default and the parameter exists so a
 // test can run the Windows rules anywhere.
-export const outputFileFor = (
+export const renderTargetFor = (
   clientDirectory: string,
   path: string,
   origin: string,
   pathApi: typeof nodePath = nodePath,
-): string => {
+): Readonly<{ url: URL; file: string }> => {
   const url = new URL(path, origin)
   if (url.origin !== new URL(origin).origin || url.pathname !== path) {
     throw new Error(
@@ -257,7 +264,7 @@ export const outputFileFor = (
       `[foldkit] cannot generate "${path}": it resolves to "${file}", outside the browser build at "${root}".`,
     )
   }
-  return file
+  return { url, file }
 }
 
 // A static file is a body plus whatever headers its host adds, so a result that
@@ -382,11 +389,8 @@ export const foldkitBuild = (
     const { injectIntoTemplate } = await import('foldkit/experimental/server')
 
     for (const path of paths) {
-      // The same resolution the output file is derived from, so what the
-      // entry renders and where it is written can never disagree — string
-      // concatenation handed the entry `//about` when the origin carried a
-      // trailing slash.
-      const result = await entry.renderPage(new Request(new URL(path, origin)))
+      const { url, file } = renderTargetFor(clientDirectory, path, origin)
+      const result = await entry.renderPage(new Request(url))
       const html = injectIntoTemplate(
         template(),
         renderedApplication(path, result),
@@ -394,7 +398,6 @@ export const foldkitBuild = (
           ? undefined
           : { containerId: prerender.containerId },
       )
-      const file = outputFileFor(clientDirectory, path, origin)
 
       await mkdir(dirname(file), { recursive: true })
       await writeFile(file, html)

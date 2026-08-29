@@ -12,7 +12,7 @@ import {
   type FoldkitBuildOptions,
   foldkitBuild,
   manifestPath,
-  outputFileFor,
+  renderTargetFor,
 } from '../src/build.ts'
 import { foldkitBuildToken } from '../src/buildToken.ts'
 
@@ -253,12 +253,12 @@ describe('foldkitBuild', () => {
 // the browser build no matter which platform's rules apply. The Windows cases
 // run everywhere because `path.slice(1)` is a relative path on POSIX and a
 // drive-absolute or drive-relative path on Windows.
-describe('outputFileFor', () => {
+describe('renderTargetFor', () => {
   const CLIENT = win32.resolve('C:/build/client')
   const ORIGIN = 'https://app.example'
 
   const generated = (path: string): string =>
-    outputFileFor(CLIENT, path, ORIGIN, win32)
+    renderTargetFor(CLIENT, path, ORIGIN, win32).file
 
   it('writes the root path to the browser build index', () => {
     expect(generated('/')).toBe(win32.join(CLIENT, 'index.html'))
@@ -267,6 +267,18 @@ describe('outputFileFor', () => {
   it('writes a nested path under the browser build', () => {
     expect(generated('/docs/api')).toBe(
       win32.join(CLIENT, 'docs', 'api', 'index.html'),
+    )
+  })
+
+  it('returns the URL the validation resolved, for the render to use', () => {
+    expect(renderTargetFor(CLIENT, '/docs/api', ORIGIN, win32).url.href).toBe(
+      'https://app.example/docs/api',
+    )
+  })
+
+  it('refuses a protocol-relative path before anything can render it', () => {
+    expect(() => generated('//169.254.169.254/latest/meta-data')).toThrow(
+      /foldkit/,
     )
   })
 
@@ -490,6 +502,29 @@ describe('foldkitBuild orchestration', () => {
 
     await expect(
       readFile(resolve(server, 'evaluation-marker.txt'), 'utf8'),
+    ).rejects.toThrow()
+  })
+
+  // Rendering runs application code that may fetch from `Request.url`, so an
+  // invalid path has to be refused before the entry sees it — not on the way
+  // to writing the file. The fixture logs every render beside its bundle;
+  // a build given only a hostile path must fail with no log at all.
+  it('refuses an invalid path before the entry can render it', async () => {
+    let server = ''
+    await expect(
+      buildFixture(
+        'invalid-path',
+        { prerender: { paths: ['//169.254.169.254/latest/meta-data'] } },
+        [],
+        EVALUATION_ROOT,
+      ).then(built => {
+        server = built.server
+      }),
+    ).rejects.toThrow(/foldkit/)
+
+    server = resolve(EVALUATION_ROOT, 'dist-test/invalid-path/server')
+    await expect(
+      readFile(resolve(server, 'render-log.txt'), 'utf8'),
     ).rejects.toThrow()
   })
 
