@@ -19,6 +19,7 @@ import { defineMessageUnion } from 'foldkit/message'
 import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import type { Map as MapInstance } from 'maplibre-gl'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 
 import { Button, Input } from '@foldkit/ui'
 
@@ -322,6 +323,7 @@ const mountMap = (element: Element, hostId: string) =>
       yield* Effect.acquireRelease(
         Effect.gen(function* () {
           const maplibre = yield* Effect.tryPromise(() => import('maplibre-gl'))
+          maplibre.setWorkerUrl(maplibreWorkerUrl)
           const map = new maplibre.Map({
             container: element,
             style: 'https://demotiles.maplibre.org/style.json',

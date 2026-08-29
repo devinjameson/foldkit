@@ -14,7 +14,7 @@
     "clsx": "^2.1.1",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",
-    "maplibre-gl": "^5.24.0"
+    "maplibre-gl": "^6.6.0"
   },
   "devDependencies": {
     "@foldkit/devtools": "workspace:*",
