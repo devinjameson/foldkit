@@ -100,7 +100,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",
-    "knip": "^6.32.3",
+    "knip": "^6.33.0",
     "madge": "^8.0.0",
     "oxlint": "^1.80.0",
     "prettier": "^3.9.6",
