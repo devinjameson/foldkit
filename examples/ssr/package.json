@@ -22,7 +22,7 @@
     "@foldkit/vite-plugin": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "happy-dom": "^20.11.8",
+    "happy-dom": "^20.11.12",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
