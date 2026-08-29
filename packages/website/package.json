@@ -33,7 +33,7 @@
     "clsx": "^2.1.1",
     "effect": "4.0.0-rc.112",
     "foldkit": "workspace:*",
-    "monaco-editor": "^0.55.1",
+    "monaco-editor": "^0.56.0",
     "shiki": "^4.4.3",
     "tailwind-merge": "^3.6.0"
   },
