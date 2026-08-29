@@ -81,7 +81,6 @@ const LoadExternal = Command.define('LoadExternal', {
 // UPDATE
 
 type UpdateReturn = Update.Return<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const foldProductsOutMessage = M.type<Products.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
@@ -117,20 +116,17 @@ export const update = (model: Model, message: Message) =>
     CompletedLoadExternal: () => ({ model }),
 
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: urlToString(url) })],
-          }),
-
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
         }),
-      ),
+
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) => ({
       model: evo(model, {
@@ -281,14 +277,12 @@ const routeTitle = (route: Model['route']): string =>
   )
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Products: () => productsView(model, h),
-      Cart: () => cartView(model, h),
-      Checkout: () => checkoutView(model, h),
-      NotFound: ({ path }) => notFoundView(path, h),
-    }),
-  )
+  const routeContent = AppRoute.match(model.route, {
+    Products: () => productsView(model, h),
+    Cart: () => cartView(model, h),
+    Checkout: () => checkoutView(model, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   return {
     title: routeTitle(model.route),

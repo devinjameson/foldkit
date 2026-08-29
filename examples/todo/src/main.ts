@@ -108,12 +108,10 @@ export const update = (model: Model, message: Message) =>
     UpdatedEditingTodo: ({ text }) => ({
       model: evo(model, {
         editing: () =>
-          M.value(model.editing).pipe(
-            M.tagsExhaustive({
-              NotEditing: () => model.editing,
-              Editing: ({ id }) => EditingState.Editing({ id, text }),
-            }),
-          ),
+          EditingState.match(model.editing, {
+            NotEditing: () => model.editing,
+            Editing: ({ id }) => EditingState.Editing({ id, text }),
+          }),
       }),
     }),
 
@@ -190,36 +188,33 @@ export const update = (model: Model, message: Message) =>
     },
 
     SavedEdit: () =>
-      M.value(model.editing).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.tagsExhaustive({
-          NotEditing: () => ({ model }),
+      EditingState.match<UpdateReturn>(model.editing, {
+        NotEditing: () => ({ model }),
 
-          Editing: ({ id, text }) => {
-            if (String.isEmpty(String.trim(text))) {
-              return {
-                model: evo(model, {
-                  editing: () => EditingState.NotEditing(),
-                }),
-              }
-            }
-
-            const updatedTodos = Array.map(model.todos, todo =>
-              todo.id === id
-                ? evo(todo, { text: () => String.trim(text) })
-                : todo,
-            )
-
+        Editing: ({ id, text }) => {
+          if (String.isEmpty(String.trim(text))) {
             return {
               model: evo(model, {
-                todos: () => updatedTodos,
                 editing: () => EditingState.NotEditing(),
               }),
-              commands: [SaveTodos({ todos: updatedTodos })],
             }
-          },
-        }),
-      ),
+          }
+
+          const updatedTodos = Array.map(model.todos, todo =>
+            todo.id === id
+              ? evo(todo, { text: () => String.trim(text) })
+              : todo,
+          )
+
+          return {
+            model: evo(model, {
+              todos: () => updatedTodos,
+              editing: () => EditingState.NotEditing(),
+            }),
+            commands: [SaveTodos({ todos: updatedTodos })],
+          }
+        },
+      }),
 
     CancelledEdit: () => ({
       model: evo(model, {
@@ -304,13 +299,10 @@ const editingTextFor = (
   editing: EditingState,
   todoId: string,
 ): Option.Option<string> =>
-  M.value(editing).pipe(
-    M.tagsExhaustive({
-      NotEditing: () => Option.none(),
-      Editing: ({ id, text }) =>
-        Option.liftPredicate(text, () => id === todoId),
-    }),
-  )
+  EditingState.match(editing, {
+    NotEditing: () => Option.none(),
+    Editing: ({ id, text }) => Option.liftPredicate(text, () => id === todoId),
+  })
 
 const todoItemView = (
   todo: Todo,

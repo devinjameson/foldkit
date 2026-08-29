@@ -976,16 +976,14 @@ const buildOverlayView = (
   })
   type RowSegment = typeof RowSegment.Type
 
-  const rowSegmentView = M.type<RowSegment>().pipe(
-    M.tagsExhaustive({
-      ArrowSegment: ({ isExpanded }) => arrowView(isExpanded),
-      DiffDotSegment: () => diffDotView,
-      KeyLabelSegment: ({ key }) => keyView(key),
-      TagLabelSegment: ({ tag }) => tagLabelView(tag),
-      PreviewSegment: ({ preview }) => previewView(preview),
-      LeafValueSegment: ({ value }) => leafValueView(value),
-    }),
-  )
+  const rowSegmentView = RowSegment.match({
+    ArrowSegment: ({ isExpanded }) => arrowView(isExpanded),
+    DiffDotSegment: () => diffDotView,
+    KeyLabelSegment: ({ key }) => keyView(key),
+    TagLabelSegment: ({ tag }) => tagLabelView(tag),
+    PreviewSegment: ({ preview }) => previewView(preview),
+    LeafValueSegment: ({ value }) => leafValueView(value),
+  })
 
   type FlatNode = Readonly<{
     value: unknown

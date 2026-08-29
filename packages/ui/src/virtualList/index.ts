@@ -1,7 +1,6 @@
 import {
   Array,
   Effect,
-  Match as M,
   Number,
   Option,
   Queue,
@@ -272,33 +271,28 @@ export const visibleWindow = (
   itemCount: number,
   overscan: number,
 ): Option.Option<VisibleWindow> =>
-  M.value(model.measurement).pipe(
-    M.withReturnType<Option.Option<VisibleWindow>>(),
-    M.tagsExhaustive({
-      Unmeasured: () => Option.none(),
-      Measured: ({ containerHeight }) => {
-        const firstVisibleIndex = Math.floor(
-          model.scrollTop / model.rowHeightPx,
-        )
-        const lastVisibleIndex = Math.ceil(
-          (model.scrollTop + containerHeight) / model.rowHeightPx,
-        )
+  Measurement.match<Option.Option<VisibleWindow>>(model.measurement, {
+    Unmeasured: () => Option.none(),
+    Measured: ({ containerHeight }) => {
+      const firstVisibleIndex = Math.floor(model.scrollTop / model.rowHeightPx)
+      const lastVisibleIndex = Math.ceil(
+        (model.scrollTop + containerHeight) / model.rowHeightPx,
+      )
 
-        const startIndex = clampIndex(firstVisibleIndex - overscan, itemCount)
-        const endIndex = clampIndex(lastVisibleIndex + overscan, itemCount)
+      const startIndex = clampIndex(firstVisibleIndex - overscan, itemCount)
+      const endIndex = clampIndex(lastVisibleIndex + overscan, itemCount)
 
-        const topSpacerHeight = startIndex * model.rowHeightPx
-        const bottomSpacerHeight = (itemCount - endIndex) * model.rowHeightPx
+      const topSpacerHeight = startIndex * model.rowHeightPx
+      const bottomSpacerHeight = (itemCount - endIndex) * model.rowHeightPx
 
-        return Option.some({
-          startIndex,
-          endIndex,
-          topSpacerHeight,
-          bottomSpacerHeight,
-        })
-      },
-    }),
-  )
+      return Option.some({
+        startIndex,
+        endIndex,
+        topSpacerHeight,
+        bottomSpacerHeight,
+      })
+    },
+  })
 
 /** Variable-height counterpart of `visibleWindow`. Walks the heights of every
  *  item to build a prefix-sum array, then locates the visible slice with two
@@ -317,56 +311,53 @@ export const visibleWindowVariable = <Item>(
   itemToRowHeightPx: (item: Item, index: number) => number,
   overscan: number,
 ): Option.Option<VisibleWindow> =>
-  M.value(model.measurement).pipe(
-    M.withReturnType<Option.Option<VisibleWindow>>(),
-    M.tagsExhaustive({
-      Unmeasured: () => Option.none(),
-      Measured: ({ containerHeight }) => {
-        const itemCount = items.length
-        const cumulativeOffsets = prefixSum(items, itemToRowHeightPx)
-        const totalHeight = lastOrZero(cumulativeOffsets)
+  Measurement.match<Option.Option<VisibleWindow>>(model.measurement, {
+    Unmeasured: () => Option.none(),
+    Measured: ({ containerHeight }) => {
+      const itemCount = items.length
+      const cumulativeOffsets = prefixSum(items, itemToRowHeightPx)
+      const totalHeight = lastOrZero(cumulativeOffsets)
 
-        const firstVisibleIndex = pipe(
-          cumulativeOffsets,
-          Array.findFirstIndex(Number.isGreaterThan(model.scrollTop)),
-          Option.match({
-            onNone: () => itemCount,
-            onSome: index => Math.max(0, index - 1),
-          }),
-        )
+      const firstVisibleIndex = pipe(
+        cumulativeOffsets,
+        Array.findFirstIndex(Number.isGreaterThan(model.scrollTop)),
+        Option.match({
+          onNone: () => itemCount,
+          onSome: index => Math.max(0, index - 1),
+        }),
+      )
 
-        const lastVisibleIndex = pipe(
-          cumulativeOffsets,
-          Array.findFirstIndex(
-            Number.isGreaterThanOrEqualTo(model.scrollTop + containerHeight),
-          ),
-          Option.getOrElse(() => itemCount),
-        )
+      const lastVisibleIndex = pipe(
+        cumulativeOffsets,
+        Array.findFirstIndex(
+          Number.isGreaterThanOrEqualTo(model.scrollTop + containerHeight),
+        ),
+        Option.getOrElse(() => itemCount),
+      )
 
-        const startIndex = clampIndex(firstVisibleIndex - overscan, itemCount)
-        const endIndex = clampIndex(lastVisibleIndex + overscan, itemCount)
+      const startIndex = clampIndex(firstVisibleIndex - overscan, itemCount)
+      const endIndex = clampIndex(lastVisibleIndex + overscan, itemCount)
 
-        const topSpacerHeight = pipe(
-          cumulativeOffsets,
-          Array.get(startIndex),
-          Option.getOrElse(() => 0),
-        )
-        const offsetAtEnd = pipe(
-          cumulativeOffsets,
-          Array.get(endIndex),
-          Option.getOrElse(() => totalHeight),
-        )
-        const bottomSpacerHeight = totalHeight - offsetAtEnd
+      const topSpacerHeight = pipe(
+        cumulativeOffsets,
+        Array.get(startIndex),
+        Option.getOrElse(() => 0),
+      )
+      const offsetAtEnd = pipe(
+        cumulativeOffsets,
+        Array.get(endIndex),
+        Option.getOrElse(() => totalHeight),
+      )
+      const bottomSpacerHeight = totalHeight - offsetAtEnd
 
-        return Option.some({
-          startIndex,
-          endIndex,
-          topSpacerHeight,
-          bottomSpacerHeight,
-        })
-      },
-    }),
-  )
+      return Option.some({
+        startIndex,
+        endIndex,
+        topSpacerHeight,
+        bottomSpacerHeight,
+      })
+    },
+  })
 
 // SUBSCRIPTION
 

@@ -4,7 +4,6 @@ import {
   Effect,
   Equal,
   Function,
-  Match as M,
   Option,
   Queue,
   Schema as S,
@@ -680,15 +679,13 @@ const geolocateOverlayView = (
   state: GeolocateState,
   h: HtmlBuilder<Message>,
 ): Html =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Idle: () => h.empty,
-      Locating: () =>
-        geolocateOverlayShellView(geolocateLocatingContentView(h), h),
-      Failed: ({ reason }) =>
-        geolocateOverlayShellView(geolocateFailedContentView(reason, h), h),
-    }),
-  )
+  GeolocateState.match(state, {
+    Idle: () => h.empty,
+    Locating: () =>
+      geolocateOverlayShellView(geolocateLocatingContentView(h), h),
+    Failed: ({ reason }) =>
+      geolocateOverlayShellView(geolocateFailedContentView(reason, h), h),
+  })
 
 const geolocateOverlayShellView = (
   content: Html,

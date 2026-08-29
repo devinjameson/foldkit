@@ -1,6 +1,6 @@
 import { Effect, Match as M, Option, Schema as S } from 'effect'
 import { Command, Update, Url } from 'foldkit'
-import { load, pushUrl } from 'foldkit/navigation'
+import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 
 import * as Shared from '@typing-game/shared'
@@ -95,19 +95,16 @@ const foldRoomMessage = (roomId: string) =>
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn<Model, Message>>(message, {
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: Url.toString(url) })],
-          }),
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn<Model, Message>>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: Url.toString(url) })],
         }),
-      ),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) => ({
       model: evo(model, {

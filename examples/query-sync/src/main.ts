@@ -101,16 +101,13 @@ const sortingFromParam = (() => {
             },
           }),
         encode: (sorting): Option.Option<string> =>
-          M.value(sorting).pipe(
-            M.withReturnType<Option.Option<string>>(),
-            M.tagsExhaustive({
-              Unsorted: () => Option.none(),
-              Ascending: ({ column }) =>
-                Option.some(`${column}${SORT_PARAM_SEPARATOR}Ascending`),
-              Descending: ({ column }) =>
-                Option.some(`${column}${SORT_PARAM_SEPARATOR}Descending`),
-            }),
-          ),
+          Sorting.match<Option.Option<string>>(sorting, {
+            Unsorted: () => Option.none(),
+            Ascending: ({ column }) =>
+              Option.some(`${column}${SORT_PARAM_SEPARATOR}Ascending`),
+            Descending: ({ column }) =>
+              Option.some(`${column}${SORT_PARAM_SEPARATOR}Descending`),
+          }),
       }),
     ),
   )
@@ -268,7 +265,6 @@ const LoadExternal = Command.define('LoadExternal', {
 })
 
 type UpdateReturn = Update.Return<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const DietListbox = Listbox.create<string>()
 const PeriodListbox = Listbox.create<string>()
@@ -342,19 +338,16 @@ export const update = (model: Model, message: Message) =>
     CompletedReplaceFilters: () => ({ model }),
 
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: urlToString(url) })],
-          }),
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
         }),
-      ),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) => {
       const nextRoute = urlToAppRoute(url)
@@ -422,14 +415,11 @@ const filterWhenSome =
 const sortBySorting =
   <A>(sorting: Sorting, orders: Record<SortColumn, Order.Order<A>>) =>
   (items: ReadonlyArray<A>): ReadonlyArray<A> =>
-    M.value(sorting).pipe(
-      M.tag('Unsorted', () => items),
-      M.tag('Ascending', ({ column }) => Array.sort(items, orders[column])),
-      M.tag('Descending', ({ column }) =>
-        Array.sort(items, Order.flip(orders[column])),
-      ),
-      M.exhaustive,
-    )
+    Sorting.match(sorting, {
+      Unsorted: () => items,
+      Ascending: ({ column }) => Array.sort(items, orders[column]),
+      Descending: ({ column }) => Array.sort(items, Order.flip(orders[column])),
+    })
 
 const filterAndSort = (fields: BrowseFields): ReadonlyArray<Dinosaur> =>
   pipe(
@@ -868,12 +858,10 @@ const routeTitle = (route: Model['route']): string =>
   )
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Browse: route => browseView(model, route, h),
-      NotFound: ({ path }) => notFoundView(path, h),
-    }),
-  )
+  const routeContent = AppRoute.match(model.route, {
+    Browse: route => browseView(model, route, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   const body = h.div(
     [h.Class('min-h-screen bg-gray-50')],

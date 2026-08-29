@@ -2,7 +2,6 @@ import {
   Array,
   Duration,
   Effect,
-  Match as M,
   Option,
   Schema as S,
   String,
@@ -203,10 +202,9 @@ export const informRouteChanged = (model: Model, route: PeopleRoute) =>
 // VIEW
 
 const statusText = (results: SearchResults): string =>
-  M.value(results).pipe(
-    M.withReturnType<string>(),
-    M.tag('Loading', () => 'Searching…'),
-    M.tag('Loaded', ({ query, people: found }) => {
+  SearchResults.match<string>(results, {
+    Loading: () => 'Searching…',
+    Loaded: ({ query, people: found }) => {
       if (String.isEmpty(query)) {
         return 'Click on any person to view their details:'
       }
@@ -214,9 +212,8 @@ const statusText = (results: SearchResults): string =>
       const count = Array.length(found)
       const noun = count === 1 ? 'result' : 'results'
       return `${count} ${noun} for “${query}”`
-    }),
-    M.exhaustive,
-  )
+    },
+  })
 
 const recentSearchesView = (
   history: ReadonlyArray<string>,
@@ -331,16 +328,14 @@ export const view = Submodel.defineView<Model, Message>(
           [statusText(model.results)],
         ),
 
-        M.value(model.results).pipe(
-          M.tag('Loading', () => h.empty),
-          M.tag('Loaded', ({ people: results }) =>
+        SearchResults.match(model.results, {
+          Loading: () => h.empty,
+          Loaded: ({ people: results }) =>
             h.ul(
               [h.Class('space-y-3')],
               Array.map(results, person => personListItemView(person, h)),
             ),
-          ),
-          M.exhaustive,
-        ),
+        }),
       ],
     ),
 )

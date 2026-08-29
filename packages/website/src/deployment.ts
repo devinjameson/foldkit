@@ -1,4 +1,4 @@
-import { Match as M, Schema as S } from 'effect'
+import { Schema as S } from 'effect'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 export const Deployment = defineTaggedUnion({
@@ -20,12 +20,10 @@ export const deploymentFromCanaryCommit = (
 }
 
 export const isTelemetryEnabled = (deployment: Deployment): boolean =>
-  M.value(deployment).pipe(
-    M.tagsExhaustive({
-      Production: () => true,
-      Canary: () => false,
-    }),
-  )
+  Deployment.match(deployment, {
+    Production: () => true,
+    Canary: () => false,
+  })
 
 export const deployment = deploymentFromCanaryCommit(
   import.meta.env.VITE_FOLDKIT_CANARY_COMMIT,

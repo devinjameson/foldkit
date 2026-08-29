@@ -439,32 +439,30 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
             ],
           ),
 
-          M.value(model.submission).pipe(
-            M.tagsExhaustive({
-              NotSubmitted: () => h.empty,
-              Submitting: () => h.empty,
-              SubmitSuccess: ({ confirmationText }) =>
-                h.div(
-                  [
-                    h.Role('status'),
-                    h.Class(
-                      'mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg',
-                    ),
-                  ],
-                  [confirmationText],
-                ),
-              SubmitError: ({ error }) =>
-                h.div(
-                  [
-                    h.Role('alert'),
-                    h.Class(
-                      'mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg',
-                    ),
-                  ],
-                  [error],
-                ),
-            }),
-          ),
+          Submission.match(model.submission, {
+            NotSubmitted: () => h.empty,
+            Submitting: () => h.empty,
+            SubmitSuccess: ({ confirmationText }) =>
+              h.div(
+                [
+                  h.Role('status'),
+                  h.Class(
+                    'mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg',
+                  ),
+                ],
+                [confirmationText],
+              ),
+            SubmitError: ({ error }) =>
+              h.div(
+                [
+                  h.Role('alert'),
+                  h.Class(
+                    'mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg',
+                  ),
+                ],
+                [error],
+              ),
+          }),
         ],
       ),
     ],

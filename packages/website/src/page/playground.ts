@@ -810,33 +810,31 @@ const previewPaneView = (
       h.div(
         [h.Class('flex-1 min-w-0 min-h-0 flex flex-col')],
         [
-          M.value(state).pipe(
-            M.tagsExhaustive({
-              Idle: () =>
+          PlaygroundState.match(state, {
+            Idle: () =>
+              bootingPanelView(
+                'Starting playground…',
+                'The preview will appear when the development environment is ready.',
+              ),
+            Booting: () =>
+              bootingPanelView(
+                'Starting playground…',
+                'The first load can take about 30 seconds. The preview will appear when the development environment is ready.',
+              ),
+            Booted: ({ preview }) =>
+              PlaygroundPreview.view(
+                preview,
+                Message.LoadedPlaygroundPreview({
+                  previewUrl: preview.previewUrl,
+                }),
                 bootingPanelView(
-                  'Starting playground…',
-                  'The preview will appear when the development environment is ready.',
+                  'Preparing preview…',
+                  'The server is running. The preview will appear when the page finishes loading.',
                 ),
-              Booting: () =>
-                bootingPanelView(
-                  'Starting playground…',
-                  'The first load can take about 30 seconds. The preview will appear when the development environment is ready.',
-                ),
-              Booted: ({ preview }) =>
-                PlaygroundPreview.view(
-                  preview,
-                  Message.LoadedPlaygroundPreview({
-                    previewUrl: preview.previewUrl,
-                  }),
-                  bootingPanelView(
-                    'Preparing preview…',
-                    'The server is running. The preview will appear when the page finishes loading.',
-                  ),
-                  h,
-                ),
-              Failed: ({ reason }) => failurePanelView(reason),
-            }),
-          ),
+                h,
+              ),
+            Failed: ({ reason }) => failurePanelView(reason),
+          }),
         ],
       ),
     ],

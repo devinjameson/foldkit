@@ -216,14 +216,7 @@ export const counterDemoCodePlugin = (): Plugin =>
 
 const NOTE_PLAYER_DEMO_CODE_ID = 'virtual:note-player-demo-code'
 
-const NOTE_PLAYER_DEMO_IMPORTS = `import {
-  Array,
-  Context,
-  Effect,
-  Layer,
-  Match as M,
-  Schema as S,
-} from 'effect'
+const NOTE_PLAYER_DEMO_IMPORTS = `import { Array, Context, Effect, Layer, Schema as S } from 'effect'
 import { Command, Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { defineTaggedUnion } from 'foldkit/schema'
@@ -259,7 +252,6 @@ type Message = typeof Message.Type
 // UPDATE
 
 type UpdateReturn = Update.Return<Model, Message, AudioContextService>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const playNoteAt = (
   model: Model,
@@ -280,28 +272,21 @@ const playNoteAt = (
 const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     ClickedPlay: () =>
-      M.value(model.playbackState).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Idle: () => playNoteAt(model, 0),
-          Paused: ({ currentNoteIndex }) =>
-            playNoteAt(model, currentNoteIndex),
-          Playing: () => ({ model }),
-        }),
-      ),
+      PlaybackState.match<UpdateReturn>(model.playbackState, {
+        Idle: () => playNoteAt(model, 0),
+        Paused: ({ currentNoteIndex }) => playNoteAt(model, currentNoteIndex),
+        Playing: () => ({ model }),
+      }),
     ClickedPause: () =>
-      M.value(model.playbackState).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Playing: ({ currentNoteIndex }) => ({
-            model: evo(model, {
-              playbackState: () => PlaybackState.Paused({ currentNoteIndex }),
-            }),
+      PlaybackState.match<UpdateReturn>(model.playbackState, {
+        Playing: ({ currentNoteIndex }) => ({
+          model: evo(model, {
+            playbackState: () => PlaybackState.Paused({ currentNoteIndex }),
           }),
-          Idle: () => ({ model }),
-          Paused: () => ({ model }),
         }),
-      ),
+        Idle: () => ({ model }),
+        Paused: () => ({ model }),
+      }),
     CompletedPlayNote: ({ noteIndex }) => {
       const { playbackState, noteSequence } = model
       const nextCurrentNoteIndex = noteIndex + 1
@@ -356,7 +341,7 @@ const NOTE_PLAYER_PHASE_REGIONS: PhaseRegions = {
   PlayMessage: [{ from: '  ClickedPlay: {},' }],
   PauseMessage: [{ from: '  ClickedPause: {},' }],
   PlayUpdate: [
-    { from: '    ClickedPlay: () =>', to: '      ),' },
+    { from: '    ClickedPlay: () =>', to: '      }),' },
     { from: 'const playNoteAt = (', to: '})' },
   ],
   PlayModel: [{ from: 'const Model = S.Struct({', to: '})' }],

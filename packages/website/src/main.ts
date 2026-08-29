@@ -24,7 +24,7 @@ import {
   Update,
 } from 'foldkit'
 import { type Document, type HtmlBuilder } from 'foldkit/html'
-import { load, pushUrl } from 'foldkit/navigation'
+import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 import { githubStarCount } from 'virtual:landing-data'
@@ -679,33 +679,30 @@ type UpdateReturn = Update.Return<
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.tagsExhaustive({
-          Internal: ({ url }) => {
-            // NOTE: WebContainer requires `window.crossOriginIsolated`,
-            // which only becomes true when the document is loaded with
-            // the COEP/COOP response headers set in deploy-website.yml
-            // and vite.config.ts. SPA navigation reuses the previous
-            // page's document (no headers), so we navigate to playground
-            // URLs by loading a fresh document instead.
-            if (isPlaygroundRoute(urlToAppRoute(url))) {
-              return {
-                model,
-                commands: [LoadExternal({ href: urlToString(url) })],
-              }
-            }
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => {
+          // NOTE: WebContainer requires `window.crossOriginIsolated`,
+          // which only becomes true when the document is loaded with
+          // the COEP/COOP response headers set in deploy-website.yml
+          // and vite.config.ts. SPA navigation reuses the previous
+          // page's document (no headers), so we navigate to playground
+          // URLs by loading a fresh document instead.
+          if (isPlaygroundRoute(urlToAppRoute(url))) {
             return {
               model,
-              commands: [NavigateInternal({ url: urlToString(url) })],
+              commands: [LoadExternal({ href: urlToString(url) })],
             }
-          },
-          External: ({ href }) => ({
+          }
+          return {
             model,
-            commands: [LoadExternal({ href })],
-          }),
+            commands: [NavigateInternal({ url: urlToString(url) })],
+          }
+        },
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
         }),
-      ),
+      }),
 
     ChangedUrl: ({ url }) => {
       const nextRoute = urlToAppRoute(url)
@@ -1208,12 +1205,10 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
 
   return {
     title: routeTitle(model.route, model.apiReference.apiData),
-    body: M.value(model.deployment).pipe(
-      M.tagsExhaustive({
-        Production: () => body,
-        Canary: ({ commit }) => h.div([], [body, canaryBanner(commit)]),
-      }),
-    ),
+    body: Deployment.match(model.deployment, {
+      Production: () => body,
+      Canary: ({ commit }) => h.div([], [body, canaryBanner(commit)]),
+    }),
   }
 }
 

@@ -259,10 +259,9 @@ export const update = (model: Model, message: Message) =>
       foldNoteDurationRadioGroup(model, message),
 
     ClickedPlay: () =>
-      M.value(model.playbackState).pipe(
-        withUpdateReturn,
-        M.tag('Playing', () => ({ model })),
-        M.tag('Paused', ({ noteSequence, currentNoteIndex }) => {
+      PlaybackState.match<UpdateReturn>(model.playbackState, {
+        Playing: () => ({ model }),
+        Paused: ({ noteSequence, currentNoteIndex }) => {
           const resumeIndex = currentNoteIndex + 1
 
           if (resumeIndex >= noteSequence.length) {
@@ -290,8 +289,8 @@ export const update = (model: Model, message: Message) =>
             }),
             commands: [DelayAdvancePhase({ generation: nextGeneration })],
           }
-        }),
-        M.tag('Idle', () => {
+        },
+        Idle: () => {
           const noteSequence =
             model.noteInput._tag === 'Valid'
               ? parseNotes(model.noteInput.value)
@@ -316,9 +315,8 @@ export const update = (model: Model, message: Message) =>
             }),
             commands: [DelayAdvancePhase({ generation: nextGeneration })],
           }
-        }),
-        M.exhaustive,
-      ),
+        },
+      }),
 
     ClickedPause: () =>
       M.value(model.playbackState).pipe(
@@ -913,20 +911,13 @@ const noteInputLabel = (model: Model): string =>
   )
 
 const playbackStateLabel = (model: Model): string =>
-  M.value(model.playbackState).pipe(
-    M.tag('Idle', () => 'Idle'),
-    M.tag(
-      'Playing',
-      ({ currentNoteIndex, noteSequence }) =>
-        `PlaybackState.Playing(${currentNoteIndex + 1}/${noteSequence.length})`,
-    ),
-    M.tag(
-      'Paused',
-      ({ currentNoteIndex, noteSequence }) =>
-        `PlaybackState.Paused(${currentNoteIndex + 1}/${noteSequence.length})`,
-    ),
-    M.exhaustive,
-  )
+  PlaybackState.match(model.playbackState, {
+    Idle: () => 'Idle',
+    Playing: ({ currentNoteIndex, noteSequence }) =>
+      `PlaybackState.Playing(${currentNoteIndex + 1}/${noteSequence.length})`,
+    Paused: ({ currentNoteIndex, noteSequence }) =>
+      `PlaybackState.Paused(${currentNoteIndex + 1}/${noteSequence.length})`,
+  })
 
 const phaseLabel = (phase: NoteHighlightPhase): string =>
   M.value(phase).pipe(

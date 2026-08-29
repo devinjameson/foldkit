@@ -1,4 +1,3 @@
-import { Match as M } from 'effect'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 
 import { Message } from '../message'
@@ -7,35 +6,31 @@ import { Home, Room } from '../page'
 import { AppRoute } from '../route'
 
 const routeTitle = (route: Model['route']): string =>
-  M.value(route).pipe(
-    M.tagsExhaustive({
-      Home: () => 'Typing Game',
-      Room: ({ roomId }) => `Room ${roomId} | Typing Game`,
-      NotFound: () => 'Not Found | Typing Game',
-    }),
-  )
+  AppRoute.match(route, {
+    Home: () => 'Typing Game',
+    Room: ({ roomId }) => `Room ${roomId} | Typing Game`,
+    NotFound: () => 'Not Found | Typing Game',
+  })
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const content = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Home: () =>
-        h.submodel({
-          slotId: 'home',
-          model: model.home,
-          view: Home.view,
-          toParentMessage: message => Message.GotHomeMessage({ message }),
-        }),
-      Room: ({ roomId }) =>
-        h.submodel({
-          slotId: 'room',
-          model: model.room,
-          view: Room.view,
-          viewInputs: { roomId },
-          toParentMessage: message => Message.GotRoomMessage({ message }),
-        }),
-      NotFound: route => notFound(route, h),
-    }),
-  )
+  const content = AppRoute.match(model.route, {
+    Home: () =>
+      h.submodel({
+        slotId: 'home',
+        model: model.home,
+        view: Home.view,
+        toParentMessage: message => Message.GotHomeMessage({ message }),
+      }),
+    Room: ({ roomId }) =>
+      h.submodel({
+        slotId: 'room',
+        model: model.room,
+        view: Room.view,
+        viewInputs: { roomId },
+        toParentMessage: message => Message.GotRoomMessage({ message }),
+      }),
+    NotFound: route => notFound(route, h),
+  })
 
   const footerElement = h.footer(
     [h.Class('mt-auto pt-8')],

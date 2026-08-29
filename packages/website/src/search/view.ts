@@ -9,7 +9,7 @@ import { Icon } from '../icon'
 import { KEYBOARD_WARMUP_INPUT_ID, SEARCH_INPUT_ID } from './command'
 import { Message, type SearchResult } from './message'
 import type { Model } from './model'
-import { resultsFromState } from './model'
+import { SearchState, resultsFromState } from './model'
 
 const RESULTS_LIST_ID = 'search-results'
 const resultItemId = (index: number): string => `search-result-${index}`
@@ -196,23 +196,19 @@ const resultListView = (
   })
 
 const resultsListView = (model: Model, h: HtmlBuilder<Message>): Html =>
-  M.value(model.searchState).pipe(
-    M.withReturnType<Html>(),
-    M.tag('Idle', () => emptyPrompt),
-    M.tag('Loading', ({ results }) =>
+  SearchState.match<Html>(model.searchState, {
+    Idle: () => emptyPrompt,
+    Loading: ({ results }) =>
       Array.match(results, {
         onEmpty: () => searchingIndicator,
         onNonEmpty: () => resultListView(results, model.activeResultIndex, h),
       }),
-    ),
-    M.tag('Ok', ({ results }) =>
+    Ok: ({ results }) =>
       Array.match(results, {
         onEmpty: () => noResultsView(model.query),
         onNonEmpty: () => resultListView(results, model.activeResultIndex, h),
       }),
-    ),
-    M.exhaustive,
-  )
+  })
 
 const resultCountAnnouncement = (model: Model): Html => {
   const results = resultsFromState(model.searchState)

@@ -32,7 +32,7 @@ import {
   KeyframeInfo,
   MAX_DISPATCH_BATCH_SIZE,
   MessageSchemaResult,
-  type Request,
+  Request,
   RequestFrame,
   Response,
   ResponseFrame,
@@ -395,337 +395,332 @@ export const dispatchRequest = (
   maybeJsonSchemaDocument: Option.Option<unknown>,
   request: Request,
 ): Effect.Effect<Response> =>
-  Match.value(request).pipe(
-    Match.tagsExhaustive({
-      RequestGetModel: ({ maybePath, expand }) =>
-        Effect.gen(function* () {
-          const state = yield* SubscriptionRef.get(store.stateRef)
-          const index = latestEntryIndex(state)
-          return yield* readModelResponse(store, index, maybePath, expand)
-        }),
+  Request.match<Effect.Effect<Response>>(request, {
+    RequestGetModel: ({ maybePath, expand }) =>
+      Effect.gen(function* () {
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        const index = latestEntryIndex(state)
+        return yield* readModelResponse(store, index, maybePath, expand)
+      }),
 
-      RequestGetModelAt: ({ index, maybePath, expand }) =>
-        Effect.gen(function* () {
-          const state = yield* SubscriptionRef.get(store.stateRef)
-          if (!isIndexReadable(state, index)) {
-            return Response.ResponseError({
-              reason: formatIndexNotReadable(state, index),
-            })
-          }
-          return yield* readModelResponse(store, index, maybePath, expand)
-        }),
-
-      RequestListMessages: ({
-        limit,
-        maybeSinceIndex,
-        maybeChangedPathsMatch,
-        fromEnd,
-      }) =>
-        Effect.gen(function* () {
-          if (fromEnd && Option.isSome(maybeSinceIndex)) {
-            return Response.ResponseError({
-              reason:
-                'from_end cannot be combined with since_index. Use from_end alone to read the latest entries, or since_index to page forward.',
-            })
-          }
-          const maybeInvalidPattern = maybePatternError(maybeChangedPathsMatch)
-          if (Option.isSome(maybeInvalidPattern)) {
-            return maybeInvalidPattern.value
-          }
-
-          const state = yield* SubscriptionRef.get(store.stateRef)
-          const candidates = collectMatchingEntries(
-            state,
-            maybeSinceIndex,
-            maybeChangedPathsMatch,
-          )
-          const { page, maybeNextIndex } = pageMatchingEntries(
-            candidates,
-            limit,
-            fromEnd,
-          )
-          const entries = Array.map(page, ({ entry, index }) =>
-            toSerializedEntry(entry, index),
-          )
-
-          return Response.ResponseMessages({ entries, maybeNextIndex })
-        }),
-
-      RequestCountMessagesByTag: ({
-        maybeSinceIndex,
-        maybeChangedPathsMatch,
-      }) =>
-        Effect.gen(function* () {
-          const maybeInvalidPattern = maybePatternError(maybeChangedPathsMatch)
-          if (Option.isSome(maybeInvalidPattern)) {
-            return maybeInvalidPattern.value
-          }
-
-          const state = yield* SubscriptionRef.get(store.stateRef)
-          const candidates = collectMatchingEntries(
-            state,
-            maybeSinceIndex,
-            maybeChangedPathsMatch,
-          )
-          const scannedFromIndex = Math.max(
-            Option.getOrElse(maybeSinceIndex, () => state.startIndex),
-            state.startIndex,
-          )
-          return Response.ResponseMessageCounts({
-            counts: countEntriesByTag(candidates),
-            totalCount: candidates.length,
-            scannedFromIndex,
-            scannedToIndex: latestEntryIndex(state),
+    RequestGetModelAt: ({ index, maybePath, expand }) =>
+      Effect.gen(function* () {
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        if (!isIndexReadable(state, index)) {
+          return Response.ResponseError({
+            reason: formatIndexNotReadable(state, index),
           })
-        }),
+        }
+        return yield* readModelResponse(store, index, maybePath, expand)
+      }),
 
-      RequestDiffModels: ({ fromIndex, toIndex, maybeChangedPathsMatch }) =>
-        Effect.gen(function* () {
-          const maybeInvalidPattern = maybePatternError(maybeChangedPathsMatch)
-          if (Option.isSome(maybeInvalidPattern)) {
-            return maybeInvalidPattern.value
-          }
-
-          const state = yield* SubscriptionRef.get(store.stateRef)
-          const maybeUnreadableIndex = Array.findFirst(
-            [fromIndex, toIndex],
-            index => !isIndexReadable(state, index),
-          )
-          if (Option.isSome(maybeUnreadableIndex)) {
-            return Response.ResponseError({
-              reason: formatIndexNotReadable(state, maybeUnreadableIndex.value),
-            })
-          }
-
-          const beforeModel = yield* store.getModelAtIndex(fromIndex)
-          const afterModel = yield* store.getModelAtIndex(toIndex)
-          // NOTE: the diff must walk the same trees the paths are resolved
-          // against. toInspectableValue converts Date/File/Blob/URL instances
-          // to plain data, so diffing the transformed trees keeps every
-          // emitted path resolvable and lets instance-typed fields (whose raw
-          // forms have no enumerable keys) surface as value changes.
-          const diff = computeDiff(
-            toInspectableValue(beforeModel),
-            toInspectableValue(afterModel),
-          )
-          const maybePatterns = Option.filter(
-            maybeChangedPathsMatch,
-            Array.isReadonlyArrayNonEmpty,
-          )
-
-          const changes = pipe(
-            diff.changedPaths,
-            Array.fromIterable,
-            Array.filter(path =>
-              Option.match(maybePatterns, {
-                onNone: () => true,
-                onSome: patterns => matchesAnyPathPattern(path, patterns),
-              }),
-            ),
-            Array.sort(pathOrder),
-            Array.map(path => ({
-              path,
-              before: toDiffValue(readSummarizedValueAt(beforeModel, path)),
-              after: toDiffValue(readSummarizedValueAt(afterModel, path)),
-            })),
-          )
-
-          return Response.ResponseModelDiff({ fromIndex, toIndex, changes })
-        }).pipe(
-          Effect.catchCause(cause =>
-            Effect.succeed(
-              Response.ResponseError({
-                reason: `Failed to diff Models between ${fromIndex} and ${toIndex}: ${Cause.pretty(cause)}`,
-              }),
-            ),
-          ),
-        ),
-
-      RequestGetMessage: ({ index }) =>
-        Effect.gen(function* () {
-          const state = yield* SubscriptionRef.get(store.stateRef)
-          const relative = index - state.startIndex
-          const maybeEntry = Array.get(state.entries, relative)
-
-          return yield* Option.match(maybeEntry, {
-            onNone: () =>
-              Effect.succeed(
-                Response.ResponseError({
-                  reason: `No entry at index ${index} (have ${state.startIndex} to ${state.startIndex + state.entries.length - 1})`,
-                }),
-              ),
-            onSome: entry =>
-              Effect.succeed(
-                Response.ResponseMessage({
-                  entry: toSerializedEntry(entry, index),
-                }),
-              ),
+    RequestListMessages: ({
+      limit,
+      maybeSinceIndex,
+      maybeChangedPathsMatch,
+      fromEnd,
+    }) =>
+      Effect.gen(function* () {
+        if (fromEnd && Option.isSome(maybeSinceIndex)) {
+          return Response.ResponseError({
+            reason:
+              'from_end cannot be combined with since_index. Use from_end alone to read the latest entries, or since_index to page forward.',
           })
-        }),
-
-      RequestListKeyframes: () =>
-        Effect.gen(function* () {
-          const state = yield* SubscriptionRef.get(store.stateRef)
-          const sortedKeyframeIndices = pipe(
-            state.keyframes,
-            HashMap.keys,
-            Array.fromIterable,
-            Array.sort(Order.Number),
-          )
-          const indicesWithInit = Option.match(state.maybeInitModel, {
-            onNone: () => sortedKeyframeIndices,
-            onSome: () => [INIT_INDEX, ...sortedKeyframeIndices],
-          })
-          const keyframes = indicesWithInit.map(index =>
-            KeyframeInfo.make({ index }),
-          )
-          return Response.ResponseKeyframes({ keyframes })
-        }),
-
-      RequestReplayToKeyframe: ({ keyframeIndex }) =>
-        pipe(
-          Effect.gen(function* () {
-            const state = yield* SubscriptionRef.get(store.stateRef)
-            if (!isIndexReadable(state, keyframeIndex)) {
-              return Response.ResponseError({
-                reason: formatIndexNotReadable(state, keyframeIndex),
-              })
-            }
-            yield* store.jumpTo(keyframeIndex)
-            const model = yield* store.getModelAtIndex(keyframeIndex)
-            return Response.ResponseReplayed({
-              model: toInspectableValue(model),
-            })
-          }),
-          Effect.catchCause(cause =>
-            Effect.succeed(
-              Response.ResponseError({
-                reason: `Failed to replay to keyframe ${keyframeIndex}: ${Cause.pretty(cause)}`,
-              }),
-            ),
-          ),
-        ),
-
-      RequestResume: () =>
-        Effect.gen(function* () {
-          yield* store.resume
-          return Response.ResponseResumed()
-        }).pipe(
-          Effect.catchCause(cause =>
-            Effect.succeed(
-              Response.ResponseError({
-                reason: `Failed to resume: ${Cause.pretty(cause)}`,
-              }),
-            ),
-          ),
-        ),
-
-      RequestDispatchMessage: ({ message }) =>
-        Option.match(maybeDispatchSchema, {
-          onNone: () => Effect.succeed(missingMessageSchemaResponse),
-          onSome: dispatchSchema =>
-            Effect.gen(function* () {
-              const decodedMessage =
-                yield* S.decodeUnknownEffect(dispatchSchema)(message)
-              const stateBefore = yield* SubscriptionRef.get(store.stateRef)
-              const acceptedAtIndex = nextEntryIndex(stateBefore)
-              yield* dispatch(decodedMessage)
-              return Response.ResponseDispatched({ acceptedAtIndex })
-            }).pipe(
-              Effect.catch(error =>
-                Effect.succeed(
-                  Response.ResponseError({
-                    reason: `Invalid Message: ${formatInvalidMessageReason(error, message)}`,
-                  }),
-                ),
-              ),
-            ),
-        }),
-
-      RequestDispatchMessages: ({ messages }) => {
-        if (messages.length > MAX_DISPATCH_BATCH_SIZE) {
-          return Effect.succeed(
-            Response.ResponseError({
-              reason: `Batch too large: ${messages.length} Messages exceeds the limit of ${MAX_DISPATCH_BATCH_SIZE}. No Messages from the batch were dispatched.`,
-            }),
-          )
+        }
+        const maybeInvalidPattern = maybePatternError(maybeChangedPathsMatch)
+        if (Option.isSome(maybeInvalidPattern)) {
+          return maybeInvalidPattern.value
         }
 
-        return Option.match(maybeDispatchSchema, {
-          onNone: () => Effect.succeed(missingMessageSchemaResponse),
-          onSome: dispatchSchema =>
-            Effect.gen(function* () {
-              const decodeMessage = S.decodeUnknownEffect(dispatchSchema)
-              const decodedMessages = yield* Effect.forEach(
-                messages,
-                (message, position) =>
-                  Effect.mapError(
-                    decodeMessage(message),
-                    error =>
-                      new Error(
-                        `Invalid Message at zero-based batch position ${position}: ${formatInvalidMessageReason(error, message)}\n\nNo Messages from the batch were dispatched.`,
-                      ),
-                  ),
-              )
-              const stateBefore = yield* SubscriptionRef.get(store.stateRef)
-              const firstAcceptedIndex = nextEntryIndex(stateBefore)
-              yield* Effect.forEach(decodedMessages, dispatch)
-              const acceptedAtIndices = Array.map(
-                decodedMessages,
-                (_decodedMessage, offset) => firstAcceptedIndex + offset,
-              )
-              return Response.ResponseDispatchedBatch({ acceptedAtIndices })
-            }).pipe(
-              Effect.catch(error =>
-                Effect.succeed(
-                  Response.ResponseError({
-                    reason:
-                      error instanceof Error ? error.message : String(error),
-                  }),
-                ),
-              ),
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        const candidates = collectMatchingEntries(
+          state,
+          maybeSinceIndex,
+          maybeChangedPathsMatch,
+        )
+        const { page, maybeNextIndex } = pageMatchingEntries(
+          candidates,
+          limit,
+          fromEnd,
+        )
+        const entries = Array.map(page, ({ entry, index }) =>
+          toSerializedEntry(entry, index),
+        )
+
+        return Response.ResponseMessages({ entries, maybeNextIndex })
+      }),
+
+    RequestCountMessagesByTag: ({ maybeSinceIndex, maybeChangedPathsMatch }) =>
+      Effect.gen(function* () {
+        const maybeInvalidPattern = maybePatternError(maybeChangedPathsMatch)
+        if (Option.isSome(maybeInvalidPattern)) {
+          return maybeInvalidPattern.value
+        }
+
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        const candidates = collectMatchingEntries(
+          state,
+          maybeSinceIndex,
+          maybeChangedPathsMatch,
+        )
+        const scannedFromIndex = Math.max(
+          Option.getOrElse(maybeSinceIndex, () => state.startIndex),
+          state.startIndex,
+        )
+        return Response.ResponseMessageCounts({
+          counts: countEntriesByTag(candidates),
+          totalCount: candidates.length,
+          scannedFromIndex,
+          scannedToIndex: latestEntryIndex(state),
+        })
+      }),
+
+    RequestDiffModels: ({ fromIndex, toIndex, maybeChangedPathsMatch }) =>
+      Effect.gen(function* () {
+        const maybeInvalidPattern = maybePatternError(maybeChangedPathsMatch)
+        if (Option.isSome(maybeInvalidPattern)) {
+          return maybeInvalidPattern.value
+        }
+
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        const maybeUnreadableIndex = Array.findFirst(
+          [fromIndex, toIndex],
+          index => !isIndexReadable(state, index),
+        )
+        if (Option.isSome(maybeUnreadableIndex)) {
+          return Response.ResponseError({
+            reason: formatIndexNotReadable(state, maybeUnreadableIndex.value),
+          })
+        }
+
+        const beforeModel = yield* store.getModelAtIndex(fromIndex)
+        const afterModel = yield* store.getModelAtIndex(toIndex)
+        // NOTE: the diff must walk the same trees the paths are resolved
+        // against. toInspectableValue converts Date/File/Blob/URL instances
+        // to plain data, so diffing the transformed trees keeps every
+        // emitted path resolvable and lets instance-typed fields (whose raw
+        // forms have no enumerable keys) surface as value changes.
+        const diff = computeDiff(
+          toInspectableValue(beforeModel),
+          toInspectableValue(afterModel),
+        )
+        const maybePatterns = Option.filter(
+          maybeChangedPathsMatch,
+          Array.isReadonlyArrayNonEmpty,
+        )
+
+        const changes = pipe(
+          diff.changedPaths,
+          Array.fromIterable,
+          Array.filter(path =>
+            Option.match(maybePatterns, {
+              onNone: () => true,
+              onSome: patterns => matchesAnyPathPattern(path, patterns),
+            }),
+          ),
+          Array.sort(pathOrder),
+          Array.map(path => ({
+            path,
+            before: toDiffValue(readSummarizedValueAt(beforeModel, path)),
+            after: toDiffValue(readSummarizedValueAt(afterModel, path)),
+          })),
+        )
+
+        return Response.ResponseModelDiff({ fromIndex, toIndex, changes })
+      }).pipe(
+        Effect.catchCause(cause =>
+          Effect.succeed(
+            Response.ResponseError({
+              reason: `Failed to diff Models between ${fromIndex} and ${toIndex}: ${Cause.pretty(cause)}`,
+            }),
+          ),
+        ),
+      ),
+
+    RequestGetMessage: ({ index }) =>
+      Effect.gen(function* () {
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        const relative = index - state.startIndex
+        const maybeEntry = Array.get(state.entries, relative)
+
+        return yield* Option.match(maybeEntry, {
+          onNone: () =>
+            Effect.succeed(
+              Response.ResponseError({
+                reason: `No entry at index ${index} (have ${state.startIndex} to ${state.startIndex + state.entries.length - 1})`,
+              }),
+            ),
+          onSome: entry =>
+            Effect.succeed(
+              Response.ResponseMessage({
+                entry: toSerializedEntry(entry, index),
+              }),
             ),
         })
-      },
+      }),
 
-      RequestGetMessageSchema: ({ maybeVariantTag }) =>
-        Effect.succeed(
-          buildMessageSchemaResponse(maybeJsonSchemaDocument, maybeVariantTag),
-        ),
+    RequestListKeyframes: () =>
+      Effect.gen(function* () {
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        const sortedKeyframeIndices = pipe(
+          state.keyframes,
+          HashMap.keys,
+          Array.fromIterable,
+          Array.sort(Order.Number),
+        )
+        const indicesWithInit = Option.match(state.maybeInitModel, {
+          onNone: () => sortedKeyframeIndices,
+          onSome: () => [INIT_INDEX, ...sortedKeyframeIndices],
+        })
+        const keyframes = indicesWithInit.map(index =>
+          KeyframeInfo.make({ index }),
+        )
+        return Response.ResponseKeyframes({ keyframes })
+      }),
 
-      RequestListRuntimes: () =>
-        Effect.succeed(
-          Response.ResponseError({
-            reason:
-              'RequestListRuntimes is plugin-handled and should not reach the runtime bridge',
-          }),
-        ),
-
-      RequestGetInit: () =>
+    RequestReplayToKeyframe: ({ keyframeIndex }) =>
+      pipe(
         Effect.gen(function* () {
           const state = yield* SubscriptionRef.get(store.stateRef)
-          return Response.ResponseInit({
-            maybeModel: Option.map(state.maybeInitModel, toInspectableValue),
-            commands: Array.map(state.initCommands, toSerializedCommand),
-            mountStarts: Array.map(state.initMountStarts, toSerializedMount),
+          if (!isIndexReadable(state, keyframeIndex)) {
+            return Response.ResponseError({
+              reason: formatIndexNotReadable(state, keyframeIndex),
+            })
+          }
+          yield* store.jumpTo(keyframeIndex)
+          const model = yield* store.getModelAtIndex(keyframeIndex)
+          return Response.ResponseReplayed({
+            model: toInspectableValue(model),
           })
         }),
+        Effect.catchCause(cause =>
+          Effect.succeed(
+            Response.ResponseError({
+              reason: `Failed to replay to keyframe ${keyframeIndex}: ${Cause.pretty(cause)}`,
+            }),
+          ),
+        ),
+      ),
 
-      RequestGetRuntimeState: () =>
-        Effect.gen(function* () {
-          const state = yield* SubscriptionRef.get(store.stateRef)
-          const currentIndex = latestEntryIndex(state)
-          return Response.ResponseRuntimeState({
-            currentIndex,
-            startIndex: state.startIndex,
-            totalEntries: state.entries.length,
-            isPaused: state.isPaused,
-            maybePausedAtIndex: OptionExt.when(
-              state.isPaused,
-              state.pausedAtIndex,
+    RequestResume: () =>
+      Effect.gen(function* () {
+        yield* store.resume
+        return Response.ResponseResumed()
+      }).pipe(
+        Effect.catchCause(cause =>
+          Effect.succeed(
+            Response.ResponseError({
+              reason: `Failed to resume: ${Cause.pretty(cause)}`,
+            }),
+          ),
+        ),
+      ),
+
+    RequestDispatchMessage: ({ message }) =>
+      Option.match(maybeDispatchSchema, {
+        onNone: () => Effect.succeed(missingMessageSchemaResponse),
+        onSome: dispatchSchema =>
+          Effect.gen(function* () {
+            const decodedMessage =
+              yield* S.decodeUnknownEffect(dispatchSchema)(message)
+            const stateBefore = yield* SubscriptionRef.get(store.stateRef)
+            const acceptedAtIndex = nextEntryIndex(stateBefore)
+            yield* dispatch(decodedMessage)
+            return Response.ResponseDispatched({ acceptedAtIndex })
+          }).pipe(
+            Effect.catch(error =>
+              Effect.succeed(
+                Response.ResponseError({
+                  reason: `Invalid Message: ${formatInvalidMessageReason(error, message)}`,
+                }),
+              ),
             ),
-            hasInitModel: Option.isSome(state.maybeInitModel),
-          })
+          ),
+      }),
+
+    RequestDispatchMessages: ({ messages }) => {
+      if (messages.length > MAX_DISPATCH_BATCH_SIZE) {
+        return Effect.succeed(
+          Response.ResponseError({
+            reason: `Batch too large: ${messages.length} Messages exceeds the limit of ${MAX_DISPATCH_BATCH_SIZE}. No Messages from the batch were dispatched.`,
+          }),
+        )
+      }
+
+      return Option.match(maybeDispatchSchema, {
+        onNone: () => Effect.succeed(missingMessageSchemaResponse),
+        onSome: dispatchSchema =>
+          Effect.gen(function* () {
+            const decodeMessage = S.decodeUnknownEffect(dispatchSchema)
+            const decodedMessages = yield* Effect.forEach(
+              messages,
+              (message, position) =>
+                Effect.mapError(
+                  decodeMessage(message),
+                  error =>
+                    new Error(
+                      `Invalid Message at zero-based batch position ${position}: ${formatInvalidMessageReason(error, message)}\n\nNo Messages from the batch were dispatched.`,
+                    ),
+                ),
+            )
+            const stateBefore = yield* SubscriptionRef.get(store.stateRef)
+            const firstAcceptedIndex = nextEntryIndex(stateBefore)
+            yield* Effect.forEach(decodedMessages, dispatch)
+            const acceptedAtIndices = Array.map(
+              decodedMessages,
+              (_decodedMessage, offset) => firstAcceptedIndex + offset,
+            )
+            return Response.ResponseDispatchedBatch({ acceptedAtIndices })
+          }).pipe(
+            Effect.catch(error =>
+              Effect.succeed(
+                Response.ResponseError({
+                  reason:
+                    error instanceof Error ? error.message : String(error),
+                }),
+              ),
+            ),
+          ),
+      })
+    },
+
+    RequestGetMessageSchema: ({ maybeVariantTag }) =>
+      Effect.succeed(
+        buildMessageSchemaResponse(maybeJsonSchemaDocument, maybeVariantTag),
+      ),
+
+    RequestListRuntimes: () =>
+      Effect.succeed(
+        Response.ResponseError({
+          reason:
+            'RequestListRuntimes is plugin-handled and should not reach the runtime bridge',
         }),
-    }),
-  )
+      ),
+
+    RequestGetInit: () =>
+      Effect.gen(function* () {
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        return Response.ResponseInit({
+          maybeModel: Option.map(state.maybeInitModel, toInspectableValue),
+          commands: Array.map(state.initCommands, toSerializedCommand),
+          mountStarts: Array.map(state.initMountStarts, toSerializedMount),
+        })
+      }),
+
+    RequestGetRuntimeState: () =>
+      Effect.gen(function* () {
+        const state = yield* SubscriptionRef.get(store.stateRef)
+        const currentIndex = latestEntryIndex(state)
+        return Response.ResponseRuntimeState({
+          currentIndex,
+          startIndex: state.startIndex,
+          totalEntries: state.entries.length,
+          isPaused: state.isPaused,
+          maybePausedAtIndex: OptionExt.when(
+            state.isPaused,
+            state.pausedAtIndex,
+          ),
+          hasInitModel: Option.isSome(state.maybeInitModel),
+        })
+      }),
+  })

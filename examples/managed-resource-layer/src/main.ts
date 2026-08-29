@@ -199,25 +199,24 @@ const engineStatusView = (
   engine: EngineState,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const status = M.value(engine).pipe(
-    M.tag('Off', () => ({
+  const status = EngineState.match(engine, {
+    Off: () => ({
       colorClassName: 'text-gray-500',
       text: 'Engine is off.',
-    })),
-    M.tag('Booting', () => ({
+    }),
+    Booting: () => ({
       colorClassName: 'text-amber-600',
       text: 'Booting engine...',
-    })),
-    M.tag('Ready', ({ engineId }) => ({
+    }),
+    Ready: ({ engineId }) => ({
       colorClassName: 'text-green-600',
       text: `Engine ready: ${engineId}`,
-    })),
-    M.tag('Failed', ({ reason }) => ({
+    }),
+    Failed: ({ reason }) => ({
       colorClassName: 'text-red-600',
       text: `Engine failed: ${reason}`,
-    })),
-    M.exhaustive,
-  )
+    }),
+  })
 
   return h.p([h.Class(status.colorClassName)], [status.text])
 }

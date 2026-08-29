@@ -1,4 +1,4 @@
-import { Array, Effect, Match as M, Number, Schema as S } from 'effect'
+import { Array, Effect, Number, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import * as Interruptible from '../../command/interruptible/index.js'
@@ -109,17 +109,14 @@ export const update = (model: Model, message: Message) =>
       model: evo(model, { uploads: setStatusById(uploadId, 'Failed') }),
     }),
     CompletedCancelUploadFile: ({ uploadId, outcome }) =>
-      M.value(outcome).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.tagsExhaustive({
-          Interrupted: () => ({
-            model: evo(model, {
-              uploads: setStatusById(uploadId, 'Cancelled'),
-            }),
+      Interruptible.Outcome.match<UpdateReturn>(outcome, {
+        Interrupted: () => ({
+          model: evo(model, {
+            uploads: setStatusById(uploadId, 'Cancelled'),
           }),
-          NotFound: () => ({ model }),
         }),
-      ),
+        NotFound: () => ({ model }),
+      }),
   })
 
 // VIEW
