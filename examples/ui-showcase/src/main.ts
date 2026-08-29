@@ -253,19 +253,16 @@ export const update = (model: Model, message: Message) =>
     CompletedLoadExternal: () => ({ model }),
 
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: urlToString(url) })],
-          }),
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
         }),
-      ),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) =>
       Update.combine(model, [
@@ -597,37 +594,35 @@ const contentView = (model: Model, h: HtmlBuilder<Message>): Html => {
       toParentMessage: toUiMessage,
     })
 
-  return M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Home: () => homeView(h),
-      Button: () => embedUi('ui-button', View.button),
-      Calendar: () => embedUi('ui-calendar', View.calendar),
-      Checkbox: () => embedUi('ui-checkbox', View.checkbox),
-      Combobox: () => embedUi('ui-combobox', View.combobox),
-      DatePicker: () => embedUi('ui-date-picker', View.datePicker),
-      Dialog: () => embedUi('ui-dialog', View.dialog),
-      Disclosure: () => embedUi('ui-disclosure', View.disclosure),
-      DragAndDrop: () => embedUi('ui-drag-and-drop', View.dragAndDrop),
-      Fieldset: () => embedUi('ui-fieldset', View.fieldset),
-      FileDrop: () => embedUi('ui-file-drop', View.fileDrop),
-      HoverIntent: () => embedUi('ui-hover-intent', View.hoverIntent),
-      Input: () => embedUi('ui-input', View.input),
-      Listbox: () => embedUi('ui-listbox', View.listbox),
-      Menu: () => embedUi('ui-menu', View.menu),
-      Popover: () => embedUi('ui-popover', View.popover),
-      RadioGroup: () => embedUi('ui-radio-group', View.radioGroup),
-      Select: () => embedUi('ui-select', View.select),
-      Slider: () => embedUi('ui-slider', View.slider),
-      Switch: () => embedUi('ui-switch', View.switch_),
-      Tabs: () => embedUi('ui-tabs', View.tabs),
-      Textarea: () => embedUi('ui-textarea', View.textarea),
-      Toast: () => embedUi('ui-toast', View.toast),
-      Tooltip: () => embedUi('ui-tooltip', View.tooltip),
-      Animation: () => embedUi('ui-animation', View.animation),
-      VirtualList: () => embedUi('ui-virtual-list', View.virtualList),
-      NotFound: ({ path }) => notFoundView(path, h),
-    }),
-  )
+  return AppRoute.match(model.route, {
+    Home: () => homeView(h),
+    Button: () => embedUi('ui-button', View.button),
+    Calendar: () => embedUi('ui-calendar', View.calendar),
+    Checkbox: () => embedUi('ui-checkbox', View.checkbox),
+    Combobox: () => embedUi('ui-combobox', View.combobox),
+    DatePicker: () => embedUi('ui-date-picker', View.datePicker),
+    Dialog: () => embedUi('ui-dialog', View.dialog),
+    Disclosure: () => embedUi('ui-disclosure', View.disclosure),
+    DragAndDrop: () => embedUi('ui-drag-and-drop', View.dragAndDrop),
+    Fieldset: () => embedUi('ui-fieldset', View.fieldset),
+    FileDrop: () => embedUi('ui-file-drop', View.fileDrop),
+    HoverIntent: () => embedUi('ui-hover-intent', View.hoverIntent),
+    Input: () => embedUi('ui-input', View.input),
+    Listbox: () => embedUi('ui-listbox', View.listbox),
+    Menu: () => embedUi('ui-menu', View.menu),
+    Popover: () => embedUi('ui-popover', View.popover),
+    RadioGroup: () => embedUi('ui-radio-group', View.radioGroup),
+    Select: () => embedUi('ui-select', View.select),
+    Slider: () => embedUi('ui-slider', View.slider),
+    Switch: () => embedUi('ui-switch', View.switch_),
+    Tabs: () => embedUi('ui-tabs', View.tabs),
+    Textarea: () => embedUi('ui-textarea', View.textarea),
+    Toast: () => embedUi('ui-toast', View.toast),
+    Tooltip: () => embedUi('ui-tooltip', View.tooltip),
+    Animation: () => embedUi('ui-animation', View.animation),
+    VirtualList: () => embedUi('ui-virtual-list', View.virtualList),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 }
 
 const routeTitle = (route: Model['route']): string =>

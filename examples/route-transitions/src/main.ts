@@ -122,7 +122,6 @@ export const SaveDraft = Command.define('SaveDraft', {
 
 type UpdateReturn = Update.Return<Model, Message>
 type Step = Update.Step<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export type AppTransition = Transition.Transition<AppRoute>
 
@@ -223,19 +222,16 @@ export const update = (model: Model, message: Message) =>
     CompletedLoadExternal: () => ({ model }),
 
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: urlToString(url) })],
-          }),
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
         }),
-      ),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) => {
       const nextRoute = urlToAppRoute(url)
@@ -289,15 +285,13 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 // VIEW
 
 const routeLabel = (route: AppRoute): string =>
-  M.value(route).pipe(
-    M.tagsExhaustive({
-      Home: () => 'Home',
-      Gallery: () => 'Gallery',
-      Painting: ({ paintingId }) => `Painting ${paintingId}`,
-      Studio: () => 'Studio',
-      NotFound: () => 'Not found',
-    }),
-  )
+  AppRoute.match(route, {
+    Home: () => 'Home',
+    Gallery: () => 'Gallery',
+    Painting: ({ paintingId }) => `Painting ${paintingId}`,
+    Studio: () => 'Studio',
+    NotFound: () => 'Not found',
+  })
 
 const navigationView = (
   currentRoute: AppRoute,
@@ -760,16 +754,14 @@ const routeTitle = (route: AppRoute): string =>
   )
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Home: () => homeView(h),
-      Gallery: () => galleryView(model.catalogStatus, h),
-      Painting: ({ paintingId }) =>
-        paintingView(paintingId, model.paintingStatus, h),
-      Studio: () => studioView(model.studioDraft, model.maybeSavedDraft, h),
-      NotFound: ({ path }) => notFoundView(path, h),
-    }),
-  )
+  const routeContent = AppRoute.match(model.route, {
+    Home: () => homeView(h),
+    Gallery: () => galleryView(model.catalogStatus, h),
+    Painting: ({ paintingId }) =>
+      paintingView(paintingId, model.paintingStatus, h),
+    Studio: () => studioView(model.studioDraft, model.maybeSavedDraft, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   return {
     title: routeTitle(model.route),

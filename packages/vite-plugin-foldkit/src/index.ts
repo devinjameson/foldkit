@@ -315,12 +315,10 @@ const handleBrowserEventFrameReceived = (
         error,
       ),
     onSuccess: frame =>
-      M.value(frame.event).pipe(
-        M.tagsExhaustive({
-          EventConnected: event => handleConnectedEvent(state, event, client),
-          EventDisconnected: event => handleDisconnectedEvent(state, event),
-        }),
-      ),
+      DevToolsEvent.match(frame.event, {
+        EventConnected: event => handleConnectedEvent(state, event, client),
+        EventDisconnected: event => handleDisconnectedEvent(state, event),
+      }),
   })
 
 const handleConnectedEvent = (

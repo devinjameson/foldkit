@@ -1,4 +1,4 @@
-import { Match as M, Number, Schema as S } from 'effect'
+import { Number, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
@@ -51,16 +51,14 @@ export const update = (model: Model, message: Message) =>
 // VIEW
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
-  const contextMenu = M.value(model.contextMenu).pipe(
-    M.tagsExhaustive({
-      Closed: () => h.empty,
-      Open: ({ source }) =>
-        h.div(
-          [h.Role('menu'), h.AriaLabel(`${source} context menu`)],
-          [`${source} context menu opens=${model.openCount}`],
-        ),
-    }),
-  )
+  const contextMenu = ContextMenuState.match(model.contextMenu, {
+    Closed: () => h.empty,
+    Open: ({ source }) =>
+      h.div(
+        [h.Role('menu'), h.AriaLabel(`${source} context menu`)],
+        [`${source} context menu opens=${model.openCount}`],
+      ),
+  })
 
   return h.div(
     [],

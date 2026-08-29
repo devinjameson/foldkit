@@ -1,4 +1,4 @@
-import { Array, Effect, Match as M, Schema as S } from 'effect'
+import { Array, Effect, Schema as S } from 'effect'
 import { Command, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -54,21 +54,18 @@ const update = (model: Model, message: Message) =>
       ],
     }),
     CompletedCancelUploadFile: ({ uploadId, outcome }) =>
-      M.value(outcome).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.tagsExhaustive({
-          // The upload was stopped. Its result Message will never arrive,
-          // so this branch owns the state transition.
-          Interrupted: () => ({
-            model: evo(model, {
-              uploads: setStatusForId(uploadId, 'Cancelled'),
-            }),
+      Command.Interruptible.Outcome.match<UpdateReturn>(outcome, {
+        // The upload was stopped. Its result Message will never arrive,
+        // so this branch owns the state transition.
+        Interrupted: () => ({
+          model: evo(model, {
+            uploads: setStatusForId(uploadId, 'Cancelled'),
           }),
-          // Nothing held the key: the upload already completed (or never
-          // started), and its own result Message handles the Model.
-          NotFound: () => ({ model }),
         }),
-      ),
+        // Nothing held the key: the upload already completed (or never
+        // started), and its own result Message handles the Model.
+        NotFound: () => ({ model }),
+      }),
     SucceededUploadFile: ({ uploadId }) => ({
       model: evo(model, { uploads: setStatusForId(uploadId, 'Done') }),
     }),

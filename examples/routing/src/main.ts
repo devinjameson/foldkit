@@ -87,7 +87,6 @@ const LoadExternal = Command.define('LoadExternal', {
 // UPDATE
 
 type UpdateReturn = Update.Return<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const foldPeopleEntry = <Input>(
   update: (peoplePage: People.Model, input: Input) => People.UpdateReturn,
@@ -114,19 +113,16 @@ export const update = (model: Model, message: Message) =>
     CompletedLoadExternal: () => ({ model }),
 
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: urlToString(url) })],
-          }),
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
         }),
-      ),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) => {
       const nextRoute = urlToAppRoute(url)
@@ -534,23 +530,21 @@ const routeTitle = (route: Model['route']): string =>
   )
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Home: () => homeView(h),
-      Nested: () => nestedView(h),
-      People: () =>
-        h.submodel({
-          slotId: 'people',
-          model: model.peoplePage,
-          view: People.view,
-          toParentMessage: message => Message.GotPeopleMessage({ message }),
-        }),
-      Person: ({ personId }) => personView(personId, h),
-      FilesIndex: () => filesIndexView(h),
-      Files: ({ path }) => filesView(path, h),
-      NotFound: ({ path }) => notFoundView(path, h),
-    }),
-  )
+  const routeContent = AppRoute.match(model.route, {
+    Home: () => homeView(h),
+    Nested: () => nestedView(h),
+    People: () =>
+      h.submodel({
+        slotId: 'people',
+        model: model.peoplePage,
+        view: People.view,
+        toParentMessage: message => Message.GotPeopleMessage({ message }),
+      }),
+    Person: ({ personId }) => personView(personId, h),
+    FilesIndex: () => filesIndexView(h),
+    Files: ({ path }) => filesView(path, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   return {
     title: routeTitle(model.route),

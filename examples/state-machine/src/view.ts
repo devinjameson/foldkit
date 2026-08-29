@@ -12,6 +12,7 @@ import {
   EditionRadioGroup,
   Message,
   type Model,
+  Promo,
   checkoutMachine,
   editionName,
   isReviewReady,
@@ -37,43 +38,37 @@ const cancelButtonClassName =
   'cursor-pointer text-sm font-medium text-stone-600 underline decoration-stone-400 underline-offset-4 transition-colors hover:text-orange-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-900'
 
 const stateEyebrow = (state: typeof CheckoutState.Type): string =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Cart: () => 'Bag',
-      Shipping: () => 'Delivery',
-      Payment: () => 'Payment',
-      Review: () => 'Review',
-      Placing: () => 'Order',
-      Confirmed: () => 'Order',
-      Cancelled: () => 'Checkout',
-    }),
-  )
+  CheckoutState.match(state, {
+    Cart: () => 'Bag',
+    Shipping: () => 'Delivery',
+    Payment: () => 'Payment',
+    Review: () => 'Review',
+    Placing: () => 'Order',
+    Confirmed: () => 'Order',
+    Cancelled: () => 'Checkout',
+  })
 
 const stateTitle = (state: typeof CheckoutState.Type): string =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Cart: () => 'Your order',
-      Shipping: () => 'Delivery details',
-      Payment: () => 'Payment',
-      Review: () => 'Review and place order',
-      Placing: () => 'Processing your order',
-      Confirmed: () => 'Thank you',
-      Cancelled: () => 'Checkout cancelled',
-    }),
-  )
+  CheckoutState.match(state, {
+    Cart: () => 'Your order',
+    Shipping: () => 'Delivery details',
+    Payment: () => 'Payment',
+    Review: () => 'Review and place order',
+    Placing: () => 'Processing your order',
+    Confirmed: () => 'Thank you',
+    Cancelled: () => 'Checkout cancelled',
+  })
 
 const stateDescription = (state: typeof CheckoutState.Type): string =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Cart: () => 'Choose your edition before continuing to checkout.',
-      Shipping: () => 'Confirm where we should send your hardcover.',
-      Payment: () => 'Select a saved payment method for this order.',
-      Review: () => 'Check the details below before placing your order.',
-      Placing: () => 'Please keep this page open for a moment.',
-      Confirmed: () => 'Your order is confirmed and a receipt is on its way.',
-      Cancelled: () => 'Nothing was charged. Your selection has been saved.',
-    }),
-  )
+  CheckoutState.match(state, {
+    Cart: () => 'Choose your edition before continuing to checkout.',
+    Shipping: () => 'Confirm where we should send your hardcover.',
+    Payment: () => 'Select a saved payment method for this order.',
+    Review: () => 'Check the details below before placing your order.',
+    Placing: () => 'Please keep this page open for a moment.',
+    Confirmed: () => 'Your order is confirmed and a receipt is on its way.',
+    Cancelled: () => 'Nothing was charged. Your selection has been saved.',
+  })
 
 const progressSteps: ReadonlyArray<string> = [
   'Bag',
@@ -1039,21 +1034,19 @@ const reviewView = (
               ),
             ],
           ),
-          M.value(state.promo).pipe(
-            M.tagsExhaustive({
-              NoPromo: () => h.p([h.Class(promoFeedbackClassName)], ['']),
-              AppliedPromo: ({ discount }) =>
-                h.p(
-                  [h.Class(clsx(promoFeedbackClassName, 'text-orange-800'))],
-                  [`${discount.code} applied · ${discount.percentOff}% off`],
-                ),
-              RejectedPromo: () =>
-                h.p(
-                  [h.Class(clsx(promoFeedbackClassName, 'text-red-700'))],
-                  ["That code isn't recognized."],
-                ),
-            }),
-          ),
+          Promo.match(state.promo, {
+            NoPromo: () => h.p([h.Class(promoFeedbackClassName)], ['']),
+            AppliedPromo: ({ discount }) =>
+              h.p(
+                [h.Class(clsx(promoFeedbackClassName, 'text-orange-800'))],
+                [`${discount.code} applied · ${discount.percentOff}% off`],
+              ),
+            RejectedPromo: () =>
+              h.p(
+                [h.Class(clsx(promoFeedbackClassName, 'text-red-700'))],
+                ["That code isn't recognized."],
+              ),
+          }),
         ],
       ),
       Checkbox.view(
@@ -1288,17 +1281,15 @@ const checkoutContentView = (
   editionRadioGroup: RadioGroup.Model,
   h: HtmlBuilder<Message>,
 ): Html =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Cart: cartState => cartView(cartState, editionRadioGroup, h),
-      Shipping: () => shippingView(h),
-      Payment: paymentState => paymentView(paymentState, h),
-      Review: reviewState => reviewView(reviewState, h),
-      Placing: () => placingView(h),
-      Confirmed: confirmedState => confirmedView(confirmedState, h),
-      Cancelled: () => cancelledView(h),
-    }),
-  )
+  CheckoutState.match(state, {
+    Cart: cartState => cartView(cartState, editionRadioGroup, h),
+    Shipping: () => shippingView(h),
+    Payment: paymentState => paymentView(paymentState, h),
+    Review: reviewState => reviewView(reviewState, h),
+    Placing: () => placingView(h),
+    Confirmed: confirmedState => confirmedView(confirmedState, h),
+    Cancelled: () => cancelledView(h),
+  })
 
 const checkoutPanelView = (
   state: typeof CheckoutState.Type,

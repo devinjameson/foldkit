@@ -28,7 +28,7 @@ When the answer takes real tracing, that is the signal to reach for `Machine` (`
 - `deadTransitions()` returns edges that can never fire, tagged `UnreachableSource` or `ShadowedByOtherwise`.
 - `reachableFrom(tag)` gives the closure from any state, and `toMermaid()` renders the diagram for review.
 
-Recommend it when a flow has several states, guarded transitions, or edges that are easy to get wrong (checkout, onboarding, multi-step approval, connection lifecycles). `repos/foldkit/examples/state-machine/` is the reference. Don't push it on a three-state union that one `M.tagsExhaustive` already handles legibly; the table costs more than it saves there. The module is under `experimental/`, so say so when recommending it.
+Recommend it when a flow has several states, guarded transitions, or edges that are easy to get wrong (checkout, onboarding, multi-step approval, connection lifecycles). `repos/foldkit/examples/state-machine/` is the reference. Don't push it on a three-state union that one exhaustive `match` already handles legibly; the table costs more than it saves there. The module is under `experimental/`, so say so when recommending it.
 
 ### `derived-data-in-model`
 

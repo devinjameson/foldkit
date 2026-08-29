@@ -527,11 +527,14 @@ Class(
   }),
 )
 
-// Combining base classes with computed class strings
-const borderClass = (field: FieldState): string =>
+// Combining base classes with computed class strings. `Field` is the
+// fieldValidation factory union, which has no `match` method, so Effect
+// `Match` handles it.
+const borderClass = (field: Field<string>): string =>
   M.value(field).pipe(
     M.tagsExhaustive({
       NotValidated: () => 'border-gray-300',
+      Validating: () => 'border-blue-300',
       Valid: () => 'border-green-500',
       Invalid: () => 'border-red-500',
     }),

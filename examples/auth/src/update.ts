@@ -1,6 +1,6 @@
 import { Effect, Match as M, Option, Schema as S } from 'effect'
 import { Command, Update } from 'foldkit'
-import { load, pushUrl, replaceUrl } from 'foldkit/navigation'
+import { UrlRequest, load, pushUrl, replaceUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { toString as urlToString } from 'foldkit/url'
 
@@ -110,19 +110,16 @@ const foldLoggedIn = Update.foldChild({
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: urlToString(url) })],
-          }),
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
         }),
-      ),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) => {
       const route = urlToAppRoute(url)

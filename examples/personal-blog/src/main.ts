@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { Effect, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Option, Schema as S } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -61,7 +61,6 @@ const LoadExternal = Command.define('LoadExternal', {
 // UPDATE
 
 type UpdateReturn = Update.Return<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const foldCounter = Update.foldChild({
   update: Counter.update,
@@ -73,19 +72,16 @@ const foldCounter = Update.foldChild({
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: urlToString(url) })],
-          }),
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
         }),
-      ),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) => {
       const nextRoute = Route.urlToAppRoute(url)
@@ -321,28 +317,24 @@ const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
   )
 
 const routeTitle = (route: Route.AppRoute): string =>
-  M.value(route).pipe(
-    M.tagsExhaustive({
-      Home: () => 'Devin Jameson',
-      Posts: () => 'Posts | Devin Jameson',
-      Post: ({ slug }) =>
-        Option.match(findPost(slug), {
-          onNone: () => 'Post Not Found | Devin Jameson',
-          onSome: post => `${post.title} | Devin Jameson`,
-        }),
-      NotFound: () => 'Not Found | Devin Jameson',
-    }),
-  )
+  Route.AppRoute.match(route, {
+    Home: () => 'Devin Jameson',
+    Posts: () => 'Posts | Devin Jameson',
+    Post: ({ slug }) =>
+      Option.match(findPost(slug), {
+        onNone: () => 'Post Not Found | Devin Jameson',
+        onSome: post => `${post.title} | Devin Jameson`,
+      }),
+    NotFound: () => 'Not Found | Devin Jameson',
+  })
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Home: () => homeView(model, h),
-      Posts: () => postsView(h),
-      Post: ({ slug }) => postView(slug, model, h),
-      NotFound: ({ path }) => notFoundView(path, h),
-    }),
-  )
+  const routeContent = Route.AppRoute.match(model.route, {
+    Home: () => homeView(model, h),
+    Posts: () => postsView(h),
+    Post: ({ slug }) => postView(slug, model, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   return {
     title: routeTitle(model.route),

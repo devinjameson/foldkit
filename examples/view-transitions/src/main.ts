@@ -1,4 +1,4 @@
-import { Array, Effect, Match as M, Option, Schema as S, String } from 'effect'
+import { Array, Effect, Option, Schema as S, String } from 'effect'
 import { Command, Runtime, type Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -57,7 +57,6 @@ const LoadExternal = Command.define('LoadExternal', {
 // UPDATE
 
 type UpdateReturn = Update.Return<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
@@ -65,19 +64,16 @@ export const update = (model: Model, message: Message) =>
     CompletedLoadExternal: () => ({ model }),
 
     ClickedLink: ({ request }) =>
-      M.value(request).pipe(
-        withUpdateReturn,
-        M.tagsExhaustive({
-          Internal: ({ url }) => ({
-            model,
-            commands: [NavigateInternal({ url: urlToString(url) })],
-          }),
-          External: ({ href }) => ({
-            model,
-            commands: [LoadExternal({ href })],
-          }),
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
         }),
-      ),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
     ChangedUrl: ({ url }) => ({
       model: evo(model, { route: () => urlToAppRoute(url) }),
@@ -105,14 +101,11 @@ export const viewTransition: Runtime.ViewTransitionConfig<Model, Message> = ({
 
   return Option.match(Transition.enteredAny(transition), {
     onNone: () => true,
-    onSome: M.type<AppRoute>().pipe(
-      M.withReturnType<Runtime.ViewTransitionDecision>(),
-      M.tagsExhaustive({
-        Artwork: () => ({ types: ['to-artwork-detail'] }),
-        Gallery: () => ({ types: ['to-gallery'] }),
-        NotFound: () => true,
-      }),
-    ),
+    onSome: AppRoute.match<Runtime.ViewTransitionDecision>({
+      Artwork: () => ({ types: ['to-artwork-detail'] }),
+      Gallery: () => ({ types: ['to-gallery'] }),
+      NotFound: () => true,
+    }),
   })
 }
 
@@ -291,26 +284,22 @@ const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
   )
 
 const routeTitle = (route: AppRoute): string =>
-  M.value(route).pipe(
-    M.tagsExhaustive({
-      Gallery: () => 'View Transitions',
-      Artwork: ({ artworkId }) =>
-        Option.match(findArtwork(artworkId), {
-          onNone: () => 'Artwork Not Found | View Transitions',
-          onSome: artwork => `${artwork.title} | View Transitions`,
-        }),
-      NotFound: () => 'Page Not Found | View Transitions',
-    }),
-  )
+  AppRoute.match(route, {
+    Gallery: () => 'View Transitions',
+    Artwork: ({ artworkId }) =>
+      Option.match(findArtwork(artworkId), {
+        onNone: () => 'Artwork Not Found | View Transitions',
+        onSome: artwork => `${artwork.title} | View Transitions`,
+      }),
+    NotFound: () => 'Page Not Found | View Transitions',
+  })
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Gallery: () => galleryView(model.filterText, h),
-      Artwork: ({ artworkId }) => artworkDetailView(artworkId, h),
-      NotFound: ({ path }) => notFoundView(path, h),
-    }),
-  )
+  const routeContent = AppRoute.match(model.route, {
+    Gallery: () => galleryView(model.filterText, h),
+    Artwork: ({ artworkId }) => artworkDetailView(artworkId, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   return {
     title: routeTitle(model.route),

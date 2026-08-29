@@ -378,14 +378,12 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
 
           messagesView(model.messages, h),
 
-          M.value(model.connection).pipe(
-            M.tagsExhaustive({
-              Disconnected: () => connectButtonView(h),
-              Connecting: () => connectingView(h),
-              Connected: () => messageInputView(model.messageInput, h),
-              Error: ({ error }) => errorView(error, h),
-            }),
-          ),
+          ConnectionState.match(model.connection, {
+            Disconnected: () => connectButtonView(h),
+            Connecting: () => connectingView(h),
+            Connected: () => messageInputView(model.messageInput, h),
+            Error: ({ error }) => errorView(error, h),
+          }),
         ],
       ),
     ],
@@ -399,30 +397,22 @@ const connectionStatusView = (
   h.div(
     [h.Class('flex items-center gap-2')],
     [
-      M.value(connection).pipe(
-        M.tagsExhaustive({
-          Disconnected: () =>
-            h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
-          Connecting: () =>
-            h.div([
-              h.Class('w-3 h-3 rounded-full bg-yellow-500 animate-pulse'),
-            ]),
-          Connected: () =>
-            h.div([h.Class('w-3 h-3 rounded-full bg-green-500')]),
-          Error: () => h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
-        }),
-      ),
-      M.value(connection).pipe(
-        M.tagsExhaustive({
-          Disconnected: () =>
-            h.span([h.Class('text-sm text-gray-600')], ['Disconnected']),
-          Connecting: () =>
-            h.span([h.Class('text-sm text-gray-600')], ['Connecting...']),
-          Connected: () =>
-            h.span([h.Class('text-sm text-gray-600')], ['Connected']),
-          Error: () => h.span([h.Class('text-sm text-red-600')], ['Error']),
-        }),
-      ),
+      ConnectionState.match(connection, {
+        Disconnected: () => h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
+        Connecting: () =>
+          h.div([h.Class('w-3 h-3 rounded-full bg-yellow-500 animate-pulse')]),
+        Connected: () => h.div([h.Class('w-3 h-3 rounded-full bg-green-500')]),
+        Error: () => h.div([h.Class('w-3 h-3 rounded-full bg-red-500')]),
+      }),
+      ConnectionState.match(connection, {
+        Disconnected: () =>
+          h.span([h.Class('text-sm text-gray-600')], ['Disconnected']),
+        Connecting: () =>
+          h.span([h.Class('text-sm text-gray-600')], ['Connecting...']),
+        Connected: () =>
+          h.span([h.Class('text-sm text-gray-600')], ['Connected']),
+        Error: () => h.span([h.Class('text-sm text-red-600')], ['Error']),
+      }),
     ],
   )
 
