@@ -51,7 +51,7 @@
     "pagefind": "^1.5.2",
     "playwright": "^1.62.1",
     "prettier": "^3.9.6",
-    "satori": "^0.26.0",
+    "satori": "^0.33.4",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
