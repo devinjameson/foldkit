@@ -1,7 +1,12 @@
 import { Option } from 'effect'
 import { type ESTree } from 'effect-oxlint'
 
-import { isIdentifier, isObjectExpression, isStringLiteral } from './guards.ts'
+import {
+  isIdentifier,
+  isObjectExpression,
+  isStringLiteral,
+  staticPropertyName,
+} from './guards.ts'
 
 const foldkitMessageModule = 'foldkit/message'
 
@@ -10,24 +15,6 @@ export type MessageCase = Readonly<{
   nameNode: ESTree.Node
   fields: ESTree.ObjectExpression
 }>
-
-const staticPropertyName = (
-  property: ESTree.ObjectPropertyKind,
-): Option.Option<Readonly<{ name: string; node: ESTree.Node }>> => {
-  if (property.type !== 'Property') {
-    return Option.none()
-  }
-
-  if (!property.computed && isIdentifier(property.key)) {
-    return Option.some({ name: property.key.name, node: property.key })
-  }
-
-  if (isStringLiteral(property.key)) {
-    return Option.some({ name: property.key.value, node: property.key })
-  }
-
-  return Option.none()
-}
 
 export const recordFoldkitMessageUnionBindings = (
   bindings: Set<string>,
@@ -74,19 +61,19 @@ export const messageCases = (
   }
 
   return casesByTag.properties.flatMap(property => {
+    if (property.type !== 'Property') {
+      return []
+    }
+
     const maybeName = staticPropertyName(property)
-    if (
-      property.type !== 'Property' ||
-      Option.isNone(maybeName) ||
-      !isObjectExpression(property.value)
-    ) {
+    if (Option.isNone(maybeName) || !isObjectExpression(property.value)) {
       return []
     }
 
     return [
       {
-        name: maybeName.value.name,
-        nameNode: maybeName.value.node,
+        name: maybeName.value,
+        nameNode: property.key,
         fields: property.value,
       },
     ]

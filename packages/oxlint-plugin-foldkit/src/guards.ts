@@ -1,5 +1,5 @@
 import { Array, Option } from 'effect'
-import { type ESTree } from 'effect-oxlint'
+import { type ESTree, type OxlintScope, type Reference } from 'effect-oxlint'
 
 export const isIdentifier = (
   node: unknown,
@@ -12,6 +12,10 @@ export const isIdentifier = (
   'name' in node &&
   typeof node.name === 'string' &&
   (name === undefined || node.name === name)
+
+export const isIdentifierReference = (
+  node: unknown,
+): node is ESTree.IdentifierReference => isIdentifier(node)
 
 export const isStringLiteral = (node: unknown): node is ESTree.StringLiteral =>
   typeof node === 'object' &&
@@ -39,12 +43,7 @@ export const isCallExpression = (
 
 export const isMemberExpression = (
   node: unknown,
-): node is Readonly<{
-  type: 'MemberExpression'
-  object: unknown
-  property: unknown
-  computed?: boolean
-}> =>
+): node is ESTree.MemberExpression =>
   typeof node === 'object' &&
   node !== null &&
   'type' in node &&
@@ -57,6 +56,14 @@ export const isObjectExpression = (
   node !== null &&
   'type' in node &&
   node.type === 'ObjectExpression'
+
+export const isObjectProperty = (
+  node: unknown,
+): node is ESTree.ObjectProperty =>
+  typeof node === 'object' &&
+  node !== null &&
+  'type' in node &&
+  node.type === 'Property'
 
 export const isArrayExpression = (
   node: unknown,
@@ -105,6 +112,55 @@ export const staticStringValue = (node: unknown): Option.Option<string> => {
     )
   }
   return Option.none()
+}
+
+export const staticMemberName = (
+  node: ESTree.MemberExpression,
+): Option.Option<string> => {
+  if (!node.computed && isIdentifier(node.property)) {
+    return Option.some(node.property.name)
+  }
+  return staticStringValue(node.property)
+}
+
+export const staticPropertyName = (
+  property: Readonly<{
+    computed?: boolean
+    key: ESTree.PropertyKey
+  }>,
+): Option.Option<string> => {
+  if (!property.computed && isIdentifier(property.key)) {
+    return Option.some(property.key.name)
+  }
+  return staticStringValue(property.key)
+}
+
+export const indexReferences = (
+  scopes: ReadonlyArray<OxlintScope>,
+): WeakMap<ESTree.Node, Reference> => {
+  const references = new WeakMap<ESTree.Node, Reference>()
+
+  for (const scope of scopes) {
+    for (const reference of scope.references) {
+      references.set(reference.identifier, reference)
+    }
+  }
+  return references
+}
+
+export const isUnshadowedReference = (
+  references: WeakMap<ESTree.Node, Reference> | undefined,
+  node: ESTree.Node,
+): boolean => {
+  if (references === undefined) {
+    return true
+  }
+
+  const reference = references.get(node)
+  return (
+    reference !== undefined &&
+    (reference.resolved === null || Array.isArrayEmpty(reference.resolved.defs))
+  )
 }
 
 export const isVariableDeclarator = (

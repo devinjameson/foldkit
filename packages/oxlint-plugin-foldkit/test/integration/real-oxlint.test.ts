@@ -97,6 +97,12 @@ describe('real-oxlint rule fixtures', () => {
     })
   }
 
+  it('reports every direct decision-time operation in its invalid fixture', () => {
+    expect(countDiagnostics('no-impure-call-at-decision-time', 'invalid')).toBe(
+      23,
+    )
+  })
+
   it('fixes only structurally safe empty commands properties', async () => {
     const rule = 'no-empty-commands-array'
     const sourcePath = join(fixturesRoot, rule, 'invalid', 'update.ts')

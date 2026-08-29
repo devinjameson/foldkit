@@ -65,6 +65,7 @@
         "foldkit/no-duplicate-onmount-per-element": "error",
         "foldkit/no-hand-rolled-command-struct": "error",
         "foldkit/no-hardcoded-route-strings": "error",
+        "foldkit/no-impure-call-at-decision-time": "error",
         "foldkit/no-raw-dom-event-attributes": "error",
         "foldkit/no-spread-in-evo": "error",
         "foldkit/require-rel-for-external-link": "error",
@@ -74,11 +75,30 @@
     },
     {
       "files": [
+        "**/entry.ts",
+        "**/entry.tsx",
+        "**/entry.client.ts",
+        "**/entry.client.tsx",
+        "**/entry.server.ts",
+        "**/entry.server.tsx",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "examples/slow-warnings/src/main.ts"
+      ],
+      "rules": {
+        "foldkit/no-impure-call-at-decision-time": "off"
+      }
+    },
+    {
+      "files": [
         "**/entry.server.ts",
         "**/entry.server.tsx",
         "**/server/**/*.ts",
         "**/server/**/*.tsx",
-        "**/prerender.ts"
+        "**/prerender.ts",
+        "**/prerender.tsx"
       ],
       "excludeFiles": [
         "**/*.test.ts",
@@ -87,7 +107,8 @@
         "**/*.spec.tsx"
       ],
       "rules": {
-        "foldkit/no-nonportable-server-globals": "error"
+        "foldkit/no-nonportable-server-globals": "error",
+        "foldkit/no-impure-call-at-decision-time": "off"
       }
     }
   ],
