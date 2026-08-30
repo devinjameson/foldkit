@@ -1,6 +1,6 @@
 ---
 title: Foldkit 0.154.0 and 0.155.0
-description: Two Foldkit releases bring composable interaction controls, one Vite build for server-rendered applications, pure Mount construction, HoverIntent, and more.
+description: Foldkit 0.154.0 and 0.155.0 expand click and focus controls, unify Vite builds for server-rendered apps, introduce HoverIntent, and more.
 date: 2026-08-29
 coverImage: /blog/foldkit-0-155-0/cover.webp
 coverImageAlt: The version numbers 0.154.0 and 0.155.0 in large black type over layered translucent zeros on a lime-green background.
@@ -10,7 +10,7 @@ coverImageHeight: 1067
 
 Foldkit 0.155.0 is out. I never announced 0.154.0, so this post covers both.
 
-## What you missed in 0.154.0
+## What shipped in 0.154.0
 
 0.154.0 shipped earlier this week with several additions worth calling out:
 
@@ -22,7 +22,7 @@ Foldkit 0.155.0 is out. I never announced 0.154.0, so this post covers both.
 
 Now for 0.155.0.
 
-## One Vite build means the whole application
+## One Vite build for the whole application
 
 Foldkit gained [server rendering](/blog/foldkit-has-server-rendering) two weeks ago. It worked, but building a server-rendered application still happened across three commands: build the browser bundle, build the server bundle, then prerender the configured routes.
 
@@ -30,15 +30,7 @@ That separation mattered as soon as another Vite plugin needed to participate in
 
 `@foldkit/vite-plugin` 0.20.0 now owns the whole build:
 
-```ts
-foldkit({
-  buildId,
-  ssr: {
-    serverEntry: '/src/entry.server.ts',
-    build: { prerender: true },
-  },
-})
-```
+::Snippet{name="release0155ViteBuild" label="Vite build configuration"}
 
 Run `vite build` once. Vite produces the browser bundle, the server bundle, and, when `prerender` is enabled, a page for every path exported by the server entry. Every environment belongs to the same build and shares the same build id.
 
@@ -56,28 +48,13 @@ It looked compact, but it hid a bad boundary: the outer function ran when view c
 
 Mount definitions now use one config object with named `args`, `messages`, and `execute` fields:
 
-```ts
-// Before
-const AnchorPopover = Mount.define(
-  'AnchorPopover',
-  { buttonId: S.String, anchor: AnchorConfig },
-  CompletedAnchorPopover,
-)(({ buttonId, anchor }) => element =>
-  Effect.gen(function* () {
-    // ...
-  }),
-)
+Before:
 
-// After
-const AnchorPopover = Mount.define('AnchorPopover', {
-  args: { buttonId: S.String, anchor: AnchorConfig },
-  messages: [CompletedAnchorPopover],
-  execute: ({ element, buttonId, anchor }) =>
-    Effect.gen(function* () {
-      // ...
-    }),
-})
-```
+::Snippet{name="release0155MountBefore" label="Mount definition before 0.155.0"}
+
+After:
+
+::Snippet{name="release0155MountAfter" label="Mount definition in 0.155.0"}
 
 `execute` has the same flat shape with or without args. Constructing a MountAction now runs nothing. The runtime calls `execute` only after the element exists.
 
