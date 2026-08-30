@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createServer, resolveConfig } from 'vite'
@@ -100,6 +106,20 @@ const transformProductionHtml = async (root: string) => {
   })
 }
 
+const runConfigHook = (root: string, command: 'serve' | 'build') => {
+  const plugin = devToolsOverlayPlugin()
+
+  if (typeof plugin.config !== 'function') {
+    throw new Error('DevTools overlay plugin hooks changed shape')
+  }
+
+  return plugin.config.call(
+    PLUGIN_CONTEXT,
+    { root },
+    { command, mode: command === 'serve' ? 'development' : 'production' },
+  )
+}
+
 // NOTE: the counter's own config supplies the workspace aliases that resolve
 // `@foldkit/devtools/vite` to source, and those aliases are what a synthetic
 // config would miss while every example is broken. Its plugins are rebuilt
@@ -137,6 +157,62 @@ describe('DevTools overlay injection', () => {
 
     expect(transformedOverlay?.code).toContain('__setDevToolsOverlay')
     expect(transformedOverlay?.code).toContain('devtools/src/vite')
+  })
+
+  it('declares the overlay imports to the dep optimizer during development', () => {
+    const root = makeRoot({ section: 'devDependencies' })
+
+    expect(runConfigHook(root, 'serve')).toEqual({
+      optimizeDeps: {
+        include: ['@foldkit/devtools/vite', 'foldkit/devtools-host'],
+      },
+    })
+  })
+
+  it('declares nothing to the dep optimizer for a linked DevTools package', () => {
+    const root = mkdtempSync(join(tmpdir(), 'foldkit-devtools-overlay-'))
+    onTestFinished(() => rmSync(root, { recursive: true, force: true }))
+
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'app',
+        devDependencies: { '@foldkit/devtools': 'workspace:*' },
+      }),
+    )
+    const sourceDirectory = join(root, 'devtools-source')
+    mkdirSync(sourceDirectory, { recursive: true })
+    writeFileSync(
+      join(sourceDirectory, 'package.json'),
+      JSON.stringify({
+        name: '@foldkit/devtools',
+        type: 'module',
+        exports: DEV_TOOLS_VITE_EXPORTS,
+      }),
+    )
+    mkdirSync(join(root, 'node_modules', '@foldkit'), { recursive: true })
+    symlinkSync(
+      sourceDirectory,
+      join(root, 'node_modules', '@foldkit', 'devtools'),
+    )
+
+    expect(runConfigHook(root, 'serve')).toBeUndefined()
+  })
+
+  it('declares nothing to the dep optimizer when the overlay is not served', () => {
+    expect(runConfigHook(makeRoot(), 'serve')).toBeUndefined()
+    expect(
+      runConfigHook(
+        makeRoot({
+          section: 'dependencies',
+          exports: DEV_TOOLS_LEGACY_EXPORTS,
+        }),
+        'serve',
+      ),
+    ).toBeUndefined()
+    expect(
+      runConfigHook(makeRoot({ section: 'dependencies' }), 'build'),
+    ).toBeUndefined()
   })
 
   it('serves a development dependency', () => {

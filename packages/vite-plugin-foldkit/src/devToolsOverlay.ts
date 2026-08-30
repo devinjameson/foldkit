@@ -1,15 +1,27 @@
 import { Option, Record, Schema as S } from 'effect'
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
+import { dirname, join, resolve, sep } from 'node:path'
 import type { Plugin } from 'vite'
 
 const DEV_TOOLS_PACKAGE_NAME = '@foldkit/devtools'
 const DEV_TOOLS_VITE_EXPORT = './vite'
 const DEV_TOOLS_OVERLAY_MODULE_ID = 'virtual:foldkit-devtools-overlay'
 const RESOLVED_DEV_TOOLS_OVERLAY_MODULE_ID = `\0${DEV_TOOLS_OVERLAY_MODULE_ID}`
+const DEV_TOOLS_VITE_IMPORT_SPECIFIER = `${DEV_TOOLS_PACKAGE_NAME}${DEV_TOOLS_VITE_EXPORT.slice(1)}`
+const DEV_TOOLS_HOST_IMPORT_SPECIFIER = 'foldkit/devtools-host'
+// NOTE: declared to the dep optimizer in the plugin's `config` hook. The
+// optimizer's scan crawls imports reachable from source, and these two appear
+// only in the virtual module below, so without the declaration a cold cache
+// discovers them on the first page load and re-optimizes mid-session. The
+// full-page reload that follows tears down whatever the page was running,
+// which under a browser-mode test runner is the suite itself.
+const DEV_TOOLS_OVERLAY_IMPORT_SPECIFIERS: ReadonlyArray<string> = [
+  DEV_TOOLS_VITE_IMPORT_SPECIFIER,
+  DEV_TOOLS_HOST_IMPORT_SPECIFIER,
+]
 const DEV_TOOLS_OVERLAY_MODULE_SOURCE = `
-import { overlay } from '@foldkit/devtools/vite'
-import { __setDevToolsOverlay } from 'foldkit/devtools-host'
+import { overlay } from '${DEV_TOOLS_VITE_IMPORT_SPECIFIER}'
+import { __setDevToolsOverlay } from '${DEV_TOOLS_HOST_IMPORT_SPECIFIER}'
 
 __setDevToolsOverlay(overlay)
 `
@@ -91,6 +103,26 @@ const findApplicationPackageJsonPath = (root: string): Option.Option<string> =>
     existsSync(applicationPackageJsonPath(directory)),
   ).pipe(Option.map(applicationPackageJsonPath))
 
+// NOTE: mirrors the dep optimizer's own rule that a linked package is served
+// from source rather than pre-bundled. A package installed from the registry
+// realpaths into some `node_modules` directory, a store included, while a
+// workspace link realpaths out to its source checkout. Force-including a
+// linked DevTools would freeze that source into the optimizer's cache, where
+// edits to it no longer reach the page.
+const isDevToolsResolvedIntoNodeModules = (root: string): boolean =>
+  findDevToolsPackageJsonPath(root).pipe(
+    Option.flatMap(packageJsonPath => {
+      try {
+        return Option.some(realpathSync(dirname(packageJsonPath)))
+      } catch {
+        return Option.none()
+      }
+    }),
+    Option.exists(packageDirectory =>
+      packageDirectory.split(sep).includes('node_modules'),
+    ),
+  )
+
 const isDevToolsProductionDependency = (root: string): boolean =>
   findApplicationPackageJsonPath(root).pipe(
     Option.flatMap(packageJsonPath =>
@@ -125,6 +157,29 @@ export const devToolsOverlayPlugin = (): Plugin => {
 
   return {
     name: 'foldkit:devtools-overlay',
+    // NOTE: the optimizer only runs for the dev server, and the overlay's
+    // imports resolve only when the injection check passes, so the entries are
+    // added under exactly the conditions where the served page will import
+    // them. Declaring them unconditionally would log a "failed to resolve"
+    // warning in every project without DevTools installed. A linked DevTools,
+    // the workspace's own examples included, stays undeclared and keeps being
+    // served from source.
+    config: (userConfig, environment) => {
+      const root = userConfig.root ?? process.cwd()
+      if (
+        environment.command !== 'serve' ||
+        !shouldInjectDevToolsOverlay(environment.command, root) ||
+        !isDevToolsResolvedIntoNodeModules(root)
+      ) {
+        return undefined
+      }
+
+      return {
+        optimizeDeps: {
+          include: [...DEV_TOOLS_OVERLAY_IMPORT_SPECIFIERS],
+        },
+      }
+    },
     configResolved: config => {
       isInjectionEnabled = shouldInjectDevToolsOverlay(
         config.command,
