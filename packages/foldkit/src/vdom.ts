@@ -130,14 +130,18 @@ export const dedupeMemoizedResult = (
 // container was is never `sameVnode` with an element, so `createElm` builds the
 // tree fresh and replaces the container, exactly as a boot into an empty
 // container does.
-const patchFreshInto = (container: HTMLElement, nextVNode: VNode): VNode => {
+const patchFreshInto = (
+  container: HTMLElement,
+  nextVNode: VNode,
+  onRootPatched?: (vnode: VNode) => void,
+): VNode => {
   const parent = container.parentNode
   if (parent === null) {
-    return patch(toVNode(container), nextVNode)
+    return patch(toVNode(container), nextVNode, onRootPatched)
   }
   const placeholder = container.ownerDocument.createComment('')
   parent.replaceChild(placeholder, container)
-  return patch(toVNode(placeholder), nextVNode)
+  return patch(toVNode(placeholder), nextVNode, onRootPatched)
 }
 
 export const __patchVNode = (
@@ -145,13 +149,23 @@ export const __patchVNode = (
   nextVNode: VNode | null,
   container: HTMLElement,
   seen?: Set<object>,
+  onRootPatched?: (vnode: VNode) => void,
 ): VNode => {
   const dedupedVNode =
     nextVNode !== null ? dedupeSharedVNodes(nextVNode, seen) : h('!')
 
   if (Option.isNone(maybeCurrentVNode)) {
-    return patchFreshInto(container, dedupedVNode)
+    return patchFreshInto(container, dedupedVNode, onRootPatched)
   }
 
-  return patch(maybeCurrentVNode.value, dedupedVNode)
+  return patch(maybeCurrentVNode.value, dedupedVNode, onRootPatched)
+}
+
+export const __recoverVNodeAfterPatchFailure = (currentVNode: VNode): VNode => {
+  const currentElement = currentVNode.elm
+  const recoveryVNode = patch(currentVNode, h('!'))
+  if (recoveryVNode.elm !== currentElement && currentElement?.parentNode) {
+    currentElement.parentNode.removeChild(currentElement)
+  }
+  return recoveryVNode
 }

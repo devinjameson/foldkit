@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DevToolsStore } from '../devTools/store.js'
 import { INIT_INDEX, latestEntryIndex } from '../devTools/store.js'
-import { type Html, __htmlBuilder, createLazy } from '../html/index.js'
+import { type Html, Prop, __htmlBuilder, createLazy } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import * as Mount from '../mount/index.js'
 import { evo } from '../struct/index.js'
@@ -451,12 +451,16 @@ describe('Mount view-state awareness', () => {
 
   it('delivers a result when resume inserts a cached lazy Mount', async () => {
     const processedTags: Array<Message['_tag']> = []
+    let renderEditorCount = 0
     const mountEditor: Mount.MountAction<Message> = {
       name: 'MountEditor',
       f: () => Stream.make(Message.CompletedMountEditor()),
     }
     const lazyEditor = createLazy()
-    const renderEditor = (): Html => editorView(mountEditor)
+    const renderEditor = (): Html => {
+      renderEditorCount += 1
+      return editorView(mountEditor)
+    }
     const renderLazyEditor = (): Html => {
       const maybeEditor = lazyEditor(renderEditor, [])
       if (maybeEditor === null) {
@@ -503,6 +507,7 @@ describe('Mount view-state awareness', () => {
         expect(
           Array_.filter(processedTags, tag => tag === 'CompletedMountEditor'),
         ).toHaveLength(1)
+        expect(renderEditorCount).toBe(1)
       })
 
       await Effect.runPromise(store.jumpTo(INIT_INDEX))
@@ -514,6 +519,7 @@ describe('Mount view-state awareness', () => {
         expect(
           Array_.filter(processedTags, tag => tag === 'CompletedMountEditor'),
         ).toHaveLength(2)
+        expect(renderEditorCount).toBe(1)
       })
     } finally {
       await Effect.runPromise(Fiber.interrupt(runtimeFiber))
@@ -802,6 +808,320 @@ describe('Mount view-state awareness', () => {
       await Effect.runPromise(Fiber.interrupt(runtimeFiber))
     }
   })
+
+  it.each([
+    { recoveryPath: 'the first jump', isPausedBeforeFailure: false },
+    { recoveryPath: 'a later jump', isPausedBeforeFailure: true },
+  ])(
+    'rebuilds from the real DOM when $recoveryPath throws midway',
+    async ({ isPausedBeforeFailure }) => {
+      let isPatchFailureEnabled = false
+      Object.defineProperty(HTMLElement.prototype, 'foldkitPatchFailure', {
+        configurable: true,
+        set: () => {
+          if (isPatchFailureEnabled) {
+            throw new Error('Historical property patch failed')
+          }
+        },
+      })
+
+      const mountEditor: Mount.MountAction<Message> = {
+        name: 'MountEditor',
+        f: () => Stream.never,
+      }
+      let maybeStore: DevToolsStore | null = null
+      __setDevToolsOverlay(store => {
+        maybeStore = store
+        return Effect.void
+      })
+
+      const runtime = makeElement({
+        Model,
+        init: () => ({ model: initialModel(false) }),
+        update,
+        view: (model: Model) =>
+          h.div(
+            [],
+            [
+              h.button([h.OnClick(Message.ShowedEditor())], ['show']),
+              h.button([h.OnClick(Message.HidEditor())], ['hide']),
+              ...(model.isEditorShown
+                ? [
+                    h.span([h.Id('inserted-before-failure')], ['Inserted']),
+                    h.div(
+                      [
+                        h.Id('failing-property'),
+                        Prop({
+                          key: 'foldkitPatchFailure',
+                          value: 'fail',
+                        }),
+                      ],
+                      ['Failure'],
+                    ),
+                    editorView(mountEditor),
+                  ]
+                : [h.p([h.Id('stable-node')], ['Stable'])]),
+            ],
+          ),
+        crash: { view: () => h.div([], ['Crashed']) },
+        container,
+        devTools: { show: 'Always', keyframeInterval: 1 },
+      })
+      const runtimeFiber = Effect.runFork(runtime.start())
+
+      try {
+        await vi.waitFor(() => {
+          expect(maybeStore).not.toBeNull()
+          expect(document.querySelector('#stable-node')).not.toBeNull()
+        })
+        const store = requireDevToolsStore(maybeStore)
+
+        clickButton('show')
+        await vi.waitFor(() => {
+          expect(
+            document.querySelector('#inserted-before-failure'),
+          ).not.toBeNull()
+        })
+        const shownState = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        const shownIndex = latestEntryIndex(shownState)
+
+        clickButton('hide')
+        await vi.waitFor(() => {
+          expect(document.querySelector('#stable-node')).not.toBeNull()
+        })
+        const hiddenState = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        const hiddenIndex = latestEntryIndex(hiddenState)
+
+        if (isPausedBeforeFailure) {
+          await Effect.runPromise(store.jumpTo(hiddenIndex))
+        }
+        isPatchFailureEnabled = true
+        const jumpExit = await Effect.runPromise(
+          Effect.exit(store.jumpTo(shownIndex)),
+        )
+
+        expect(Exit.isFailure(jumpExit)).toBe(true)
+        if (!isPausedBeforeFailure) {
+          await vi.waitFor(() => {
+            expect(document.querySelector('#stable-node')).not.toBeNull()
+          })
+        }
+        const pausedState = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        expect(pausedState.isPaused).toBe(isPausedBeforeFailure)
+        if (isPausedBeforeFailure) {
+          expect(pausedState.pausedAtIndex).toBe(hiddenIndex)
+        }
+        expect(document.querySelector('#stable-node')).not.toBeNull()
+        expect(document.querySelector('#inserted-before-failure')).toBeNull()
+        expect(document.querySelector('#failing-property')).toBeNull()
+        expect(document.body.textContent).not.toContain('Crashed')
+
+        isPatchFailureEnabled = false
+        if (isPausedBeforeFailure) {
+          await Effect.runPromise(store.resume)
+        }
+        await waitForTwoAnimationFrames()
+        clickButton('show')
+        await vi.waitFor(() => {
+          expect(
+            document.querySelector('#inserted-before-failure'),
+          ).not.toBeNull()
+          expect(document.querySelector('#failing-property')).not.toBeNull()
+        })
+      } finally {
+        Reflect.deleteProperty(HTMLElement.prototype, 'foldkitPatchFailure')
+        await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+      }
+    },
+  )
+
+  it.each([
+    {
+      failureTiming: 'before root replacement on the first jump',
+      isFailureAfterRootReplacement: false,
+      isPausedBeforeFailure: false,
+    },
+    {
+      failureTiming: 'before root replacement on a later jump',
+      isFailureAfterRootReplacement: false,
+      isPausedBeforeFailure: true,
+    },
+    {
+      failureTiming: 'after root replacement on the first jump',
+      isFailureAfterRootReplacement: true,
+      isPausedBeforeFailure: false,
+    },
+    {
+      failureTiming: 'after root replacement on a later jump',
+      isFailureAfterRootReplacement: true,
+      isPausedBeforeFailure: true,
+    },
+  ])(
+    'recovers an empty view when a patch fails $failureTiming',
+    async ({ isFailureAfterRootReplacement, isPausedBeforeFailure }) => {
+      const valueDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype,
+        'value',
+      )
+      if (
+        valueDescriptor?.get === undefined ||
+        valueDescriptor.set === undefined
+      ) {
+        throw new Error('Expected HTMLSelectElement.value accessors')
+      }
+      const getValue = valueDescriptor.get
+      const setValue = valueDescriptor.set
+      let isPatchFailureEnabled = false
+      Object.defineProperty(HTMLElement.prototype, 'foldkitPatchFailure', {
+        configurable: true,
+        set: () => {
+          if (isPatchFailureEnabled && !isFailureAfterRootReplacement) {
+            throw new Error('Historical root creation failed')
+          }
+        },
+      })
+      Object.defineProperty(HTMLSelectElement.prototype, 'value', {
+        ...valueDescriptor,
+        get: getValue,
+        set(value: string) {
+          setValue.call(this, value)
+          if (
+            isPatchFailureEnabled &&
+            isFailureAfterRootReplacement &&
+            this.isConnected
+          ) {
+            throw new Error('Historical insert hook failed')
+          }
+        },
+      })
+
+      const subscriptionMessages = await Effect.runPromise(
+        PubSub.unbounded<Message>(),
+      )
+      let isSubscriptionReady = false
+      const subscriptions = Subscription.make<Model, Message>()(() => ({
+        testMessages: Subscription.persistent(
+          Stream.fromEffect(
+            Effect.sync(() => {
+              isSubscriptionReady = true
+            }),
+          ).pipe(Stream.flatMap(() => Stream.fromPubSub(subscriptionMessages))),
+        ),
+      }))
+      let maybeStore: DevToolsStore | null = null
+      __setDevToolsOverlay(store => {
+        maybeStore = store
+        return Effect.void
+      })
+      const shownView = (): Html => {
+        if (isFailureAfterRootReplacement) {
+          return h.select(
+            [h.Id('replacement-root'), h.Value('b')],
+            [h.option([h.Value('a')], ['A']), h.option([h.Value('b')], ['B'])],
+          )
+        }
+        return h.div(
+          [h.Id('replacement-root')],
+          [
+            h.span([], ['Inserted']),
+            h.div(
+              [
+                Prop({
+                  key: 'foldkitPatchFailure',
+                  value: 'fail',
+                }),
+              ],
+              ['Failure'],
+            ),
+          ],
+        )
+      }
+
+      const runtime = makeElement({
+        Model,
+        init: () => ({ model: initialModel(false) }),
+        update,
+        view: (model: Model) => (model.isEditorShown ? shownView() : h.empty),
+        crash: { view: () => h.div([], ['Crashed']) },
+        container,
+        subscriptions,
+        devTools: { show: 'Always', keyframeInterval: 1 },
+      })
+      const runtimeFiber = Effect.runFork(runtime.start())
+
+      try {
+        await vi.waitFor(() => {
+          expect(maybeStore).not.toBeNull()
+          expect(isSubscriptionReady).toBe(true)
+        })
+        const store = requireDevToolsStore(maybeStore)
+
+        PubSub.publishUnsafe(subscriptionMessages, Message.ShowedEditor())
+        await vi.waitFor(() => {
+          expect(document.querySelector('#replacement-root')).not.toBeNull()
+        })
+        const shownState = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        const shownIndex = latestEntryIndex(shownState)
+
+        PubSub.publishUnsafe(subscriptionMessages, Message.HidEditor())
+        await vi.waitFor(() => {
+          expect(document.querySelector('#replacement-root')).toBeNull()
+        })
+        const hiddenState = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        const hiddenIndex = latestEntryIndex(hiddenState)
+
+        if (isPausedBeforeFailure) {
+          await Effect.runPromise(store.jumpTo(hiddenIndex))
+        }
+        isPatchFailureEnabled = true
+        const jumpExit = await Effect.runPromise(
+          Effect.exit(store.jumpTo(shownIndex)),
+        )
+
+        expect(Exit.isFailure(jumpExit)).toBe(true)
+        if (!isPausedBeforeFailure) {
+          await waitForTwoAnimationFrames()
+        }
+        const pausedState = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        expect(pausedState.isPaused).toBe(isPausedBeforeFailure)
+        if (isPausedBeforeFailure) {
+          expect(pausedState.pausedAtIndex).toBe(hiddenIndex)
+        }
+        expect(document.querySelector('#replacement-root')).toBeNull()
+        expect(document.body.textContent).not.toContain('Crashed')
+
+        isPatchFailureEnabled = false
+        if (isPausedBeforeFailure) {
+          await Effect.runPromise(store.resume)
+          await waitForTwoAnimationFrames()
+        }
+        PubSub.publishUnsafe(subscriptionMessages, Message.ShowedEditor())
+        await vi.waitFor(() => {
+          expect(document.querySelector('#replacement-root')).not.toBeNull()
+        })
+      } finally {
+        Reflect.deleteProperty(HTMLElement.prototype, 'foldkitPatchFailure')
+        Object.defineProperty(
+          HTMLSelectElement.prototype,
+          'value',
+          valueDescriptor,
+        )
+        await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+      }
+    },
+  )
 
   it('patches the live view when history eviction auto-resumes', async () => {
     const subscriptionMessages = await Effect.runPromise(

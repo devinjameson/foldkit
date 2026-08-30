@@ -420,13 +420,33 @@ export const createDevToolsStore = (
         const state = yield* SubscriptionRef.get(stateRef)
         const model = resolveModel(state, index)
         yield* bridge.render(model)
-        yield* SubscriptionRef.set(
+        const wasTargetEvicted = yield* SubscriptionRef.modify(
           stateRef,
-          evo(state, {
-            isPaused: () => true,
-            pausedAtIndex: () => index,
-          }),
+          currentState => {
+            const isTargetRetained =
+              index === INIT_INDEX ||
+              (index >= currentState.startIndex &&
+                index <= latestEntryIndex(currentState))
+
+            return isTargetRetained
+              ? [
+                  false,
+                  evo(currentState, {
+                    isPaused: () => true,
+                    pausedAtIndex: () => index,
+                  }),
+                ]
+              : [
+                  true,
+                  evo(currentState, {
+                    isPaused: () => false,
+                  }),
+                ]
+          },
         )
+        if (wasTargetEvicted) {
+          yield* bridge.markRenderPending
+        }
         return model
       })
 

@@ -78,7 +78,11 @@ import { RenderCommit, createCommitNotifier } from '../render/commit.js'
 import type { Subscriptions } from '../subscription/subscription.js'
 import type { Return as UpdateReturn } from '../update/index.js'
 import { Url, fromString as urlFromString } from '../url/index.js'
-import { VNode, __patchVNode } from '../vdom.js'
+import {
+  VNode,
+  __patchVNode,
+  __recoverVNodeAfterPatchFailure,
+} from '../vdom.js'
 import { addNavigationEventListeners } from './browserListeners.js'
 import { defaultCrashView, noOpDispatch } from './crashUI.js'
 import { deepFreeze } from './deepFreeze.js'
@@ -2478,6 +2482,32 @@ const makeRuntime = <
 
         const vnodeSlot: VNodeSlot = { maybeCurrentVNode: Option.none() }
 
+        const patchRuntimeVNode = (
+          maybeCurrentVNode: Option.Option<VNode>,
+          nextVNode: VNode | null,
+          seen?: Set<object>,
+        ): VNode => {
+          try {
+            return __patchVNode(
+              maybeCurrentVNode,
+              nextVNode,
+              container,
+              seen,
+              patchedVNode => {
+                vnodeSlot.maybeCurrentVNode = Option.some(patchedVNode)
+              },
+            )
+          } catch (error) {
+            const maybeRecoveryVNode = vnodeSlot.maybeCurrentVNode
+            if (Option.isSome(maybeRecoveryVNode)) {
+              vnodeSlot.maybeCurrentVNode = Option.some(
+                __recoverVNodeAfterPatchFailure(maybeRecoveryVNode.value),
+              )
+            }
+            throw error
+          }
+        }
+
         // NOTE: consumed by the first render only. Set when this boot found
         // an adoptable server-rendered root; the first patch then goes
         // through `__hydrateVNode` instead of replacing the container.
@@ -2582,10 +2612,11 @@ const makeRuntime = <
 
         const dispatch = { dispatchAsync, dispatchSync }
 
+        let isResumePatchActive = false
         const mountRuntime = MountRuntime.of({
           viewStateChanges,
           dispatch: message => {
-            if (currentViewState === 'Live') {
+            if (currentViewState === 'Live' || isResumePatchActive) {
               dispatchSync(message)
             }
           },
@@ -2945,10 +2976,9 @@ const makeRuntime = <
                     buildId ?? '',
                   )
                 }
-                return __patchVNode(
+                return patchRuntimeVNode(
                   maybeCurrentVNode,
                   nextVNode,
-                  container,
                   boundaryRegistry.dedupeSeen,
                 )
               }),
@@ -3178,25 +3208,6 @@ const makeRuntime = <
           mountRuntime,
         )
 
-        const makeResumePatchRenderContext = () => {
-          let dispatchMountMessage = dispatchSync
-          const resumePatchMountRuntime = MountRuntime.of({
-            viewStateChanges: mountRuntime.viewStateChanges,
-            dispatch: message => dispatchMountMessage(message),
-          })
-
-          return {
-            runtimeContext: Context.add(
-              liveRenderContext,
-              MountRuntime,
-              resumePatchMountRuntime,
-            ),
-            finishResumePatch: () => {
-              dispatchMountMessage = mountRuntime.dispatch
-            },
-          }
-        }
-
         // NOTE: the render, Mount drain, DevTools attribution, and
         // patch-time-buffer flush. Shared by the plain path (called directly)
         // and the View Transition path (called from the transition's update
@@ -3212,21 +3223,20 @@ const makeRuntime = <
           // it. What this frame painted is what the next transition animates
           // away from.
           const renderedModel = liveModel
-          // NOTE: Mounts inserted by the live resume patch belong to the live
-          // DOM, but `currentViewState` must stay `Paused` until that patch
-          // completes. Give only those new Mounts a dispatcher that reaches
-          // the frame's existing patch-time Message buffer, then restore the
-          // normal view-state gate for everything they emit afterward.
-          const resumePatch =
-            currentViewState === 'Paused'
-              ? makeResumePatchRenderContext()
-              : null
+          const isResuming = currentViewState === 'Paused'
+          if (isResuming) {
+            // NOTE: Messages accumulated while a historical view owned the DOM
+            // did not cause this repaint. A Message arriving during the patch
+            // can repopulate this field when the buffered queue drains.
+            maybeLastDirtyMessage = Option.none()
+            // NOTE: Mounts inserted by the live resume patch belong to the live
+            // DOM, but `currentViewState` stays `Paused` until the patch commits.
+            // The stable Mount dispatcher admits their synchronous results into
+            // the frame's existing Message buffer only for that patch.
+            isResumePatchActive = true
+          }
           try {
-            renderSyncPlain(
-              liveModel,
-              maybeLastDirtyMessage,
-              resumePatch?.runtimeContext ?? liveRenderContext,
-            )
+            renderSyncPlain(liveModel, maybeLastDirtyMessage, liveRenderContext)
             // NOTE: after the patch, so a render that threw leaves this on the
             // Model still on screen, and before `drainPendingMessages` below,
             // whose handlers can advance `liveModel` again.
@@ -3235,7 +3245,6 @@ const makeRuntime = <
             // Mounts paused through the patch itself, then reopen their
             // dispatch and publish `Live` only once the live DOM is installed.
             setViewState('Live')
-            resumePatch?.finishResumePatch()
             if (devToolsStore !== null) {
               const mountEvents = drainMountEvents()
               Effect.runFork(
@@ -3248,6 +3257,7 @@ const makeRuntime = <
           } catch (error) {
             Effect.runFork(crashWith(Cause.die(error), maybeLastDirtyMessage))
           } finally {
+            isResumePatchActive = false
             isRenderingFrame = false
           }
           // NOTE: Messages dispatched by patch-time hooks (for example,
@@ -3274,6 +3284,9 @@ const makeRuntime = <
         const startFrameViewTransition = (
           resolved: ResolvedViewTransition<Model, Message>,
         ): boolean => {
+          if (currentViewState === 'Paused') {
+            return false
+          }
           if (resolved.reducedMotionQuery.matches) {
             return false
           }
@@ -3394,10 +3407,9 @@ const makeRuntime = <
           const [patchedVNode, maybePatchDuration] = measureSlowPhase(
             resolvedSlowPatch,
             () =>
-              __patchVNode(
+              patchRuntimeVNode(
                 maybeCurrentVNode,
                 nextDocument.body,
-                container,
                 boundaryRegistry.dedupeSeen,
               ),
           )

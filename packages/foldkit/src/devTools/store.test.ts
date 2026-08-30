@@ -530,6 +530,144 @@ describe('DevToolsStore', () => {
       expect(rendered[rendered.length - 1]).toEqual({ count: 2 })
     })
 
+    it('preserves history recorded while the historical view renders', () => {
+      let maybeStore: DevToolsStore | null = null
+      const bridge: Bridge = {
+        replay: counterReplay,
+        render: () =>
+          Effect.suspend(() => {
+            if (maybeStore === null) {
+              return Effect.die('Expected the store to be installed')
+            }
+            return maybeStore.recordMessage(
+              clickedIncrement,
+              initialModel,
+              { count: 1 },
+              [],
+              true,
+            )
+          }),
+        markRenderPending: Effect.void,
+      }
+      const store = run(createDevToolsStore(bridge, { keyframeInterval: 1 }))
+      maybeStore = store
+      run(store.recordInit(initialModel, []))
+
+      run(store.jumpTo(-1))
+
+      const state = getState(store)
+      expect(state.entries).toHaveLength(1)
+      expect(state.maybeLatestModel).toEqual(Option.some({ count: 1 }))
+      expect(state.isPaused).toBe(true)
+      expect(state.pausedAtIndex).toBe(-1)
+    })
+
+    it('repaints live when the jump target is evicted during rendering', () => {
+      let maybeStore: DevToolsStore | null = null
+      let markedPendingCount = 0
+      const bridge: Bridge = {
+        replay: counterReplay,
+        render: () =>
+          Effect.suspend(() => {
+            if (maybeStore === null) {
+              return Effect.die('Expected the store to be installed')
+            }
+            return maybeStore.recordMessage(
+              clickedIncrement,
+              { count: 1 },
+              { count: 2 },
+              [],
+              true,
+            )
+          }),
+        markRenderPending: Effect.sync(() => {
+          markedPendingCount += 1
+        }),
+      }
+      const store = run(
+        createDevToolsStore(bridge, {
+          maxEntries: 1,
+          keyframeInterval: 1,
+        }),
+      )
+      maybeStore = store
+      run(store.recordInit(initialModel, []))
+      run(
+        store.recordMessage(
+          clickedIncrement,
+          initialModel,
+          { count: 1 },
+          [],
+          true,
+        ),
+      )
+
+      run(store.jumpTo(0))
+
+      const state = getState(store)
+      expect(state.startIndex).toBe(1)
+      expect(state.entries).toHaveLength(1)
+      expect(state.isPaused).toBe(false)
+      expect(markedPendingCount).toBe(1)
+    })
+
+    it('resumes when a jump target is evicted from another paused view', () => {
+      let maybeStore: DevToolsStore | null = null
+      let isRecordingDuringRender = false
+      let markedPendingCount = 0
+      const bridge: Bridge = {
+        replay: counterReplay,
+        render: () => {
+          if (!isRecordingDuringRender) {
+            return Effect.void
+          }
+          return Effect.suspend(() => {
+            if (maybeStore === null) {
+              return Effect.die('Expected the store to be installed')
+            }
+            return maybeStore.recordMessage(
+              clickedIncrement,
+              { count: 1 },
+              { count: 2 },
+              [],
+              true,
+            )
+          })
+        },
+        markRenderPending: Effect.sync(() => {
+          markedPendingCount += 1
+        }),
+      }
+      const store = run(
+        createDevToolsStore(bridge, {
+          maxEntries: 1,
+          keyframeInterval: 1,
+        }),
+      )
+      maybeStore = store
+      run(store.recordInit(initialModel, []))
+      run(
+        store.recordMessage(
+          clickedIncrement,
+          initialModel,
+          { count: 1 },
+          [],
+          true,
+        ),
+      )
+      run(store.jumpTo(-1))
+      expect(getState(store).isPaused).toBe(true)
+
+      isRecordingDuringRender = true
+      run(store.jumpTo(0))
+
+      const state = getState(store)
+      expect(state.startIndex).toBe(1)
+      expect(state.entries).toHaveLength(1)
+      expect(state.isPaused).toBe(false)
+      expect(markedPendingCount).toBe(1)
+    })
+
     it('returns the resolved model so callers skip a second resolution', () => {
       const { bridge, store, rendered } = makeStore()
       const replaySpy = vi.spyOn(bridge, 'replay')

@@ -51,10 +51,11 @@ const resolveOrCache = <Args extends ReadonlyArray<unknown>>(
   const dispatch = requireDispatch()
   const mountDispatch = requireMountDispatch()
   const { registry } = requireBoundary()
-  // NOTE: dispatcher identities in the cache key matter for time travel.
-  // Replay installs `noOpDispatch`, and resume temporarily installs a Mount
-  // dispatcher that preserves results from Mounts inserted by the live patch.
-  // A cache hit from another mode would retain stale handler closures.
+  // NOTE: dispatcher identities belong in the cache key because the cached
+  // VNode closes over both of them. Replay changes the ordinary dispatcher to
+  // `noOpDispatch`, while a renderer or test context can independently change
+  // the Mount dispatcher. A hit across either boundary would retain stale
+  // handler closures.
   if (
     Predicate.isNotUndefined(previousEntry) &&
     previousEntry.fn === fn &&

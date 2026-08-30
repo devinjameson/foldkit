@@ -1,9 +1,10 @@
-import { Effect, Fiber, Option, Schema } from 'effect'
+import { Effect, Fiber, Option, PubSub, Schema, Stream } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { type DevToolsStore, INIT_INDEX } from '../devTools/store.js'
 import { __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
+import * as Subscription from '../subscription/subscription.js'
 import type * as Update from '../update/index.js'
 import { __setDevToolsOverlay, makeElement } from './runtime.js'
 import {
@@ -165,6 +166,7 @@ describe('__resolveStartViewTransition', () => {
 const Message = defineMessageUnion({
   ClickedTransition: {},
   ClickedPlain: {},
+  Ticked: {},
 })
 type Message = typeof Message.Type
 
@@ -177,6 +179,7 @@ const update = (_model: Model, message: Message) =>
   Message.match<Update.Return<Model, Message>>(message, {
     ClickedTransition: () => ({ model: { label: 'transitioned' } }),
     ClickedPlain: () => ({ model: { label: 'plain' } }),
+    Ticked: () => ({ model: { label: 'ticked' } }),
   })
 
 describe('makeElement with viewTransition', () => {
@@ -270,6 +273,80 @@ describe('makeElement with viewTransition', () => {
       })
 
       expect(document.body.textContent).not.toContain('transitioned')
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(fiber))
+    }
+  })
+
+  it('resumes a paused view without a View Transition', async () => {
+    const transitionCalls: Array<unknown> = []
+    Object.defineProperty(document, 'startViewTransition', {
+      configurable: true,
+      value: (callbackOptions: () => void) => {
+        transitionCalls.push(callbackOptions)
+        callbackOptions()
+        return {
+          updateCallbackDone: Promise.resolve(),
+          skipTransition: () => {},
+        }
+      },
+    })
+
+    const subscriptionMessages = await Effect.runPromise(
+      PubSub.unbounded<Message>(),
+    )
+    let isSubscriptionReady = false
+    const subscriptions = Subscription.make<Model, Message>()(() => ({
+      testMessages: Subscription.persistent(
+        Stream.fromEffect(
+          Effect.sync(() => {
+            isSubscriptionReady = true
+          }),
+        ).pipe(Stream.flatMap(() => Stream.fromPubSub(subscriptionMessages))),
+      ),
+    }))
+    let didProcessTick = false
+    let maybeStore: DevToolsStore | null = null
+    __setDevToolsOverlay(store => {
+      maybeStore = store
+      return Effect.void
+    })
+
+    const element = makeElement({
+      Model,
+      init: () => ({ model: { label: 'initial' } }),
+      update: (model, message) => {
+        if (message._tag === 'Ticked') {
+          didProcessTick = true
+        }
+        return update(model, message)
+      },
+      view: model => h.div([], [model.label]),
+      subscriptions,
+      container,
+      viewTransition: () => true,
+      devTools: { show: 'Always' },
+    })
+    const fiber = Effect.runFork(element.start())
+
+    try {
+      await awaitBodyText('initial')
+      await vi.waitFor(() => {
+        expect(maybeStore).not.toBeNull()
+        expect(isSubscriptionReady).toBe(true)
+      })
+
+      await Effect.runPromise(maybeStore!.jumpTo(INIT_INDEX))
+      PubSub.publishUnsafe(subscriptionMessages, Message.Ticked())
+      await vi.waitFor(() => {
+        expect(didProcessTick).toBe(true)
+      })
+      expect(document.body.textContent).toContain('initial')
+
+      await Effect.runPromise(maybeStore!.resume)
+      await awaitBodyText('ticked')
+
+      expect(transitionCalls).toEqual([])
     } finally {
       await Effect.runPromise(Fiber.interrupt(fiber))
     }
