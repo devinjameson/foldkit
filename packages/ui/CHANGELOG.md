@@ -1,5 +1,96 @@
 # @foldkit/ui
 
+## 0.155.0
+
+### Minor Changes
+
+- [#1191](https://github.com/foldkit/foldkit/pull/1191) [`2d85d5a`](https://github.com/foldkit/foldkit/commit/2d85d5ae9536e3fc9c9595442c233a72c0395122) Thanks [@wmaurer](https://github.com/wmaurer)! - `ShowDialog` now reports whether the dialog opened. It produces `SucceededShowDialog` when the show completes and `FailedShowDialog` when the dialog element is already gone by the time the show runs. `CompletedShowDialog` is renamed to `SucceededShowDialog`. Update any test that resolves `ShowDialog`:
+
+  ```ts
+  // Before
+  Command.resolve(Dialog.ShowDialog, DialogMessage.CompletedShowDialog())
+
+  // After
+  Command.resolve(Dialog.ShowDialog, DialogMessage.SucceededShowDialog())
+  ```
+
+  A failed show now releases the scroll lock that the Command took, and `update` closes the Model on `FailedShowDialog`. Before this change, the page stayed locked with no dialog open. The Model also still said the dialog was open. The same dialog could then render again with no lock and no focus trap. If another overlay was open, closing the dialog released that overlay's lock, and the page under it could scroll. `ShowDialog` also releases the lock when the Command is interrupted while it waits for the commit.
+
+  `CloseDialog` now releases the dialog's resources when the element is already gone by the time the close runs. Before this change, a close with no element was ignored and the lock was never released.
+
+  `CloseDialog` also unlocks page scroll only when the close released the resources that `ShowDialog` installed. A close that runs before the show has finished leaves the lock alone. When the show then fails, it releases the lock itself. When the show succeeds, `update` closes the dialog again. Without the check on the close result, a close that ran before the show finished would release the lock, and the failed show would release it again. With another overlay open, the page under that overlay could then scroll.
+
+- [#1179](https://github.com/foldkit/foldkit/pull/1179) [`8c8758e`](https://github.com/foldkit/foldkit/commit/8c8758e64c00172c5615090e5064f83791d2ee8a) Thanks [@SyahrulBhudiF](https://github.com/SyahrulBhudiF)! - Add HoverIntent, a behavior-only Submodel for delayed hover and focus reveal across a trigger and panel.
+
+  HoverIntent opens after a configurable pointer-entry delay, keeps the interaction visible while the pointer or focus moves between its trigger and panel, and closes after a configurable grace delay. Escape closes immediately and suppresses reopening until the interaction fully disengages. The component returns headless trigger and panel event bundles only. It does not impose markup, ARIA semantics, positioning, or styling, so Hover Card and Navigation Menu implementations can compose it with their own UI behavior.
+
+- [#1188](https://github.com/foldkit/foldkit/pull/1188) [`4e7d8d4`](https://github.com/foldkit/foldkit/commit/4e7d8d4010be5a84dd37d1dc48bb97b4f4e599f3) Thanks [@devinjameson](https://github.com/devinjameson)! - Take every `Mount.define` and `Mount.defineStream` input as a named field, with the work in a single flat `execute`.
+
+  Both constructors took their inputs positionally, with the result Messages as a variadic tail and the work supplied by a second call. With args declared, that second call was itself curried: `args => element => Effect<Message>`. The outer function ran the moment a view constructed the MountAction, so anything an author wrote between the two arrows ran on every render, inside a pure view. `Command.define` had the same hazard and defers its body with `Effect.suspend`; a Mount had no equivalent.
+
+  Inputs are now named fields on a config object: `args` declares the args Schema, `messages` lists the Messages the Mount can produce, and `execute` does the work. `execute` takes one parameter that carries the live element as `element` alongside the declared args, so the curried middle step is gone. Constructing a MountAction now runs nothing at all; the runtime calls `execute` when the element enters the DOM.
+
+  `execute` keeps the same shape whether or not `args` is declared, because a Mount always has an element. An args field named `element` is rejected where you declare it, since it would collide with the element `execute` receives.
+
+  ## Migration
+
+  Move each positional argument to its field, wrap the result Messages in an array, and collapse the two arrows into one `execute` that destructures `element` alongside the args.
+
+  ```ts
+  // before
+  const AnchorPopover = Mount.define(
+    'AnchorPopover',
+    { buttonId: S.String, anchor: AnchorConfig },
+    CompletedAnchorPopover,
+  )(({ buttonId, anchor }) => element => Effect.gen(function* () { ... }))
+
+  // after
+  const AnchorPopover = Mount.define('AnchorPopover', {
+    args: { buttonId: S.String, anchor: AnchorConfig },
+    messages: [CompletedAnchorPopover],
+    execute: ({ element, buttonId, anchor }) => Effect.gen(function* () { ... }),
+  })
+  ```
+
+  A Mount with no args omits `args` and keeps the same `execute`.
+
+  ```ts
+  // before
+  const PortalToBody = Mount.define('PortalToBody', CompletedPortalToBody)(
+    element => Effect.gen(function* () { ... }),
+  )
+
+  // after
+  const PortalToBody = Mount.define('PortalToBody', {
+    messages: [CompletedPortalToBody],
+    execute: ({ element }) => Effect.gen(function* () { ... }),
+  })
+  ```
+
+  `Mount.defineStream` migrates the same way, with `execute` returning a `Stream<Message>`.
+
+  `@foldkit/ui` now requires `foldkit` 0.155.0 or newer because its Mount definitions use this config shape.
+
+  `foldkit/mount-factory-must-use-element` reads the new shape. It looks for `element` in `execute`'s destructuring pattern, and reports on `execute` itself. A Mount whose `execute` ignores its element is still an error: the element is the reason a Mount exists, and work that does not need it belongs in a Command, Subscription, or ManagedResource.
+
+  Destructure `element` and the rule checks the read, reading through a default value so `{ element = document.body }` is still checked. Reading `input.element` off an unpacked parameter is checked too. Hand the whole input somewhere the rule cannot follow, such as `attachObserver(input)` or `input[key]`, and it stops checking rather than reporting a Mount that does use its element. Reading only some other field off that input still reports, and so does an `execute` that never references its parameter at all.
+
+### Patch Changes
+
+- [#1205](https://github.com/foldkit/foldkit/pull/1205) [`9601382`](https://github.com/foldkit/foldkit/commit/960138253f09310ff1dca45d2cf84d25fb86d12d) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade `@floating-ui/dom` to 1.8.0.
+
+- [#1220](https://github.com/foldkit/foldkit/pull/1220) [`16b392c`](https://github.com/foldkit/foldkit/commit/16b392c5e304bbbea62c0aae5a4a36f90d472f71) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade Happy DOM to include its latest custom-element event-listener fix.
+
+- [#1207](https://github.com/foldkit/foldkit/pull/1207) [`2a88e37`](https://github.com/foldkit/foldkit/commit/2a88e3738d4841525be25f2ba16d958164b4f1a9) Thanks [@devinjameson](https://github.com/devinjameson)! - Move TypeDoc generation into a private workspace so package TypeScript upgrades are independent from TypeDoc's compiler support.
+
+- [#1231](https://github.com/foldkit/foldkit/pull/1231) [`aaff2e5`](https://github.com/foldkit/foldkit/commit/aaff2e53f5bf5742ae0428c5fda89a5d6974ac43) Thanks [@devinjameson](https://github.com/devinjameson)! - Match `defineTaggedUnion` and `defineRouteUnion` values through the union's own `match` instead of `Match.value` pipes with `Match.tagsExhaustive`. Internal call sites, the ssg template, and the generated FOLDKIT.md guidance now use the union method; behavior is unchanged.
+
+- [#1210](https://github.com/foldkit/foldkit/pull/1210) [`b02ce0a`](https://github.com/foldkit/foldkit/commit/b02ce0ab32a082bd40774127b8f4f6bfd6e1043e) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade development dependencies to Node 26 type definitions and Happy DOM 20.11.8.
+
+- [#1220](https://github.com/foldkit/foldkit/pull/1220) [`16b392c`](https://github.com/foldkit/foldkit/commit/16b392c5e304bbbea62c0aae5a4a36f90d472f71) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade the Happy DOM development dependency used by package tests.
+
+- [#1210](https://github.com/foldkit/foldkit/pull/1210) [`b02ce0a`](https://github.com/foldkit/foldkit/commit/b02ce0ab32a082bd40774127b8f4f6bfd6e1043e) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade the TypeScript compiler used to build and test packages to 7.0.2 while keeping compiler API tools on the official TypeScript 6 compatibility package.
+
 ## 0.154.0
 
 ### Minor Changes
