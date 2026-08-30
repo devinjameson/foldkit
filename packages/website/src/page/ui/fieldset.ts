@@ -15,36 +15,12 @@ const fieldsetClassName = 'w-full p-6'
 const legendClassName =
   'float-left w-full text-base font-semibold text-gray-900 dark:text-white'
 
-const descriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
-
-const labelClassName =
-  'block text-sm font-medium text-gray-700 dark:text-gray-300'
-
-const inputClassName =
-  'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-accent-400 dark:focus:ring-accent-400 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
-
-const textareaClassName =
-  'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-accent-400 dark:focus:ring-accent-400 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
-
-const checkboxClassName =
-  'flex h-5 w-5 shrink-0 items-center justify-center rounded border border-gray-400 dark:border-gray-500 cursor-pointer data-[checked]:bg-accent-600 data-[checked]:dark:bg-accent-500 data-[checked]:border-accent-600 data-[checked]:dark:border-accent-500 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
-
-const checkboxLabelClassName =
-  'text-sm font-normal text-gray-900 dark:text-white cursor-pointer select-none'
-
-const checkboxDescriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
-
-const fieldClassName = 'flex flex-col gap-1.5'
-
 const fieldsClassName = 'mt-4 flex flex-col gap-4'
 
 // FIELDS
 
 const checkmark = (h: HtmlBuilder<Message>): Html =>
-  h.span(
-    [h.Class('text-white dark:text-accent-900 text-xs font-normal')],
-    ['✓'],
-  )
+  h.span([h.Class('demo-checkbox-mark')], ['✓'])
 
 const nameInput = (value: string, h: HtmlBuilder<Message>): Html =>
   Input.view(
@@ -56,12 +32,12 @@ const nameInput = (value: string, h: HtmlBuilder<Message>): Html =>
       placeholder: 'Enter your full name',
       toView: attributes =>
         h.div(
-          [h.Class(fieldClassName)],
+          [h.Class('demo-field')],
           [
-            h.label([...attributes.label, h.Class(labelClassName)], ['Name']),
-            h.input([...attributes.input, h.Class(inputClassName)]),
+            h.label([...attributes.label, h.Class('demo-label')], ['Name']),
+            h.input([...attributes.input, h.Class('demo-field-input')]),
             h.span(
-              [...attributes.description, h.Class(descriptionClassName)],
+              [...attributes.description, h.Class('demo-description')],
               ['As it appears on your government-issued ID.'],
             ),
           ],
@@ -81,12 +57,15 @@ const bioTextarea = (value: string, h: HtmlBuilder<Message>): Html =>
       rows: 3,
       toView: attributes =>
         h.div(
-          [h.Class(fieldClassName)],
+          [h.Class('demo-field')],
           [
-            h.label([...attributes.label, h.Class(labelClassName)], ['Bio']),
-            h.textarea([...attributes.textarea, h.Class(textareaClassName)]),
+            h.label([...attributes.label, h.Class('demo-label')], ['Bio']),
+            h.textarea([
+              ...attributes.textarea,
+              h.Class('demo-field-textarea'),
+            ]),
             h.span(
-              [...attributes.description, h.Class(descriptionClassName)],
+              [...attributes.description, h.Class('demo-description')],
               ['A brief introduction about yourself.'],
             ),
           ],
@@ -110,20 +89,17 @@ const termsCheckbox = (isChecked: boolean, h: HtmlBuilder<Message>): Html =>
               [h.Class('flex items-center gap-2')],
               [
                 h.button(
-                  [...attributes.checkbox, h.Class(checkboxClassName)],
+                  [...attributes.checkbox, h.Class('demo-checkbox')],
                   isChecked ? [checkmark(h)] : [],
                 ),
                 h.label(
-                  [...attributes.label, h.Class(checkboxLabelClassName)],
+                  [...attributes.label, h.Class('demo-toggle-label')],
                   ['I agree to the terms and conditions'],
                 ),
               ],
             ),
             h.p(
-              [
-                ...attributes.description,
-                h.Class(checkboxDescriptionClassName),
-              ],
+              [...attributes.description, h.Class('demo-description')],
               ['You agree to our Terms of Service and Privacy Policy.'],
             ),
           ],
@@ -142,10 +118,10 @@ const disabledNameInput = (h: HtmlBuilder<Message>): Html =>
       value: 'Ada Lovelace',
       toView: attributes =>
         h.div(
-          [h.Class(fieldClassName)],
+          [h.Class('demo-field')],
           [
-            h.label([...attributes.label, h.Class(labelClassName)], ['Name']),
-            h.input([...attributes.input, h.Class(inputClassName)]),
+            h.label([...attributes.label, h.Class('demo-label')], ['Name']),
+            h.input([...attributes.input, h.Class('demo-field-input')]),
           ],
         ),
     },
@@ -162,10 +138,13 @@ const disabledBioTextarea = (h: HtmlBuilder<Message>): Html =>
       rows: 3,
       toView: attributes =>
         h.div(
-          [h.Class(fieldClassName)],
+          [h.Class('demo-field')],
           [
-            h.label([...attributes.label, h.Class(labelClassName)], ['Bio']),
-            h.textarea([...attributes.textarea, h.Class(textareaClassName)]),
+            h.label([...attributes.label, h.Class('demo-label')], ['Bio']),
+            h.textarea([
+              ...attributes.textarea,
+              h.Class('demo-field-textarea'),
+            ]),
           ],
         ),
     },
@@ -184,11 +163,11 @@ const disabledTermsCheckbox = (h: HtmlBuilder<Message>): Html =>
           [h.Class('flex items-center gap-2')],
           [
             h.button(
-              [...attributes.checkbox, h.Class(checkboxClassName)],
+              [...attributes.checkbox, h.Class('demo-checkbox')],
               [checkmark(h)],
             ),
             h.label(
-              [...attributes.label, h.Class(checkboxLabelClassName)],
+              [...attributes.label, h.Class('demo-toggle-label')],
               ['I agree to the terms and conditions'],
             ),
           ],
@@ -213,10 +192,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
                 ['Personal Information'],
               ),
               h.span(
-                [
-                  ...attributes.description,
-                  h.Class(`${descriptionClassName} mt-1`),
-                ],
+                [...attributes.description, h.Class('demo-description mt-1')],
                 ['We just need a few details.'],
               ),
               h.div(
@@ -250,10 +226,7 @@ export const disabledDemo = (_model: Model, h: HtmlBuilder<Message>) => {
                 ['Personal Information'],
               ),
               h.span(
-                [
-                  ...attributes.description,
-                  h.Class(`${descriptionClassName} mt-1`),
-                ],
+                [...attributes.description, h.Class('demo-description mt-1')],
                 ['This fieldset is disabled.'],
               ),
               h.div(

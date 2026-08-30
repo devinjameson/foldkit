@@ -7,14 +7,11 @@ import { Message } from './message'
 
 // DEMO CONTENT
 
-const triggerClassName =
-  'inline-flex items-center gap-1.5 px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+const triggerClassName = 'demo-neutral-button inline-flex items-center gap-1.5'
 
-const basicPanelClassName =
-  'w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-cream dark:bg-gray-800 shadow-lg p-4 z-10 outline-none'
+const basicPanelClassName = 'demo-popup-surface w-64 p-4'
 
-const animatedPanelClassName =
-  'w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-cream dark:bg-gray-800 shadow-lg p-4 z-10 outline-none transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0'
+const animatedPanelClassName = `${basicPanelClassName} transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0`
 
 type PanelVariant = 'Basic' | 'Animated' | 'Arrow'
 
@@ -146,13 +143,10 @@ const labeledPopoverDemo = (
   h: HtmlBuilder<Message>,
 ): Array<Html> => [
   h.div(
-    [h.Class('flex flex-col gap-1.5')],
+    [h.Class('demo-field')],
     [
       h.label(
-        [
-          h.For(Popover.buttonId(popoverModel.id)),
-          h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-        ],
+        [h.For(Popover.buttonId(popoverModel.id)), h.Class('demo-label')],
         ['Product menu'],
       ),
       h.div(
@@ -253,12 +247,12 @@ export const nestedDemo = (
 ) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
           [
             h.For(Popover.buttonId(parentPopoverModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+            h.Class('demo-label'),
           ],
           ['Account'],
         ),

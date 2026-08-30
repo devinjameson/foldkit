@@ -9,8 +9,7 @@ import type { City } from './model'
 
 // DEMO CONTENT
 
-const triggerClassName =
-  'px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+const triggerClassName = 'demo-neutral-button'
 
 const backdropClassName = 'fixed inset-0 bg-black/50'
 
@@ -38,8 +37,7 @@ const dialogClassName =
 
 const actionsClassName = 'flex gap-2 justify-end'
 
-const cancelButtonClassName =
-  'px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+const cancelButtonClassName = 'demo-neutral-button'
 
 const confirmButtonClassName =
   'button-accent px-4 py-2 text-base cursor-pointer rounded-lg'
