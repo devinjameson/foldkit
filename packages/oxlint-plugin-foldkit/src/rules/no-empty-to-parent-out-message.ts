@@ -2,34 +2,21 @@ import { Array, Effect, Option } from 'effect'
 import {
   Diagnostic,
   type ESTree,
-  type OxlintScope,
   type Reference,
   Rule,
   RuleContext,
 } from 'effect-oxlint'
 
 import {
-  isIdentifier,
+  indexReferences,
+  isIdentifierReference,
   isObjectExpression,
-  staticStringValue,
+  isObjectProperty,
+  isUnshadowedReference,
+  staticPropertyName,
 } from '../guards.ts'
 
 const TO_PARENT_OUT_MESSAGE_PROPERTY = 'toParentOutMessage'
-
-const isObjectProperty = (node: unknown): node is ESTree.ObjectProperty =>
-  typeof node === 'object' &&
-  node !== null &&
-  'type' in node &&
-  node.type === 'Property'
-
-const staticPropertyName = (
-  property: ESTree.ObjectProperty,
-): Option.Option<string> => {
-  if (!property.computed && isIdentifier(property.key)) {
-    return Option.some(property.key.name)
-  }
-  return staticStringValue(property.key)
-}
 
 const isArrowFunctionExpression = (
   node: unknown,
@@ -51,23 +38,6 @@ const isMapperFunction = (
   (isArrowFunctionExpression(node) && !node.async) ||
   (isFunctionExpression(node) && !node.async && !node.generator)
 
-const isIdentifierReference = (
-  node: unknown,
-): node is ESTree.IdentifierReference => isIdentifier(node)
-
-const indexReferences = (
-  scopes: ReadonlyArray<OxlintScope>,
-): WeakMap<ESTree.Node, Reference> => {
-  const references = new WeakMap<ESTree.Node, Reference>()
-
-  for (const scope of scopes) {
-    for (const reference of scope.references) {
-      references.set(reference.identifier, reference)
-    }
-  }
-  return references
-}
-
 const isUnshadowedUndefined = (
   references: WeakMap<ESTree.Node, Reference> | undefined,
   node: unknown,
@@ -75,15 +45,7 @@ const isUnshadowedUndefined = (
   if (!isIdentifierReference(node) || node.name !== 'undefined') {
     return false
   }
-  if (references === undefined) {
-    return true
-  }
-
-  const reference = references.get(node)
-  return (
-    reference !== undefined &&
-    (reference.resolved === null || Array.isArrayEmpty(reference.resolved.defs))
-  )
+  return isUnshadowedReference(references, node)
 }
 
 const directlyReturnsUndefined = (

@@ -18,6 +18,7 @@ import { noEmptyObjectTaggedCall } from './rules/no-empty-object-tagged-call.ts'
 import { noEmptyToParentOutMessage } from './rules/no-empty-to-parent-out-message.ts'
 import { noHandRolledCommandStruct } from './rules/no-hand-rolled-command-struct.ts'
 import { noHardcodedRouteStrings } from './rules/no-hardcoded-route-strings.ts'
+import { noImpureCallAtDecisionTime } from './rules/no-impure-call-at-decision-time.ts'
 import { noModuleLevelMutableState } from './rules/no-module-level-mutable-state.ts'
 import { noNonportableServerGlobals } from './rules/no-nonportable-server-globals.ts'
 import { noNoopMessage } from './rules/no-noop-message.ts'
@@ -50,6 +51,7 @@ const basePlugin = Plugin.define({
     'no-empty-object-tagged-call': noEmptyObjectTaggedCall,
     'no-hand-rolled-command-struct': noHandRolledCommandStruct,
     'no-hardcoded-route-strings': noHardcodedRouteStrings,
+    'no-impure-call-at-decision-time': noImpureCallAtDecisionTime,
     'no-module-level-mutable-state': noModuleLevelMutableState,
     'no-nonportable-server-globals': noNonportableServerGlobals,
     'no-noop-message': noNoopMessage,
@@ -86,13 +88,34 @@ const serverFilePatterns = [
   '**/server/**/*.ts',
   '**/server/**/*.tsx',
   '**/prerender.ts',
+  '**/prerender.tsx',
 ]
+
+const entryFilePatterns = [
+  '**/entry.ts',
+  '**/entry.tsx',
+  '**/entry.client.ts',
+  '**/entry.client.tsx',
+  '**/entry.server.ts',
+  '**/entry.server.tsx',
+]
+
+const decisionTimeRuleId = 'foldkit/no-impure-call-at-decision-time'
 
 const serverOverride: Override = {
   files: serverFilePatterns,
   excludeFiles: testFilePatterns,
   rules: {
     'foldkit/no-nonportable-server-globals': 'error',
+    [decisionTimeRuleId]: 'off',
+  },
+}
+
+const entryOverride: Override = {
+  files: entryFilePatterns,
+  excludeFiles: testFilePatterns,
+  rules: {
+    [decisionTimeRuleId]: 'off',
   },
 }
 
@@ -117,7 +140,7 @@ const withOverrides = (config: Plugin.OxlintConfig): OverriddenConfig => ({
     ...config.rules,
     'foldkit/no-nonportable-server-globals': 'off',
   },
-  overrides: [serverOverride, testOverride(config)],
+  overrides: [serverOverride, entryOverride, testOverride(config)],
 })
 
 export default {

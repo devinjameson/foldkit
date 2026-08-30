@@ -1,12 +1,12 @@
-import { Array, Effect } from 'effect'
+import { Effect, Option } from 'effect'
+import { Diagnostic, type ESTree, Rule, RuleContext } from 'effect-oxlint'
+
 import {
-  Diagnostic,
-  type ESTree,
-  type OxlintScope,
-  type Reference,
-  Rule,
-  RuleContext,
-} from 'effect-oxlint'
+  indexReferences,
+  isUnshadowedReference,
+  staticMemberName,
+  staticPropertyName,
+} from '../guards.ts'
 
 const restrictedGlobalNames: ReadonlySet<string> = new Set([
   'alert',
@@ -47,37 +47,6 @@ const isInsideTypeQuery = (node: ESTree.Node): boolean => {
   return false
 }
 
-const staticMemberName = (
-  node: ESTree.MemberExpression,
-): string | undefined => {
-  if (!node.computed && node.property.type === 'Identifier') {
-    return node.property.name
-  }
-  if (
-    node.computed &&
-    node.property.type === 'Literal' &&
-    typeof node.property.value === 'string'
-  ) {
-    return node.property.value
-  }
-  return undefined
-}
-
-const staticPropertyName = (
-  property: Readonly<{ key: ESTree.PropertyKey }>,
-): string | undefined => {
-  if (property.key.type === 'Identifier') {
-    return property.key.name
-  }
-  if (
-    property.key.type === 'Literal' &&
-    typeof property.key.value === 'string'
-  ) {
-    return property.key.value
-  }
-  return undefined
-}
-
 const destructuringSource = (
   node: ESTree.ObjectPattern | ESTree.ObjectAssignmentTarget,
 ): ESTree.Expression | null | undefined => {
@@ -108,31 +77,6 @@ const restrictedGlobalDiagnostic = (node: ESTree.Node, name: string) =>
     message: `Global \`${name}\` is not portable across Foldkit server targets. Use a server API available everywhere you deploy or pass the value into the entry.`,
   })
 
-const indexReferences = (
-  scopes: ReadonlyArray<OxlintScope>,
-): WeakMap<ESTree.Node, Reference> => {
-  const references = new WeakMap<ESTree.Node, Reference>()
-
-  for (const scope of scopes) {
-    for (const reference of scope.references) {
-      references.set(reference.identifier, reference)
-    }
-  }
-  return references
-}
-
-const isUnshadowedGlobalReference = (
-  references: WeakMap<ESTree.Node, Reference>,
-  node: ESTree.Node,
-): boolean => {
-  const reference = references.get(node)
-
-  return (
-    reference !== undefined &&
-    (reference.resolved === null || Array.isArrayEmpty(reference.resolved.defs))
-  )
-}
-
 /**
  * Flags selected browser-only globals in files that run on a server.
  */
@@ -155,7 +99,7 @@ export const noNonportableServerGlobals = Rule.define({
         ) {
           return Effect.void
         }
-        return isUnshadowedGlobalReference(references, node)
+        return isUnshadowedReference(references, node)
           ? ctx.report(restrictedGlobalDiagnostic(node, node.name))
           : Effect.void
       },
@@ -167,15 +111,15 @@ export const noNonportableServerGlobals = Rule.define({
         ) {
           return Effect.void
         }
-        const memberName = staticMemberName(node)
+        const maybeMemberName = staticMemberName(node)
         if (
-          memberName === undefined ||
-          !restrictedGlobalNames.has(memberName)
+          Option.isNone(maybeMemberName) ||
+          !restrictedGlobalNames.has(maybeMemberName.value)
         ) {
           return Effect.void
         }
-        return isUnshadowedGlobalReference(references, node.object)
-          ? ctx.report(restrictedGlobalDiagnostic(node, memberName))
+        return isUnshadowedReference(references, node.object)
+          ? ctx.report(restrictedGlobalDiagnostic(node, maybeMemberName.value))
           : Effect.void
       },
       ObjectPattern: (node: ESTree.Node) => {
@@ -190,12 +134,13 @@ export const noNonportableServerGlobals = Rule.define({
           if (property.type !== 'Property') {
             return []
           }
-          const name = staticPropertyName(property)
-          return name !== undefined && restrictedGlobalNames.has(name)
-            ? [{ name, property }]
+          const maybeName = staticPropertyName(property)
+          return Option.isSome(maybeName) &&
+            restrictedGlobalNames.has(maybeName.value)
+            ? [{ name: maybeName.value, property }]
             : []
         })
-        return isUnshadowedGlobalReference(references, source)
+        return isUnshadowedReference(references, source)
           ? Effect.forEach(
               restrictedProperties,
               ({ name, property }) =>

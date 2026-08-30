@@ -3,27 +3,12 @@ import { Diagnostic, type ESTree, Rule, RuleContext } from 'effect-oxlint'
 
 import {
   isArrayExpression,
-  isIdentifier,
   isObjectExpression,
-  staticStringValue,
+  isObjectProperty,
+  staticPropertyName,
 } from '../guards.ts'
 
 const COMMANDS_PROPERTY = 'commands'
-
-const isObjectProperty = (node: unknown): node is ESTree.ObjectProperty =>
-  typeof node === 'object' &&
-  node !== null &&
-  'type' in node &&
-  node.type === 'Property'
-
-const staticPropertyName = (
-  property: ESTree.ObjectProperty,
-): Option.Option<string> => {
-  if (!property.computed && isIdentifier(property.key)) {
-    return Option.some(property.key.name)
-  }
-  return staticStringValue(property.key)
-}
 
 const isEmptyCommandsProperty = (property: ESTree.ObjectProperty): boolean =>
   Option.contains(staticPropertyName(property), COMMANDS_PROPERTY) &&
