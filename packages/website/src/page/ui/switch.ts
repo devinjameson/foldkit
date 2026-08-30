@@ -11,12 +11,7 @@ export const SWITCH_DEMO_ID = 'switch-demo'
 const wrapperClassName = 'flex items-center gap-3'
 
 const buttonClassName =
-  'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer bg-gray-300 dark:bg-gray-600 data-[checked]:bg-accent-600 data-[checked]:dark:bg-accent-500 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
-
-const labelClassName =
-  'text-sm font-normal text-gray-900 dark:text-white cursor-pointer select-none'
-
-const descriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
+  'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer bg-gray-300 dark:bg-gray-600 data-[checked]:bg-accent-600 data-[checked]:dark:bg-accent-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
 
 // VIEW
 
@@ -49,11 +44,11 @@ export const basicDemo = (
                 [],
                 [
                   h.label(
-                    [...attributes.label, h.Class(labelClassName)],
+                    [...attributes.label, h.Class('demo-toggle-label')],
                     ['Enable notifications'],
                   ),
                   h.p(
-                    [...attributes.description, h.Class(descriptionClassName)],
+                    [...attributes.description, h.Class('demo-description')],
                     ['Get notified when something important happens.'],
                   ),
                 ],
