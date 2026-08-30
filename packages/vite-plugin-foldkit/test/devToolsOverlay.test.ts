@@ -115,9 +115,6 @@ const installFoldkit = (root: string): void => {
   )
 }
 
-// A workspace link: the package's real home sits outside any node_modules
-// directory and node_modules only carries a symlink to it, which is the layout
-// the per-package linked check reads.
 const linkPackage = (
   root: string,
   packageName: string,

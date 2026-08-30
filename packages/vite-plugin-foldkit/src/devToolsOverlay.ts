@@ -1,4 +1,4 @@
-import { Option, Record, Schema as S } from 'effect'
+import { Array, Option, Record, Schema as S } from 'effect'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve, sep } from 'node:path'
 import type { Plugin } from 'vite'
@@ -204,7 +204,11 @@ export const devToolsOverlayPlugin = (): Plugin => {
         isPackageResolvedIntoNodeModules(root, packageName),
       ).map(({ specifier }) => specifier)
 
-      return include.length === 0 ? undefined : { optimizeDeps: { include } }
+      if (Array.isArrayEmpty(include)) {
+        return undefined
+      } else {
+        return { optimizeDeps: { include } }
+      }
     },
     configResolved: config => {
       isInjectionEnabled = shouldInjectDevToolsOverlay(
