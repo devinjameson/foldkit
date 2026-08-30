@@ -405,16 +405,16 @@ Import as `import { Dom } from 'foldkit'` (or `import * as Dom from 'foldkit/dom
 
 Use these directly from the `effect` package for non-DOM concerns. No Foldkit wrapper is needed.
 
-| Need                  | Use                                                    |
-| --------------------- | ------------------------------------------------------ |
-| Current time (millis) | `yield* Clock.currentTimeMillis`                       |
-| Current calendar date | `yield* Calendar.today.local` (returns `CalendarDate`) |
-| Random integer        | `yield* Random.nextIntBetween(min, max)`               |
-| Random float          | `yield* Random.nextBetween(min, max)`                  |
-| UUID                  | `yield* Effect.uuid`                                   |
-| Delay                 | `yield* Effect.sleep(Duration.millis(500))`            |
+| Need                  | Use                                                                                                                   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Current time (millis) | `yield* Clock.currentTimeMillis`                                                                                      |
+| Current calendar date | `yield* Calendar.today.local` (returns `CalendarDate`)                                                                |
+| Random integer        | `yield* Random.nextIntBetween(min, max)`                                                                              |
+| Random float          | `yield* Random.nextBetween(min, max)`                                                                                 |
+| UUID                  | `yield* Effect.orDie(crypto.randomUUIDv4)` after `const crypto = yield* Crypto.Crypto`; provide `BrowserCrypto.layer` |
+| Delay                 | `yield* Effect.sleep(Duration.millis(500))`                                                                           |
 
-Use these instead of raw `document.querySelector`, `setTimeout`, `Date.now()`, or `Math.random()`. They compose naturally inside `Command.define`. For canonical wiring, see `repos/foldkit/examples/kanban/src/command.ts` (`FocusAddCardInput` wraps `Dom.focus`) and `repos/foldkit/examples/stopwatch/src/main.ts` (`Clock.currentTimeMillis` inside an `Effect.gen`).
+Use these instead of raw `document.querySelector`, `setTimeout`, `Date.now()`, or `Math.random()`. They compose naturally inside `Command.define`. For canonical wiring, see `repos/foldkit/examples/kanban/src/command.ts` (`FocusAddCardInput` wraps `Dom.focus`, `GenerateCardId` acquires `Crypto.Crypto` and provides `BrowserCrypto.layer`) and `repos/foldkit/examples/stopwatch/src/main.ts` (`Clock.currentTimeMillis` inside an `Effect.gen`).
 
 ## With and Without URL Routing
 
