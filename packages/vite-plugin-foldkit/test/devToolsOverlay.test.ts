@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { createServer, resolveConfig } from 'vite'
 import { describe, expect, it, onTestFinished } from 'vitest'
 
@@ -106,6 +106,39 @@ const transformProductionHtml = async (root: string) => {
   })
 }
 
+const installFoldkit = (root: string): void => {
+  const packageRoot = join(root, 'node_modules', 'foldkit')
+  mkdirSync(packageRoot, { recursive: true })
+  writeFileSync(
+    join(packageRoot, 'package.json'),
+    JSON.stringify({ name: 'foldkit', type: 'module' }),
+  )
+}
+
+// A workspace link: the package's real home sits outside any node_modules
+// directory and node_modules only carries a symlink to it, which is the layout
+// the per-package linked check reads.
+const linkPackage = (
+  root: string,
+  packageName: string,
+  exports?: Record<string, unknown>,
+): void => {
+  const sourceDirectory = join(root, `${packageName.replace('/', '-')}-source`)
+  mkdirSync(sourceDirectory, { recursive: true })
+  writeFileSync(
+    join(sourceDirectory, 'package.json'),
+    JSON.stringify({
+      name: packageName,
+      type: 'module',
+      ...(exports ? { exports } : {}),
+    }),
+  )
+  mkdirSync(dirname(join(root, 'node_modules', packageName)), {
+    recursive: true,
+  })
+  symlinkSync(sourceDirectory, join(root, 'node_modules', packageName))
+}
+
 const runConfigHook = (root: string, command: 'serve' | 'build') => {
   const plugin = devToolsOverlayPlugin()
 
@@ -161,6 +194,7 @@ describe('DevTools overlay injection', () => {
 
   it('declares the overlay imports to the dep optimizer during development', () => {
     const root = makeRoot({ section: 'devDependencies' })
+    installFoldkit(root)
 
     expect(runConfigHook(root, 'serve')).toEqual({
       optimizeDeps: {
@@ -169,32 +203,33 @@ describe('DevTools overlay injection', () => {
     })
   })
 
-  it('declares nothing to the dep optimizer for a linked DevTools package', () => {
-    const root = mkdtempSync(join(tmpdir(), 'foldkit-devtools-overlay-'))
-    onTestFinished(() => rmSync(root, { recursive: true, force: true }))
+  it('declares only the DevTools import when foldkit is linked', () => {
+    const root = makeRoot({ section: 'devDependencies' })
+    linkPackage(root, 'foldkit')
 
-    writeFileSync(
-      join(root, 'package.json'),
-      JSON.stringify({
-        name: 'app',
-        devDependencies: { '@foldkit/devtools': 'workspace:*' },
-      }),
-    )
-    const sourceDirectory = join(root, 'devtools-source')
-    mkdirSync(sourceDirectory, { recursive: true })
-    writeFileSync(
-      join(sourceDirectory, 'package.json'),
-      JSON.stringify({
-        name: '@foldkit/devtools',
-        type: 'module',
-        exports: DEV_TOOLS_VITE_EXPORTS,
-      }),
-    )
-    mkdirSync(join(root, 'node_modules', '@foldkit'), { recursive: true })
-    symlinkSync(
-      sourceDirectory,
-      join(root, 'node_modules', '@foldkit', 'devtools'),
-    )
+    expect(runConfigHook(root, 'serve')).toEqual({
+      optimizeDeps: {
+        include: ['@foldkit/devtools/vite'],
+      },
+    })
+  })
+
+  it('declares only the host import when DevTools is linked', () => {
+    const root = makeRoot()
+    linkPackage(root, '@foldkit/devtools', DEV_TOOLS_VITE_EXPORTS)
+    installFoldkit(root)
+
+    expect(runConfigHook(root, 'serve')).toEqual({
+      optimizeDeps: {
+        include: ['foldkit/devtools-host'],
+      },
+    })
+  })
+
+  it('declares nothing to the dep optimizer when both packages are linked', () => {
+    const root = makeRoot()
+    linkPackage(root, '@foldkit/devtools', DEV_TOOLS_VITE_EXPORTS)
+    linkPackage(root, 'foldkit')
 
     expect(runConfigHook(root, 'serve')).toBeUndefined()
   })

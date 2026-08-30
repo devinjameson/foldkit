@@ -4,20 +4,31 @@ import { dirname, join, resolve, sep } from 'node:path'
 import type { Plugin } from 'vite'
 
 const DEV_TOOLS_PACKAGE_NAME = '@foldkit/devtools'
+const FOLDKIT_PACKAGE_NAME = 'foldkit'
 const DEV_TOOLS_VITE_EXPORT = './vite'
 const DEV_TOOLS_OVERLAY_MODULE_ID = 'virtual:foldkit-devtools-overlay'
 const RESOLVED_DEV_TOOLS_OVERLAY_MODULE_ID = `\0${DEV_TOOLS_OVERLAY_MODULE_ID}`
 const DEV_TOOLS_VITE_IMPORT_SPECIFIER = `${DEV_TOOLS_PACKAGE_NAME}${DEV_TOOLS_VITE_EXPORT.slice(1)}`
 const DEV_TOOLS_HOST_IMPORT_SPECIFIER = 'foldkit/devtools-host'
-// NOTE: declared to the dep optimizer in the plugin's `config` hook. The
-// optimizer's scan crawls imports reachable from source, and these two appear
-// only in the virtual module below, so without the declaration a cold cache
-// discovers them on the first page load and re-optimizes mid-session. The
-// full-page reload that follows tears down whatever the page was running,
-// which under a browser-mode test runner is the suite itself.
-const DEV_TOOLS_OVERLAY_IMPORT_SPECIFIERS: ReadonlyArray<string> = [
-  DEV_TOOLS_VITE_IMPORT_SPECIFIER,
-  DEV_TOOLS_HOST_IMPORT_SPECIFIER,
+// NOTE: declared to the dep optimizer in the plugin's `config` hook, each
+// specifier on the standing of the package that owns it. The optimizer's scan
+// crawls imports reachable from source, and these two appear only in the
+// virtual module below, so without the declaration a cold cache discovers
+// them on the first page load and re-optimizes mid-session. The full-page
+// reload that follows tears down whatever the page was running, which under a
+// browser-mode test runner is the suite itself.
+const DEV_TOOLS_OVERLAY_IMPORTS: ReadonlyArray<{
+  specifier: string
+  packageName: string
+}> = [
+  {
+    specifier: DEV_TOOLS_VITE_IMPORT_SPECIFIER,
+    packageName: DEV_TOOLS_PACKAGE_NAME,
+  },
+  {
+    specifier: DEV_TOOLS_HOST_IMPORT_SPECIFIER,
+    packageName: FOLDKIT_PACKAGE_NAME,
+  },
 ]
 const DEV_TOOLS_OVERLAY_MODULE_SOURCE = `
 import { overlay } from '${DEV_TOOLS_VITE_IMPORT_SPECIFIER}'
@@ -71,13 +82,23 @@ const findDirectoryUpward = (
 // package is installed, and `resolve.paths` appends this module's own lookup
 // chain, which under pnpm includes the hoisted virtual store. Both would make
 // the answer depend on something other than what the application installed.
-const devToolsPackageJsonPath = (directory: string): string =>
-  join(directory, 'node_modules', DEV_TOOLS_PACKAGE_NAME, 'package.json')
+const installedPackageJsonPath = (
+  directory: string,
+  packageName: string,
+): string => join(directory, 'node_modules', packageName, 'package.json')
+
+const findInstalledPackageJsonPath = (
+  root: string,
+  packageName: string,
+): Option.Option<string> =>
+  findDirectoryUpward(resolve(root), directory =>
+    existsSync(installedPackageJsonPath(directory, packageName)),
+  ).pipe(
+    Option.map(directory => installedPackageJsonPath(directory, packageName)),
+  )
 
 const findDevToolsPackageJsonPath = (root: string): Option.Option<string> =>
-  findDirectoryUpward(resolve(root), directory =>
-    existsSync(devToolsPackageJsonPath(directory)),
-  ).pipe(Option.map(devToolsPackageJsonPath))
+  findInstalledPackageJsonPath(root, DEV_TOOLS_PACKAGE_NAME)
 
 // NOTE: the virtual module imports `@foldkit/devtools/vite` statically, so an
 // installed copy that predates that export point would fail the build rather
@@ -107,10 +128,15 @@ const findApplicationPackageJsonPath = (root: string): Option.Option<string> =>
 // from source rather than pre-bundled. A package installed from the registry
 // realpaths into some `node_modules` directory, a store included, while a
 // workspace link realpaths out to its source checkout. Force-including a
-// linked DevTools would freeze that source into the optimizer's cache, where
-// edits to it no longer reach the page.
-const isDevToolsResolvedIntoNodeModules = (root: string): boolean =>
-  findDevToolsPackageJsonPath(root).pipe(
+// specifier owned by a linked package would freeze that source into the
+// optimizer's cache, where edits to it no longer reach the page. Asked per
+// package, because the two overlay imports have different owners and a layout
+// can link one while installing the other.
+const isPackageResolvedIntoNodeModules = (
+  root: string,
+  packageName: string,
+): boolean =>
+  findInstalledPackageJsonPath(root, packageName).pipe(
     Option.flatMap(packageJsonPath => {
       try {
         return Option.some(realpathSync(dirname(packageJsonPath)))
@@ -158,27 +184,27 @@ export const devToolsOverlayPlugin = (): Plugin => {
   return {
     name: 'foldkit:devtools-overlay',
     // NOTE: the optimizer only runs for the dev server, and the overlay's
-    // imports resolve only when the injection check passes, so the entries are
+    // imports resolve only when the injection check passes, so entries are
     // added under exactly the conditions where the served page will import
     // them. Declaring them unconditionally would log a "failed to resolve"
-    // warning in every project without DevTools installed. A linked DevTools,
-    // the workspace's own examples included, stays undeclared and keeps being
-    // served from source.
+    // warning in every project without DevTools installed. Each specifier then
+    // stands or falls with its own package: one owned by a linked package, the
+    // workspace's own examples included, stays undeclared and keeps being
+    // served from source, whatever the other one does.
     config: (userConfig, environment) => {
       const root = userConfig.root ?? process.cwd()
       if (
         environment.command !== 'serve' ||
-        !shouldInjectDevToolsOverlay(environment.command, root) ||
-        !isDevToolsResolvedIntoNodeModules(root)
+        !shouldInjectDevToolsOverlay(environment.command, root)
       ) {
         return undefined
       }
 
-      return {
-        optimizeDeps: {
-          include: [...DEV_TOOLS_OVERLAY_IMPORT_SPECIFIERS],
-        },
-      }
+      const include = DEV_TOOLS_OVERLAY_IMPORTS.filter(({ packageName }) =>
+        isPackageResolvedIntoNodeModules(root, packageName),
+      ).map(({ specifier }) => specifier)
+
+      return include.length === 0 ? undefined : { optimizeDeps: { include } }
     },
     configResolved: config => {
       isInjectionEnabled = shouldInjectDevToolsOverlay(
