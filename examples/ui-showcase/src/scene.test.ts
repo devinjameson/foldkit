@@ -71,7 +71,7 @@ describe('view', () => {
       { update, view },
       given(modelForRoute(AppRoute.HoverIntent())),
       expect(role('heading', { name: 'Hover Intent' })).toExist(),
-      expect(role('button', { name: 'Preview account' })).toExist(),
+      expect(role('button', { name: 'More information' })).toExist(),
     )
   })
 

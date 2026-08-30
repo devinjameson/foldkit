@@ -24,30 +24,19 @@ test('renders the experimental API reference', async ({ page }) => {
   ).toBeVisible()
 })
 
-test('restores focus after Escape dismisses hover-intent panel content', async ({
-  page,
-}) => {
+test('closes the hover-intent menu without navigating', async ({ page }) => {
   await page.goto('/ui/hover-intent', { waitUntil: 'networkidle' })
   await expect(page.locator('[data-foldkit-build]')).toHaveCount(0)
 
-  const trigger = page.locator('#hover-intent-navigation-trigger')
-  const panel = page.locator('#hover-intent-navigation-panel')
+  const trigger = page.locator('#hover-intent-menu-trigger')
+  const panel = page.locator('#hover-intent-menu-panel')
 
   await trigger.focus()
   await expect(panel).toBeVisible()
 
-  const overviewLink = panel.getByRole('link', { name: 'Overview' })
-  await overviewLink.focus()
-
-  await page.keyboard.press('Escape')
+  await panel.getByRole('button', { name: 'Edit' }).click()
   await expect(panel).toBeHidden()
-  await expect(trigger).toBeFocused()
-
-  await trigger.blur()
-  await expect(trigger).not.toBeFocused()
-
-  await trigger.focus()
-  await expect(panel).toBeVisible()
+  await expect(page).toHaveURL(/\/ui\/hover-intent$/)
 })
 
 test('selects an item from the combobox', async ({ page }) => {

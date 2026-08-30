@@ -9,6 +9,7 @@ import {
   OutMessage,
   WaitBeforeClosing,
   WaitBeforeOpening,
+  close,
   init,
   update,
 } from './index.js'
@@ -107,7 +108,9 @@ describe('HoverIntent', () => {
         update,
         withPointerOpen,
         Story.message(Message.LeftTrigger()),
-        Story.Command.expectHas(WaitBeforeClosing),
+        Story.Command.expectHas(
+          WaitBeforeClosing({ delay: Duration.millis(300), version: 2 }),
+        ),
         resolveStaleClose,
         Story.message(Message.EnteredPanel()),
         Story.message(Message.CompletedWaitBeforeClosing({ version: 2 })),
@@ -210,6 +213,22 @@ describe('HoverIntent', () => {
         Story.expectOutMessage(OutMessage.Closed()),
       )
     })
+
+    it('closes without the pointer grace delay when focus leaves', () => {
+      Story.story(
+        update,
+        withFocusedOpen,
+        Story.message(Message.BlurredTrigger()),
+        Story.Command.expectHas(
+          WaitBeforeClosing({ delay: Duration.zero, version: 2 }),
+        ),
+        Story.Command.resolve(
+          WaitBeforeClosing,
+          Message.CompletedWaitBeforeClosing({ version: 2 }),
+        ),
+        Story.expectOutMessage(OutMessage.Closed()),
+      )
+    })
   })
 
   describe('dismissal', () => {
@@ -301,6 +320,26 @@ describe('HoverIntent', () => {
         }),
         Story.expectNoOutMessage(),
       )
+    })
+
+    it('closes programmatically and clears panel engagement', () => {
+      const focusedOpenUpdate = update(init(), Message.FocusedTrigger())
+      const panelHoveredUpdate = update(
+        focusedOpenUpdate.model,
+        Message.EnteredPanel(),
+      )
+      const panelFocusedUpdate = update(
+        panelHoveredUpdate.model,
+        Message.FocusedPanel(),
+      )
+      const closeUpdate = close(panelFocusedUpdate.model)
+
+      expect(closeUpdate.model.isOpen).toBe(false)
+      expect(closeUpdate.model.isPanelHovered).toBe(false)
+      expect(closeUpdate.model.maybeFocusLocation).toStrictEqual(Option.none())
+      expect(closeUpdate.model.pendingOpenVersion).toBe(3)
+      expect(closeUpdate.model.pendingCloseVersion).toBe(4)
+      expect(closeUpdate.outMessage).toStrictEqual(OutMessage.Closed())
     })
   })
 

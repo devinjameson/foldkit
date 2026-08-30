@@ -14,6 +14,7 @@ const Model = S.Struct({
   hoverIntent: HoverIntent.Model,
   // ...your other fields
 })
+type Model = typeof Model.Type
 
 // Initialize it. This behavior primitive owns no DOM id:
 const init = () => ({
@@ -27,6 +28,7 @@ const init = () => ({
 const Message = defineMessageUnion({
   GotHoverIntentMessage: { message: HoverIntent.Message },
 })
+type Message = typeof Message.Type
 
 const foldHoverIntentOutMessage = M.type<HoverIntent.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
@@ -50,12 +52,12 @@ GotHoverIntentMessage: ({ message }) => foldHoverIntent(model, message)
 // Spread trigger attributes on the activator. Spread panel attributes on the
 // content. HoverIntent owns events only, so this component chooses the role,
 // anchor, and styles around those elements.
-const triggerId = 'account-preview-trigger'
-const panelId = 'account-preview-panel'
+const triggerId = 'more-information-trigger'
+const panelId = 'more-information-panel'
 
 const view = (h: HtmlBuilder<Message>) =>
   h.submodel({
-    slotId: 'account-preview',
+    slotId: 'more-information',
     model: model.hoverIntent,
     view: HoverIntent.view,
     viewInputs: {
@@ -67,17 +69,23 @@ const view = (h: HtmlBuilder<Message>) =>
             h.button(
               [
                 ...trigger,
+                h.Type('button'),
                 h.Id(triggerId),
                 h.AriaControls(panelId),
                 h.AriaExpanded(isVisible),
               ],
-              ['Preview account'],
+              ['More information'],
             ),
             ...(isVisible
               ? [
                   h.div(
                     [...panel, h.Id(panelId)],
-                    [h.a([h.Href('/account')], ['Open account'])],
+                    [
+                      h.p(
+                        [],
+                        ['A short description can provide useful context.'],
+                      ),
+                    ],
                   ),
                 ]
               : []),

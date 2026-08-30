@@ -42,7 +42,7 @@ export type InitConfig = Readonly<{
   closeDelay?: Duration.Input
 }>
 
-/** Creates a HoverIntent Model. Pointer entry opens after 200 milliseconds and full disengagement closes after 300 milliseconds by default. */
+/** Creates a HoverIntent Model. Pointer entry opens after 200 milliseconds and pointer departure closes after a 300-millisecond grace period by default. Focus entry opens immediately, and focus departure closes without that pointer grace period. */
 export const init = (config: InitConfig = {}): Model => ({
   isOpen: false,
   isTriggerHovered: false,
@@ -102,7 +102,7 @@ const open = (model: Model): UpdateReturn => {
   }
 }
 
-const close = (model: Model): UpdateReturn => {
+const finishClosing = (model: Model): UpdateReturn => {
   if (!model.isOpen) {
     return { model }
   }
@@ -121,11 +121,14 @@ const scheduleOpen = (model: Model): UpdateReturn => {
   }
 }
 
-const scheduleClose = (model: Model): UpdateReturn => {
+const scheduleClose = (
+  model: Model,
+  delay: Duration.Duration,
+): UpdateReturn => {
   const version = Number.increment(model.pendingCloseVersion)
   return {
     model: evo(model, { pendingCloseVersion: () => version }),
-    commands: [WaitBeforeClosing({ delay: model.closeDelay, version })],
+    commands: [WaitBeforeClosing({ delay, version })],
   }
 }
 
@@ -158,7 +161,7 @@ const left = (model: Model): UpdateReturn => {
     return { model: leftModel }
   }
 
-  return scheduleClose(leftModel)
+  return scheduleClose(leftModel, leftModel.closeDelay)
 }
 
 const focused = (model: Model, focusLocation: FocusLocation): UpdateReturn => {
@@ -193,8 +196,40 @@ const blurred = (model: Model): UpdateReturn => {
     return { model: blurredModel }
   }
 
-  return scheduleClose(blurredModel)
+  return scheduleClose(blurredModel, Duration.zero)
 }
+
+const dismiss = (model: Model, isTriggerFocused: boolean): UpdateReturn => {
+  const maybeFocusLocation = Option.liftPredicate<FocusLocation>(
+    'Trigger',
+    () => isTriggerFocused,
+  )
+  const dismissedModel = evo(model, {
+    isOpen: () => false,
+    isPanelHovered: () => false,
+    maybeFocusLocation: () => maybeFocusLocation,
+    isDismissed: () => model.isTriggerHovered || isTriggerFocused,
+    pendingOpenVersion: Number.increment,
+    pendingCloseVersion: Number.increment,
+  })
+
+  if (model.isOpen) {
+    return { model: dismissedModel, outMessage: OutMessage.Closed() }
+  }
+
+  return { model: dismissedModel }
+}
+
+/** Programmatically closes HoverIntent immediately, invalidating pending
+ *  transitions and suppressing reopening until the trigger disengages. */
+export const close = (model: Model): UpdateReturn =>
+  dismiss(
+    model,
+    Option.exists(
+      model.maybeFocusLocation,
+      focusLocation => focusLocation === 'Trigger',
+    ),
+  )
 
 /** Processes a HoverIntent Message and returns the next Model, optional Commands, and an optional OutMessage. */
 export const update = (model: Model, message: Message): UpdateReturn =>
@@ -215,24 +250,8 @@ export const update = (model: Model, message: Message): UpdateReturn =>
           model.maybeFocusLocation,
           focusLocation => focusLocation === 'Trigger',
         )
-      const maybeFocusLocation = isTriggerFocused
-        ? Option.some<FocusLocation>('Trigger')
-        : Option.none<FocusLocation>()
-      const isDismissed = model.isTriggerHovered || isTriggerFocused
-      const dismissedModel = evo(model, {
-        isOpen: () => false,
-        isPanelHovered: () => false,
-        maybeFocusLocation: () => maybeFocusLocation,
-        isDismissed: () => isDismissed,
-        pendingOpenVersion: Number.increment,
-        pendingCloseVersion: Number.increment,
-      })
 
-      if (model.isOpen) {
-        return { model: dismissedModel, outMessage: OutMessage.Closed() }
-      }
-
-      return { model: dismissedModel }
+      return dismiss(model, isTriggerFocused)
     },
 
     CompletedWaitBeforeOpening: ({ version }) => {
@@ -252,7 +271,7 @@ export const update = (model: Model, message: Message): UpdateReturn =>
         return { model }
       }
 
-      return close(model)
+      return finishClosing(model)
     },
   })
 

@@ -9,10 +9,9 @@ import raw from './hoverIntentPage.md'
 import type { Message } from './message'
 import type { Model } from './model'
 
-const { tableOfContents, view: renderPage } = slotDocPage<'demo'>(
-  raw,
-  'ui/hover-intent',
-)
+const { tableOfContents, view: renderPage } = slotDocPage<
+  'hover-card' | 'hover-menu'
+>(raw, 'ui/hover-intent')
 
 export { tableOfContents }
 
@@ -25,7 +24,12 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
   (model, { renderCopyButton, renderHeadingLink }, h): Html =>
     renderPage({
       demos: {
-        demo: demoContainer(...HoverIntent.demo(model, h)),
+        'hover-card': demoContainer(
+          ...HoverIntent.hoverCardDemo(model.hoverIntentCardDemo, h),
+        ),
+        'hover-menu': demoContainer(
+          ...HoverIntent.hoverMenuDemo(model.hoverIntentMenuDemo, h),
+        ),
       },
       renderCopyButton,
       renderHeadingLink,

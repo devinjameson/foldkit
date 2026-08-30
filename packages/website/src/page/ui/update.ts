@@ -724,15 +724,32 @@ const foldHoverIntentCardDemo = Update.foldChild({
   foldOutMessage: foldHoverIntentOutMessage,
 })
 
-const foldHoverIntentNavigationDemo = Update.foldChild({
+const readHoverIntentMenuDemo = (
+  model: Model,
+): Option.Option<HoverIntent.Model> => Option.some(model.hoverIntentMenuDemo)
+
+const writeHoverIntentMenuDemo = (
+  model: Model,
+  nextHoverIntentMenuDemo: HoverIntent.Model,
+): Model => evo(model, { hoverIntentMenuDemo: () => nextHoverIntentMenuDemo })
+
+const toGotHoverIntentMenuDemoMessage = (
+  message: HoverIntent.Message,
+): Message => Message.GotHoverIntentMenuDemoMessage({ message })
+
+const foldHoverIntentMenuDemo = Update.foldChild({
   update: HoverIntent.update,
-  read: (model: Model) => Option.some(model.hoverIntentNavigationDemo),
-  write: (model, nextHoverIntentNavigationDemo) =>
-    evo(model, {
-      hoverIntentNavigationDemo: () => nextHoverIntentNavigationDemo,
-    }),
-  toParentMessage: message =>
-    Message.GotHoverIntentNavigationDemoMessage({ message }),
+  read: readHoverIntentMenuDemo,
+  write: writeHoverIntentMenuDemo,
+  toParentMessage: toGotHoverIntentMenuDemoMessage,
+  foldOutMessage: foldHoverIntentOutMessage,
+})
+
+const foldHoverIntentMenuDemoClose = Update.foldChildStep({
+  update: HoverIntent.close,
+  read: readHoverIntentMenuDemo,
+  write: writeHoverIntentMenuDemo,
+  toParentMessage: toGotHoverIntentMenuDemoMessage,
   foldOutMessage: foldHoverIntentOutMessage,
 })
 
@@ -1114,8 +1131,10 @@ export const update = (model: Model, message: Message) =>
     GotHoverIntentCardDemoMessage: ({ message }) =>
       foldHoverIntentCardDemo(model, message),
 
-    GotHoverIntentNavigationDemoMessage: ({ message }) =>
-      foldHoverIntentNavigationDemo(model, message),
+    GotHoverIntentMenuDemoMessage: ({ message }) =>
+      foldHoverIntentMenuDemo(model, message),
+
+    ClickedHoverIntentMenuItem: () => foldHoverIntentMenuDemoClose(model),
 
     GotToastDemoMessage: ({ message }) => foldToastDemo(model, message),
 
