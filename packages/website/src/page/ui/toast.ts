@@ -40,7 +40,7 @@ const variantClassName = (variant: Variant): string =>
 const entryClassName = 'w-80'
 
 const buttonClassName =
-  'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+  'demo-neutral-button inline-flex items-center gap-1.5 text-sm'
 
 // VIEW
 

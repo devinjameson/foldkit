@@ -1,24 +1,25 @@
-import { Match as M, Option } from 'effect'
-import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
+import { Option } from 'effect'
+import type { HtmlBuilder } from 'foldkit/html'
 
-import { Calendar, DatePicker } from '@foldkit/ui'
+import { DatePicker } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
 
 import { Icon } from '../../icon'
+import { calendarView } from './calendarView'
 import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
 
 const triggerClassName =
-  'inline-flex items-center justify-between gap-2 min-w-48 px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+  'demo-neutral-button inline-flex min-w-48 items-center justify-between gap-2'
 
 const triggerContentClassName = 'flex w-full items-center justify-between gap-4'
 
 const placeholderClassName = 'text-gray-500 dark:text-gray-400'
 
 const panelClassName =
-  'rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-4 shadow-lg z-10 outline-none'
+  'demo-popup-surface rounded-xl bg-white p-4 dark:border-gray-800 dark:bg-gray-950'
 
 const backdropClassName = 'fixed inset-0 z-0'
 
@@ -26,167 +27,6 @@ const wrapperClassName = 'relative inline-block'
 
 const calendarWrapperClassName =
   'flex flex-col gap-3 select-none min-w-[268px] min-h-[284px]'
-
-const headerClassName = 'flex items-center justify-between gap-2'
-
-const headingButtonClassName =
-  'inline-flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white tabular-nums px-2 py-1 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800'
-
-const headingTextClassName =
-  'text-sm font-semibold text-gray-900 dark:text-white tabular-nums'
-
-const navButtonClassName =
-  'inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'
-
-const gridClassName = 'flex flex-col gap-1 outline-none'
-
-const rowClassName = 'grid grid-cols-7 gap-1'
-
-const columnHeaderClassName =
-  'text-center text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400 py-1'
-
-const cellClassName = 'group flex items-center justify-center'
-
-const dayButtonClassName =
-  'flex h-9 w-9 items-center justify-center rounded-full text-sm font-normal text-gray-900 dark:text-gray-100 tabular-nums cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 group-data-[today]:ring-1 group-data-[today]:ring-gray-400 dark:group-data-[today]:ring-gray-500 group-data-[selected]:bg-accent-600 group-data-[selected]:dark:bg-accent-500 group-data-[selected]:text-white! group-data-[selected]:dark:text-accent-900! group-data-[selected]:hover:bg-accent-700 group-data-[selected]:dark:hover:bg-accent-600 group-data-[selected]:active:bg-accent-800 group-data-[selected]:dark:active:bg-accent-700 group-data-[focused]:outline-2 group-data-[focused]:outline-offset-2 group-data-[focused]:outline-accent-500 group-data-[outside-month]:text-gray-400 dark:group-data-[outside-month]:text-gray-600 group-data-[disabled]:cursor-not-allowed group-data-[disabled]:opacity-40'
-
-const monthYearGridClassName =
-  'grid grid-cols-3 grid-rows-4 gap-1 outline-none flex-1'
-
-const monthYearButtonClassName =
-  'flex h-full w-full items-center justify-center rounded-md text-sm font-normal text-gray-900 dark:text-gray-100 tabular-nums cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 group-data-[today]:ring-1 group-data-[today]:ring-gray-400 dark:group-data-[today]:ring-gray-500 group-data-[selected]:bg-accent-600 group-data-[selected]:dark:bg-accent-500 group-data-[selected]:text-white! group-data-[selected]:dark:text-accent-900! group-data-[selected]:hover:bg-accent-700 group-data-[selected]:dark:hover:bg-accent-600 group-data-[selected]:active:bg-accent-800 group-data-[selected]:dark:active:bg-accent-700 group-data-[focused]:outline-2 group-data-[focused]:outline-offset-2 group-data-[focused]:outline-accent-500 group-data-[disabled]:cursor-not-allowed group-data-[disabled]:opacity-40'
-
-// PIECES
-
-const navButton = (
-  attributes: ReadonlyArray<ChildAttribute>,
-  icon: Html,
-  h: HtmlBuilder<Message>,
-): Html => h.button([...attributes, h.Class(navButtonClassName)], [icon])
-
-const headingButton = (
-  heading: Calendar.DaysModeAttributes['heading'],
-  attributes: ReadonlyArray<ChildAttribute>,
-  h: HtmlBuilder<Message>,
-): Html =>
-  h.button(
-    [h.Id(heading.id), ...attributes, h.Class(headingButtonClassName)],
-    [heading.text, Icon.chevronDown('w-3 h-3')],
-  )
-
-const weekRow = (week: Calendar.Week, h: HtmlBuilder<Message>): Html =>
-  h.div(
-    [...week.attributes, h.Class(rowClassName)],
-    week.cells.map(cell =>
-      h.div(
-        [...cell.cellAttributes, h.Class(cellClassName)],
-        [
-          h.button(
-            [...cell.buttonAttributes, h.Class(dayButtonClassName)],
-            [cell.label],
-          ),
-        ],
-      ),
-    ),
-  )
-
-// MODES
-
-const daysView = (
-  days: Calendar.DaysModeAttributes,
-  h: HtmlBuilder<Message>,
-): Html =>
-  h.div(
-    [...days.root, h.Class(calendarWrapperClassName)],
-    [
-      h.div(
-        [h.Class(headerClassName)],
-        [
-          navButton(days.previousMonthButton, Icon.chevronLeft('w-5 h-5'), h),
-          headingButton(days.heading, days.headingButton, h),
-          navButton(days.nextMonthButton, Icon.chevronRight('w-5 h-5'), h),
-        ],
-      ),
-      h.div(
-        [...days.grid, h.Class(gridClassName)],
-        [
-          h.div(
-            [...days.headerRow, h.Class(rowClassName)],
-            days.columnHeaders.map(header =>
-              h.div(
-                [...header.attributes, h.Class(columnHeaderClassName)],
-                [header.name],
-              ),
-            ),
-          ),
-          ...days.weeks.map(week => weekRow(week, h)),
-        ],
-      ),
-    ],
-  )
-
-const monthsView = (
-  months: Calendar.MonthsModeAttributes,
-  h: HtmlBuilder<Message>,
-): Html =>
-  h.div(
-    [...months.root, h.Class(calendarWrapperClassName)],
-    [
-      h.div(
-        [h.Class(`${headerClassName} justify-center`)],
-        [headingButton(months.heading, months.headingButton, h)],
-      ),
-      h.div(
-        [...months.grid, h.Class(monthYearGridClassName)],
-        months.cells.map(cell =>
-          h.div(
-            [...cell.cellAttributes, h.Class(cellClassName)],
-            [
-              h.button(
-                [...cell.buttonAttributes, h.Class(monthYearButtonClassName)],
-                [cell.shortLabel],
-              ),
-            ],
-          ),
-        ),
-      ),
-    ],
-  )
-
-const yearsView = (
-  years: Calendar.YearsModeAttributes,
-  h: HtmlBuilder<Message>,
-): Html =>
-  h.div(
-    [...years.root, h.Class(calendarWrapperClassName)],
-    [
-      h.div(
-        [h.Class(headerClassName)],
-        [
-          navButton(years.previousPageButton, Icon.chevronLeft('w-5 h-5'), h),
-          h.h2(
-            [h.Id(years.heading.id), h.Class(headingTextClassName)],
-            [years.heading.text],
-          ),
-          navButton(years.nextPageButton, Icon.chevronRight('w-5 h-5'), h),
-        ],
-      ),
-      h.div(
-        [...years.grid, h.Class(monthYearGridClassName)],
-        years.cells.map(cell =>
-          h.div(
-            [...cell.cellAttributes, h.Class(cellClassName)],
-            [
-              h.button(
-                [...cell.buttonAttributes, h.Class(monthYearButtonClassName)],
-                [cell.label],
-              ),
-            ],
-          ),
-        ),
-      ),
-    ],
-  )
 
 // VIEW
 
@@ -221,12 +61,12 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
 
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
           [
             h.For(DatePicker.triggerId(model.datePickerBasicDemo.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+            h.Class('demo-label'),
           ],
           ['Due date'],
         ),
@@ -242,13 +82,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
             panelClassName,
             backdropClassName,
             className: wrapperClassName,
-            toCalendarView: M.type<Calendar.CalendarAttributes>().pipe(
-              M.tagsExhaustive({
-                Days: days => daysView(days, h),
-                Months: months => monthsView(months, h),
-                Years: years => yearsView(years, h),
-              }),
-            ),
+            toCalendarView: calendarView(calendarWrapperClassName, h),
           },
           toParentMessage: message =>
             Message.GotDatePickerBasicDemoMessage({ message }),

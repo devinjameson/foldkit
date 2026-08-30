@@ -113,9 +113,7 @@ const landingFooter = (currentYear: number): Html =>
           ih.a(
             [
               ih.Href(`${Link.websiteSource}/src/main.ts`),
-              ih.Class(
-                'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500',
-              ),
+              ih.Class('link-accent'),
             ],
             ['Foldkit'],
           ),

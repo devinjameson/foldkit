@@ -295,12 +295,7 @@ const poweredBySection = (): Html =>
             [
               'Built on ',
               ih.a(
-                [
-                  ih.Href(Link.effect),
-                  ih.Class(
-                    'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
-                  ),
-                ],
+                [ih.Href(Link.effect), ih.Class('link-accent font-normal')],
                 ['Effect'],
               ),
               '. Inside and out.',
@@ -467,12 +462,7 @@ const includedFeature = (
       ...(link
         ? [
             ih.a(
-              [
-                ih.Href(link.href),
-                ih.Class(
-                  'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
-                ),
-              ],
+              [ih.Href(link.href), ih.Class('link-accent font-normal')],
               [
                 link.label,
                 ih.span(
@@ -900,9 +890,7 @@ const fitSection = (): Html =>
               ih.a(
                 [
                   ih.Href(Link.elmArchitecture),
-                  ih.Class(
-                    'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
-                  ),
+                  ih.Class('link-accent font-normal'),
                 ],
                 ['The Elm Architecture'],
               ),
@@ -1155,12 +1143,7 @@ const trustItemWithLink = (
         [label],
       ),
       ih.a(
-        [
-          ih.Href(href),
-          ih.Class(
-            'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 text-lg font-normal',
-          ),
-        ],
+        [ih.Href(href), ih.Class('link-accent text-lg font-normal')],
         [
           linkText,
           ih.span(

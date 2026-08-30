@@ -16,21 +16,10 @@ const wrapperClassName = 'flex flex-col gap-1'
 
 const topRowClassName = 'flex items-center gap-2'
 
-const checkboxClassName =
-  'flex h-5 w-5 shrink-0 items-center justify-center rounded border border-gray-400 dark:border-gray-500 cursor-pointer data-[checked]:bg-accent-600 data-[checked]:dark:bg-accent-500 data-[checked]:border-accent-600 data-[checked]:dark:border-accent-500 data-[indeterminate]:bg-accent-600 data-[indeterminate]:dark:bg-accent-500 data-[indeterminate]:border-accent-600 data-[indeterminate]:dark:border-accent-500 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
-
-const labelClassName =
-  'text-sm font-normal text-gray-900 dark:text-white cursor-pointer select-none'
-
-const descriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
-
 // VIEW
 
 export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
-  const checkmark = h.span(
-    [h.Class('text-white dark:text-accent-900 text-xs font-normal')],
-    ['✓'],
-  )
+  const checkmark = h.span([h.Class('demo-checkbox-mark')], ['✓'])
 
   return [
     Checkbox.view(
@@ -46,17 +35,17 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
                 [h.Class(topRowClassName)],
                 [
                   h.button(
-                    [...attributes.checkbox, h.Class(checkboxClassName)],
+                    [...attributes.checkbox, h.Class('demo-checkbox')],
                     model.isCheckboxBasicDemoChecked ? [checkmark] : [],
                   ),
                   h.label(
-                    [...attributes.label, h.Class(labelClassName)],
+                    [...attributes.label, h.Class('demo-toggle-label')],
                     ['Accept terms and conditions'],
                   ),
                 ],
               ),
               h.p(
-                [...attributes.description, h.Class(descriptionClassName)],
+                [...attributes.description, h.Class('demo-description')],
                 ['You agree to our Terms of Service and Privacy Policy.'],
               ),
             ],
@@ -68,14 +57,8 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
 }
 
 export const indeterminateDemo = (model: Model, h: HtmlBuilder<Message>) => {
-  const checkmark = h.span(
-    [h.Class('text-white dark:text-accent-900 text-xs font-normal')],
-    ['✓'],
-  )
-  const indeterminateMark = h.span(
-    [h.Class('text-white dark:text-accent-900 text-xs font-normal')],
-    ['—'],
-  )
+  const checkmark = h.span([h.Class('demo-checkbox-mark')], ['✓'])
+  const indeterminateMark = h.span([h.Class('demo-checkbox-mark')], ['—'])
 
   const isAllChecked =
     model.isCheckboxOptionADemoChecked && model.isCheckboxOptionBDemoChecked
@@ -109,11 +92,11 @@ export const indeterminateDemo = (model: Model, h: HtmlBuilder<Message>) => {
                 [h.Class(topRowClassName)],
                 [
                   h.button(
-                    [...attributes.checkbox, h.Class(checkboxClassName)],
+                    [...attributes.checkbox, h.Class('demo-checkbox')],
                     resolveSelectAllMark(),
                   ),
                   h.label(
-                    [...attributes.label, h.Class(labelClassName)],
+                    [...attributes.label, h.Class('demo-toggle-label')],
                     ['All notifications'],
                   ),
                 ],
@@ -135,11 +118,11 @@ export const indeterminateDemo = (model: Model, h: HtmlBuilder<Message>) => {
                     [h.Class(topRowClassName)],
                     [
                       h.button(
-                        [...attributes.checkbox, h.Class(checkboxClassName)],
+                        [...attributes.checkbox, h.Class('demo-checkbox')],
                         model.isCheckboxOptionADemoChecked ? [checkmark] : [],
                       ),
                       h.label(
-                        [...attributes.label, h.Class(labelClassName)],
+                        [...attributes.label, h.Class('demo-toggle-label')],
                         ['Email notifications'],
                       ),
                     ],
@@ -158,11 +141,11 @@ export const indeterminateDemo = (model: Model, h: HtmlBuilder<Message>) => {
                     [h.Class(topRowClassName)],
                     [
                       h.button(
-                        [...attributes.checkbox, h.Class(checkboxClassName)],
+                        [...attributes.checkbox, h.Class('demo-checkbox')],
                         model.isCheckboxOptionBDemoChecked ? [checkmark] : [],
                       ),
                       h.label(
-                        [...attributes.label, h.Class(labelClassName)],
+                        [...attributes.label, h.Class('demo-toggle-label')],
                         ['Push notifications'],
                       ),
                     ],

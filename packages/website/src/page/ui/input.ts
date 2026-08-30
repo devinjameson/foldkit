@@ -5,16 +5,6 @@ import { Input } from '@foldkit/ui'
 import { Message } from './message'
 import type { Model } from './model'
 
-// DEMO CONTENT
-
-const inputClassName =
-  'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-accent-400 dark:focus:ring-accent-400 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
-
-const labelClassName =
-  'block text-sm font-medium text-gray-700 dark:text-gray-300'
-
-const descriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
-
 // VIEW
 
 export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
@@ -30,15 +20,15 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
             placeholder: 'Enter your full name',
             toView: attributes =>
               h.div(
-                [h.Class('flex flex-col gap-1.5 w-full')],
+                [h.Class('demo-field w-full')],
                 [
                   h.label(
-                    [...attributes.label, h.Class(labelClassName)],
+                    [...attributes.label, h.Class('demo-label')],
                     ['Name'],
                   ),
-                  h.input([...attributes.input, h.Class(inputClassName)]),
+                  h.input([...attributes.input, h.Class('demo-field-input')]),
                   h.span(
-                    [...attributes.description, h.Class(descriptionClassName)],
+                    [...attributes.description, h.Class('demo-description')],
                     ['As it appears on your government-issued ID.'],
                   ),
                 ],
@@ -60,12 +50,12 @@ export const disabledDemo = (_model: Model, h: HtmlBuilder<Message>) => {
         value: 'Ada Lovelace',
         toView: attributes =>
           h.div(
-            [h.Class('flex flex-col gap-1.5 w-full max-w-md')],
+            [h.Class('demo-field w-full max-w-md')],
             [
-              h.label([...attributes.label, h.Class(labelClassName)], ['Name']),
-              h.input([...attributes.input, h.Class(inputClassName)]),
+              h.label([...attributes.label, h.Class('demo-label')], ['Name']),
+              h.input([...attributes.input, h.Class('demo-field-input')]),
               h.span(
-                [...attributes.description, h.Class(descriptionClassName)],
+                [...attributes.description, h.Class('demo-description')],
                 ['This input is disabled.'],
               ),
             ],
