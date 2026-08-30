@@ -151,7 +151,7 @@ export const init = (today: Calendar.CalendarDate): InitReturn => ({
     maybeLastDismissedToastTitle: Option.none(),
     tooltipDemo: Tooltip.init({ id: 'tooltip-demo' }),
     hoverIntentCardDemo: HoverIntent.init(),
-    hoverIntentNavigationDemo: HoverIntent.init(),
+    hoverIntentMenuDemo: HoverIntent.init(),
     animationDemo: Animation.init({ id: 'animation-demo' }),
     virtualListDemo: VirtualList.init({
       id: 'virtual-list-demo',

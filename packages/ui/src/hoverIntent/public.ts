@@ -1,4 +1,5 @@
 export {
+  close,
   init,
   update,
   view,

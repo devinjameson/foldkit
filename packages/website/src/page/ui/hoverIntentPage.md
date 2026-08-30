@@ -2,25 +2,35 @@
 
 ## Overview
 
-HoverIntent is a behavior-only Submodel for a trigger and its related panel. It opens after pointer entry, stays open while the pointer or focus moves between both elements, then closes after the configured grace delay. Focus opens immediately. Escape closes the panel and suppresses reopening until pointer and focus have both left.
+HoverIntent is a behavior-only Submodel for a trigger and its related panel. It opens after pointer entry and stays open while the pointer or focus moves between both elements. Pointer departure uses a configurable grace delay; focus departure closes without that pointer delay. Focus opens immediately. Escape closes the panel and suppresses reopening until pointer and focus have both left.
 
-It does not create elements, position a panel, assign an ARIA role, or choose a styling hook. Use it when those choices belong to the component you are building. For example, a Hover Card can combine HoverIntent with [Anchor](/ui/anchor), while a Navigation Menu can coordinate several HoverIntent Models with one shared viewport.
+It does not create elements, position a panel, assign an ARIA role, or choose a styling hook. Use it when those choices belong to the component you are building. For example, a Hover Card can combine HoverIntent with [Anchor](/ui/anchor), while a hover menu can use it to keep its items available as the pointer leaves the trigger.
 
 ## Examples
 
-Hover or focus either trigger, then move into its panel. Press Escape to close it. The trigger and panel are plain elements; HoverIntent supplies only their event bundles.
+### Hover Card
 
-::Demo{name="demo"}
+Hover or focus More information, then move into the card. Press Escape or move focus away to close it.
 
-::Snippet{name="uiHoverIntentBasic" label="hover-intent example"}
+::Demo{name="hover-card"}
+
+::Snippet{name="uiHoverIntentBasic" label="hover card example"}
+
+### Hover Menu
+
+Hover or focus Actions, then move into the menu. Choosing an item closes it without navigating or changing other page state.
+
+::Demo{name="hover-menu"}
+
+::Snippet{name="uiHoverIntentMenu" label="hover menu example"}
 
 HoverIntent's trigger and panel bundles carry child Messages through `h.submodel`. Spreading them into the wrong element changes the interaction model, so put `trigger` on the activator and `panel` on the content that must keep the intent alive.
 
 ## Timing and Dismissal
 
-Pointer entry starts `openDelay`, which defaults to 200 milliseconds. Leaving the last hovered or focused element starts `closeDelay`, which defaults to 300 milliseconds. Entering either element again cancels a pending close. Each wait carries a version, so a completion from an earlier interaction cannot change current visibility.
+Pointer entry starts `openDelay`, which defaults to 200 milliseconds. Leaving the last hovered element starts `closeDelay`, which defaults to 300 milliseconds. Entering either element again cancels a pending close. Each wait carries a version, so a completion from an earlier interaction cannot change current visibility.
 
-Focus opens immediately. When focus moves from the trigger into the panel, its blur may schedule a close before panel focus arrives. The panel focus handler cancels that close, so keyboard users can enter interactive panel content.
+Focus opens immediately. Focus departure schedules a zero-delay close, so clicking or tabbing away does not inherit the pointer grace period. When focus moves from the trigger into the panel, the panel focus handler cancels that close before it resolves, so keyboard users can enter interactive panel content.
 
 Escape closes immediately. When panel content can hold focus, set `focusTriggerSelector` so Escape returns focus to the trigger before removing the panel. If the selector is omitted or does not resolve to a focusable element, HoverIntent does not move focus; removing the focused panel leaves the browser to choose its fallback focus target. It does not reopen while the pointer or focus still engages the trigger or panel. After both disengage, a fresh entry can open it again.
 
@@ -34,10 +44,16 @@ Creates a closed HoverIntent Model. `init` takes no `id` because HoverIntent own
 
 ### InitConfig {#init-config}
 
-| Name         | Type             | Default                | Description                                              |
-| ------------ | ---------------- | ---------------------- | -------------------------------------------------------- |
-| `openDelay`  | `Duration.Input` | `Duration.millis(200)` | Delay between pointer entry and opening.                 |
-| `closeDelay` | `Duration.Input` | `Duration.millis(300)` | Grace period after the final pointer or focus departure. |
+| Name         | Type             | Default                | Description                                     |
+| ------------ | ---------------- | ---------------------- | ----------------------------------------------- |
+| `openDelay`  | `Duration.Input` | `Duration.millis(200)` | Delay between pointer entry and opening.        |
+| `closeDelay` | `Duration.Input` | `Duration.millis(300)` | Grace period after the final pointer departure. |
+
+### close
+
+`(model: Model) => Update.ReturnWithOutMessage<Model, Message, OutMessage>`
+
+Closes HoverIntent immediately for a parent domain event, such as choosing an item in a hover menu. It invalidates pending transitions, clears panel engagement, and emits `Closed` when visibility changes.
 
 ### update
 

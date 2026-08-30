@@ -129,7 +129,7 @@ export const Model = S.Struct({
   maybeLastDismissedToastTitle: S.Option(S.String),
   tooltipDemo: Tooltip.Model,
   hoverIntentCardDemo: HoverIntent.Model,
-  hoverIntentNavigationDemo: HoverIntent.Model,
+  hoverIntentMenuDemo: HoverIntent.Model,
   animationDemo: Animation.Model,
   virtualListDemo: VirtualList.Model,
   virtualListVariableDemo: VirtualList.Model,

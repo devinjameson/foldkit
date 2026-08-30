@@ -7,7 +7,7 @@ import { UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const triggerClassName =
-  'rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition hover:border-accent-500 hover:text-accent-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600'
+  'inline-flex cursor-pointer items-center rounded-lg bg-accent-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600'
 
 const panelClassName =
   'absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg'
@@ -26,7 +26,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>((model, h): Html =>
       h.p(
         [h.Class('mb-4 max-w-xl text-sm text-gray-600')],
         [
-          'Hover or focus the trigger, then move into the interactive panel. Press Escape to return focus to the trigger.',
+          'Hover the trigger, then move the pointer into the panel. Focus the trigger and press Escape to close it.',
         ],
       ),
       h.submodel({
@@ -42,12 +42,13 @@ export const view = Submodel.defineView<UiModel, UiMessage>((model, h): Html =>
                 h.button(
                   [
                     ...trigger,
+                    h.Type('button'),
                     h.Id(TRIGGER_ID),
                     h.AriaControls(PANEL_ID),
                     h.AriaExpanded(isVisible),
                     h.Class(triggerClassName),
                   ],
-                  ['Preview account'],
+                  ['More information'],
                 ),
                 ...(isVisible
                   ? [
@@ -55,24 +56,12 @@ export const view = Submodel.defineView<UiModel, UiMessage>((model, h): Html =>
                         [...panel, h.Id(PANEL_ID), h.Class(panelClassName)],
                         [
                           h.h3(
-                            [
-                              h.Id('hover-intent-showcase-details'),
-                              h.Class('font-semibold text-gray-900'),
-                            ],
-                            ['Account summary'],
+                            [h.Class('text-sm font-medium text-gray-900')],
+                            ['Details'],
                           ),
                           h.p(
-                            [h.Class('mt-2 text-sm text-gray-600')],
-                            ['Review your profile and recent activity.'],
-                          ),
-                          h.a(
-                            [
-                              h.Href('#hover-intent-showcase-details'),
-                              h.Class(
-                                'mt-3 inline-block text-sm font-medium text-accent-700 underline underline-offset-4',
-                              ),
-                            ],
-                            ['View account details'],
+                            [h.Class('mt-1 text-sm leading-5 text-gray-600')],
+                            ['A short description can provide useful context.'],
                           ),
                         ],
                       ),
