@@ -56,7 +56,7 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
     section: '',
   },
   Manifesto: docs(
-    'Manifesto',
+    'Why Foldkit',
     'Why Foldkit exists and the principles behind its design.',
     'Docs',
   ),

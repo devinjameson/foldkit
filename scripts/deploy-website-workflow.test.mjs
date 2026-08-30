@@ -659,6 +659,27 @@ test('the developer portal path redirects to the AI overview', () => {
   )
 })
 
+test('the old manifesto paths redirect to Why Foldkit', () => {
+  for (const pathname of [
+    '/manifesto',
+    '/manifesto/',
+    '/get-started/manifesto',
+    '/get-started/manifesto/',
+  ]) {
+    const result = resolveRequest(productionConfig, pathname)
+    assert.equal(result.kind, 'redirect', pathname)
+    assert.equal(result.status, 308, pathname)
+    assert.equal(result.location, '/get-started/why-foldkit', pathname)
+  }
+
+  for (const pathname of ['/manifesto.md', '/get-started/manifesto.md']) {
+    const result = resolveRequest(productionConfig, pathname)
+    assert.equal(result.kind, 'redirect', pathname)
+    assert.equal(result.status, 308, pathname)
+    assert.equal(result.location, '/get-started/why-foldkit.md', pathname)
+  }
+})
+
 test('the MCP manifest and OpenAPI description are served as JSON', () => {
   const manifest = resolveRequest(productionConfig, '/.well-known/mcp')
   assert.equal(manifest.status, 200)
