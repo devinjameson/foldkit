@@ -144,7 +144,7 @@ export const docsSections: ReadonlyArray<DocsSection> = [
         {
           _tag: 'Manifesto',
           href: manifestoRouter(),
-          label: 'Manifesto',
+          label: 'Why Foldkit',
         },
         {
           _tag: 'GettingStarted',

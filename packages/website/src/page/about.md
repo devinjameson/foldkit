@@ -31,5 +31,5 @@ The site is also built to be read by agents. Every page is available as Markdown
 ## Where to Go Next
 
 - [Getting Started](/get-started/getting-started) creates a project and walks through the generated structure.
-- [Manifesto](/get-started/manifesto) explains why Foldkit exists and the principles behind its design.
+- [Why Foldkit](/get-started/why-foldkit) explains why Foldkit exists and the principles behind its design.
 - [Contact](/contact) lists the ways to reach the project.

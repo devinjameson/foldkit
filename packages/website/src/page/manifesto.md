@@ -1,4 +1,4 @@
-# Manifesto
+# Why Foldkit
 
 ## The Architecture Problem
 
