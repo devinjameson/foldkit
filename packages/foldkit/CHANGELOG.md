@@ -1,5 +1,103 @@
 # foldkit
 
+## 0.155.0
+
+### Minor Changes
+
+- [#1233](https://github.com/foldkit/foldkit/pull/1233) [`5c50e26`](https://github.com/foldkit/foldkit/commit/5c50e264d596fb14b149d49ed8a7cf5a53c2645b) Thanks [@devinjameson](https://github.com/devinjameson)! - Accept `ChildAttribute` in a custom element's attribute array.
+
+  An `ElementBuilder` minted by `CustomElement.define` typed its attributes as `ReadonlyArray<Attribute<Message>>`, while every html element builder accepts `ReadonlyArray<Attribute<Message> | ChildAttribute>`. Spreading a Submodel's published `childAttributes` group into `h.div` typechecked, but spreading the same group into a defined custom element was rejected, even though the runtime routes a `ChildAttribute` through its originating Submodel's boundary regardless of the element's tag. Wrappers that forward caller attributes into a custom element inherited the narrowing, so their own attribute parameters could not accept published groups either.
+
+  The builder's call signature now accepts the union, matching the html element builders. Nothing changes at runtime.
+
+- [#1232](https://github.com/foldkit/foldkit/pull/1232) [`9fe0b36`](https://github.com/foldkit/foldkit/commit/9fe0b3693b432f31337721c09f3708f6a422b86d) Thanks [@devinjameson](https://github.com/devinjameson)! - Add `FieldValidation.match`, a module-level exhaustive matcher for `Field` states. It follows the `AsyncData.match` shape: data-first with the field or data-last for pipelines, handlers `onNotValidated`, `onValidating`, and `onValid` receiving the state's `value`, and `onInvalid` receiving `{ value, errors }`.
+
+  ```typescript
+  FieldValidation.match(model.email, {
+    onNotValidated: () => 'border-gray-300',
+    onValidating: () => 'border-blue-300',
+    onValid: () => 'border-green-500',
+    onInvalid: () => 'border-red-500',
+  })
+  ```
+
+- [#1188](https://github.com/foldkit/foldkit/pull/1188) [`4e7d8d4`](https://github.com/foldkit/foldkit/commit/4e7d8d4010be5a84dd37d1dc48bb97b4f4e599f3) Thanks [@devinjameson](https://github.com/devinjameson)! - Take every `Mount.define` and `Mount.defineStream` input as a named field, with the work in a single flat `execute`.
+
+  Both constructors took their inputs positionally, with the result Messages as a variadic tail and the work supplied by a second call. With args declared, that second call was itself curried: `args => element => Effect<Message>`. The outer function ran the moment a view constructed the MountAction, so anything an author wrote between the two arrows ran on every render, inside a pure view. `Command.define` had the same hazard and defers its body with `Effect.suspend`; a Mount had no equivalent.
+
+  Inputs are now named fields on a config object: `args` declares the args Schema, `messages` lists the Messages the Mount can produce, and `execute` does the work. `execute` takes one parameter that carries the live element as `element` alongside the declared args, so the curried middle step is gone. Constructing a MountAction now runs nothing at all; the runtime calls `execute` when the element enters the DOM.
+
+  `execute` keeps the same shape whether or not `args` is declared, because a Mount always has an element. An args field named `element` is rejected where you declare it, since it would collide with the element `execute` receives.
+
+  ## Migration
+
+  Move each positional argument to its field, wrap the result Messages in an array, and collapse the two arrows into one `execute` that destructures `element` alongside the args.
+
+  ```ts
+  // before
+  const AnchorPopover = Mount.define(
+    'AnchorPopover',
+    { buttonId: S.String, anchor: AnchorConfig },
+    CompletedAnchorPopover,
+  )(({ buttonId, anchor }) => element => Effect.gen(function* () { ... }))
+
+  // after
+  const AnchorPopover = Mount.define('AnchorPopover', {
+    args: { buttonId: S.String, anchor: AnchorConfig },
+    messages: [CompletedAnchorPopover],
+    execute: ({ element, buttonId, anchor }) => Effect.gen(function* () { ... }),
+  })
+  ```
+
+  A Mount with no args omits `args` and keeps the same `execute`.
+
+  ```ts
+  // before
+  const PortalToBody = Mount.define('PortalToBody', CompletedPortalToBody)(
+    element => Effect.gen(function* () { ... }),
+  )
+
+  // after
+  const PortalToBody = Mount.define('PortalToBody', {
+    messages: [CompletedPortalToBody],
+    execute: ({ element }) => Effect.gen(function* () { ... }),
+  })
+  ```
+
+  `Mount.defineStream` migrates the same way, with `execute` returning a `Stream<Message>`.
+
+  `@foldkit/ui` now requires `foldkit` 0.155.0 or newer because its Mount definitions use this config shape.
+
+  `foldkit/mount-factory-must-use-element` reads the new shape. It looks for `element` in `execute`'s destructuring pattern, and reports on `execute` itself. A Mount whose `execute` ignores its element is still an error: the element is the reason a Mount exists, and work that does not need it belongs in a Command, Subscription, or ManagedResource.
+
+  Destructure `element` and the rule checks the read, reading through a default value so `{ element = document.body }` is still checked. Reading `input.element` off an unpacked parameter is checked too. Hand the whole input somewhere the rule cannot follow, such as `attachObserver(input)` or `input[key]`, and it stops checking rather than reporting a Mount that does use its element. Reading only some other field off that input still reports, and so does an `execute` that never references its parameter at all.
+
+- [#1203](https://github.com/foldkit/foldkit/pull/1203) [`d56894c`](https://github.com/foldkit/foldkit/commit/d56894cdc320bad3b80c43eb14bea457bde65af9) Thanks [@devinjameson](https://github.com/devinjameson)! - Remove the deprecated `h.OnClickFocus`. Replace `h.OnClickFocus(focusSelector, message)` with `h.OnClick(message, { focusSelector })`.
+
+- [#1208](https://github.com/foldkit/foldkit/pull/1208) [`fdc973c`](https://github.com/foldkit/foldkit/commit/fdc973cc795c2f04ce1e0f149f9cf0143cc6f3f1) Thanks [@devinjameson](https://github.com/devinjameson)! - Let Scene preserve multiple OutMessages emitted by one update-producing step in runtime order and assert the complete sequence with `expectOutMessages`.
+
+  This changes OutMessage assertions after `Command.resolveAll`, `Command.resolveAllExact`, and `Mount.resolveAll`. `expectOutMessage` now requires exactly one OutMessage from the whole step, and `expectNoOutMessage` requires none. Use `expectOutMessages` when several resolvers emit OutMessages. When a step emits several, the singular `SceneSimulation.outMessage` field is `undefined` because no single value can represent the result.
+
+### Patch Changes
+
+- [#1191](https://github.com/foldkit/foldkit/pull/1191) [`2d85d5a`](https://github.com/foldkit/foldkit/commit/2d85d5ae9536e3fc9c9595442c233a72c0395122) Thanks [@wmaurer](https://github.com/wmaurer)! - `Dom.closeDialog` now resolves to a boolean. It is `true` when the close released the focus trap, return focus, and stack entry that `Dom.showDialog` installed. It is `false` when the dialog held none. For example, this happens when the close runs before the show has finished. A caller that ignores the result needs no change.
+
+- [#1220](https://github.com/foldkit/foldkit/pull/1220) [`16b392c`](https://github.com/foldkit/foldkit/commit/16b392c5e304bbbea62c0aae5a4a36f90d472f71) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade Happy DOM to include its latest custom-element event-listener fix.
+
+- [#1207](https://github.com/foldkit/foldkit/pull/1207) [`2a88e37`](https://github.com/foldkit/foldkit/commit/2a88e3738d4841525be25f2ba16d958164b4f1a9) Thanks [@devinjameson](https://github.com/devinjameson)! - Move TypeDoc generation into a private workspace so package TypeScript upgrades are independent from TypeDoc's compiler support.
+
+- [#1230](https://github.com/foldkit/foldkit/pull/1230) [`92e56cf`](https://github.com/foldkit/foldkit/commit/92e56cfbc0a7bccc261cf9e50564a5132fc89d1d) Thanks [@devinjameson](https://github.com/devinjameson)! - Clear a ManagedResource reference and dispatch its release Message when the user-provided release effect fails.
+
+- [#1231](https://github.com/foldkit/foldkit/pull/1231) [`aaff2e5`](https://github.com/foldkit/foldkit/commit/aaff2e53f5bf5742ae0428c5fda89a5d6974ac43) Thanks [@devinjameson](https://github.com/devinjameson)! - Match `defineTaggedUnion` and `defineRouteUnion` values through the union's own `match` instead of `Match.value` pipes with `Match.tagsExhaustive`. Internal call sites, the ssg template, and the generated FOLDKIT.md guidance now use the union method; behavior is unchanged.
+
+- [#1210](https://github.com/foldkit/foldkit/pull/1210) [`b02ce0a`](https://github.com/foldkit/foldkit/commit/b02ce0ab32a082bd40774127b8f4f6bfd6e1043e) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade development dependencies to Node 26 type definitions and Happy DOM 20.11.8.
+
+- [#1217](https://github.com/foldkit/foldkit/pull/1217) [`5f8a6e8`](https://github.com/foldkit/foldkit/commit/5f8a6e8a2ac0baf34598964a7cc8d48c81fb37c6) Thanks [@devinjameson](https://github.com/devinjameson)! - Reduce render overhead by caching unchanged document metadata, writing ordinary properties directly, and skipping masked module scans for VNodes with no module data. External metadata changes and URL updates are still reconciled on the next render.
+
+- [#1220](https://github.com/foldkit/foldkit/pull/1220) [`16b392c`](https://github.com/foldkit/foldkit/commit/16b392c5e304bbbea62c0aae5a4a36f90d472f71) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade the Happy DOM development dependency used by package tests.
+
+- [#1210](https://github.com/foldkit/foldkit/pull/1210) [`b02ce0a`](https://github.com/foldkit/foldkit/commit/b02ce0ab32a082bd40774127b8f4f6bfd6e1043e) Thanks [@devinjameson](https://github.com/devinjameson)! - Upgrade the TypeScript compiler used to build and test packages to 7.0.2 while keeping compiler API tools on the official TypeScript 6 compatibility package.
+
 ## 0.154.0
 
 ### Minor Changes
