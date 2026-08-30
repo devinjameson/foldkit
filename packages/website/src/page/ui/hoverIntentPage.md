@@ -2,15 +2,15 @@
 
 ## Overview
 
-HoverIntent is a behavior-only Submodel for a trigger and its related panel. It opens after pointer entry and stays open while the pointer or focus moves between both elements. Pointer departure uses a configurable grace delay; focus departure closes without that pointer delay. Focus opens immediately. Escape closes the panel and suppresses reopening until pointer and focus have both left.
+HoverIntent keeps a related panel open while the pointer or focus moves between it and a trigger. Pointer entry and departure use configurable delays. Focus opens the panel immediately; if focus is the last thing keeping it open, moving focus away closes it without the pointer grace period. Escape also closes immediately and prevents reopening until the pointer and focus have both left.
 
-It does not create elements, position a panel, assign an ARIA role, or choose a styling hook. Use it when those choices belong to the component you are building. For example, a Hover Card can combine HoverIntent with [Anchor](/ui/anchor), while a hover menu can use it to keep its items available as the pointer leaves the trigger.
+HoverIntent is headless. It does not render elements, position the panel, assign ARIA roles, or choose styles. Use it when those choices belong to the component you are building. For example, a Hover Card can pair HoverIntent with [Anchor](/ui/anchor), while a hover menu can keep its items available as the pointer moves from the trigger into the panel.
 
 ## Examples
 
 ### Hover Card
 
-Hover or focus More information, then move into the card. Press Escape or move focus away to close it.
+Hover over or focus the “More information” trigger, then move the pointer into the card. Move the pointer or focus away from both elements, or press Escape, to close it.
 
 ::Demo{name="hover-card"}
 
@@ -18,21 +18,21 @@ Hover or focus More information, then move into the card. Press Escape or move f
 
 ### Hover Menu
 
-Hover or focus Actions, then move into the menu. Choosing an item closes it without navigating or changing other page state.
+Hover over or focus the “Actions” trigger, then move the pointer into the menu. Choosing an item closes the menu; the demo items do not navigate or change other page state.
 
 ::Demo{name="hover-menu"}
 
 ::Snippet{name="uiHoverIntentMenu" label="hover menu example"}
 
-HoverIntent's trigger and panel bundles carry child Messages through `h.submodel`. Spreading them into the wrong element changes the interaction model, so put `trigger` on the activator and `panel` on the content that must keep the intent alive.
+Spread `trigger` onto the trigger element and `panel` onto the panel element. Each bundle supplies the hover, focus, and Escape handlers for that element. The `h.submodel` boundary routes the resulting child Messages back to the parent.
 
 ## Timing and Dismissal
 
-Pointer entry starts `openDelay`, which defaults to 200 milliseconds. Leaving the last hovered element starts `closeDelay`, which defaults to 300 milliseconds. Entering either element again cancels a pending close. Each wait carries a version, so a completion from an earlier interaction cannot change current visibility.
+Pointer entry starts `openDelay`, which defaults to 200 milliseconds. When the pointer leaves both elements and neither holds focus, `closeDelay` starts; it defaults to 300 milliseconds. Entering either element again before the delay expires keeps the panel open. Versioning prevents an old wait from changing visibility after a newer interaction.
 
-Focus opens immediately. Focus departure schedules a zero-delay close, so clicking or tabbing away does not inherit the pointer grace period. When focus moves from the trigger into the panel, the panel focus handler cancels that close before it resolves, so keyboard users can enter interactive panel content.
+Focus opens immediately. If focus is the last thing keeping the panel open, moving it outside both elements starts a zero-delay close, so clicking or tabbing away does not use the pointer grace period. When focus moves from the trigger into the panel, the panel focus handler cancels that close before it resolves. Keyboard users can therefore move into focusable panel content without closing it.
 
-Escape closes immediately. When panel content can hold focus, set `focusTriggerSelector` so Escape returns focus to the trigger before removing the panel. If the selector is omitted or does not resolve to a focusable element, HoverIntent does not move focus; removing the focused panel leaves the browser to choose its fallback focus target. It does not reopen while the pointer or focus still engages the trigger or panel. After both disengage, a fresh entry can open it again.
+Escape closes immediately. When panel content can hold focus, set `focusTriggerSelector` so Escape returns focus to the trigger before removing the panel. If the selector is omitted or does not resolve to a focusable element, HoverIntent does not move focus; removing the focused panel leaves the browser to choose its fallback focus target. After Escape, the panel does not reopen until the pointer and focus have both left the trigger and panel. A later entry can open it again.
 
 ## API Reference
 
@@ -53,7 +53,7 @@ Creates a closed HoverIntent Model. `init` takes no `id` because HoverIntent own
 
 `(model: Model) => Update.ReturnWithOutMessage<Model, Message, OutMessage>`
 
-Closes HoverIntent immediately for a parent domain event, such as choosing an item in a hover menu. It invalidates pending transitions, clears panel engagement, and emits `Closed` when visibility changes.
+Closes HoverIntent immediately, for example after the parent handles a hover-menu item click. It invalidates pending waits and emits `Closed` only when visibility changes. If the trigger is still hovered or focused, the panel stays closed until both hover and focus leave it.
 
 ### update
 
@@ -69,18 +69,18 @@ Builds headless trigger and panel event bundles, then calls `ViewInputs.toView`.
 
 ### ViewInputs {#view-inputs}
 
-| Name                   | Type                           | Description                                                                               |
-| ---------------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
-| `focusTriggerSelector` | `string \| undefined`          | Selector for the trigger that receives focus when Escape dismisses focused panel content. |
-| `toView`               | `(render: RenderInfo) => Html` | Renders the consumer-owned markup from HoverIntent's event bundles and visibility state.  |
+| Name                   | Type                           | Description                                                                    |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
+| `focusTriggerSelector` | `string \| undefined`          | Selector for the trigger to focus before Escape removes focused panel content. |
+| `toView`               | `(render: RenderInfo) => Html` | Renders consumer-owned markup from the event bundles and visibility state.     |
 
 ### RenderInfo {#render-info}
 
-| Name        | Type                            | Description                                                                  |
-| ----------- | ------------------------------- | ---------------------------------------------------------------------------- |
-| `trigger`   | `ReadonlyArray<ChildAttribute>` | Hover, focus, and Escape attributes for the trigger element.                 |
-| `panel`     | `ReadonlyArray<ChildAttribute>` | Hover, focus, and Escape attributes for the panel element.                   |
-| `isVisible` | `boolean`                       | Whether the HoverIntent Model is open. Render the panel conditionally on it. |
+| Name        | Type                            | Description                                                           |
+| ----------- | ------------------------------- | --------------------------------------------------------------------- |
+| `trigger`   | `ReadonlyArray<ChildAttribute>` | Hover, focus, and Escape attributes for the trigger element.          |
+| `panel`     | `ReadonlyArray<ChildAttribute>` | Hover, focus, and Escape attributes for the panel element.            |
+| `isVisible` | `boolean`                       | Whether the panel is open. The consumer decides whether to render it. |
 
 ### Message
 
@@ -95,4 +95,4 @@ Builds headless trigger and panel event bundles, then calls `ViewInputs.toView`.
 
 ### WaitBeforeOpening and WaitBeforeClosing {#wait-commands}
 
-These Commands wait for the configured delay and emit their matching completion Message with its scheduling version. They are exported for Story tests. Application code should let `update` issue and resolve them through the normal Runtime.
+These Commands wait for the configured delay and emit their matching completion Message with the version that scheduled the wait. `update` ignores stale versions. The Commands are exported for Story tests; application code should let `update` issue and resolve them through the normal Runtime.

@@ -26,7 +26,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>((model, h): Html =>
       h.p(
         [h.Class('mb-4 max-w-xl text-sm text-gray-600')],
         [
-          'Hover the trigger, then move the pointer into the panel. Focus the trigger and press Escape to close it.',
+          'Hover over or focus the “More information” trigger, then move the pointer into the card. Move the pointer or focus away from both elements, or press Escape, to close it.',
         ],
       ),
       h.submodel({
