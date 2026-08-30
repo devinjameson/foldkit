@@ -66,11 +66,11 @@ Command.define('GenerateCardId', {
   args: { columnId: S.String },
   messages: [Message.CompletedGenerateCardId],
   execute: ({ columnId }) =>
-    Effect.uuid.pipe(
-      Effect.map(cardId =>
-        Message.CompletedGenerateCardId({ cardId, columnId }),
-      ),
-    ),
+    Effect.gen(function* () {
+      const crypto = yield* Crypto.Crypto
+      const cardId = yield* Effect.orDie(crypto.randomUUIDv4)
+      return Message.CompletedGenerateCardId({ cardId, columnId })
+    }).pipe(Effect.provide(BrowserCrypto.layer)),
 })
 Command.define('SaveTodos', {
   args: { todos: Todos },
@@ -614,7 +614,7 @@ Notes:
 
 - Only import what you actually use in the file. The lint pass catches unused imports.
 - Module-by-module reminders, for example: `Calendar` for `Calendar.CalendarDate`, `Calendar.today.local`, `Calendar.make`, `Calendar.addDays` etc., paired with the `Calendar` or `DatePicker` component from `@foldkit/ui` (the component and the `foldkit` date module share the name `Calendar`; they are different things). `Dom` for DOM-side-effect helpers (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.closeDialog`, `Dom.lockScroll`, `Dom.unlockScroll`, `Dom.waitForAnimationSettled`, etc.). `File` for file upload primitives paired with `FileDrop` from `@foldkit/ui`. `foldkit/fieldValidation` for form validation.
-- For time, randomness, UUIDs, or delays, use Effect's built-ins directly rather than reaching for a Foldkit module: `Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Effect.sleep(Duration.millis(...))`.
+- For time, randomness, or delays, use Effect's built-ins directly rather than reaching for a Foldkit module: `Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.sleep(Duration.millis(...))`. For UUIDs, use the `Crypto.Crypto` service's `randomUUIDv4` Effect with a platform Crypto layer (`BrowserCrypto.layer` from `@effect/platform-browser`).
 - When an Effect module name collides with a global, alias the Effect import with a trailing underscore: `String as String_`, `Array as Array_`, `Number as Number_`.
 - `Message.match` is the exhaustive matcher on a union returned by `defineMessageUnion()`. `Match as M` is Effect's Match module for other tagged unions, partial matching, fallbacks, and handlers shared by several tags.
 - **UI components live in a separate package.** Import them by name from `@foldkit/ui`: `import { Dialog, DatePicker, FileDrop, Toast, Tooltip } from '@foldkit/ui'`. Deep imports (`@foldkit/ui/dialog`) work too. There is no `Ui` export on the `foldkit` package, so `Ui.Dialog.view` does not resolve.
