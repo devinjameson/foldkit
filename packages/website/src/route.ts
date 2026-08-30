@@ -262,7 +262,7 @@ const ai = section('ai')
 
 export const homeRouter = pipe(root, mapTo(AppRoute.Home))
 
-export const manifestoRouter = getStarted('manifesto', AppRoute.Manifesto)
+export const manifestoRouter = getStarted('why-foldkit', AppRoute.Manifesto)
 export const gettingStartedRouter = getStarted(
   'getting-started',
   AppRoute.GettingStarted,

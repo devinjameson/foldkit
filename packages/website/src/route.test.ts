@@ -46,6 +46,10 @@ describe('route table', () => {
       expect(parsed._tag).toBe(expectedTag(name))
     },
   )
+
+  test('builds the Why Foldkit page at its renamed URL', () => {
+    expect(Route.manifestoRouter()).toBe('/get-started/why-foldkit')
+  })
 })
 
 describe('blog routes', () => {
