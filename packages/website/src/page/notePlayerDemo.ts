@@ -742,7 +742,7 @@ const playbackControlView = (
                       [
                         ...attributes.button,
                         h.Class(
-                          'flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-normal transition bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 hover:bg-accent-700 dark:hover:bg-accent-600 active:bg-accent-800 dark:active:bg-accent-700 cursor-pointer',
+                          'button-accent flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm cursor-pointer',
                         ),
                         h.AriaLabel('Pause'),
                       ],
@@ -763,8 +763,7 @@ const playbackControlView = (
                           clsx(
                             'flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-normal transition',
                             {
-                              'bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 hover:bg-accent-700 dark:hover:bg-accent-600 active:bg-accent-800 dark:active:bg-accent-700 cursor-pointer':
-                                canPlay,
+                              'button-accent cursor-pointer': canPlay,
                               'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed':
                                 !canPlay,
                             },

@@ -138,7 +138,7 @@ const timeAgoClassName =
   'text-right text-xs text-gray-500 dark:text-gray-400 tabular-nums'
 
 const buttonClassName =
-  'rounded bg-accent-600 hover:bg-accent-700 cursor-pointer px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-600 focus-visible:ring-offset-2'
+  'button-accent rounded cursor-pointer px-3 py-1.5 text-sm shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-600 focus-visible:ring-offset-2'
 
 const headerClassName =
   'flex items-end justify-between text-sm text-gray-600 dark:text-gray-400'
