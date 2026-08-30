@@ -2,18 +2,8 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Textarea } from '@foldkit/ui'
 
-import { type Message, UpdatedTextareaDemoValue } from './message'
+import { Message } from './message'
 import type { Model } from './model'
-
-// DEMO CONTENT
-
-const textareaClassName =
-  'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-accent-400 dark:focus:ring-accent-400 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
-
-const labelClassName =
-  'block text-sm font-medium text-gray-700 dark:text-gray-300'
-
-const descriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
 
 // VIEW
 
@@ -26,23 +16,23 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
           {
             id: 'textarea-basic-demo',
             value: model.textareaDemoValue,
-            onInput: value => UpdatedTextareaDemoValue({ value }),
+            onInput: value => Message.UpdatedTextareaDemoValue({ value }),
             placeholder: 'Tell us about yourself...',
             rows: 4,
             toView: attributes =>
               h.div(
-                [h.Class('flex flex-col gap-1.5 w-full')],
+                [h.Class('demo-field w-full')],
                 [
                   h.label(
-                    [...attributes.label, h.Class(labelClassName)],
+                    [...attributes.label, h.Class('demo-label')],
                     ['Bio'],
                   ),
                   h.textarea([
                     ...attributes.textarea,
-                    h.Class(textareaClassName),
+                    h.Class('demo-field-textarea'),
                   ]),
                   h.span(
-                    [...attributes.description, h.Class(descriptionClassName)],
+                    [...attributes.description, h.Class('demo-description')],
                     ['A brief introduction about yourself.'],
                   ),
                 ],
@@ -66,12 +56,15 @@ export const disabledDemo = (_model: Model, h: HtmlBuilder<Message>) => {
         rows: 3,
         toView: attributes =>
           h.div(
-            [h.Class('flex flex-col gap-1.5 w-full max-w-md')],
+            [h.Class('demo-field w-full max-w-md')],
             [
-              h.label([...attributes.label, h.Class(labelClassName)], ['Bio']),
-              h.textarea([...attributes.textarea, h.Class(textareaClassName)]),
+              h.label([...attributes.label, h.Class('demo-label')], ['Bio']),
+              h.textarea([
+                ...attributes.textarea,
+                h.Class('demo-field-textarea'),
+              ]),
               h.span(
-                [...attributes.description, h.Class(descriptionClassName)],
+                [...attributes.description, h.Class('demo-description')],
                 ['This textarea is disabled.'],
               ),
             ],

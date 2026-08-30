@@ -28,7 +28,7 @@ When the answer takes real tracing, that is the signal to reach for `Machine` (`
 - `deadTransitions()` returns edges that can never fire, tagged `UnreachableSource` or `ShadowedByOtherwise`.
 - `reachableFrom(tag)` gives the closure from any state, and `toMermaid()` renders the diagram for review.
 
-Recommend it when a flow has several states, guarded transitions, or edges that are easy to get wrong (checkout, onboarding, multi-step approval, connection lifecycles). `repos/foldkit/examples/state-machine/` is the reference. Don't push it on a three-state union that one `M.tagsExhaustive` already handles legibly; the table costs more than it saves there. The module is under `experimental/`, so say so when recommending it.
+Recommend it when a flow has several states, guarded transitions, or edges that are easy to get wrong (checkout, onboarding, multi-step approval, connection lifecycles). `repos/foldkit/examples/state-machine/` is the reference. Don't push it on a three-state union that one exhaustive `match` already handles legibly; the table costs more than it saves there. The module is under `experimental/`, so say so when recommending it.
 
 ### `derived-data-in-model`
 
@@ -36,11 +36,11 @@ Fields computable from other fields. `endTime` AND `remainingMs` on the same sta
 
 ### `dead-variants-and-noop-commands`
 
-Variants set but never observed by the view or other updates. Fields written but never read. Commands whose result Message handler is `[model, []]`.
+Variants set but never observed by the view or other updates. Fields written but never read. Commands whose result Message handler is `{ model }`.
 
-The **no-op startup Command**: `init` returns `[DEFAULT_MODEL, [triggerApplicationStarted]]`, the Command resolves to `ApplicationStarted()`, and the handler is `ApplicationStarted: () => [model, []]`. Give the Command real work (load preferences, fetch initial data, focus first input, restore session) or delete the Command and the Message together.
+The **no-op startup Command**: `init` returns `{ model: DEFAULT_MODEL, commands: [triggerApplicationStarted] }`, the Command resolves to `ApplicationStarted()`, and the handler is `ApplicationStarted: () => ({ model })`. Give the Command real work (load preferences, fetch initial data, focus first input, restore session) or delete the Command and the Message together.
 
-The **navigate-before-save**: a handler returning BOTH a save Command and a navigation Command races the save against the navigation. (`pushUrl` is an `Effect`, not a Command; it reaches a handler wrapped in one, as `Command.define('PushUrl', { args: { url: S.String }, messages: [CompletedPushUrl], execute: ({ url }) => pushUrl(url).pipe(Effect.as(CompletedPushUrl())) })`.) Which one lands first is timing, not something the handler decides, and a navigation is local while a save is a round trip, so the route has almost always changed by the time the save resolves. The failure Message still arrives and the handler still runs; the error just renders on a route the user didn't submit from, or on one whose view doesn't render it at all. Idiomatic: emit the save only, then navigate in the `Succeeded*` handler, so errors surface on the page the user is still looking at.
+The **navigate-before-save**: a handler returning BOTH a save Command and a navigation Command races the save against the navigation. (`pushUrl` is an `Effect`, not a Command; it reaches a handler wrapped in one, as `Command.define('PushUrl', { args: { url: S.String }, messages: [Message.CompletedPushUrl], execute: ({ url }) => pushUrl(url).pipe(Effect.as(Message.CompletedPushUrl())) })`.) Which one lands first is timing, not something the handler decides, and a navigation is local while a save is a round trip, so the route has almost always changed by the time the save resolves. The failure Message still arrives and the handler still runs; the error just renders on a route the user didn't submit from, or on one whose view doesn't render it at all. Idiomatic: emit the save only, then navigate in the `Succeeded*` handler, so errors surface on the page the user is still looking at.
 
 For every union variant, trace whether the view branches on it and whether that branch is reachable. For every Model field, trace whether anything reads it besides its own writes.
 
@@ -50,16 +50,30 @@ For every union variant, trace whether the view branches on it and whether that 
 
 Three or four handlers sharing the same 5-line scaffold (`M.tag` + `M.orElse`, `Option.match` + fallback) want a named helper. Genuinely duplicated decision logic, not coincidentally similar shape.
 
-Specific case: the update return type written inline at every update site. The convention is to name it once per file:
+Specific case: an `UpdateReturn` alias used only by one `Message.match`. Inline the type at that matcher:
 
 ```ts
-type UpdateReturn = Update.Return<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    // ...
+  })
 ```
 
-`Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart.
+Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses the type. `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart.
 
-**Flag the repetition, not the spelling.** Writing the tuple out as `type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]` is what most examples still do (kanban, auth, job-application); `Update.Return` is the tidier spelling and the right default for new code, but a hand-written alias is not a finding. What is a finding: no alias at all, with the full tuple repeated at the signature and again inside `M.withReturnType<...>()`.
+**Flag needless scaffolding, repeated types, and a missing guard.** Use `Update.Return<Model, Message>` when an update cannot emit an OutMessage. A missing `outMessage` field means that update emitted nothing. The `outMessage?: never` guard also prevents a result containing an OutMessage from entering code that would keep only its Model and Commands. Code expecting `Update.ReturnWithOutMessage<Model, Message, OutMessage>` can accept either outcome. A hand-written plain-return alias must preserve the same guard. Also flag a full record repeated at the update signature and again inside `Message.match<UpdateReturn>(message, handlers)`, or `: UpdateReturn` repeated on an update already constrained by that match.
+
+### `manual-update-return-unpacking`
+
+Do not destructure or rename `model`, `commands`, or `outMessage` from an update-like result. Bind the whole result to an operation-named value and access its fields through that value. For example, pass `homeInit.commands` directly to `Command.mapMessages` instead of extracting or renaming it. Use `result.commands ?? []` only when the next operation requires a concrete array.
+
+Dot access does not prevent someone from ignoring `outMessage`; it keeps the operation and all of its returned fields visible together. When the result belongs to a child Submodel, manual unpacking is usually the deeper problem. Use `Update.foldChild` or `Update.foldChildStep` so the child Model, lifted Commands, and OutMessage remain part of one fold.
+
+When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` when attaching an OutMessage to an existing plain return or when the value has the type `OutMessage | undefined`. Pipe an existing return into the helper, and pass a new result literal first. Flag local attachment helpers and conditional object spreads that duplicate it.
+
+A child fold needs `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. For partial forwarding, match every child variant and return `undefined` for the variants that stop here. Omit `toParentOutMessage` when every variant stops here. `foldOutMessage` still handles each variant locally, including variants that continue upward. Flag `toParentOutMessage: () => undefined`.
+
+When several operations update the same Model in sequence, use `Update.combine`. Do not apply it to independent init results whose Models are assembled as separate fields.
 
 ### `functions-doing-two-things`
 
@@ -103,9 +117,9 @@ An `evo` setter that only transforms that same field should be point-free: `entr
 
 ### `empty-object-constructors`
 
-`foldkit/no-empty-object-tagged-call` catches the bare-identifier form (`Idle({})`). It bails on a member-expression callee, so `Todo.ClickedDelete({})` through a namespace import needs your eyes.
+`foldkit/no-empty-object-tagged-call` catches `Idle({})`, calls through Message, Route, and State namespaces, and unions declared in the same file with Foldkit's union helpers. It cannot recognize an imported domain union such as `Todo` from its name alone, so check those calls by eye.
 
-No-field tagged structs called with `({})`: `Idle({})`, `Work({})`, `ClickedSubmit({})`. Should be `Idle()`, `Work()`, `ClickedSubmit()`. Both compile; exemplars are uniform on the no-arg form.
+No-field tagged structs called with `({})`: `Idle({})`, `Work({})`, `Message.ClickedSubmit({})`. Should be `Idle()`, `Work()`, `Message.ClickedSubmit()`. Both compile; exemplars are uniform on the no-arg form.
 
 ### `hand-rolled-async-state`
 
@@ -137,7 +151,7 @@ A `keyed(...)` whose key is built from displayed data (concatenated booleans, a 
 
 ### `flat-parent-message-union`
 
-`Message = S.Union([ChildMessage, ParentLocalMessage])` makes every parent handler know the child's tag names, and the child can't grow its vocabulary without leaking into the parent. The canonical Submodel pattern wraps: `const GotChildMessage = m('GotChildMessage', { message: Child.Message })`, and the parent's `M.tagsExhaustive` has one `GotChildMessage` case delegating to `Child.update(model.child, message)`. Flat unions work for trivial cases but don't isolate child concerns. Suggest `Got*` wrapping for any Submodel likely to grow, or any child that needs an OutMessage.
+Flattening a child's Message variants into the parent's `defineMessageUnion()` record makes every parent handler know the child's tag names, and the child can't grow its vocabulary without leaking into the parent. The canonical Submodel pattern adds `GotChildMessage: { message: Child.Message }` to the parent Message and handles that one variant with `Message.match`, delegating to `Child.update(model.child, message)`. Flat unions work for trivial cases but don't isolate child concerns. Suggest `Got*` wrapping for any Submodel likely to grow, or any child that needs an OutMessage.
 
 ## Accessibility
 

@@ -3,11 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { BLOG_SECTION } from '../src/page/blog/meta'
 import { findBySlug } from '../src/page/example/meta'
-import {
-  BlogPostRoute,
-  ExampleDetailRoute,
-  PlaygroundRoute,
-} from '../src/route'
+import { AppRoute } from '../src/route'
 import { blogPosts } from './blogPosts'
 import { routeToMetadata } from './metadata'
 
@@ -20,7 +16,7 @@ describe('routeToMetadata', () => {
 
       expect(
         routeToMetadata(
-          BlogPostRoute({ postSlug: slug }),
+          AppRoute.BlogPost({ postSlug: slug }),
           resolveApiModuleName,
         ),
       ).toEqual({
@@ -33,7 +29,7 @@ describe('routeToMetadata', () => {
     it('throws naming the slug and the registry for an unregistered slug', () => {
       expect(() =>
         routeToMetadata(
-          BlogPostRoute({ postSlug: 'no-such-post' }),
+          AppRoute.BlogPost({ postSlug: 'no-such-post' }),
           resolveApiModuleName,
         ),
       ).toThrow(
@@ -48,7 +44,7 @@ describe('routeToMetadata', () => {
 
       expect(
         routeToMetadata(
-          ExampleDetailRoute({ exampleSlug: 'counter' }),
+          AppRoute.ExampleDetail({ exampleSlug: 'counter' }),
           resolveApiModuleName,
         ),
       ).toEqual({
@@ -61,7 +57,7 @@ describe('routeToMetadata', () => {
     it('throws naming the slug and the registry for an unregistered slug', () => {
       expect(() =>
         routeToMetadata(
-          ExampleDetailRoute({ exampleSlug: 'no-such-example' }),
+          AppRoute.ExampleDetail({ exampleSlug: 'no-such-example' }),
           resolveApiModuleName,
         ),
       ).toThrow(
@@ -76,11 +72,11 @@ describe('routeToMetadata', () => {
 
       expect(
         routeToMetadata(
-          PlaygroundRoute({ exampleSlug: 'counter' }),
+          AppRoute.Playground({ exampleSlug: 'counter' }),
           resolveApiModuleName,
         ),
       ).toEqual({
-        title: `${example.title} playground`,
+        title: `${example.title} Playground`,
         description: `Edit and run the ${example.title} example live in your browser.`,
         section: 'Playground',
       })
@@ -89,7 +85,7 @@ describe('routeToMetadata', () => {
     it('throws naming the slug and the registry for an unregistered slug', () => {
       expect(() =>
         routeToMetadata(
-          PlaygroundRoute({ exampleSlug: 'no-such-example' }),
+          AppRoute.Playground({ exampleSlug: 'no-such-example' }),
           resolveApiModuleName,
         ),
       ).toThrow(

@@ -1,5 +1,5 @@
 import { Match as M, Option, Schema as S } from 'effect'
-import { Command, Update } from 'foldkit'
+import { Update } from 'foldkit'
 import {
   Field,
   NotValidated,
@@ -8,7 +8,7 @@ import {
   makeRules,
   validate,
 } from 'foldkit/fieldValidation'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Listbox } from '@foldkit/ui'
@@ -50,38 +50,26 @@ const GraduationYearListbox = Listbox.create<string>()
 
 // MESSAGE
 
-export const UpdatedSchool = m('UpdatedSchool', { value: S.String })
-export const UpdatedDegree = m('UpdatedDegree', { value: S.String })
-export const UpdatedFieldOfStudy = m('UpdatedFieldOfStudy', {
-  value: S.String,
+export const Message = defineMessageUnion({
+  UpdatedSchool: { value: S.String },
+  UpdatedDegree: { value: S.String },
+  UpdatedFieldOfStudy: { value: S.String },
+  GotGraduationYearListboxMessage: { message: Listbox.Message },
+  ToggledCurrentlyEnrolled: { isChecked: S.Boolean },
+  ClickedRemoveSelf: {},
 })
-export const GotGraduationYearListboxMessage = m(
-  'GotGraduationYearListboxMessage',
-  { message: Listbox.Message },
-)
-export const ToggledCurrentlyEnrolled = m('ToggledCurrentlyEnrolled', {
-  isChecked: S.Boolean,
-})
-export const ClickedRemoveSelf = m('ClickedRemoveSelf')
 
-export const Message = S.Union([
-  UpdatedSchool,
-  UpdatedDegree,
-  UpdatedFieldOfStudy,
-  GotGraduationYearListboxMessage,
-  ToggledCurrentlyEnrolled,
-  ClickedRemoveSelf,
-])
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
 
-export const Removed = m('Removed')
+export const OutMessage = defineMessageUnion({
+  Removed: {},
+})
 
-export const OutMessage = S.Union([Removed])
 export type OutMessage = typeof OutMessage.Type
 
-export type Removed = typeof Removed.Type
+export type Removed = typeof OutMessage.Removed.Type
 
 // INIT
 
@@ -99,21 +87,14 @@ export const init = (entryId: string): Model => ({
 
 // UPDATE
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message>>,
-  Option.Option<OutMessage>,
-]
-
 const foldGraduationYearListboxOutMessage = M.type<Listbox.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [
-        evo(model, { maybeGraduationYear: () => Option.some(value) }),
-        [],
-      ],
+      model => ({
+        model: evo(model, { maybeGraduationYear: () => Option.some(value) }),
+      }),
   }),
 )
 
@@ -122,44 +103,36 @@ const foldGraduationYearListbox = Update.foldChild({
   read: (model: Model) => Option.some(model.graduationYearListbox),
   write: (model, nextGraduationYearListbox) =>
     evo(model, { graduationYearListbox: () => nextGraduationYearListbox }),
-  toParentMessage: message => GotGraduationYearListboxMessage({ message }),
-  toParentOutMessage: () => Option.none(),
+  toParentMessage: message =>
+    Message.GotGraduationYearListboxMessage({ message }),
   foldOutMessage: foldGraduationYearListboxOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      UpdatedSchool: ({ value }) => [
-        evo(model, { school: () => validateSchool(value) }),
-        [],
-        Option.none(),
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.ReturnWithOutMessage<Model, Message, OutMessage>>(
+    message,
+    {
+      UpdatedSchool: ({ value }) => ({
+        model: evo(model, { school: () => validateSchool(value) }),
+      }),
 
-      UpdatedDegree: ({ value }) => [
-        evo(model, { degree: () => validateDegree(value) }),
-        [],
-        Option.none(),
-      ],
+      UpdatedDegree: ({ value }) => ({
+        model: evo(model, { degree: () => validateDegree(value) }),
+      }),
 
-      UpdatedFieldOfStudy: ({ value }) => [
-        evo(model, { fieldOfStudy: () => validateFieldOfStudy(value) }),
-        [],
-        Option.none(),
-      ],
+      UpdatedFieldOfStudy: ({ value }) => ({
+        model: evo(model, { fieldOfStudy: () => validateFieldOfStudy(value) }),
+      }),
 
       GotGraduationYearListboxMessage: ({ message }) =>
         foldGraduationYearListbox(model, message),
 
-      ToggledCurrentlyEnrolled: ({ isChecked }) => [
-        evo(model, { isCurrentlyEnrolled: () => isChecked }),
-        [],
-        Option.none(),
-      ],
+      ToggledCurrentlyEnrolled: ({ isChecked }) => ({
+        model: evo(model, { isCurrentlyEnrolled: () => isChecked }),
+      }),
 
-      ClickedRemoveSelf: () => [model, [], Option.some(Removed())],
-    }),
+      ClickedRemoveSelf: () => ({ model, outMessage: OutMessage.Removed() }),
+    },
   )
 
 // VALIDATION SUMMARY

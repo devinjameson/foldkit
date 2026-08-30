@@ -8,6 +8,7 @@ import { DatePicker, Listbox } from '@foldkit/ui'
 
 import { PronounOption } from '../domain'
 import { PersonalInfo } from '../step'
+import { Message } from '../step/personalInfo'
 import {
   backdropClassName,
   calendarView,
@@ -57,7 +58,7 @@ export const personalInfoView = Submodel.defineView<
               id: 'first-name',
               label: 'First Name',
               field: firstName,
-              onInput: value => PersonalInfo.UpdatedFirstName({ value }),
+              onInput: value => Message.UpdatedFirstName({ value }),
               placeholder: 'Jane',
             },
             h,
@@ -67,7 +68,7 @@ export const personalInfoView = Submodel.defineView<
               id: 'last-name',
               label: 'Last Name',
               field: lastName,
-              onInput: value => PersonalInfo.UpdatedLastName({ value }),
+              onInput: value => Message.UpdatedLastName({ value }),
               placeholder: 'Doe',
             },
             h,
@@ -79,7 +80,7 @@ export const personalInfoView = Submodel.defineView<
           id: 'email',
           label: 'Email',
           field: email,
-          onInput: value => PersonalInfo.UpdatedEmail({ value }),
+          onInput: value => Message.UpdatedEmail({ value }),
           type: 'email',
           placeholder: 'jane@example.com',
         },
@@ -90,7 +91,7 @@ export const personalInfoView = Submodel.defineView<
           id: 'phone',
           label: 'Phone (optional)',
           field: phone,
-          onInput: value => PersonalInfo.UpdatedPhone({ value }),
+          onInput: value => Message.UpdatedPhone({ value }),
           type: 'tel',
           placeholder: '+1 (555) 123-4567',
         },
@@ -158,8 +159,7 @@ export const personalInfoView = Submodel.defineView<
               ]),
               backdropAttributes: childAttributes([h.Class('fixed inset-0')]),
             },
-            toParentMessage: message =>
-              PersonalInfo.GotPronounsMessage({ message }),
+            toParentMessage: message => Message.GotPronounsMessage({ message }),
           }),
         ],
       ),
@@ -170,7 +170,7 @@ export const personalInfoView = Submodel.defineView<
                 id: 'custom-pronouns',
                 label: 'Custom Pronouns',
                 field: Valid({ value: customPronouns }),
-                onInput: value => PersonalInfo.UpdatedCustomPronouns({ value }),
+                onInput: value => Message.UpdatedCustomPronouns({ value }),
                 placeholder: 'Enter your pronouns',
               },
               h,
@@ -182,7 +182,7 @@ export const personalInfoView = Submodel.defineView<
           id: 'portfolio-url',
           label: 'Portfolio URL (optional)',
           field: portfolioUrl,
-          onInput: value => PersonalInfo.UpdatedPortfolioUrl({ value }),
+          onInput: value => Message.UpdatedPortfolioUrl({ value }),
           type: 'url',
         },
         h,
@@ -218,7 +218,7 @@ const availableDatePickerView = (
           toCalendarView: calendarView,
         },
         toParentMessage: message =>
-          PersonalInfo.GotAvailableDateMessage({ message }),
+          Message.GotAvailableDateMessage({ message }),
       }),
     ],
   )

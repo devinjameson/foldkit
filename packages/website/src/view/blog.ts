@@ -68,17 +68,7 @@ export const blogView = (
             ],
             [content],
           ),
-          h.div(
-            [PagefindIgnore],
-            [
-              docsFooterView(
-                model.emailField,
-                model.emailSubscriptionStatus,
-                model.currentYear,
-                h,
-              ),
-            ],
-          ),
+          h.div([PagefindIgnore], [docsFooterView(model.currentYear, h)]),
         ],
       ),
     ],

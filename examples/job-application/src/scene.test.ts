@@ -13,14 +13,9 @@ import {
 import { describe, test } from 'vitest'
 
 import { Menu, Tabs } from '@foldkit/ui'
+import { Message as TabsMessage } from '@foldkit/ui/tabs'
 
-import {
-  type Model,
-  NotSubmitted,
-  SubmitError,
-  SubmitSuccess,
-  Submitting,
-} from './model'
+import { type Model, Submission } from './model'
 import {
   Attachments,
   CoverLetter,
@@ -43,7 +38,7 @@ const initialModel: Model = {
   coverLetter: CoverLetter.init(),
   attachments: Attachments.init(),
   isPreviewVisible: false,
-  submission: NotSubmitted(),
+  submission: Submission.NotSubmitted(),
   stepMenu: Menu.init({ id: 'step-menu' }),
   stepTabs: Tabs.init({ id: 'step-tabs' }),
   isSubmitAttempted: false,
@@ -83,7 +78,10 @@ const completeModel: Model = {
   },
 }
 
-const resolveFocusTab = Command.resolve(Tabs.FocusTab, Tabs.CompletedFocusTab())
+const resolveFocusTab = Command.resolve(
+  Tabs.FocusTab,
+  TabsMessage.CompletedFocusTab(),
+)
 
 describe('view', () => {
   test('initial view shows the page heading and the PersonalInfo step', () => {
@@ -232,7 +230,7 @@ describe('view', () => {
       given({
         ...initialModel,
         currentStep: 'Review',
-        submission: Submitting(),
+        submission: Submission.Submitting(),
       }),
       expect(role('button', { name: 'Submitting...' })).toExist(),
     )
@@ -244,7 +242,7 @@ describe('view', () => {
       given({
         ...initialModel,
         currentStep: 'Review',
-        submission: SubmitSuccess(),
+        submission: Submission.SubmitSuccess(),
       }),
       expect(text('Application Submitted', { exact: false })).toExist(),
     )
@@ -256,7 +254,7 @@ describe('view', () => {
       given({
         ...initialModel,
         currentStep: 'Review',
-        submission: SubmitError({ error: 'Network down' }),
+        submission: Submission.SubmitError({ error: 'Network down' }),
       }),
       expect(text('Network down')).toExist(),
       expect(role('button', { name: 'Try Again' })).toExist(),

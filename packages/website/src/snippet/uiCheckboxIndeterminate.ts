@@ -3,7 +3,7 @@
 // update, and view definitions.
 import { Schema as S } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Checkbox } from '@foldkit/ui'
@@ -16,32 +16,31 @@ const Model = S.Struct({
 })
 
 // In your init function, start each unchecked:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     optionA: false,
     optionB: false,
     // ...your other fields
   },
-  [],
-]
+})
 
 // One Message per child, plus one for the "Select All" parent. Each carries
 // the new checked state:
-const ToggledSelectAll = m('ToggledSelectAll', { isChecked: S.Boolean })
-const ToggledOptionA = m('ToggledOptionA', { isChecked: S.Boolean })
-const ToggledOptionB = m('ToggledOptionB', { isChecked: S.Boolean })
 
-const Message = S.Union([ToggledSelectAll, ToggledOptionA, ToggledOptionB])
+const Message = defineMessageUnion({
+  ToggledSelectAll: { isChecked: S.Boolean },
+  ToggledOptionA: { isChecked: S.Boolean },
+  ToggledOptionB: { isChecked: S.Boolean },
+})
 
-// Inside your update function's M.tagsExhaustive({...}), toggling "Select All"
+// In the corresponding Message.match handler, toggling "Select All"
 // writes the same value to every child:
-ToggledSelectAll: ({ isChecked }) => [
-  evo(model, {
+ToggledSelectAll: ({ isChecked }) => ({
+  model: evo(model, {
     optionA: () => isChecked,
     optionB: () => isChecked,
   }),
-  [],
-]
+})
 
 // Inside your view function, compute the parent's checked and indeterminate
 // state from the children and pass isIndeterminate straight to Checkbox.view:
@@ -65,7 +64,7 @@ const view = (model, h: HtmlBuilder<Message>) => {
       id: 'select-all',
       isChecked: isAllChecked,
       isIndeterminate,
-      onToggle: isChecked => ToggledSelectAll({ isChecked }),
+      onToggle: isChecked => Message.ToggledSelectAll({ isChecked }),
       toView: attributes =>
         h.div(
           [h.Class('flex items-center gap-2')],

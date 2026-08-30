@@ -1,5 +1,5 @@
-import { Match as M, Number, String } from 'effect'
-import { Command } from 'foldkit'
+import { Match as M, Number, Option, String } from 'effect'
+import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import { Dialog } from '@foldkit/ui'
@@ -11,167 +11,162 @@ import {
   type PagefindService,
   ScrollToResult,
 } from './command'
-import {
-  ClearedSearchQuery,
-  GotSearchDialogMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import type { Model } from './model'
-import { Idle, Loading, Ok, resultsFromState } from './model'
+import { SearchState, resultsFromState } from './model'
 
-export type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message, never, PagefindService>>,
-]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+export type UpdateReturn = Update.Return<Model, Message, PagefindService>
 
-const openSearchDialog = (model: Model): UpdateReturn => {
-  const [nextDialog, dialogCommands] = Dialog.open(model.dialog)
+const foldSearchDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Opened: () => model => ({ model }),
+    Closed: () => model => ({ model }),
+  }),
+)
 
-  return [
-    evo(model, { dialog: () => nextDialog }),
-    [
-      ...Command.mapMessages(
-        dialogCommands,
-        (message): Message => GotSearchDialogMessage({ message }),
-      ),
-      FocusSearchInput(),
-    ],
-  ]
-}
+const foldSearchDialog = Update.foldChild({
+  update: Dialog.update,
+  read: (model: Model) => Option.some(model.dialog),
+  write: (model, nextDialog) => evo(model, { dialog: () => nextDialog }),
+  toParentMessage: message => Message.GotSearchDialogMessage({ message }),
+  foldOutMessage: foldSearchDialogOutMessage,
+})
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      UpdatedSearchQuery: ({ query }) => {
-        if (query === model.query) {
-          return [model, []]
-        }
+const foldSearchDialogOpen: Update.Step<Model, Message> = Update.foldChildStep({
+  update: Dialog.open,
+  read: (model: Model) => Option.some(model.dialog),
+  write: (model, nextDialog) => evo(model, { dialog: () => nextDialog }),
+  toParentMessage: message => Message.GotSearchDialogMessage({ message }),
+  foldOutMessage: foldSearchDialogOutMessage,
+})
 
-        if (String.isEmpty(query)) {
-          return [
-            evo(model, {
-              query: () => '',
-              searchState: () => Idle(),
-              activeResultIndex: () => -1,
-            }),
-            [],
-          ]
-        }
+const foldSearchDialogClose = Update.foldChildStep({
+  update: Dialog.close,
+  read: (model: Model) => Option.some(model.dialog),
+  write: (model, nextDialog) => evo(model, { dialog: () => nextDialog }),
+  toParentMessage: message => Message.GotSearchDialogMessage({ message }),
+  foldOutMessage: foldSearchDialogOutMessage,
+})
 
-        const previousResults = resultsFromState(model.searchState)
+const openSearchDialog = (model: Model): UpdateReturn =>
+  Update.combine(model, [
+    foldSearchDialogOpen,
+    stepModel => ({
+      model: stepModel,
+      commands: [FocusSearchInput()],
+    }),
+  ])
 
-        return [
-          evo(model, {
-            query: () => query,
-            searchState: () => Loading({ results: previousResults }),
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    UpdatedSearchQuery: ({ query }) => {
+      if (query === model.query) {
+        return { model }
+      }
+
+      if (String.isEmpty(query)) {
+        return {
+          model: evo(model, {
+            query: () => '',
+            searchState: () => SearchState.Idle(),
             activeResultIndex: () => -1,
           }),
-          [FetchSearchResults({ query })],
-        ]
-      },
-
-      CompletedFetchSearchResults: ({ results, query }) => {
-        if (query !== model.query) {
-          return [model, []]
         }
+      }
 
-        return [
-          evo(model, {
-            searchState: () => Ok({ results }),
-            activeResultIndex: () => 0,
-          }),
-          [],
-        ]
-      },
+      const previousResults = resultsFromState(model.searchState)
 
-      SelectedSearchResult: ({ url }) => [
-        evo(model, {
-          query: () => '',
-          searchState: () => Idle(),
+      return {
+        model: evo(model, {
+          query: () => query,
+          searchState: () => SearchState.Loading({ results: previousResults }),
           activeResultIndex: () => -1,
         }),
-        [NavigateToResult({ url })],
-      ],
+        commands: [FetchSearchResults({ query })],
+      }
+    },
 
-      ClickedOpenSearch: () => openSearchDialog(model),
+    CompletedFetchSearchResults: ({ results, query }) => {
+      if (query !== model.query) {
+        return { model }
+      }
 
-      PressedSearchShortcut: () => openSearchDialog(model),
+      return {
+        model: evo(model, {
+          searchState: () => SearchState.Ok({ results }),
+          activeResultIndex: () => 0,
+        }),
+      }
+    },
 
-      GotSearchDialogMessage: ({ message }) => {
-        const [nextDialog, dialogCommands] = Dialog.update(
-          model.dialog,
-          message,
-        )
+    SelectedSearchResult: ({ url }) => ({
+      model: evo(model, {
+        query: () => '',
+        searchState: () => SearchState.Idle(),
+        activeResultIndex: () => -1,
+      }),
+      commands: [NavigateToResult({ url })],
+    }),
 
-        const resetOnClose =
+    ClickedOpenSearch: () => openSearchDialog(model),
+
+    PressedSearchShortcut: () => openSearchDialog(model),
+
+    GotSearchDialogMessage: ({ message }) =>
+      Update.combine(model, [
+        foldSearchDialog(message),
+        stepModel =>
           message._tag === 'CompletedCloseDialog'
             ? {
-                query: () => '',
-                searchState: () => Idle(),
-                activeResultIndex: () => -1,
+                model: evo(stepModel, {
+                  query: () => '',
+                  searchState: () => SearchState.Idle(),
+                  activeResultIndex: () => -1,
+                }),
               }
-            : {}
+            : { model: stepModel },
+      ]),
 
-        const mappedDialogCommands = Command.mapMessages(
-          dialogCommands,
-          (message): Message => GotSearchDialogMessage({ message }),
-        )
-
-        return [
-          evo(model, { dialog: () => nextDialog, ...resetOnClose }),
-          mappedDialogCommands,
-        ]
-      },
-
-      ClearedSearchQuery: () => [
-        evo(model, {
-          query: () => '',
-          searchState: () => Idle(),
-          activeResultIndex: () => -1,
-        }),
-        [],
-      ],
-
-      PressedArrowKey: ({ direction }) => {
-        const results = resultsFromState(model.searchState)
-        const lastIndex = results.length - 1
-
-        const nextIndex = M.value(direction).pipe(
-          M.when('Up', () =>
-            model.activeResultIndex <= 0
-              ? lastIndex
-              : Number.decrement(model.activeResultIndex),
-          ),
-          M.when('Down', () =>
-            model.activeResultIndex >= lastIndex
-              ? 0
-              : Number.increment(model.activeResultIndex),
-          ),
-          M.exhaustive,
-        )
-
-        return [
-          evo(model, { activeResultIndex: () => nextIndex }),
-          [ScrollToResult({ index: nextIndex })],
-        ]
-      },
-
-      CompletedNavigateToResult: () => [model, []],
-      CompletedScrollToResult: () => [model, []],
-      CompletedFocusSearchInput: () => [model, []],
+    ClearedSearchQuery: () => ({
+      model: evo(model, {
+        query: () => '',
+        searchState: () => SearchState.Idle(),
+        activeResultIndex: () => -1,
+      }),
     }),
-  )
 
-export const informRouteChanged = (model: Model): UpdateReturn => {
-  const [closedDialog, closeCommands] = Dialog.close(model.dialog)
-  const [clearedModel] = update(model, ClearedSearchQuery())
-  return [
-    evo(clearedModel, { dialog: () => closedDialog }),
-    Command.mapMessages(
-      closeCommands,
-      (message): Message => GotSearchDialogMessage({ message }),
-    ),
-  ]
-}
+    PressedArrowKey: ({ direction }) => {
+      const results = resultsFromState(model.searchState)
+      const lastIndex = results.length - 1
+
+      const nextIndex = M.value(direction).pipe(
+        M.when('Up', () =>
+          model.activeResultIndex <= 0
+            ? lastIndex
+            : Number.decrement(model.activeResultIndex),
+        ),
+        M.when('Down', () =>
+          model.activeResultIndex >= lastIndex
+            ? 0
+            : Number.increment(model.activeResultIndex),
+        ),
+        M.exhaustive,
+      )
+
+      return {
+        model: evo(model, { activeResultIndex: () => nextIndex }),
+        commands: [ScrollToResult({ index: nextIndex })],
+      }
+    },
+
+    CompletedNavigateToResult: () => ({ model }),
+    CompletedScrollToResult: () => ({ model }),
+    CompletedFocusSearchInput: () => ({ model }),
+  })
+
+export const informRouteChanged = (model: Model): UpdateReturn =>
+  Update.combine(model, [
+    stepModel => update(stepModel, Message.ClearedSearchQuery()),
+    foldSearchDialogClose,
+  ])

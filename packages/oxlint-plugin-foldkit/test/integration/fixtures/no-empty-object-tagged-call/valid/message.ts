@@ -1,5 +1,19 @@
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
+import { defineTaggedUnion } from 'foldkit/schema'
 
-const ClickedSave = m('ClickedSave')
+const Message = defineMessageUnion({
+  ClickedSave: {},
+})
 
-const goodMessage = ClickedSave()
+const Submission = defineTaggedUnion({
+  NotSubmitted: {},
+  Submitting: {},
+})
+
+const Library = {
+  Configure: (_config: object) => undefined,
+}
+
+const goodMessage = Message.ClickedSave()
+const goodSubmission = Submission.NotSubmitted()
+const config = Library.Configure({})

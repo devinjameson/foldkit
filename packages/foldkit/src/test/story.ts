@@ -1,4 +1,4 @@
-import { Array, Equal, Option, Predicate, pipe } from 'effect'
+import { Array, Equal, Predicate, pipe } from 'effect'
 
 import type {
   AnyCommand,
@@ -8,6 +8,7 @@ import type {
   ResolvableCommandMatcher,
   Resolver,
   ResolverEntry,
+  SimulationUpdateReturn,
 } from './internal.js'
 import {
   assertAllCommandsResolved,
@@ -31,7 +32,7 @@ export type StorySimulation<Model, Message, OutMessage = undefined> = Readonly<{
   _phantomMessage?: Message
   model: Model
   commands: ReadonlyArray<AnyCommand>
-  outMessage: OutMessage
+  outMessage: OutMessage | undefined
 }>
 
 /** A callable step that sets the initial Model. Carries phantom type for compile-time validation. */
@@ -55,10 +56,6 @@ export type StoryStep<Model> =
 
 // INTERNAL
 
-type UpdateResult<Model, OutMessage> =
-  | readonly [Model, ReadonlyArray<AnyCommand>]
-  | readonly [Model, ReadonlyArray<AnyCommand>, OutMessage]
-
 type InternalStorySimulation<
   Model,
   Message,
@@ -69,7 +66,7 @@ type InternalStorySimulation<
     updateFn: (
       model: Model,
       message: Message,
-    ) => UpdateResult<Model, OutMessage>
+    ) => SimulationUpdateReturn<Model, OutMessage>
     resolvers: ReadonlyArray<ResolverEntry>
   }>
 
@@ -114,17 +111,16 @@ export const message =
 
     /* eslint-disable @typescript-eslint/consistent-type-assertions */
     const messageAsParent = message_ as unknown as Message
-    const result = internal.updateFn(internal.model, messageAsParent)
-    const nextModel = result[0]
-    const commands = result[1]
-    const outMessage = result.length === 3 ? result[2] : internal.outMessage
-
+    const messageUpdate = internal.updateFn(internal.model, messageAsParent)
     return {
       ...internal,
-      model: nextModel,
+      model: messageUpdate.model,
       message: messageAsParent,
-      commands: Array.appendAll(internal.commands, commands),
-      outMessage,
+      commands: Array.appendAll(
+        internal.commands,
+        messageUpdate.commands ?? [],
+      ),
+      outMessage: messageUpdate.outMessage,
     } as StorySimulation<Model, Message, OutMessage>
     /* eslint-enable @typescript-eslint/consistent-type-assertions */
   }
@@ -274,41 +270,35 @@ export const Command = {
   expectNone: expectNoCommandsStep,
 } as const
 
-/** Asserts that the OutMessage is Some with the expected value. */
+/** Asserts by structural equality that update emitted the expected OutMessage,
+ *  so callers can pass a freshly constructed expected value. */
 export const expectOutMessage =
   <Expected>(expected: Expected) =>
   <Model, Message, OutMessage>(
-    simulation: StorySimulation<Model, Message, Option.Option<OutMessage>>,
-  ): StorySimulation<Model, Message, Option.Option<OutMessage>> => {
+    simulation: StorySimulation<Model, Message, OutMessage>,
+  ): StorySimulation<Model, Message, OutMessage> => {
     const internal = toInternal(simulation)
     const outMessage = internal.outMessage
 
-    if (
-      !Option.isOption(outMessage) ||
-      Option.isNone(outMessage) ||
-      !Equal.equals(outMessage.value, expected)
-    ) {
+    if (outMessage === undefined || !Equal.equals(outMessage, expected)) {
       throw new Error(
-        `Expected OutMessage:\n\n    Some(${JSON.stringify(expected)})\n\nBut got:\n\n    ${JSON.stringify(outMessage)}`,
+        `Expected OutMessage:\n\n    ${JSON.stringify(expected)}\n\nBut got:\n\n    ${JSON.stringify(outMessage)}`,
       )
     }
 
     return simulation
   }
 
-/** Asserts that the OutMessage is None. */
+/** Asserts that update emitted no OutMessage. */
 export const expectNoOutMessage =
   () =>
   <Model, Message, OutMessage>(
-    simulation: StorySimulation<Model, Message, Option.Option<OutMessage>>,
-  ): StorySimulation<Model, Message, Option.Option<OutMessage>> => {
+    simulation: StorySimulation<Model, Message, OutMessage>,
+  ): StorySimulation<Model, Message, OutMessage> => {
     const internal = toInternal(simulation)
     const outMessage = internal.outMessage
 
-    if (
-      !Predicate.isUndefined(outMessage) &&
-      !(Option.isOption(outMessage) && Option.isNone(outMessage))
-    ) {
+    if (!Predicate.isUndefined(outMessage)) {
       throw new Error(
         `Expected no OutMessage but got:\n\n    ${JSON.stringify(outMessage)}`,
       )
@@ -325,26 +315,37 @@ export const story: {
     updateFn: (
       model: Model,
       message: Message,
-    ) => readonly [Model, ReadonlyArray<AnyCommand>, OutMessage],
+    ) => Readonly<{
+      model: Model
+      commands?: ReadonlyArray<AnyCommand>
+      outMessage?: OutMessage
+    }>,
     ...steps: ReadonlyArray<StoryStep<NoInfer<Model>>>
   ): void
   <Model, Message>(
     updateFn: (
       model: Model,
       message: Message,
-    ) => readonly [Model, ReadonlyArray<AnyCommand>],
+    ) => Readonly<{
+      model: Model
+      commands?: ReadonlyArray<AnyCommand>
+      outMessage?: never
+    }>,
     ...steps: ReadonlyArray<StoryStep<NoInfer<Model>>>
   ): void
 } = <Model, Message, OutMessage = undefined>(
-  updateFn: (model: Model, message: Message) => UpdateResult<Model, OutMessage>,
+  updateFn: (
+    model: Model,
+    message: Message,
+  ) => SimulationUpdateReturn<Model, OutMessage>,
   ...steps: ReadonlyArray<StoryStep<Model>>
 ): void => {
   /* eslint-disable @typescript-eslint/consistent-type-assertions */
   const seed = {
     model: undefined as unknown,
     message: undefined,
-    commands: [],
-    outMessage: undefined as unknown,
+    commands: Array.empty(),
+    outMessage: undefined,
     updateFn,
     resolvers: [],
   } as unknown as StorySimulation<Model, Message, OutMessage>

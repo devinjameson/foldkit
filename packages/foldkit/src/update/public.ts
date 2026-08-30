@@ -1,4 +1,10 @@
-export { combine, foldChild, foldChildStep, refresh } from './index.js'
+export {
+  combine,
+  foldChild,
+  foldChildStep,
+  refresh,
+  withOutMessage,
+} from './index.js'
 
 export type {
   Commands,
@@ -8,10 +14,13 @@ export type {
   StepWithOutMessage,
   Refreshable,
   ChildFold,
+  ChildFoldWithDerivedParentOutMessage,
   ChildFoldWithOutMessage,
   ChildFoldWithParentOutMessage,
   ChildStepFold,
+  ChildStepFoldWithDerivedParentOutMessage,
   ChildStepFoldWithOutMessage,
+  ChildStepFoldWithParentOutMessage,
   FoldContext,
   Fold,
   FoldWithOutMessage,

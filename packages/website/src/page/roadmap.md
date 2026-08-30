@@ -1,37 +1,45 @@
 # Roadmap
 
-## Overview
+## Current Goal
 
-Foldkit is pre-1.0, and the roadmap has one headline: ship a production-ready 1.0. Everything currently in flight serves that goal. The bigger directions beyond it wait until the core is stable.
+Foldkit is pre-1.0, and the current goal is a production-ready 1.0. Everything in flight serves that release. Larger directions wait until the core is stable.
 
-Day-to-day work is tracked at ticket granularity in a private tracker, and that level of detail goes stale too quickly to be worth publishing. This page is the durable version: the blocks of work that gate 1.0, the directions after it, and the stances that will not change. [GitHub issues](https://github.com/foldkit/foldkit/issues) are the public surface for bugs and feature requests.
+Day-to-day work is tracked at ticket granularity in a private tracker, where priorities can change without making this page stale. This page records the durable plan: the work that gates 1.0, features already available behind an experimental boundary, and directions that may follow. [GitHub issues](https://github.com/foldkit/foldkit/issues) are the public place for bugs and feature requests.
 
-## The path to 1.0
+## The Path to 1.0
 
-1.0 is a stability commitment, not a feature milestone. It means the public API is locked under semver, the framework has been stress-tested by real applications, and the claims in these docs are backed by published evidence. The remaining work splits into blocks, roughly in order:
+1.0 is a stability commitment, not a feature milestone. It means the public API is locked under semver, real applications have put the framework under pressure, and the claims in these docs have published evidence behind them. The remaining work is grouped into these blocks, roughly in order:
 
-- **Framework capability:** finish the surface apps cannot be built without. This block is in progress.
-- **Framework quality:** close correctness gaps before anything downstream measures them: test coverage for the newer primitives and consistent patterns across the UI components and example apps.
-- **Real-world stress tests:** build example apps in the domains early adopters will build in. Every gap they surface is treated as a framework bug.
-- **Benchmarks:** rendering numbers against other frameworks are already published on the performance page; the remaining work is reproducible numbers for TypeScript compilation and runtime throughput, held to the same bar.
-- **Audits and DX:** an accessibility audit of the UI components against WCAG with real screen readers, axe-core regression checks in CI, and clearer runtime and type-level error messages when an API is misused.
-- **Documentation:** a docs page for every core concept, an accessibility section for every UI component, and an end-to-end tutorial that builds a non-trivial app.
+- **Framework capability:** finish the surface that applications cannot be built without. This work is in progress.
+- **Framework quality:** close correctness gaps before downstream work depends on them. That includes coverage for newer primitives and consistent patterns across UI components and example applications.
+- **Real-world stress tests:** build example applications in the domains early adopters are likely to explore. Treat every framework gap they expose as a framework bug.
+- **Benchmarks:** rendering comparisons are already published on the [Performance](/faq/performance) page. The remaining work is reproducible evidence for TypeScript compilation and Runtime throughput, held to the same standard.
+- **Audits and developer experience:** audit Foldkit UI against WCAG with real screen readers, add axe-core regression checks to CI, and improve Runtime and type-level errors when an API is misused.
+- **Documentation:** publish a page for every core concept, an accessibility section for every UI component, and an end-to-end tutorial that builds a non-trivial application.
 - **Release:** lock the public API, publish the semver commitment, empty the bug backlog, write the 0.x to 1.0 migration guide, and cut a burn-in release before tagging 1.0.
 
-## After 1.0
+## Experimental Server Rendering
 
-The largest committed direction is per-request server rendering with a hydration handoff, covered in depth in [What about SSR?](/faq/what-about-ssr). Its timing is not settled yet: it may land shortly before 1.0 or as an early release after.
+Build-time static generation and per-request server rendering are available today behind `foldkit/experimental`. Both use `Server.renderToString` and the same explicit hydration handoff through `Runtime.hydrate`.
 
-Beyond that, these are directions being explored, not commitments:
+The [build-time SSG](/core/server-rendering#build-time-ssg) and [request-time SSR](/core/server-rendering#request-time-ssr) sections cover each deployment model. The experimental boundary allows this surface to change before 1.0 without weakening the stability commitment for the core API.
 
-- **Commands on the server:** a Command whose Effect runs on the server, so an app can reach a database or a private service without standing up a separate API. The client still just dispatches a Message and waits for the result.
-- **Rendering beyond the DOM:** the Elm Architecture does not depend on the browser, and the terminal is the first candidate for a non-DOM render target.
-- **The ecosystem outside core:** core stays the architecture: the runtime, routing, and the lifecycle primitives. Concerns that sit above it are likely to ship as libraries around Foldkit rather than inside it, the way the UI components already layer on top of core.
+## Directions After 1.0
 
-## What Foldkit will not do
+These are areas for exploration, not commitments:
 
-Two stances are settled and will survive 1.0. Foldkit will not split the view into server and client halves the way React Server Components do: the view is one function of one Model, and cutting that tree across a network boundary breaks the architecture. And Foldkit will not adopt JSX. Both are explained in depth in [What about SSR?](/faq/what-about-ssr) and [Why no JSX?](/faq/why-no-jsx).
+- **Commands on the server:** a Command whose Effect runs on the server, allowing an application to reach a database or private service without a separate API layer. The client would still dispatch a Message and wait for the result.
+- **Rendering beyond the DOM:** the Elm Architecture does not depend on a browser. A terminal renderer is the first candidate for another target.
+- **Libraries outside core:** core remains the architecture: the Runtime, routing, and lifecycle primitives. Higher-level concerns are likely to ship as libraries around Foldkit, as Foldkit UI already does.
 
-## How to follow along
+## Settled Boundaries
+
+Two decisions will survive 1.0.
+
+Foldkit will not split the view into server and client halves in the style of React Server Components. A Foldkit view remains one function of one Model. The server-client boundary stays at data and hydration, not inside the view tree. There are no `'use client'` or `'use server'` annotations and no second data-fetching model.
+
+Foldkit will not adopt JSX. [Why no JSX?](/faq/why-no-jsx) explains the type-system constraint behind that decision.
+
+## Following the Roadmap
 
 Releases land continuously, and every change is recorded in the [changelog](https://github.com/foldkit/foldkit/blob/main/packages/foldkit/CHANGELOG.md). Bugs and feature requests live in [GitHub issues](https://github.com/foldkit/foldkit/issues). For questions and discussion, join the [Discord](https://discord.gg/kav8VNxqGm).

@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { Calendar, Command } from 'foldkit'
+import { Calendar, type Update } from 'foldkit'
 
 import {
   Animation,
@@ -8,6 +8,7 @@ import {
   Dialog,
   DragAndDrop,
   FileDrop,
+  HoverIntent,
   Listbox,
   Menu,
   Popover,
@@ -23,10 +24,10 @@ import type { UiMessage } from './message'
 import type { UiModel } from './model'
 import { Toast } from './toast'
 
-export const uiInit = (
-  today: Calendar.CalendarDate,
-): [UiModel, ReadonlyArray<Command.Command<UiMessage>>] => [
-  {
+type InitReturn = Update.Return<UiModel, UiMessage>
+
+export const uiInit = (today: Calendar.CalendarDate): InitReturn => ({
+  model: {
     mobileMenuDialog: Dialog.init({ id: 'mobile-menu' }),
     buttonClickCount: 0,
     inputDemoValue: '',
@@ -107,6 +108,7 @@ export const uiInit = (
     ],
     fileDropBasicDemo: FileDrop.init({ id: 'file-drop-basic-demo' }),
     fileDropBasicDemoFiles: [],
+    hoverIntentDemo: HoverIntent.init(),
     listboxDemo: Listbox.init({ id: 'listbox-demo' }),
     maybeListboxDemoSelectedItem: Option.none(),
     listboxMultiDemo: Listbox.Multi.init({
@@ -181,5 +183,4 @@ export const uiInit = (
       rowHeightPx: 56,
     }),
   },
-  [],
-]
+})

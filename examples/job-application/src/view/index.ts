@@ -5,20 +5,7 @@ import type { ChildAttribute, Document, Html, HtmlBuilder } from 'foldkit/html'
 import { Button, Tabs } from '@foldkit/ui'
 
 import { Step } from '../domain'
-import {
-  ClickedNext,
-  ClickedPrevious,
-  GotAttachmentsMessage,
-  GotCoverLetterMessage,
-  GotEducationMessage,
-  GotPersonalInfoMessage,
-  GotSkillsMessage,
-  GotStepMenuMessage,
-  GotStepTabsMessage,
-  GotWorkHistoryMessage,
-  Message,
-  ToggledPreview,
-} from '../message'
+import { Message } from '../message'
 import { type Model } from '../model'
 import { Education, PersonalInfo, Skills, WorkHistory } from '../step'
 import { attachmentsView } from './attachments'
@@ -75,7 +62,7 @@ const stepContent = (
         slotId: 'personal-info',
         model: model.personalInfo,
         view: personalInfoView,
-        toParentMessage: message => GotPersonalInfoMessage({ message }),
+        toParentMessage: message => Message.GotPersonalInfoMessage({ message }),
       }),
     ),
     M.when('WorkHistory', () =>
@@ -83,7 +70,7 @@ const stepContent = (
         slotId: 'work-history',
         model: model.workHistory,
         view: workHistoryView,
-        toParentMessage: message => GotWorkHistoryMessage({ message }),
+        toParentMessage: message => Message.GotWorkHistoryMessage({ message }),
       }),
     ),
     M.when('Education', () =>
@@ -91,7 +78,7 @@ const stepContent = (
         slotId: 'education',
         model: model.education,
         view: educationView,
-        toParentMessage: message => GotEducationMessage({ message }),
+        toParentMessage: message => Message.GotEducationMessage({ message }),
       }),
     ),
     M.when('Skills', () =>
@@ -99,7 +86,7 @@ const stepContent = (
         slotId: 'skills',
         model: model.skills,
         view: skillsView,
-        toParentMessage: message => GotSkillsMessage({ message }),
+        toParentMessage: message => Message.GotSkillsMessage({ message }),
       }),
     ),
     M.when('CoverLetter', () =>
@@ -107,7 +94,7 @@ const stepContent = (
         slotId: 'cover-letter',
         model: model.coverLetter,
         view: coverLetterView,
-        toParentMessage: message => GotCoverLetterMessage({ message }),
+        toParentMessage: message => Message.GotCoverLetterMessage({ message }),
       }),
     ),
     M.when('Attachments', () =>
@@ -115,7 +102,7 @@ const stepContent = (
         slotId: 'attachments',
         model: model.attachments,
         view: attachmentsView,
-        toParentMessage: message => GotAttachmentsMessage({ message }),
+        toParentMessage: message => Message.GotAttachmentsMessage({ message }),
       }),
     ),
     M.when('Review', () => review(model, attentionSteps, h)),
@@ -137,7 +124,7 @@ const navigationButtons = (model: Model, h: HtmlBuilder<Message>): Html =>
         : [
             Button.view(
               {
-                onClick: ClickedPrevious(),
+                onClick: Message.ClickedPrevious(),
                 toView: attributes =>
                   h.button(
                     [
@@ -157,7 +144,7 @@ const navigationButtons = (model: Model, h: HtmlBuilder<Message>): Html =>
         : [
             Button.view(
               {
-                onClick: ClickedNext(),
+                onClick: Message.ClickedNext(),
                 toView: attributes =>
                   h.button(
                     [
@@ -264,7 +251,7 @@ const stepTabsLayout = (
           ],
         ),
     },
-    toParentMessage: message => GotStepTabsMessage({ message }),
+    toParentMessage: message => Message.GotStepTabsMessage({ message }),
   })
 
 const desktopPreviewSidebar = (model: Model, h: HtmlBuilder<Message>): Html =>
@@ -302,7 +289,7 @@ const mobilePreviewToggle = (model: Model, h: HtmlBuilder<Message>): Html =>
     [
       Button.view(
         {
-          onClick: ToggledPreview(),
+          onClick: Message.ToggledPreview(),
           toView: attributes =>
             h.button(
               [
@@ -350,7 +337,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
               stepMenu(
                 model,
                 attentionStepSet,
-                message => GotStepMenuMessage({ message }),
+                message => Message.GotStepMenuMessage({ message }),
                 h,
               ),
             ],

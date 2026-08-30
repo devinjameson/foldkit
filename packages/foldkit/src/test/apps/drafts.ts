@@ -1,9 +1,10 @@
-import { Effect, Match as M, Schema as S } from 'effect'
+import { Effect, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Document, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
 import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -18,12 +19,11 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ClickedSaveDraft = m('ClickedSaveDraft')
-export const SucceededSaveDraft = m('SucceededSaveDraft', {
-  revision: S.Number,
+export const Message = defineMessageUnion({
+  ClickedSaveDraft: {},
+  SucceededSaveDraft: { revision: S.Number },
 })
 
-export const Message = S.Union([ClickedSaveDraft, SucceededSaveDraft])
 export type Message = typeof Message.Type
 
 // COMMAND
@@ -33,10 +33,10 @@ export type SaveDraftArgs = typeof SaveDraftArgs.Type
 
 export const SaveDraft = Command.define('SaveDraft', {
   args: SaveDraftArgs.fields,
-  messages: [SucceededSaveDraft],
+  messages: [Message.SucceededSaveDraft],
   interrupt: true,
   execute: ({ revision }) =>
-    Effect.as(Effect.never, SucceededSaveDraft({ revision })),
+    Effect.as(Effect.never, Message.SucceededSaveDraft({ revision })),
 })
 
 // INIT
@@ -45,22 +45,16 @@ export const initialModel: Model = { revision: 0, status: 'Editing' }
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
-      ClickedSaveDraft: () => [
-        evo(model, { status: () => 'Saving' }),
-        [SaveDraft({ revision: model.revision })],
-      ],
-      SucceededSaveDraft: () => [evo(model, { status: () => 'Saved' }), []],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedSaveDraft: () => ({
+      model: evo(model, { status: () => 'Saving' }),
+      commands: [SaveDraft({ revision: model.revision })],
     }),
-  )
+    SucceededSaveDraft: () => ({
+      model: evo(model, { status: () => 'Saved' }),
+    }),
+  })
 
 // VIEW
 
@@ -68,7 +62,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const body = h.div(
     [],
     [
-      h.button([h.OnClick(ClickedSaveDraft())], ['Save draft']),
+      h.button([h.OnClick(Message.ClickedSaveDraft())], ['Save draft']),
       h.span([], [`draft: ${model.status}`]),
     ],
   )

@@ -1,8 +1,8 @@
 import { clsx } from 'clsx'
-import { Match as M, Schema as S } from 'effect'
-import { Command, CustomElement, Runtime } from 'foldkit'
+import { Schema as S } from 'effect'
+import { CustomElement, Runtime, type Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import 'vanilla-colorful/hex-color-picker.js'
 
@@ -20,17 +20,12 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedContent = m('UpdatedContent', { value: S.String })
-export const ChangedFillColor = m('ChangedFillColor', { value: S.String })
-export const ChangedBackgroundColor = m('ChangedBackgroundColor', {
-  value: S.String,
+export const Message = defineMessageUnion({
+  UpdatedContent: { value: S.String },
+  ChangedFillColor: { value: S.String },
+  ChangedBackgroundColor: { value: S.String },
 })
 
-export const Message = S.Union([
-  UpdatedContent,
-  ChangedFillColor,
-  ChangedBackgroundColor,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -39,35 +34,28 @@ const DEFAULT_CONTENT = 'https://foldkit.dev'
 const DEFAULT_FILL_COLOR = '#1e1b4b'
 const DEFAULT_BACKGROUND_COLOR = '#fef3c7'
 
-export const init: Runtime.ApplicationInit<Model, Message> = () => [
-  {
+export const init: Runtime.ApplicationInit<Model, Message> = () => ({
+  model: {
     content: DEFAULT_CONTENT,
     fillColor: DEFAULT_FILL_COLOR,
     backgroundColor: DEFAULT_BACKGROUND_COLOR,
   },
-  [],
-]
+})
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
-
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      UpdatedContent: ({ value }) => [evo(model, { content: () => value }), []],
-      ChangedFillColor: ({ value }) => [
-        evo(model, { fillColor: () => value }),
-        [],
-      ],
-      ChangedBackgroundColor: ({ value }) => [
-        evo(model, { backgroundColor: () => value }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    UpdatedContent: ({ value }) => ({
+      model: evo(model, { content: () => value }),
     }),
-  )
+    ChangedFillColor: ({ value }) => ({
+      model: evo(model, { fillColor: () => value }),
+    }),
+    ChangedBackgroundColor: ({ value }) => ({
+      model: evo(model, { backgroundColor: () => value }),
+    }),
+  })
 
 // WEB COMPONENT
 
@@ -177,7 +165,7 @@ const controlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
           id: 'fill-color',
           label: 'Fill color',
           value: model.fillColor,
-          onChange: value => ChangedFillColor({ value }),
+          onChange: value => Message.ChangedFillColor({ value }),
         },
         h,
       ),
@@ -186,7 +174,7 @@ const controlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
           id: 'background-color',
           label: 'Background color',
           value: model.backgroundColor,
-          onChange: value => ChangedBackgroundColor({ value }),
+          onChange: value => Message.ChangedBackgroundColor({ value }),
         },
         h,
       ),
@@ -198,7 +186,7 @@ const contentFieldView = (model: Model, h: HtmlBuilder<Message>): Html =>
     {
       id: 'qr-content',
       value: model.content,
-      onInput: value => UpdatedContent({ value }),
+      onInput: value => Message.UpdatedContent({ value }),
       placeholder: 'https://foldkit.dev',
       toView: attributes =>
         h.div(

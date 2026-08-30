@@ -1,7 +1,6 @@
-import { Match as M, Option, Schema as S } from 'effect'
-import * as Command from 'foldkit/command'
+import { Match as M, Option } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
 import { evo } from 'foldkit/struct'
 import * as Update from 'foldkit/update'
@@ -14,7 +13,6 @@ import type {
   ViewInputs,
 } from './index.js'
 import {
-  CompletedFocusOption,
   FocusOption,
   Message as RadioGroupMessage,
   create,
@@ -26,11 +24,9 @@ const options: ReadonlyArray<string> = ['Brush', 'Fill', 'Eraser']
 
 const TestRadioGroup = create()
 
-const GotRadioGroupMessage = m('GotRadioGroupMessage', {
-  message: RadioGroupMessage,
+const Message = defineMessageUnion({
+  GotRadioGroupMessage: { message: RadioGroupMessage },
 })
-
-const Message = S.Union([GotRadioGroupMessage])
 type Message = typeof Message.Type
 
 type Model = Readonly<{
@@ -45,17 +41,14 @@ const modelWith = (maybeSelectedValue: Option.Option<string>): Model => ({
 
 const nothingSelected = modelWith(Option.none())
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 const foldRadioGroupOutMessage = M.type<RadioGroupOutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [
-        evo(model, { maybeSelectedValue: () => Option.some(value) }),
-        [],
-      ],
+      model => ({
+        model: evo(model, { maybeSelectedValue: () => Option.some(value) }),
+      }),
   }),
 )
 
@@ -64,17 +57,14 @@ const foldRadioGroup = Update.foldChild({
   read: (model: Model) => Option.some(model.radioGroup),
   write: (model, nextRadioGroup) =>
     evo(model, { radioGroup: () => nextRadioGroup }),
-  toParentMessage: message => GotRadioGroupMessage({ message }),
+  toParentMessage: message => Message.GotRadioGroupMessage({ message }),
   foldOutMessage: foldRadioGroupOutMessage,
 })
 
-const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      GotRadioGroupMessage: ({ message }) => foldRadioGroup(model, message),
-    }),
-  )
+const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    GotRadioGroupMessage: ({ message }) => foldRadioGroup(model, message),
+  })
 
 type Overrides = Omit<
   Partial<ViewInputs>,
@@ -97,19 +87,19 @@ const testView =
           h.div(
             [...group],
             optionInfos.map(option =>
-              h.div(
+              h.button(
                 [...option.option],
                 [h.span([...option.label], [option.value])],
               ),
             ),
           ),
       },
-      toParentMessage: message => GotRadioGroupMessage({ message }),
+      toParentMessage: message => Message.GotRadioGroupMessage({ message }),
     })
 
 const resolveFocusOption = Scene.Command.resolve(
   FocusOption,
-  CompletedFocusOption(),
+  RadioGroupMessage.CompletedFocusOption(),
 )
 
 const group = Scene.role('radiogroup')

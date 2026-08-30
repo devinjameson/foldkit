@@ -10,19 +10,19 @@ const Model = S.Struct({
 
 // MESSAGE
 
-const EnteredPostsRoute = m('EnteredPostsRoute')
-const SettledFetchPosts = m('SettledFetchPosts', {
-  result: S.Result(S.Array(Post), S.String),
+const Message = defineMessageUnion({
+  EnteredPostsRoute: {},
+  SettledFetchPosts: { result: S.Result(S.Array(Post), S.String) },
 })
 
 // COMMAND
 
 const FetchPosts = Command.define('FetchPosts', {
-  messages: [SettledFetchPosts],
+  messages: [Message.SettledFetchPosts],
   execute: pipe(
     fetchPosts,
     Effect.result,
-    Effect.map(result => SettledFetchPosts({ result })),
+    Effect.map(result => Message.SettledFetchPosts({ result })),
   ),
 })
 
@@ -31,15 +31,14 @@ const FetchPosts = Command.define('FetchPosts', {
 M.tagsExhaustive({
   EnteredPostsRoute: () =>
     Option.match(AsyncData.revalidateOrLoad(model.posts), {
-      onNone: () => [model, []],
-      onSome: nextPosts => [
-        evo(model, { posts: () => nextPosts }),
-        [FetchPosts()],
-      ],
+      onNone: () => ({ model }),
+      onSome: nextPosts => ({
+        model: evo(model, { posts: () => nextPosts }),
+        commands: [FetchPosts()],
+      }),
     }),
 
-  SettledFetchPosts: ({ result }) => [
-    evo(model, { posts: AsyncData.settle(result) }),
-    [],
-  ],
+  SettledFetchPosts: ({ result }) => ({
+    model: evo(model, { posts: AsyncData.settle(result) }),
+  }),
 })

@@ -5,7 +5,7 @@ import * as Scene from 'foldkit/scene'
 import { describe, it } from '@effect/vitest'
 
 import type { SliderAttributes } from './index.js'
-import { PressedThumb, init, update, view } from './index.js'
+import { Message, init, update, view } from './index.js'
 
 const testToView = (attributes: SliderAttributes) =>
   ih.div(
@@ -15,7 +15,7 @@ const testToView = (attributes: SliderAttributes) =>
       ih.div([...attributes.track], [ih.div([...attributes.filledTrack])]),
       ih.div([...attributes.thumb]),
       ...(Array.isReadonlyArrayNonEmpty(attributes.hiddenInput)
-        ? [ih.span(attributes.hiddenInput)]
+        ? [ih.input(attributes.hiddenInput)]
         : []),
     ],
   )
@@ -119,13 +119,13 @@ describe('Slider', () => {
 
   describe('state attributes', () => {
     it('marks the root, track, and thumb with data-dragging while Dragging', () => {
-      const [draggingModel] = update(
+      const dragStart = update(
         defaultModel,
-        PressedThumb({ originValue: 5 }),
+        Message.PressedThumb({ originValue: 5 }),
       )
       Scene.scene(
         { update, view: sceneView() },
-        Scene.given(draggingModel),
+        Scene.given(dragStart.model),
         Scene.expect(root).toHaveAttr('data-dragging', ''),
         Scene.expect(track).toHaveAttr('data-dragging', ''),
         Scene.expect(thumb).toHaveAttr('data-dragging', ''),

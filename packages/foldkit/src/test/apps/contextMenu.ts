@@ -1,20 +1,19 @@
-import { Match as M, Number, Schema as S } from 'effect'
+import { Number, Schema as S } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
-import { ts } from '../../schema/index.js'
+import { defineMessageUnion } from '../../message/index.js'
+import { defineTaggedUnion } from '../../schema/index.js'
 import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
 const ContextMenuSource = S.Literals(['Direct', 'Inner', 'Outer'])
 
-const Closed = ts('Closed')
-const Open = ts('Open', {
-  source: ContextMenuSource,
+const ContextMenuState = defineTaggedUnion({
+  Closed: {},
+  Open: { source: ContextMenuSource },
 })
-
-const ContextMenuState = S.Union([Closed, Open])
 type ContextMenuState = typeof ContextMenuState.Type
 
 export const Model = S.Struct({
@@ -25,52 +24,41 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const OpenedContextMenu = m('OpenedContextMenu', {
-  source: ContextMenuSource,
+const Message = defineMessageUnion({
+  OpenedContextMenu: { source: ContextMenuSource },
 })
-
-const Message = S.Union([OpenedContextMenu])
 type Message = typeof Message.Type
 
 // INIT
 
 export const initialModel = Model.make({
-  contextMenu: Closed(),
+  contextMenu: ContextMenuState.Closed(),
   openCount: 0,
 })
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<never>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tagsExhaustive({
-      OpenedContextMenu: ({ source }) => [
-        evo(model, {
-          contextMenu: () => Open({ source }),
-          openCount: Number.increment,
-        }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    OpenedContextMenu: ({ source }) => ({
+      model: evo(model, {
+        contextMenu: () => ContextMenuState.Open({ source }),
+        openCount: Number.increment,
+      }),
     }),
-  )
+  })
 
 // VIEW
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
-  const contextMenu = M.value(model.contextMenu).pipe(
-    M.tagsExhaustive({
-      Closed: () => h.empty,
-      Open: ({ source }) =>
-        h.div(
-          [h.Role('menu'), h.AriaLabel(`${source} context menu`)],
-          [`${source} context menu opens=${model.openCount}`],
-        ),
-    }),
-  )
+  const contextMenu = ContextMenuState.match(model.contextMenu, {
+    Closed: () => h.empty,
+    Open: ({ source }) =>
+      h.div(
+        [h.Role('menu'), h.AriaLabel(`${source} context menu`)],
+        [`${source} context menu opens=${model.openCount}`],
+      ),
+  })
 
   return h.div(
     [],
@@ -78,21 +66,23 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
       h.section(
         [
           h.AriaLabel('outer context area'),
-          h.OnContextMenu(OpenedContextMenu({ source: 'Outer' })),
+          h.OnContextMenu(Message.OpenedContextMenu({ source: 'Outer' })),
         ],
         [
           h.span([h.AriaLabel('outer target')], ['Outer target']),
           h.div(
             [
               h.AriaLabel('inner context area'),
-              h.OnContextMenu(OpenedContextMenu({ source: 'Inner' })),
+              h.OnContextMenu(Message.OpenedContextMenu({ source: 'Inner' })),
             ],
             [
               h.span([h.AriaLabel('nearest target')], ['Nearest target']),
               h.button(
                 [
                   h.AriaLabel('direct target'),
-                  h.OnContextMenu(OpenedContextMenu({ source: 'Direct' })),
+                  h.OnContextMenu(
+                    Message.OpenedContextMenu({ source: 'Direct' }),
+                  ),
                 ],
                 ['Direct target'],
               ),

@@ -6,22 +6,13 @@ Anchor is the positioning runtime the floating components are built on. [Listbox
 
 It is exported so you can build an anchored component Foldkit does not ship. If one of the six above fits, use it. Reach for this module when the panel you need differs structurally from all of them, for example a virtualized list with group headers, or a multi-select that stages changes against an open-time baseline and commits them with a Done action.
 
-```ts
-import {
-  AnchorConfig,
-  Padding,
-  Placement,
-  anchorSetup,
-  portalToContainingRoot,
-} from '@foldkit/ui/anchor'
-import type { SetupConfig } from '@foldkit/ui/anchor'
-```
+::Snippet{name="uiAnchorExports" label="Anchor imports"}
 
 The module is also exported from the root barrel, as `import { Anchor } from '@foldkit/ui'`.
 
 ## Positioning a Panel
 
-`anchorSetup` is a plain DOM function. It takes the element and a config, and returns a cleanup. An element exists in the rendered tree and the factory uses that element to do DOM work, so [Mount](/core/mount) is the primitive that owns it. `Mount.define` covers the one-shot acquire-with-cleanup shape.
+`anchorSetup` is a plain DOM function. It takes the element and a config, and returns a cleanup. An element exists in the rendered tree and `execute` uses that element to do DOM work, so [Mount](/core/mount) is the primitive that owns it. `Mount.define` covers the one-shot acquire-with-cleanup shape.
 
 ::Snippet{name="uiAnchorBasic" label="anchored panel"}
 
@@ -43,17 +34,18 @@ The containing root is the shadow root when the app is mounted inside one, and `
 
 ## What Anchor Writes to Your Element {#managed-styles}
 
-Anchor writes the following while the Mount is alive. Except where a row says otherwise, whatever you set is overwritten. Only `data-placement` is cleaned up on unmount; the inline styles are left on the element, which is normally invisible because the element unmounts with the Mount.
+Anchor writes the following while the Mount is alive. Except where a row says otherwise, whatever you set is overwritten. `data-placement`, `overflow-y`, `overscroll-behavior`, `--arrow-x`, and `--arrow-y` are removed on unmount; the other inline styles are left on the element, which is normally invisible because the element unmounts with the Mount.
 
-| Property                             | Description                                                                                                                                                                      |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `left` / `top`                       | The resolved position, recomputed on scroll, resize, and layout shift.                                                                                                           |
-| `visibility`                         | Cleared once the first position resolves. Render the element at `visibility: hidden`.                                                                                            |
-| `max-height`                         | The height available in the viewport, so a long panel scrolls instead of overflowing.                                                                                            |
-| `overflow-y` / `overscroll-behavior` | Set to `auto` and `none`, so a scrolled panel does not chain its scroll to the page.                                                                                             |
-| `--button-width`                     | The trigger's width as a custom property. Use it to match panel width to trigger width in CSS.                                                                                   |
-| `position`                           | Set to `fixed` only inside a shadow root, where the absolute strategy mis-measures against the light-DOM host. Otherwise the element keeps the `position: absolute` you gave it. |
-| `data-placement`                     | The side the panel currently sits on: `top`, `right`, `bottom`, or `left`. Removed on cleanup.                                                                                   |
+| Property                             | Description                                                                                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `left` / `top`                       | The resolved position, recomputed on scroll, resize, and layout shift.                                                                                                                                                                |
+| `visibility`                         | Cleared once the first position resolves. Render the element at `visibility: hidden`.                                                                                                                                                 |
+| `max-height`                         | The height available in the viewport, so a long panel scrolls instead of overflowing. Always written, including when `arrowId` resolves and the panel scrolls through a container of your own.                                        |
+| `overflow-y` / `overscroll-behavior` | Set to `auto` and `none`, so a scrolled panel does not chain its scroll to the page. Neither is written once `arrowId` resolves, because a scrolling panel clips on both axes and would erase the arrow. Both are removed on cleanup. |
+| `--button-width`                     | The trigger's width as a custom property. Use it to match panel width to trigger width in CSS.                                                                                                                                        |
+| `--arrow-x` / `--arrow-y`            | The arrow's offset along the panel edge, published only when `arrowId` resolves. One axis per placement; the other is reset to `initial`, so an ancestor's value cannot inherit into the arrow. Both are removed on cleanup.          |
+| `position`                           | Set to `fixed` only inside a shadow root, where the absolute strategy mis-measures against the light-DOM host. Otherwise the element keeps the `position: absolute` you gave it.                                                      |
+| `data-placement`                     | The side the panel currently sits on: `top`, `right`, `bottom`, or `left`. Removed on cleanup.                                                                                                                                        |
 
 `data-placement` is the hook for styling by side, for example an arrow that flips with the panel. With `isPlacementLocked: true` it holds the side the first positioning picked and stays there.
 
@@ -88,13 +80,15 @@ Static positioning options. Every field is optional. This is the same Schema the
 
 The second argument to `anchorSetup`.
 
-| Name                 | Type           | Default | Description                                                                                                                                                 |
-| -------------------- | -------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `buttonId`           | `string`       | —       | Id of the trigger to position against. Resolved through the element's own root, so it works inside a shadow root. Required.                                 |
-| `anchor`             | `AnchorConfig` | —       | The static positioning options above. Required.                                                                                                             |
-| `interceptTab`       | `boolean`      | `true`  | Returns focus to the trigger when Tab is pressed inside a portaled panel. Set it to `false` when the panel holds focusable content Tab should move through. |
-| `focusAfterPosition` | `boolean`      | `false` | Focuses the panel once the first position resolves, deferred a frame so the element is painted first.                                                       |
-| `focusSelector`      | `string`       | —       | Focuses a descendant matching this selector instead of the panel itself, for example a grid inside a panel. Only read when `focusAfterPosition` is true.    |
+| Name                 | Type           | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------- | -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `buttonId`           | `string`       | —       | Id of the trigger to position against. Resolved through the element's own root, so it works inside a shadow root. Required.                                                                                                                                                                                                                                                                                                           |
+| `anchor`             | `AnchorConfig` | —       | The static positioning options above. Required.                                                                                                                                                                                                                                                                                                                                                                                       |
+| `interceptTab`       | `boolean`      | `true`  | Returns focus to the trigger when Tab is pressed inside a portaled panel. Set it to `false` when the panel holds focusable content Tab should move through.                                                                                                                                                                                                                                                                           |
+| `focusAfterPosition` | `boolean`      | `false` | Focuses the panel once the first position resolves, deferred a frame so the element is painted first.                                                                                                                                                                                                                                                                                                                                 |
+| `focusSelector`      | `string`       | —       | Focuses a descendant matching this selector instead of the panel itself, for example a grid inside a panel. Only read when `focusAfterPosition` is true.                                                                                                                                                                                                                                                                              |
+| `arrowId`            | `string`       | —       | Id of an arrow element inside the panel, resolved through the element's own root. When it resolves, Anchor computes the arrow's offset along the panel edge, publishes it as `--arrow-x` and `--arrow-y`, and stops making the panel a scroll container. Any element type works, including `<svg>`. With no id, an id that resolves to nothing, or an id that resolves to an element outside the panel, no arrow work happens at all. |
+| `arrowPadding`       | `number`       | `0`     | Distance in pixels the arrow keeps from the panel's corners. Separate from `anchor.padding`, which is the viewport padding that flip, shift, and the height calculation consume.                                                                                                                                                                                                                                                      |
 
 ### portalToContainingRoot {#portal-to-containing-root}
 

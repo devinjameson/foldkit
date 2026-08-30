@@ -1,23 +1,8 @@
 import { Array, Effect, Match, Option, Schema as S } from 'effect'
 import {
   MAX_DISPATCH_BATCH_SIZE,
-  type Request,
-  RequestCountMessagesByTag,
-  RequestDiffModels,
-  RequestDispatchMessage,
-  RequestDispatchMessages,
-  RequestGetInit,
-  RequestGetMessage,
-  RequestGetMessageSchema,
-  RequestGetModel,
-  RequestGetModelAt,
-  RequestGetRuntimeState,
-  RequestListKeyframes,
-  RequestListMessages,
-  RequestListRuntimes,
-  RequestReplayToKeyframe,
-  RequestResume,
-  type Response,
+  Request,
+  Response,
 } from 'foldkit/devtools-protocol'
 
 import type { WebSocketClient } from './webSocketClient.js'
@@ -262,7 +247,7 @@ const resolveRuntimeId = (
   }
   return Effect.gen(function* () {
     const response = yield* wsClient.sendRequest(
-      RequestListRuntimes(),
+      Request.RequestListRuntimes(),
       Option.none(),
     )
     return yield* Match.value(response).pipe(
@@ -351,7 +336,7 @@ export const buildTools = (
     handle: runRuntimeTool(
       GetModelInput,
       ({ path, expand }) =>
-        RequestGetModel({
+        Request.RequestGetModel({
           maybePath: Option.fromNullishOr(path),
           expand: expand ?? false,
         }),
@@ -366,7 +351,7 @@ export const buildTools = (
     handle: runRuntimeTool(
       GetModelAtInput,
       ({ index, path, expand }) =>
-        RequestGetModelAt({
+        Request.RequestGetModelAt({
           index,
           maybePath: Option.fromNullishOr(path),
           expand: expand ?? false,
@@ -382,7 +367,7 @@ export const buildTools = (
     handle: runRuntimeTool(
       ListMessagesInput,
       ({ limit, since_index, changed_paths_match, from_end }) =>
-        RequestListMessages({
+        Request.RequestListMessages({
           limit: limit ?? DEFAULT_LIST_MESSAGES_LIMIT,
           maybeSinceIndex: Option.fromNullishOr(since_index),
           maybeChangedPathsMatch: Option.fromNullishOr(changed_paths_match),
@@ -399,7 +384,7 @@ export const buildTools = (
     handle: runRuntimeTool(
       CountMessagesByTagInput,
       ({ since_index, changed_paths_match }) =>
-        RequestCountMessagesByTag({
+        Request.RequestCountMessagesByTag({
           maybeSinceIndex: Option.fromNullishOr(since_index),
           maybeChangedPathsMatch: Option.fromNullishOr(changed_paths_match),
         }),
@@ -414,7 +399,7 @@ export const buildTools = (
     handle: runRuntimeTool(
       DiffModelsInput,
       ({ from_index, to_index, changed_paths_match }) =>
-        RequestDiffModels({
+        Request.RequestDiffModels({
           fromIndex: from_index,
           toIndex: to_index,
           maybeChangedPathsMatch: Option.fromNullishOr(changed_paths_match),
@@ -429,7 +414,7 @@ export const buildTools = (
     inputSchema: toInputSchema(GetMessageInput),
     handle: runRuntimeTool(
       GetMessageInput,
-      ({ index }) => RequestGetMessage({ index }),
+      ({ index }) => Request.RequestGetMessage({ index }),
       wsClient,
     ),
   },
@@ -438,7 +423,11 @@ export const buildTools = (
     description:
       "Read the runtime's initial Model, the Commands returned from the application's `init` function, and the Mounts that fired during the first render. The init entry is the synthetic row at index -1 in the DevTools panel; this tool exposes the same data without time-travelling the runtime. `maybeModel` is `None` until the runtime has finished its first render and recorded init, then stays `Some` for the rest of the runtime's life. `commands` lists init-time Commands in the order they were produced, each with its name and `args` (`Some(record)` when the Command declared an args schema, `None` otherwise); `mountStarts` lists Mounts whose elements appeared in the initial render, each with its name and `args` (`Some(record)` when the Mount declared an args schema, `None` otherwise).",
     inputSchema: toInputSchema(GetInitInput),
-    handle: runRuntimeTool(GetInitInput, () => RequestGetInit(), wsClient),
+    handle: runRuntimeTool(
+      GetInitInput,
+      () => Request.RequestGetInit(),
+      wsClient,
+    ),
   },
   {
     name: 'foldkit_get_runtime_state',
@@ -447,7 +436,7 @@ export const buildTools = (
     inputSchema: toInputSchema(GetRuntimeStateInput),
     handle: runRuntimeTool(
       GetRuntimeStateInput,
-      () => RequestGetRuntimeState(),
+      () => Request.RequestGetRuntimeState(),
       wsClient,
     ),
   },
@@ -458,7 +447,7 @@ export const buildTools = (
     inputSchema: toInputSchema(ListKeyframesInput),
     handle: runRuntimeTool(
       ListKeyframesInput,
-      () => RequestListKeyframes(),
+      () => Request.RequestListKeyframes(),
       wsClient,
     ),
   },
@@ -470,7 +459,7 @@ export const buildTools = (
     handle: runRuntimeTool(
       ReplayToKeyframeInput,
       ({ keyframe_index }) =>
-        RequestReplayToKeyframe({ keyframeIndex: keyframe_index }),
+        Request.RequestReplayToKeyframe({ keyframeIndex: keyframe_index }),
       wsClient,
     ),
   },
@@ -479,7 +468,11 @@ export const buildTools = (
     description:
       'Resume normal execution of a Foldkit runtime that was paused by foldkit_replay_to_keyframe.',
     inputSchema: toInputSchema(ResumeInput),
-    handle: runRuntimeTool(ResumeInput, () => RequestResume(), wsClient),
+    handle: runRuntimeTool(
+      ResumeInput,
+      () => Request.RequestResume(),
+      wsClient,
+    ),
   },
   {
     name: 'foldkit_get_message_schema',
@@ -489,7 +482,7 @@ export const buildTools = (
     handle: runRuntimeTool(
       GetMessageSchemaInput,
       ({ variant_tag }) =>
-        RequestGetMessageSchema({
+        Request.RequestGetMessageSchema({
           maybeVariantTag: Option.fromNullishOr(variant_tag),
         }),
       wsClient,
@@ -502,7 +495,7 @@ export const buildTools = (
     inputSchema: toInputSchema(DispatchMessageInput),
     handle: runRuntimeTool(
       DispatchMessageInput,
-      ({ message }) => RequestDispatchMessage({ message }),
+      ({ message }) => Request.RequestDispatchMessage({ message }),
       wsClient,
     ),
   },
@@ -512,7 +505,7 @@ export const buildTools = (
     inputSchema: toInputSchema(DispatchMessagesInput),
     handle: runRuntimeTool(
       DispatchMessagesInput,
-      ({ messages }) => RequestDispatchMessages({ messages }),
+      ({ messages }) => Request.RequestDispatchMessages({ messages }),
       wsClient,
     ),
   },
@@ -524,7 +517,7 @@ export const buildTools = (
     handle: () =>
       Effect.gen(function* () {
         const response = yield* wsClient.sendRequest(
-          RequestListRuntimes(),
+          Request.RequestListRuntimes(),
           Option.none(),
         )
         return responseToToolResult(response)

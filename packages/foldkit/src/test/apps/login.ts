@@ -2,7 +2,9 @@ import { Effect, Match as M, Schema as S } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
-import { m } from '../../message/index.js'
+import { defineMessageUnion } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
+import type * as Update from '../../update/index.js'
 
 // MODEL
 
@@ -18,30 +20,24 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedEmail = m('UpdatedEmail', { value: S.String })
-export const UpdatedPassword = m('UpdatedPassword', { value: S.String })
-export const SubmittedLogin = m('SubmittedLogin')
-export const SucceededAuthenticate = m('SucceededAuthenticate', {
-  username: S.String,
+export const Message = defineMessageUnion({
+  UpdatedEmail: { value: S.String },
+  UpdatedPassword: { value: S.String },
+  SubmittedLogin: {},
+  SucceededAuthenticate: { username: S.String },
+  FailedAuthenticate: { error: S.String },
+  ClickedLogout: {},
 })
-export const FailedAuthenticate = m('FailedAuthenticate', { error: S.String })
-export const ClickedLogout = m('ClickedLogout')
 
-export const Message = S.Union([
-  UpdatedEmail,
-  UpdatedPassword,
-  SubmittedLogin,
-  SucceededAuthenticate,
-  FailedAuthenticate,
-  ClickedLogout,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
 
 export const Authenticate = Command.define('Authenticate', {
-  messages: [SucceededAuthenticate, FailedAuthenticate],
-  execute: Effect.sync(() => SucceededAuthenticate({ username: 'alice' })),
+  messages: [Message.SucceededAuthenticate, Message.FailedAuthenticate],
+  execute: Effect.sync(() =>
+    Message.SucceededAuthenticate({ username: 'alice' }),
+  ),
 })
 
 // INIT
@@ -56,35 +52,36 @@ export const initialModel: Model = {
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
-      UpdatedEmail: ({ value }) => [{ ...model, email: value }, []],
-      UpdatedPassword: ({ value }) => [{ ...model, password: value }, []],
-      SubmittedLogin: () => [
-        { ...model, status: 'Submitting' },
-        [Authenticate()],
-      ],
-      SucceededAuthenticate: ({ username }) => [
-        { ...model, status: 'LoggedIn', username },
-        [],
-      ],
-      FailedAuthenticate: ({ error }) => [
-        { ...model, status: 'Error', error },
-        [],
-      ],
-      ClickedLogout: () => [
-        { ...model, status: 'Idle', username: '', email: '', password: '' },
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    UpdatedEmail: ({ value }) => ({
+      model: evo(model, { email: () => value }),
     }),
-  )
+    UpdatedPassword: ({ value }) => ({
+      model: evo(model, { password: () => value }),
+    }),
+    SubmittedLogin: () => ({
+      model: evo(model, { status: () => 'Submitting' }),
+      commands: [Authenticate()],
+    }),
+    SucceededAuthenticate: ({ username }) => ({
+      model: evo(model, {
+        status: () => 'LoggedIn',
+        username: () => username,
+      }),
+    }),
+    FailedAuthenticate: ({ error }) => ({
+      model: evo(model, { status: () => 'Error', error: () => error }),
+    }),
+    ClickedLogout: () => ({
+      model: evo(model, {
+        status: () => 'Idle',
+        username: () => '',
+        email: () => '',
+        password: () => '',
+      }),
+    }),
+  })
 
 // VIEW
 
@@ -96,7 +93,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
         M.withReturnType<Html>(),
         M.when('Submitting', () =>
           h.form(
-            [h.Class('login-form'), h.Disabled(true)],
+            [h.Class('login-form')],
             [h.button([h.Type('submit'), h.Disabled(true)], ['Signing in...'])],
           ),
         ),
@@ -114,7 +111,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
               ),
               h.button(
                 [
-                  h.OnClick(ClickedLogout()),
+                  h.OnClick(Message.ClickedLogout()),
                   h.Role('button'),
                   h.AriaExpanded(false),
                 ],
@@ -129,7 +126,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
             [
               h.p([h.Class('error'), h.Role('alert')], [model.error]),
               h.button(
-                [h.OnClick(SubmittedLogin()), h.Class('retry')],
+                [h.OnClick(Message.SubmittedLogin()), h.Class('retry')],
                 ['Retry'],
               ),
             ],
@@ -137,7 +134,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
         ),
         M.when('Idle', () =>
           h.form(
-            [h.OnSubmit(SubmittedLogin()), h.Class('login-form')],
+            [h.OnSubmit(Message.SubmittedLogin()), h.Class('login-form')],
             [
               h.label([h.For('email'), h.Class('sr-only')], ['Email']),
               h.input([
@@ -145,7 +142,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
                 h.Type('email'),
                 h.Placeholder('Email'),
                 h.Value(model.email),
-                h.OnInput(value => UpdatedEmail({ value })),
+                h.OnInput(value => Message.UpdatedEmail({ value })),
               ]),
               h.label([h.For('password'), h.Class('sr-only')], ['Password']),
               h.input([
@@ -153,7 +150,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
                 h.Type('password'),
                 h.Placeholder('Password'),
                 h.Value(model.password),
-                h.OnInput(value => UpdatedPassword({ value })),
+                h.OnInput(value => Message.UpdatedPassword({ value })),
               ]),
               h.button(
                 [h.Type('submit'), h.Class('primary'), h.Disabled(false)],

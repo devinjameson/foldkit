@@ -7,10 +7,11 @@ import {
   String,
   pipe,
 } from 'effect'
+import { type Update } from 'foldkit'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 import { type View as SubmodelView, defineView } from 'foldkit/submodel'
 
@@ -44,34 +45,22 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-/** Sent when a tab is selected via click or keyboard. Commits the tab as the
- *  new selection and moves focus onto it. */
-export const SelectedTab = m('SelectedTab', {
-  index: S.Number,
-  value: S.String,
-})
-/** Sent when a tab receives keyboard focus in `Manual` mode without being activated. */
-export const FocusedTab = m('FocusedTab', { index: S.Number })
-/** Sent when the focus-tab command completes. */
-export const CompletedFocusTab = m('CompletedFocusTab')
-
 /** Union of all messages the tabs component can produce. */
-export const Message: S.Union<
-  [typeof SelectedTab, typeof FocusedTab, typeof CompletedFocusTab]
-> = S.Union([SelectedTab, FocusedTab, CompletedFocusTab])
+export const Message = defineMessageUnion({
+  SelectedTab: {
+    index: S.Number,
+    value: S.String,
+  },
+  FocusedTab: { index: S.Number },
+  CompletedFocusTab: {},
+})
 
-export type SelectedTab = typeof SelectedTab.Type
-export type FocusedTab = typeof FocusedTab.Type
+export type SelectedTab = typeof Message.SelectedTab.Type
+export type FocusedTab = typeof Message.FocusedTab.Type
 
 export type Message = typeof Message.Type
 
 // OUT MESSAGE
-
-/** Sent to the parent when a tab is committed via click or keyboard. Carries both the tab's value (typed as `Value` via `Tabs.create<Value>()`) and its index. Generic at the type level; the schema stores `value: string` and the factory's fenced cast types it as `Value`. */
-export const Selected = m('Selected', {
-  value: S.String,
-  index: S.Number,
-})
 
 export type Selected<Value extends string = string> = Readonly<{
   readonly _tag: 'Selected'
@@ -79,8 +68,14 @@ export type Selected<Value extends string = string> = Readonly<{
   readonly index: number
 }>
 
-/** Union of out-messages the tabs component can produce. Surfaced as the third element of `update`'s return tuple and pattern-matched by the parent. */
-export const OutMessage = S.Union([Selected])
+/** Union of OutMessages the tabs component can produce. The parent's
+ *  `Update.foldChild` config handles them through `foldOutMessage`. */
+export const OutMessage = defineMessageUnion({
+  Selected: {
+    value: S.String,
+    index: S.Number,
+  },
+})
 
 /** Generic over `Value extends string` so consumers using
  *  `Tabs.create<MyUnion>()` receive `value: MyUnion` in the
@@ -113,41 +108,33 @@ const tabPanelId = (id: string, index: number): string => `${id}-panel-${index}`
 /** Moves focus to the tab at the given index. */
 export const FocusTab = Command.define('FocusTab', {
   args: { id: S.String, index: S.Number },
-  messages: [CompletedFocusTab],
+  messages: [Message.CompletedFocusTab],
   execute: ({ id, index }) =>
     Dom.focus(idSelector(tabId(id, index))).pipe(
       Effect.ignore,
-      Effect.as(CompletedFocusTab()),
+      Effect.as(Message.CompletedFocusTab()),
     ),
 })
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message>>,
-  Option.Option<OutMessage>,
-]
+type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
-/** Processes a tabs message and returns the next model, commands, and an
- *  optional OutMessage. `Selected` fires when a tab is committed via click or
- *  keyboard; the parent stores the new value and passes it back in as
+/** Processes a Tabs Message and returns the next Model, optional Commands, and
+ *  an optional OutMessage. `Selected` fires when a tab is committed via click
+ *  or keyboard; the parent stores the new value and passes it back in as
  *  `selectedValue`. */
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      SelectedTab: ({ index, value }) => [
-        evo(model, { maybeFocusedIndex: () => Option.none() }),
-        [FocusTab({ id: model.id, index })],
-        Option.some(Selected({ value, index })),
-      ],
-      FocusedTab: ({ index }) => [
-        evo(model, { maybeFocusedIndex: () => Option.some(index) }),
-        [FocusTab({ id: model.id, index })],
-        Option.none(),
-      ],
-      CompletedFocusTab: () => [model, [], Option.none()],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    SelectedTab: ({ index, value }) => ({
+      model: evo(model, { maybeFocusedIndex: () => Option.none() }),
+      commands: [FocusTab({ id: model.id, index })],
+      outMessage: OutMessage.Selected({ value, index }),
     }),
-  )
+    FocusedTab: ({ index }) => ({
+      model: evo(model, { maybeFocusedIndex: () => Option.some(index) }),
+      commands: [FocusTab({ id: model.id, index })],
+    }),
+    CompletedFocusTab: () => ({ model }),
+  })
 
 // VIEW
 
@@ -254,7 +241,7 @@ const internalView = defineView<Model, Message, ViewInputs>(
       pipe(
         tabs,
         Array.get(index),
-        Option.map(value => SelectedTab({ index, value })),
+        Option.map(value => Message.SelectedTab({ index, value })),
       )
 
     const handleAutomaticKeyDown = (key: string): Option.Option<SelectedTab> =>
@@ -283,7 +270,8 @@ const internalView = defineView<Model, Message, ViewInputs>(
           'End',
           'PageUp',
           'PageDown',
-          () => Option.some(FocusedTab({ index: resolveKeyIndex(key) })),
+          () =>
+            Option.some(Message.FocusedTab({ index: resolveKeyIndex(key) })),
         ),
         M.whenOr('Enter', ' ', () => tabSelectedAt(focusedIndex)),
         M.orElse(() => Option.none()),
@@ -317,7 +305,7 @@ const internalView = defineView<Model, Message, ViewInputs>(
               h.AriaDisabled(true),
               h.DataAttribute('disabled', ''),
             ]
-          : [h.OnClick(SelectedTab({ index, value }))]),
+          : [h.OnClick(Message.SelectedTab({ index, value }))]),
         h.OnKeyDownPreventDefault(handleKeyDown),
       ]
 
@@ -363,11 +351,7 @@ export type Bundle<Value extends string = string> = Readonly<{
   update: (
     model: Model,
     message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
+  ) => Update.ReturnWithOutMessage<Model, Message, OutMessage<Value>>
 }>
 
 /** Pairs the tabs `view` and `update` behind a single Value-typed entry
@@ -381,19 +365,19 @@ export type Bundle<Value extends string = string> = Readonly<{
  *  // In view (selectedValue is the parent-owned active tab):
  *  h.submodel({ view: DemoTabs.view, viewInputs: { selectedValue, ... }, ... })
  *
- *  // In update, fold the Selected OutMessage into your Model:
- *  const [next, commands, maybeOutMessage] = DemoTabs.update(model, message)
+ *  // In the parent update, pass DemoTabs.update to Update.foldChild and
+ *  // fold the Selected OutMessage into your Model.
  *  ```
  *
  *  The internal view stays typed `ReadonlyArray<string>`; consumers can
  *  pass a `ReadonlyArray<MyUnion>` (assignable) and the fenced cast inside
  *  `create` types `TabInfo.value` as `MyUnion`. */
 export const create = <Value extends string = string>(): Bundle<Value> => {
-  type GenericReturn = readonly [
+  type GenericReturn = Update.ReturnWithOutMessage<
     Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Value>>,
-  ]
+    Message,
+    OutMessage<Value>
+  >
   const cast = (result: UpdateReturn): GenericReturn =>
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     result as unknown as GenericReturn

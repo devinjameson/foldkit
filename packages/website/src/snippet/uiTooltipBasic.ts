@@ -1,10 +1,10 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Tooltip } from '@foldkit/ui'
@@ -16,17 +16,16 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Tooltip Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     tooltip: Tooltip.init({ id: 'save-button' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the Tooltip Message in your parent Message:
-const GotTooltipMessage = m('GotTooltipMessage', {
-  message: Tooltip.Message,
+const Message = defineMessageUnion({
+  GotTooltipMessage: { message: Tooltip.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. `Shown` and
@@ -39,11 +38,11 @@ const foldTooltipOutMessage = M.type<Tooltip.OutMessage>().pipe(
     // The child has emitted `Shown`. In this arm the parent can update its
     // own state or dispatch its own Commands, for example log analytics,
     // prefetch content, or trigger a downstream Command.
-    Shown: () => model => [model, []],
+    Shown: () => model => ({ model }),
     // The child has emitted `Hidden`. In this arm the parent can update its
     // own state or dispatch its own Commands, for example clear ephemeral
     // state, fire analytics, or trigger a downstream Command.
-    Hidden: () => model => [model, []],
+    Hidden: () => model => ({ model }),
   }),
 )
 
@@ -54,11 +53,11 @@ const foldTooltip = Update.foldChild({
   update: Tooltip.update,
   read: (model: Model) => Option.some(model.tooltip),
   write: (model, nextTooltip) => evo(model, { tooltip: () => nextTooltip }),
-  toParentMessage: message => GotTooltipMessage({ message }),
+  toParentMessage: message => Message.GotTooltipMessage({ message }),
   foldOutMessage: foldTooltipOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotTooltipMessage: ({ message }) => foldTooltip(model, message)
 
 // Inside your view function, embed the tooltip via h.submodel. The tooltip
@@ -102,5 +101,5 @@ const view = (h: HtmlBuilder<Message>) =>
           ],
         ),
     },
-    toParentMessage: message => GotTooltipMessage({ message }),
+    toParentMessage: message => Message.GotTooltipMessage({ message }),
   })

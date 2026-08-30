@@ -7,14 +7,13 @@ import {
   Flags,
   Model,
   devTracerLayer,
-  flags,
   init,
   managedResources,
   subscriptions,
   update,
   view,
 } from './main'
-import { ChangedUrl, ClickedLink, Message } from './message'
+import { Message } from './message'
 import * as Search from './search'
 
 // NOTE: TS can't infer `Resources`/`ManagedResourceServices` from the
@@ -31,7 +30,6 @@ const application = Runtime.makeApplication<
 >({
   Model,
   Flags,
-  flags,
   init,
   update,
   view,
@@ -39,8 +37,8 @@ const application = Runtime.makeApplication<
   managedResources,
   container: document.getElementById('root'),
   routing: {
-    onUrlRequest: request => ClickedLink({ request }),
-    onUrlChange: url => ChangedUrl({ url }),
+    onUrlRequest: request => Message.ClickedLink({ request }),
+    onUrlChange: url => Message.ChangedUrl({ url }),
   },
   resources: Layer.mergeAll(Search.PagefindService.Default, devTracerLayer),
   devTools: {
@@ -52,4 +50,4 @@ const application = Runtime.makeApplication<
   },
 })
 
-Runtime.run(application)
+Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })

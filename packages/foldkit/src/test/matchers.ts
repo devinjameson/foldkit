@@ -1,5 +1,6 @@
 import { Option, String as String_ } from 'effect'
 
+import { serializedStylePropertyName } from '../domReflection.js'
 import type { VNode } from '../vdom.js'
 import { attr, isHidden, textContent } from './query.js'
 
@@ -158,7 +159,9 @@ export const sceneMatchers = {
             : `Expected element to have style ${name}="${expectedValue}" but the element does not exist.`,
       }),
       onSome: vnode => {
-        const maybeActualValue = Option.fromNullishOr(vnode.data?.style?.[name])
+        const maybeActualValue = Option.fromNullishOr(
+          vnode.data?.style?.[serializedStylePropertyName(name)],
+        )
 
         if (expectedValue === undefined) {
           return {

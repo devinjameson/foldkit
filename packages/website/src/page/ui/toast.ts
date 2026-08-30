@@ -4,15 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import type { EntryHandlers, Variant } from '@foldkit/ui/toast'
 
 import { Icon } from '../../icon'
-import {
-  ClickedDismissAllToasts,
-  ClickedShowErrorToast,
-  ClickedShowInfoToast,
-  ClickedShowStickyToast,
-  ClickedShowSuccessToast,
-  GotToastDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import { Toast } from './toastModule'
 
 type Entry = typeof Toast.Entry.Type
@@ -48,7 +40,7 @@ const variantClassName = (variant: Variant): string =>
 const entryClassName = 'w-80'
 
 const buttonClassName =
-  'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+  'demo-neutral-button inline-flex items-center gap-1.5 text-sm'
 
 // VIEW
 
@@ -89,23 +81,35 @@ export const demo = (
       [h.Class('flex flex-wrap gap-2')],
       [
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedShowInfoToast())],
+          [h.Class(buttonClassName), h.OnClick(Message.ClickedShowInfoToast())],
           ['Info'],
         ),
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedShowSuccessToast())],
+          [
+            h.Class(buttonClassName),
+            h.OnClick(Message.ClickedShowSuccessToast()),
+          ],
           ['Success'],
         ),
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedShowErrorToast())],
+          [
+            h.Class(buttonClassName),
+            h.OnClick(Message.ClickedShowErrorToast()),
+          ],
           ['Error'],
         ),
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedShowStickyToast())],
+          [
+            h.Class(buttonClassName),
+            h.OnClick(Message.ClickedShowStickyToast()),
+          ],
           ['Sticky'],
         ),
         h.button(
-          [h.Class(buttonClassName), h.OnClick(ClickedDismissAllToasts())],
+          [
+            h.Class(buttonClassName),
+            h.OnClick(Message.ClickedDismissAllToasts()),
+          ],
           ['Dismiss all'],
         ),
       ],
@@ -135,7 +139,7 @@ export const demo = (
         entryToView: renderToastEntry,
         entryClassName,
       },
-      toParentMessage: message => GotToastDemoMessage({ message }),
+      toParentMessage: message => Message.GotToastDemoMessage({ message }),
     }),
   ]
 }

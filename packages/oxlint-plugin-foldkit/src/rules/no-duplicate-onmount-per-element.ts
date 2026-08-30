@@ -4,7 +4,7 @@ import { AST, Diagnostic, type ESTree, Rule, RuleContext } from 'effect-oxlint'
 import { isArrayExpression } from '../guards.ts'
 
 const DUPLICATE_ON_MOUNT_MESSAGE =
-  'Only one OnMount attribute can attach to an element. Foldkit installs a single insert hook and tracks a single Mount fiber per element, so a later OnMount replaces the earlier one and its factory never runs. Combine the behaviors into one Mount definition.'
+  'Only one OnMount attribute can attach to an element. Foldkit installs a single insert hook and tracks a single Mount fiber per element, so a later OnMount replaces the earlier one and its `execute` never runs. Combine the behaviors into one Mount definition.'
 
 const isOnMountCallee = (callee: ESTree.Expression): boolean => {
   if (callee.type === 'Identifier') {

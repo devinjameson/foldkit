@@ -72,6 +72,7 @@ declare const fiberStringOrNumber: Fiber.Fiber<string, "err-1"> | Fiber.Fiber<nu
 declare const stringArray: Array<Effect.Effect<string, "err-3", "dep-3">>
 declare const numberRecord: Record<string, Effect.Effect<number, "err-4", "dep-4">>
 declare const optionalEffect: Option.Option<Effect.Effect<string, "err-1", "dep-1">>
+declare const iterableString: Effect.Effect<Iterable<string>, "err-1", "dep-1">
 
 class AcquireReleaseDependency extends Context.Service<AcquireReleaseDependency, string>()(
   "AcquireReleaseDependency"
@@ -174,8 +175,7 @@ describe("Effect.catchReason", () => {
     pipe(
       aiEffect,
       Effect.catchReason("AiError", "RateLimitError", (_reason, error) => {
-        expect(error.reason).type.toBeAssignableTo<RateLimitError>()
-        expect(error.reason).type.toBeAssignableFrom<RateLimitError>()
+        expect(error.reason).type.toBe<RateLimitError>()
         return Effect.succeed("ok")
       })
     )
@@ -189,8 +189,7 @@ describe("Effect.catchReason", () => {
         "RateLimitError",
         () => Effect.succeed("ok"),
         (_reason, error) => {
-          expect(error.reason).type.toBeAssignableTo<QuotaExceededError | UnknownAiModelError>()
-          expect(error.reason).type.toBeAssignableFrom<QuotaExceededError | UnknownAiModelError>()
+          expect(error.reason).type.toBe<QuotaExceededError | UnknownAiModelError>()
           return Effect.succeed("ok")
         }
       )
@@ -295,6 +294,13 @@ describe("Effect.firstSuccessOf", () => {
   })
 })
 
+describe("Effect.head", () => {
+  it("infers the element and preserves the source error and requirements", () => {
+    const result = Effect.head(iterableString)
+    expect(result).type.toBe<Effect.Effect<string, "err-1" | Cause.NoSuchElementError, "dep-1">>()
+  })
+})
+
 describe("Effect.catchReasons", () => {
   it("handlers receive respective reason types", () => {
     pipe(
@@ -317,13 +323,11 @@ describe("Effect.catchReasons", () => {
       aiEffect,
       Effect.catchReasons("AiError", {
         RateLimitError: (_r, error) => {
-          expect(error.reason).type.toBeAssignableTo<RateLimitError>()
-          expect(error.reason).type.toBeAssignableFrom<RateLimitError>()
+          expect(error.reason).type.toBe<RateLimitError>()
           return Effect.succeed("")
         },
         QuotaExceededError: (_r, error) => {
-          expect(error.reason).type.toBeAssignableTo<QuotaExceededError>()
-          expect(error.reason).type.toBeAssignableFrom<QuotaExceededError>()
+          expect(error.reason).type.toBe<QuotaExceededError>()
           return Effect.succeed("")
         }
       })
@@ -373,8 +377,7 @@ describe("Effect.catchReasons", () => {
       Effect.catchReasons("AiError", {
         RateLimitError: () => Effect.succeed("")
       }, (_others, error) => {
-        expect(error.reason).type.toBeAssignableTo<QuotaExceededError | UnknownAiModelError>()
-        expect(error.reason).type.toBeAssignableFrom<QuotaExceededError | UnknownAiModelError>()
+        expect(error.reason).type.toBe<QuotaExceededError | UnknownAiModelError>()
         return Effect.succeed("")
       })
     )
@@ -864,6 +867,35 @@ describe("Effect.partition", () => {
       Effect.partition((n) => n % 2 === 0 ? Effect.fail(n) : Effect.succeed(`${n}`))
     )
     expect(result).type.toBe<Effect.Effect<[excluded: Array<number>, satisfying: Array<string>], never, never>>()
+  })
+})
+
+describe("Effect.forEach", () => {
+  it("data-first", () => {
+    const result = Effect.forEach(
+      [1, 2, 3],
+      (n, i) => string.pipe(Effect.as(`${n}${i}`))
+    )
+    expect(result).type.toBe<Effect.Effect<Array<string>, "err-1", "dep-1">>()
+  })
+
+  it("data-last with an explicitly typed callback", () => {
+    const result = Effect.forEach((n: number, i) => string.pipe(Effect.as(`${n}${i}`)))([1, 2, 3])
+    expect(result).type.toBe<Effect.Effect<Array<string>, "err-1", "dep-1">>()
+  })
+
+  it("data-last with discard", () => {
+    const result = pipe(
+      new Set([1, 2, 3]),
+      Effect.forEach((n: number) => Effect.succeed(`${n}`), { discard: true })
+    )
+    expect(result).type.toBe<Effect.Effect<void>>()
+  })
+
+  it("data-last rejects an incompatible iterable", () => {
+    const forEachNumber = Effect.forEach((n: number) => Effect.succeed(`${n}`))
+    // @ts-expect-error Type 'string' is not assignable to type 'number'
+    forEachNumber(["a", "b"])
   })
 })
 

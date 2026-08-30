@@ -1,10 +1,19 @@
-import { build } from 'esbuild'
-import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
+import { build, transform } from 'esbuild'
+import {
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+
+import { runOxlint } from './run-oxlint.ts'
 
 // Runs every rule through real oxlint against fixtures written in real
 // Foldkit idioms. `invalid/` must produce at least one diagnostic and
@@ -16,14 +25,11 @@ const here = dirname(fileURLToPath(import.meta.url))
 const pluginRoot = join(here, '..', '..')
 const repoRoot = join(pluginRoot, '..', '..')
 const fixturesRoot = join(here, 'fixtures')
-const oxlintBin = join(repoRoot, 'node_modules', '.bin', 'oxlint')
-
-let bundlePath: string
-let workDir: string
+const oxlintBin = join(repoRoot, 'node_modules', 'oxlint', 'bin', 'oxlint')
+const workDir = mkdtempSync(join(tmpdir(), 'foldkit-oxlint-integration-'))
+const bundlePath = join(workDir, 'plugin.mjs')
 
 beforeAll(async () => {
-  workDir = mkdtempSync(join(tmpdir(), 'foldkit-oxlint-integration-'))
-  bundlePath = join(workDir, 'plugin.js')
   await build({
     entryPoints: [join(pluginRoot, 'src', 'index.ts')],
     bundle: true,
@@ -33,28 +39,38 @@ beforeAll(async () => {
   })
 })
 
+afterAll(() => {
+  rmSync(workDir, { recursive: true, force: true })
+})
+
 type FixtureKind = 'valid' | 'invalid'
 
 const countDiagnostics = (rule: string, kind: FixtureKind): number => {
   const targetDir = join(fixturesRoot, rule, kind)
   const config = {
     plugins: ['typescript'],
-    jsPlugins: [{ name: 'foldkit', specifier: bundlePath }],
+    jsPlugins: [{ name: 'foldkit', specifier: pathToFileURL(bundlePath).href }],
     categories: { correctness: 'off' },
     rules: { [`foldkit/${rule}`]: 'error' },
   }
   const configPath = join(workDir, `${rule}.${kind}.oxlintrc.json`)
   writeFileSync(configPath, JSON.stringify(config))
-  try {
-    execFileSync(oxlintBin, ['--config', configPath, targetDir], {
-      encoding: 'utf8',
-    })
-    return 0
-  } catch (error) {
-    const output = String((error as { stdout?: unknown }).stdout ?? '')
-    const matches = output.match(new RegExp(`foldkit\\(${rule}\\)`, 'g'))
-    return matches === null ? 0 : matches.length
+  const diagnostics = runOxlint({
+    oxlintBin,
+    cwd: workDir,
+    configPath,
+    target: targetDir,
+  })
+  const expectedCode = `foldkit(${rule})`
+
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.code !== expectedCode) {
+      throw new Error(
+        `Expected ${expectedCode}, received ${diagnostic.code} in ${diagnostic.filename}`,
+      )
+    }
   }
+  return diagnostics.length
 }
 
 const ruleFixtures = readdirSync(fixturesRoot, { withFileTypes: true })
@@ -64,7 +80,7 @@ const ruleFixtures = readdirSync(fixturesRoot, { withFileTypes: true })
 
 describe('real-oxlint rule fixtures', () => {
   it('has a fixture directory for every registered rule', async () => {
-    const plugin = await import(bundlePath)
+    const plugin = await import(pathToFileURL(bundlePath).href)
     const registered: ReadonlyArray<string> = Object.keys(
       (plugin.default ?? plugin).rules,
     )
@@ -80,4 +96,83 @@ describe('real-oxlint rule fixtures', () => {
       expect(countDiagnostics(rule, 'valid')).toBe(0)
     })
   }
+
+  it('reports every direct decision-time operation in its invalid fixture', () => {
+    expect(countDiagnostics('no-impure-call-at-decision-time', 'invalid')).toBe(
+      23,
+    )
+  })
+
+  it('fixes only structurally safe empty commands properties', async () => {
+    const rule = 'no-empty-commands-array'
+    const sourcePath = join(fixturesRoot, rule, 'invalid', 'update.ts')
+    const targetPath = join(workDir, `${rule}.fix.ts`)
+    const configPath = join(workDir, `${rule}.fix.oxlintrc.json`)
+    copyFileSync(sourcePath, targetPath)
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        plugins: ['typescript'],
+        jsPlugins: [
+          { name: 'foldkit', specifier: pathToFileURL(bundlePath).href },
+        ],
+        categories: { correctness: 'off' },
+        rules: { [`foldkit/${rule}`]: 'error' },
+      }),
+    )
+
+    const diagnostics = runOxlint({
+      oxlintBin,
+      cwd: workDir,
+      configPath,
+      target: targetPath,
+      fix: true,
+    })
+    const fixedSource = readFileSync(targetPath, 'utf8')
+
+    expect(diagnostics).toHaveLength(2)
+    expect(fixedSource.match(/commands: \[\]/g)).toHaveLength(1)
+    expect(fixedSource).toContain('// A comment does not make this a Command.')
+    expect(fixedSource).toContain('[propertyName]: dynamicCommands')
+    await expect(
+      transform(fixedSource, { loader: 'ts' }),
+    ).resolves.toBeDefined()
+  })
+
+  it('fixes only structurally safe empty parent OutMessage mappers', async () => {
+    const rule = 'no-empty-to-parent-out-message'
+    const sourcePath = join(fixturesRoot, rule, 'invalid', 'update.ts')
+    const targetPath = join(workDir, `${rule}.fix.ts`)
+    const configPath = join(workDir, `${rule}.fix.oxlintrc.json`)
+    copyFileSync(sourcePath, targetPath)
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        plugins: ['typescript'],
+        jsPlugins: [
+          { name: 'foldkit', specifier: pathToFileURL(bundlePath).href },
+        ],
+        categories: { correctness: 'off' },
+        rules: { [`foldkit/${rule}`]: 'error' },
+      }),
+    )
+
+    const diagnostics = runOxlint({
+      oxlintBin,
+      cwd: workDir,
+      configPath,
+      target: targetPath,
+      fix: true,
+    })
+    const fixedSource = readFileSync(targetPath, 'utf8')
+
+    expect(diagnostics).toHaveLength(2)
+    expect(fixedSource.match(/toParentOutMessage/g)).toHaveLength(2)
+    expect(fixedSource).toContain(
+      '// This comment must survive an autofix pass.',
+    )
+    await expect(
+      transform(fixedSource, { loader: 'ts' }),
+    ).resolves.toBeDefined()
+  })
 })

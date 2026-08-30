@@ -75,10 +75,9 @@ export type ViewConfig<Message> = Readonly<{
  *  )
  *
  *  // In update:
- *  ToggledDetails: ({ isOpen }) => [
- *    evo(model, { isDetailsOpen: () => isOpen }),
- *    [],
- *  ],
+ *  ToggledDetails: ({ isOpen }) => ({
+ *    model: evo(model, { isDetailsOpen: () => isOpen }),
+ *  }),
  *  ``` */
 export const view = <Message>(
   config: ViewConfig<Message>,

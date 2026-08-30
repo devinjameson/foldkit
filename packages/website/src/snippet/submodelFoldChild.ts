@@ -1,5 +1,5 @@
-import { Match as M, Option } from 'effect'
-import { Command, Update } from 'foldkit'
+import { Option } from 'effect'
+import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 const foldSettings = Update.foldChild({
@@ -9,12 +9,7 @@ const foldSettings = Update.foldChild({
   toParentMessage: message => GotSettingsMessage({ message }),
 })
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.tagsExhaustive({
-      GotSettingsMessage: ({ message }) => foldSettings(model, message),
-    }),
-  )
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    GotSettingsMessage: ({ message }) => foldSettings(model, message),
+  })

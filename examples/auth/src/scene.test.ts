@@ -12,20 +12,20 @@ import { describe, test } from 'vitest'
 
 import { SaveSession } from './command'
 import { Session } from './domain/session'
-import { CompletedNavigateInternal, SucceededSaveSession } from './message'
+import { Message } from './message'
 import { LoggedOut } from './model'
 import {
+  Message as LoginMessage,
   Model as LoginModel,
   SimulateAuthRequest,
-  SucceededSimulateAuthRequest,
   initModel as initLoginModel,
 } from './page/loggedOut/page/login'
-import { LoginRoute } from './route'
+import { AppRoute } from './route'
 import { RedirectToDashboard, update } from './update'
 import { view } from './view'
 
 const validModel = LoggedOut.Model({
-  route: LoginRoute(),
+  route: AppRoute.Login(),
   loginModel: LoginModel.make({
     ...initLoginModel(),
     email: Valid({ value: 'alice@example.com' }),
@@ -48,12 +48,12 @@ describe('login flow', () => {
       Command.expectExact(SimulateAuthRequest),
       Command.resolve(
         SimulateAuthRequest,
-        SucceededSimulateAuthRequest({ session: aliceSession }),
+        LoginMessage.SucceededSimulateAuthRequest({ session: aliceSession }),
       ),
       Command.expectExact(SaveSession, RedirectToDashboard),
       Command.resolveAll(
-        [SaveSession, SucceededSaveSession()],
-        [RedirectToDashboard, CompletedNavigateInternal()],
+        [SaveSession, Message.SucceededSaveSession()],
+        [RedirectToDashboard, Message.CompletedNavigateInternal()],
       ),
       expect(text('Welcome back, alice!')).toExist(),
     )

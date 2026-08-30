@@ -2,7 +2,7 @@
 import { NodeHttpServer } from "@effect/platform-node"
 import { NodeWS } from "@effect/platform-node/NodeSocket"
 import { assert, describe, expect, it } from "@effect/vitest"
-import { Effect } from "effect"
+import { Effect, Option } from "effect"
 import * as Duration from "effect/Duration"
 import * as Fiber from "effect/Fiber"
 import * as Latch from "effect/Latch"
@@ -60,6 +60,27 @@ describe("HttpServer", () => {
         Effect.flatMap(HttpClientResponse.schemaBodyJson(Todo))
       )
       expect(todo).toEqual({ id: 1, title: "test" })
+    }).pipe(Effect.provide(NodeHttpServer.layerTest)))
+
+  it.effect("schemaJson applies a JSON reviver", () =>
+    Effect.gen(function*() {
+      yield* HttpRouter.add(
+        "POST",
+        "/json",
+        Effect.gen(function*() {
+          const decoded = yield* HttpRouter.schemaJson(
+            Schema.Struct({ body: Schema.Struct({ value: Schema.String }) }),
+            { reviver: (key, value) => key === "value" ? "revived" : value }
+          )
+          assert.deepStrictEqual(decoded, { body: { value: "revived" } })
+          return HttpServerResponse.empty()
+        })
+      ).pipe(HttpRouter.serve, Layer.build)
+
+      const response = yield* HttpClient.post("/json", {
+        body: HttpBody.jsonUnsafe({ value: "original" })
+      })
+      assert.strictEqual(response.status, 204)
     }).pipe(Effect.provide(NodeHttpServer.layerTest)))
 
   it.effect("formData", () =>
@@ -312,10 +333,13 @@ describe("HttpServer", () => {
         "POST",
         "/upload",
         Effect.gen(function*() {
-          const result = yield* HttpServerRequest.schemaBodyFormJson(Schema.Struct({
-            test: Schema.String
-          }))("json")
-          expect(result.test).toEqual("content")
+          const result = yield* HttpServerRequest.schemaBodyFormJson(
+            Schema.Struct({
+              test: Schema.String
+            }),
+            { reviver: (key, value) => key === "test" ? "revived" : value }
+          )("json")
+          expect(result.test).toEqual("revived")
           return HttpServerResponse.empty()
         })
       ).pipe(
@@ -546,6 +570,43 @@ describe("HttpServer", () => {
       yield* completed.await
 
       assert.strictEqual(closeListenerRemovals, 1)
+    }))
+
+  it.effect("returns none when a late remoteAddress read finds no socket", () =>
+    Effect.gen(function*() {
+      const scope = yield* Effect.scope
+      let request: HttpServerRequest.HttpServerRequest | undefined
+      const handler = yield* NodeHttpServer.makeHandler(
+        Effect.gen(function*() {
+          request = yield* HttpServerRequest.HttpServerRequest
+          return HttpServerResponse.empty()
+        }),
+        { scope }
+      )
+      const completed = Latch.makeUnsafe()
+      let writableEnded = false
+      const nodeResponse = Object.defineProperty(new EventEmitter(), "writableEnded", {
+        get: () => writableEnded
+      }) as Http.ServerResponse
+      nodeResponse.writeHead = () => nodeResponse
+      nodeResponse.end = (() => {
+        writableEnded = true
+        completed.openUnsafe()
+        return nodeResponse
+      }) as Http.ServerResponse["end"]
+      const nodeRequest = {
+        method: "GET",
+        url: "/",
+        headers: {},
+        socket: { remoteAddress: "127.0.0.1" }
+      } as unknown as Http.IncomingMessage
+
+      handler(nodeRequest, nodeResponse)
+      yield* completed.await
+      assert(request !== undefined)
+      ;(nodeRequest as unknown as { socket: null }).socket = null
+
+      assert.deepStrictEqual(request.remoteAddress, Option.none())
     }))
 
   it.effect("coalesces streaming chunks from the same pull", () =>

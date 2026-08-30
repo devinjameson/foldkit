@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "declaration": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "es2022",
+    "lib": ["esnext", "dom"],
+    "types": []
+  },
+  "include": ["src/packed-types.ts", "src/inferred-program.ts"]
+}

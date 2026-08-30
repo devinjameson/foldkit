@@ -1,10 +1,10 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match as M, Option } from 'effect'
+import { Array, Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Combobox } from '@foldkit/ui'
@@ -25,18 +25,17 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Combobox Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     maybeCity: Option.none(),
     combobox: Combobox.init({ id: 'city' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Wrap Combobox's Messages so they can flow through your update:
-const GotComboboxMessage = m('GotComboboxMessage', {
-  message: Combobox.Message,
+const Message = defineMessageUnion({
+  GotComboboxMessage: { message: Combobox.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. `Selected`
@@ -50,8 +49,8 @@ const foldComboboxOutMessage = M.type<Combobox.OutMessage<City>>().pipe(
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [evo(model, { maybeCity: () => Option.some(value) }), []],
-    ClearedSelection: () => model => [model, []],
+      model => ({ model: evo(model, { maybeCity: () => Option.some(value) }) }),
+    ClearedSelection: () => model => ({ model }),
   }),
 )
 
@@ -63,11 +62,11 @@ const foldCombobox = Update.foldChild({
   update: CityCombobox.update,
   read: (model: Model) => Option.some(model.combobox),
   write: (model, nextCombobox) => evo(model, { combobox: () => nextCombobox }),
-  toParentMessage: message => GotComboboxMessage({ message }),
+  toParentMessage: message => Message.GotComboboxMessage({ message }),
   foldOutMessage: foldComboboxOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotComboboxMessage: ({ message }) => foldCombobox(model, message)
 
 const cities: ReadonlyArray<City> = [
@@ -130,7 +129,7 @@ const view = (model: Model, h: HtmlBuilder<Message>) => {
           backdropAttributes: childAttributes([h.Class('fixed inset-0')]),
           anchor: { placement: 'bottom-start', gap: 8, padding: 8 },
         },
-        toParentMessage: message => GotComboboxMessage({ message }),
+        toParentMessage: message => Message.GotComboboxMessage({ message }),
       }),
     ],
   )

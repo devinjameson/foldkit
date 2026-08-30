@@ -1,6 +1,12 @@
 import { Array, type Schema, String, pipe } from 'effect'
 
-import type { Attribute, Child, Html, HtmlBuilder } from '../html/index.js'
+import type {
+  Attribute,
+  Child,
+  ChildAttribute,
+  Html,
+  HtmlBuilder,
+} from '../html/index.js'
 import {
   OnCustomEvent,
   Prop,
@@ -34,21 +40,23 @@ type PropertyFactories<
 
 /** @internal */
 type EventFactories<Message, Events extends Record<string, Schema.Top>> = {
-  readonly [K in keyof Events as `On${KebabToPascal<string & K>}`]: EventFactory<
-    Message,
-    Schema.Schema.Type<Events[K]>
-  >
+  readonly [
+    K in keyof Events as `On${KebabToPascal<string & K>}`
+  ]: EventFactory<Message, Schema.Schema.Type<Events[K]>>
 }
 
 /** Typed call site for a defined custom element. The element constructor
  *  itself is callable; each declared property gets a PascalCase factory
- *  method, and each declared event gets an `On{PascalCase}` factory method. */
+ *  method, and each declared event gets an `On{PascalCase}` factory method.
+ *  The attribute array accepts {@link ChildAttribute} alongside
+ *  `Attribute<Message>`, like every html element builder, so a Submodel's
+ *  published attribute groups can be spread into a custom element. */
 export type ElementBuilder<
   Message,
   Properties extends Record<string, Schema.Top>,
   Events extends Record<string, Schema.Top>,
 > = ((
-  attributes?: ReadonlyArray<Attribute<Message>>,
+  attributes?: ReadonlyArray<Attribute<Message> | ChildAttribute>,
   children?: ReadonlyArray<Child>,
 ) => Html) &
   PropertyFactories<Message, Properties> &
@@ -98,6 +106,25 @@ export const kebabToPascal = (input: string): string =>
   pipe(input, String.split('-'), Array.map(String.capitalize), Array.join(''))
 
 const IDENTIFIER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/
+
+// A conservative subset of the custom-element name grammar: lowercase start,
+// then only characters that cannot carry markup. The hyphen requirement is
+// checked separately so its message stays specific.
+const CUSTOM_ELEMENT_NAME_PATTERN = /^[a-z][a-z0-9._-]*$/
+
+// Hyphenated names the custom-element spec reserves for SVG and MathML, which
+// `customElements.define` rejects with a SyntaxError. They pass the character
+// grammar, so they are excluded by name.
+const RESERVED_CUSTOM_ELEMENT_NAMES: ReadonlySet<string> = new Set([
+  'annotation-xml',
+  'color-profile',
+  'font-face',
+  'font-face-src',
+  'font-face-uri',
+  'font-face-format',
+  'font-face-name',
+  'missing-glyph',
+])
 
 const isValidPropertyName = (name: string): boolean =>
   IDENTIFIER_PATTERN.test(name)
@@ -177,7 +204,7 @@ export const define = <
     const createVNode = customElementVNode<unknown>()(config.tag)
 
     const elementFn = (
-      attributes: ReadonlyArray<Attribute<unknown>> = [],
+      attributes: ReadonlyArray<Attribute<unknown> | ChildAttribute> = [],
       children: ReadonlyArray<Child> = [],
     ): Html => createVNode(attributes, children)
 
@@ -209,8 +236,7 @@ export const define = <
   // factories close over nothing Message-specific, exactly like the html
   // builder singleton.
   let cachedElementBuilder:
-    | ElementBuilder<unknown, Properties, Events>
-    | undefined
+    ElementBuilder<unknown, Properties, Events> | undefined
 
   const withMessage = <Message>(
     _h: HtmlBuilder<Message>,
@@ -238,6 +264,18 @@ const validateNames = (input: {
   if (!input.tag.includes('-')) {
     throw new Error(
       `${context}: tag '${input.tag}' is not a valid custom element name. Autonomous custom elements must contain at least one hyphen (e.g. 'fk-emoji-rating').`,
+    )
+  }
+
+  if (!CUSTOM_ELEMENT_NAME_PATTERN.test(input.tag)) {
+    throw new Error(
+      `${context}: tag '${input.tag}' is not a valid custom element name. Names must be lowercase, start with a letter, and use only letters, numbers, hyphens, dots, and underscores.`,
+    )
+  }
+
+  if (RESERVED_CUSTOM_ELEMENT_NAMES.has(input.tag)) {
+    throw new Error(
+      `${context}: tag '${input.tag}' is a reserved custom element name that the browser rejects.`,
     )
   }
 

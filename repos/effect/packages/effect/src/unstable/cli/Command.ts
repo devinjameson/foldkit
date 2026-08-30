@@ -98,7 +98,7 @@ import * as Prompt from "./Prompt.ts"
  *   never
  * > = Command.make("deploy", {
  *   env: Flag.string("env"),
- *   force: Flag.boolean("force"),
+ *   force: Flag.boolean("force").pipe(Flag.withDefault(false)),
  *   files: Argument.string("files").pipe(Argument.variadic())
  * })
  *
@@ -456,7 +456,7 @@ export type Services<C> = C extends Command<
  *
  * const parent = Command.make("app").pipe(
  *   Command.withSharedFlags({
- *     verbose: Flag.boolean("verbose"),
+ *     verbose: Flag.boolean("verbose").pipe(Flag.withDefault(false)),
  *     config: Flag.string("config")
  *   })
  * )
@@ -582,14 +582,17 @@ export const isCommand = (u: unknown): u is Command.Any => Predicate.hasProperty
  *     port: Flag.integer("port").pipe(Flag.withDefault(3000))
  *   },
  *   files: Argument.string("files").pipe(Argument.variadic),
- *   force: Flag.boolean("force").pipe(Flag.withDescription("Force deployment"))
+ *   force: Flag.boolean("force").pipe(
+ *     Flag.withDescription("Force deployment"),
+ *     Flag.withDefault(false)
+ *   )
  * })
  *
  * // Command with handler
  * const output: Array<string> = []
  * const deployWithHandler = Command.make("deploy", {
  *   environment: Flag.string("env"),
- *   force: Flag.boolean("force")
+ *   force: Flag.boolean("force").pipe(Flag.withDefault(false))
  * }, (config) =>
  *   Effect.gen(function*() {
  *     yield* Effect.sync(() => output.push(`Starting deployment to ${config.environment}`))
@@ -798,7 +801,7 @@ const normalizeSubcommandEntries = (
  * // Parent command with shared flags
  * const git = Command.make("git").pipe(
  *   Command.withSharedFlags({
- *     verbose: Flag.boolean("verbose")
+ *     verbose: Flag.boolean("verbose").pipe(Flag.withDefault(false))
  *   })
  * )
  *
@@ -1623,7 +1626,8 @@ export const wizard = <Name extends string, Input, E, R, ContextInput>(
   options?: {
     readonly prefix?: ReadonlyArray<string> | undefined
   } | undefined
-): Effect.Effect<Array<string>, CliError.CliError | Terminal.QuitError, Environment> => Wizard.run(command, options)
+): Effect.Effect<Array<string>, CliError.CliError | Terminal.QuitError, Environment> =>
+  Effect.map(Wizard.run(command, options), (result) => result.args)
 
 const getOutOfScopeGlobalFlagErrors = (
   allFlags: ReadonlyArray<GlobalFlag.GlobalFlag<any>>,
@@ -1898,8 +1902,8 @@ export const runWith = <const Name extends string, Input, E, R, ContextInput>(
               command.name,
               ...args.filter((arg) => arg !== "--wizard" && !arg.startsWith("--wizard="))
             ]
-            const wizardArgs = yield* Wizard.run(command, { commandPath, prefix })
-            yield* Console.log(Wizard.renderCompletion(wizardArgs))
+            const wizardResult = yield* Wizard.run(command, { commandPath, prefix })
+            yield* Console.log(Wizard.renderCompletion(wizardResult.displayArgs))
             const shouldRun = yield* Prompt.run(Prompt.toggle({
               message: "Run this command?",
               initial: true,
@@ -1908,7 +1912,7 @@ export const runWith = <const Name extends string, Input, E, R, ContextInput>(
             }))
             if (shouldRun) {
               yield* Console.log()
-              yield* runWith(command, { ...config, renderErrors: false })(wizardArgs.slice(1))
+              yield* runWith(command, { ...config, renderErrors: false })(wizardResult.args.slice(1))
             }
           }).pipe(
             Effect.catchTag("QuitError", () => Console.log(Wizard.renderQuit()))

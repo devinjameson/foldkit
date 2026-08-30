@@ -5,12 +5,7 @@ import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { Listbox } from '@foldkit/ui'
 
 import * as Icon from '../../icon'
-import {
-  GotListboxDemoMessage,
-  GotListboxGroupedDemoMessage,
-  GotListboxMultiDemoMessage,
-  type UiMessage,
-} from '../message'
+import { UiMessage } from '../message'
 import type { ListboxItem, UiModel } from '../model'
 
 const LISTBOX_ITEMS: ReadonlyArray<ListboxItem> = [
@@ -147,7 +142,7 @@ const singleSelectDemo = (
         buttonContent: buttonContent(buttonLabel, h),
         ...chromeAttributes(h),
       },
-      toParentMessage: message => GotListboxDemoMessage({ message }),
+      toParentMessage: message => UiMessage.GotListboxDemoMessage({ message }),
     }),
     h,
   )
@@ -184,7 +179,8 @@ const multiSelectDemo = (
         buttonContent: buttonContent(buttonLabel, h),
         ...chromeAttributes(h),
       },
-      toParentMessage: message => GotListboxMultiDemoMessage({ message }),
+      toParentMessage: message =>
+        UiMessage.GotListboxMultiDemoMessage({ message }),
     }),
     h,
   )
@@ -225,7 +221,8 @@ const groupedDemo = (
         buttonContent: buttonContent(buttonLabel, h),
         ...chromeAttributes(h),
       },
-      toParentMessage: message => GotListboxGroupedDemoMessage({ message }),
+      toParentMessage: message =>
+        UiMessage.GotListboxGroupedDemoMessage({ message }),
     }),
     h,
   )

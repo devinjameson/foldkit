@@ -2,12 +2,12 @@ import { Effect, Schema as S } from 'effect'
 import { Command } from 'foldkit'
 
 import { ParsedApiReference } from './domain'
-import { FailedLoadApiData, SucceededLoadApiData } from './message'
+import { Message } from './message'
 
 /** Loads the generated API reference data, producing the parsed reference on
  *  success or a failure Message when the fetch or decode does not complete. */
 export const LoadApiData = Command.define('LoadApiData', {
-  messages: [SucceededLoadApiData, FailedLoadApiData],
+  messages: [Message.SucceededLoadApiData, Message.FailedLoadApiData],
   execute: Effect.gen(function* () {
     const [parsedApiModule, highlightsModule] = yield* Effect.tryPromise({
       try: () =>
@@ -23,7 +23,7 @@ export const LoadApiData = Command.define('LoadApiData', {
       parsedApiModule.default,
     )
 
-    return SucceededLoadApiData({
+    return Message.SucceededLoadApiData({
       apiData: {
         parsedApi,
         highlights: highlightsModule.default,
@@ -32,7 +32,7 @@ export const LoadApiData = Command.define('LoadApiData', {
   }).pipe(
     Effect.catch(error =>
       Effect.succeed(
-        FailedLoadApiData({
+        Message.FailedLoadApiData({
           error: typeof error === 'string' ? error : 'Failed to load API data',
         }),
       ),

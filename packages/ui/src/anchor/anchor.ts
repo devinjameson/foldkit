@@ -1,7 +1,8 @@
-import { Array, Function, Schema as S, String, pipe } from 'effect'
+import { Array, Function, Option, Schema as S, String, pipe } from 'effect'
 
 import {
   type Placement as FloatingPlacement,
+  arrow,
   autoUpdate,
   computePosition,
   flip,
@@ -120,14 +121,47 @@ const toSide = (placement: FloatingPlacement): string =>
  *  - `focusAfterPosition`: focuses the element once the first position
  *    resolves. Defaults to `false`.
  *  - `focusSelector`: focuses this descendant instead of the element itself.
- *    Read only when `focusAfterPosition` is true. */
+ *    Read only when `focusAfterPosition` is true.
+ *  - `arrowId`: id of an arrow element inside the panel, resolved through the
+ *    element's own root. An id that resolves to an element outside the panel is
+ *    ignored, and any element type is accepted, so an `<svg>` arrow works. When
+ *    it resolves, the arrow's offset along the panel edge is published as
+ *    `--arrow-x` and `--arrow-y`, with the axis the placement does not use
+ *    reset to `initial`, and the panel is no longer made a scroll container,
+ *    since scrolling clips on both axes and an arrow sits half outside the
+ *    panel's box.
+ *  - `arrowPadding`: distance in pixels the arrow keeps from the panel's
+ *    corners. Defaults to `0`. Separate from `anchor.padding`, which is the
+ *    viewport padding. */
 export type SetupConfig = Readonly<{
   buttonId: string
   anchor: AnchorConfig
   interceptTab?: boolean
   focusAfterPosition?: boolean
   focusSelector?: string
+  arrowId?: string
+  arrowPadding?: number
 }>
+
+// NOTE: the unused axis is reset to `initial` rather than removed. Custom
+// properties inherit, so removing it lets an ancestor's `--arrow-x` reach the
+// arrow, and a `left` that resolves beats the side rule's `right` under
+// over-constrained absolute positioning. An ancestor is not far-fetched: a
+// `portal: false` popover nested inside another popover's panel sits under one.
+// `initial` gives the property its guaranteed-invalid initial value, so
+// `var(--arrow-x)` is invalid at computed-value time and `left` falls back to
+// `auto`.
+const setOrResetLength = (
+  element: HTMLElement,
+  property: string,
+  value: number | undefined,
+): void => {
+  if (value === undefined) {
+    element.style.setProperty(property, 'initial')
+  } else {
+    element.style.setProperty(property, `${value}px`)
+  }
+}
 
 /** Positions a floating element relative to its button using Floating UI, then
  *  returns a cleanup function. Designed to be called inside an `OnMount`
@@ -174,6 +208,25 @@ export const anchorSetup = (
   if (inShadow) {
     element.style.position = 'fixed'
   }
+
+  // NOTE: an id lookup searches the whole root, so an unrelated element that
+  // happens to carry the arrow id would be positioned as the arrow. The
+  // containment check holds the lookup to what `arrowId` documents, an arrow
+  // inside the panel. The candidate is not narrowed to `HTMLElement`, since
+  // Floating UI's `arrow` takes any `Element` and a triangle arrow is usually
+  // an `<svg>`.
+  const maybeArrowElement = pipe(
+    Option.fromNullishOr(config.arrowId),
+    Option.flatMapNullishOr(arrowId => owner.getElementById(arrowId)),
+    Option.filter(candidate => element.contains(candidate)),
+  )
+
+  const arrowMiddleware = Option.match(maybeArrowElement, {
+    onNone: () => [],
+    onSome: arrowElement => [
+      arrow({ element: arrowElement, padding: config.arrowPadding ?? 0 }),
+    ],
+  })
 
   const {
     placement,
@@ -235,10 +288,26 @@ export const anchorSetup = (
               `${rects.reference.width}px`,
             )
             element.style.maxHeight = `${Math.max(0, availableHeight)}px`
-            element.style.overflowY = 'auto'
-            element.style.overscrollBehavior = 'none'
+
+            // NOTE: `overflow-y: auto` makes `overflow-x` compute to `auto`
+            // too, so a scrolling panel clips on every side. An arrow sits
+            // half outside the panel's padding box, so it would be clipped
+            // away entirely. A panel with an arrow keeps its scroll container
+            // inside itself instead.
+            if (Option.isNone(maybeArrowElement)) {
+              element.style.overflowY = 'auto'
+              element.style.overscrollBehavior = 'none'
+            }
           },
         }),
+        // NOTE: `arrow` runs last. Sitting after `shift` is the constraint: an
+        // offset computed before `shift` would ignore the displacement `shift`
+        // applied, which is the case this hook exists to handle. Running after
+        // `size` is safe for a different reason: when `size.apply` changes the
+        // panel's dimensions, `size` returns `reset: { rects: true }` and
+        // Floating UI reruns the whole chain, so `arrow` always resolves
+        // against the final rects rather than the ones `size` invalidated.
+        ...arrowMiddleware,
       ],
     })
 
@@ -246,7 +315,7 @@ export const anchorSetup = (
 
     tick
       .then(
-        ({ x, y, placement: resolvedPlacement }) => {
+        ({ x, y, placement: resolvedPlacement, middlewareData }) => {
           hasWarnedFailure = false
 
           if (!isActive) {
@@ -264,6 +333,12 @@ export const anchorSetup = (
             'data-placement',
             toSide(lockedPlacement ?? resolvedPlacement),
           )
+
+          if (Option.isSome(maybeArrowElement)) {
+            const { x: arrowX, y: arrowY } = middlewareData.arrow ?? {}
+            setOrResetLength(element, '--arrow-x', arrowX)
+            setOrResetLength(element, '--arrow-y', arrowY)
+          }
 
           if (isFirstUpdate) {
             isFirstUpdate = false
@@ -333,6 +408,10 @@ export const anchorSetup = (
     }
 
     element.removeAttribute('data-placement')
+    element.style.removeProperty('overflow-y')
+    element.style.removeProperty('overscroll-behavior')
+    element.style.removeProperty('--arrow-x')
+    element.style.removeProperty('--arrow-y')
 
     portalCleanup?.()
   }

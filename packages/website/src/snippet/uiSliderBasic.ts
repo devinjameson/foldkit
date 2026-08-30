@@ -4,7 +4,7 @@
 import { Match as M, Option, Schema as S } from 'effect'
 import { Subscription, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Slider } from '@foldkit/ui'
@@ -19,8 +19,8 @@ const Model = S.Struct({
 
 // In your init function, seed the value (snapped to the range) and initialize
 // the Slider Submodel with min / max / step and a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     ratingValue: Slider.snapAndClamp(3, 0, 10, 1),
     ratingDemo: Slider.init({
       id: 'rating',
@@ -30,12 +30,11 @@ const init = () => [
     }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the Slider Message in your parent Message:
-const GotSliderMessage = m('GotSliderMessage', {
-  message: Slider.Message,
+const Message = defineMessageUnion({
+  GotSliderMessage: { message: Slider.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. `ChangedValue`
@@ -50,7 +49,7 @@ const foldSliderOutMessage = M.type<Slider.OutMessage>().pipe(
     // trigger a downstream Command.
     ChangedValue:
       ({ value }) =>
-      model => [evo(model, { ratingValue: () => value }), []],
+      model => ({ model: evo(model, { ratingValue: () => value }) }),
   }),
 )
 
@@ -62,11 +61,11 @@ const foldSlider = Update.foldChild({
   read: (model: Model) => Option.some(model.ratingDemo),
   write: (model, nextRatingDemo) =>
     evo(model, { ratingDemo: () => nextRatingDemo }),
-  toParentMessage: message => GotSliderMessage({ message }),
+  toParentMessage: message => Message.GotSliderMessage({ message }),
   foldOutMessage: foldSliderOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotSliderMessage: ({ message }) => foldSlider(model, message)
 
 // NOTE: wire BOTH dragPointer and dragEscape. Without dragEscape, pressing
@@ -77,7 +76,7 @@ const sliderSubscriptions = Subscription.lift({
   sliderEscape: Slider.subscriptions.dragEscape,
 })<Model, Message>({
   toChildModel: model => model.ratingDemo,
-  toParentMessage: message => GotSliderMessage({ message }),
+  toParentMessage: message => Message.GotSliderMessage({ message }),
 })
 
 const subscriptions = Subscription.aggregate<Model, Message>()(
@@ -142,5 +141,5 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
           ],
         ),
     },
-    toParentMessage: message => GotSliderMessage({ message }),
+    toParentMessage: message => Message.GotSliderMessage({ message }),
   })

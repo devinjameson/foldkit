@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { Calendar, Command } from 'foldkit'
+import { Calendar, type Update } from 'foldkit'
 
 import {
   Animation,
@@ -8,6 +8,7 @@ import {
   Dialog,
   DragAndDrop,
   FileDrop,
+  HoverIntent,
   Listbox,
   Menu,
   Popover,
@@ -23,10 +24,10 @@ import type { Message } from './message'
 import type { Model } from './model'
 import { Toast } from './toastModule'
 
-export type InitReturn = [Model, ReadonlyArray<Command.Command<Message>>]
+export type InitReturn = Update.Return<Model, Message>
 
-export const init = (today: Calendar.CalendarDate): InitReturn => [
-  {
+export const init = (today: Calendar.CalendarDate): InitReturn => ({
+  model: {
     buttonClickCount: 0,
     inputDemoValue: '',
     textareaDemoValue: '',
@@ -103,6 +104,7 @@ export const init = (today: Calendar.CalendarDate): InitReturn => [
       id: 'popover-animated-demo',
       isAnimated: true,
     }),
+    popoverArrowDemo: Popover.init({ id: 'popover-arrow-demo' }),
     popoverNestedParentDemo: Popover.init({
       id: 'popover-nested-parent-demo',
       contentFocus: true,
@@ -148,6 +150,8 @@ export const init = (today: Calendar.CalendarDate): InitReturn => [
     toastDemo: Toast.init({ id: 'toast-demo' }),
     maybeLastDismissedToastTitle: Option.none(),
     tooltipDemo: Tooltip.init({ id: 'tooltip-demo' }),
+    hoverIntentCardDemo: HoverIntent.init(),
+    hoverIntentMenuDemo: HoverIntent.init(),
     animationDemo: Animation.init({ id: 'animation-demo' }),
     virtualListDemo: VirtualList.init({
       id: 'virtual-list-demo',
@@ -177,5 +181,4 @@ export const init = (today: Calendar.CalendarDate): InitReturn => [
       },
     ],
   },
-  [],
-]
+})

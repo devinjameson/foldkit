@@ -4,21 +4,21 @@ import {
   Effect,
   Equal,
   Function,
-  Match as M,
   Option,
   Queue,
   Schema as S,
   Stream,
   String,
 } from 'effect'
-import { Command, Mount, Runtime, Subscription } from 'foldkit'
+import { Command, Mount, Runtime, Subscription, Update } from 'foldkit'
 import * as Dom from 'foldkit/dom'
 import type { Document, Html } from 'foldkit/html'
 import { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
-import { ts } from 'foldkit/schema'
+import { defineMessageUnion } from 'foldkit/message'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import type { Map as MapInstance } from 'maplibre-gl'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 
 import { Button, Input } from '@foldkit/ui'
 
@@ -45,16 +45,12 @@ type Bounds = typeof Bounds.Type
 const LngLat = S.Struct({ lng: S.Number, lat: S.Number })
 type LngLat = typeof LngLat.Type
 
-export const GeolocateIdle = ts('GeolocateIdle')
-export const GeolocateLocating = ts('GeolocateLocating')
-export const GeolocateFailed = ts('GeolocateFailed', { reason: S.String })
-
-const GeolocateState = S.Union([
-  GeolocateIdle,
-  GeolocateLocating,
-  GeolocateFailed,
-])
-type GeolocateState = typeof GeolocateState.Type
+export const GeolocateState = defineTaggedUnion({
+  Idle: {},
+  Locating: {},
+  Failed: { reason: S.String },
+})
+export type GeolocateState = typeof GeolocateState.Type
 
 export const Model = S.Struct({
   locations: S.Array(Location),
@@ -70,42 +66,27 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const SucceededMountMap = m('SucceededMountMap', { hostId: S.String })
-export const FailedMountMap = m('FailedMountMap', { reason: S.String })
-export const MovedMap = m('MovedMap', { bounds: Bounds })
-export const ClickedMarker = m('ClickedMarker', { locationId: S.String })
-export const ClickedLocation = m('ClickedLocation', { locationId: S.String })
-export const UpdatedSearchQuery = m('UpdatedSearchQuery', { value: S.String })
-export const ClickedFindMe = m('ClickedFindMe')
-export const DismissedGeolocate = m('DismissedGeolocate')
-export const SucceededGeolocate = m('SucceededGeolocate', {
-  lng: S.Number,
-  lat: S.Number,
+export const Message = defineMessageUnion({
+  SucceededMountMap: { hostId: S.String },
+  FailedMountMap: { reason: S.String },
+  MovedMap: { bounds: Bounds },
+  ClickedMarker: { locationId: S.String },
+  ClickedLocation: { locationId: S.String },
+  UpdatedSearchQuery: { value: S.String },
+  ClickedFindMe: {},
+  DismissedGeolocate: {},
+  SucceededGeolocate: {
+    lng: S.Number,
+    lat: S.Number,
+  },
+  FailedGeolocate: { reason: S.String },
+  SucceededFlyTo: {},
+  FailedFlyTo: { reason: S.String },
+  CompletedFocusSearchInput: {},
+  CompletedLockBodyScroll: {},
+  CompletedUnlockBodyScroll: {},
 })
-export const FailedGeolocate = m('FailedGeolocate', { reason: S.String })
-export const SucceededFlyTo = m('SucceededFlyTo')
-export const FailedFlyTo = m('FailedFlyTo', { reason: S.String })
-export const CompletedFocusSearchInput = m('CompletedFocusSearchInput')
-export const CompletedLockBodyScroll = m('CompletedLockBodyScroll')
-export const CompletedUnlockBodyScroll = m('CompletedUnlockBodyScroll')
 
-export const Message = S.Union([
-  SucceededMountMap,
-  FailedMountMap,
-  MovedMap,
-  ClickedMarker,
-  ClickedLocation,
-  UpdatedSearchQuery,
-  ClickedFindMe,
-  DismissedGeolocate,
-  SucceededGeolocate,
-  FailedGeolocate,
-  SucceededFlyTo,
-  FailedFlyTo,
-  CompletedFocusSearchInput,
-  CompletedLockBodyScroll,
-  CompletedUnlockBodyScroll,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
@@ -115,18 +96,20 @@ const flyToMap = (
   lng: number,
   lat: number,
   zoom: number,
-): Effect.Effect<typeof SucceededFlyTo.Type | typeof FailedFlyTo.Type> =>
+): Effect.Effect<
+  typeof Message.SucceededFlyTo.Type | typeof Message.FailedFlyTo.Type
+> =>
   Option.match(getMap(hostId), {
     onNone: () =>
       Effect.succeed(
-        FailedFlyTo({
+        Message.FailedFlyTo({
           reason: `Could not find a live map for hostId ${hostId}.`,
         }),
       ),
     onSome: map =>
       Effect.sync(() => {
         map.flyTo({ center: [lng, lat], zoom, essential: true })
-        return SucceededFlyTo()
+        return Message.SucceededFlyTo()
       }),
   })
 
@@ -137,12 +120,12 @@ export const FlyTo = Command.define('FlyTo', {
     lat: S.Number,
     zoom: S.Number,
   },
-  messages: [SucceededFlyTo, FailedFlyTo],
+  messages: [Message.SucceededFlyTo, Message.FailedFlyTo],
   execute: ({ maybeHostId, lng, lat, zoom }) =>
     Option.match(maybeHostId, {
       onNone: () =>
         Effect.succeed(
-          FailedFlyTo({
+          Message.FailedFlyTo({
             reason: 'FlyTo dispatched before the map mounted.',
           }),
         ),
@@ -151,7 +134,7 @@ export const FlyTo = Command.define('FlyTo', {
 })
 
 export const Geolocate = Command.define('Geolocate', {
-  messages: [SucceededGeolocate, FailedGeolocate],
+  messages: [Message.SucceededGeolocate, Message.FailedGeolocate],
   execute: Effect.gen(function* () {
     const position = yield* Effect.callback<GeolocationPosition, Error>(
       resume => {
@@ -175,14 +158,14 @@ export const Geolocate = Command.define('Geolocate', {
         )
       },
     )
-    return SucceededGeolocate({
+    return Message.SucceededGeolocate({
       lng: position.coords.longitude,
       lat: position.coords.latitude,
     })
   }).pipe(
     Effect.catch(error =>
       Effect.succeed(
-        FailedGeolocate({
+        Message.FailedGeolocate({
           reason: error instanceof Error ? error.message : `${error}`,
         }),
       ),
@@ -193,33 +176,30 @@ export const Geolocate = Command.define('Geolocate', {
 const SEARCH_INPUT_ID = 'map-search-input'
 
 export const FocusSearchInput = Command.define('FocusSearchInput', {
-  messages: [CompletedFocusSearchInput],
+  messages: [Message.CompletedFocusSearchInput],
   execute: Dom.focus(`#${SEARCH_INPUT_ID}`).pipe(
     Effect.ignore,
-    Effect.as(CompletedFocusSearchInput()),
+    Effect.as(Message.CompletedFocusSearchInput()),
   ),
 })
 
 export const LockBodyScroll = Command.define('LockBodyScroll', {
-  messages: [CompletedLockBodyScroll],
+  messages: [Message.CompletedLockBodyScroll],
   execute: Effect.sync(() => {
     document.body.classList.add('overflow-hidden')
-    return CompletedLockBodyScroll()
+    return Message.CompletedLockBodyScroll()
   }),
 })
 
 export const UnlockBodyScroll = Command.define('UnlockBodyScroll', {
-  messages: [CompletedUnlockBodyScroll],
+  messages: [Message.CompletedUnlockBodyScroll],
   execute: Effect.sync(() => {
     document.body.classList.remove('overflow-hidden')
-    return CompletedUnlockBodyScroll()
+    return Message.CompletedUnlockBodyScroll()
   }),
 })
 
 // UPDATE
-
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 const findLocation = (
   model: Model,
@@ -227,98 +207,95 @@ const findLocation = (
 ): Option.Option<Location> =>
   Array.findFirst(model.locations, ({ id }) => Equal.equals(id, locationId))
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      SucceededMountMap: ({ hostId }) => [
-        evo(model, { maybeMapHostId: () => Option.some(hostId) }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    SucceededMountMap: ({ hostId }) => ({
+      model: evo(model, { maybeMapHostId: () => Option.some(hostId) }),
+    }),
 
-      FailedMountMap: ({ reason }) => [
-        evo(model, { maybeMapError: () => Option.some(reason) }),
-        [],
-      ],
+    FailedMountMap: ({ reason }) => ({
+      model: evo(model, { maybeMapError: () => Option.some(reason) }),
+    }),
 
-      MovedMap: ({ bounds }) => [
-        evo(model, { maybeBounds: () => Option.some(bounds) }),
-        [],
-      ],
+    MovedMap: ({ bounds }) => ({
+      model: evo(model, { maybeBounds: () => Option.some(bounds) }),
+    }),
 
-      ClickedMarker: ({ locationId }) => [
-        evo(model, {
-          maybeSelectedLocationId: () => Option.some(locationId),
-        }),
-        [],
-      ],
+    ClickedMarker: ({ locationId }) => ({
+      model: evo(model, {
+        maybeSelectedLocationId: () => Option.some(locationId),
+      }),
+    }),
 
-      ClickedLocation: ({ locationId }) =>
-        Option.match(findLocation(model, locationId), {
-          onNone: () => [model, []],
-          onSome: ({ lng, lat }) => [
-            evo(model, {
-              maybeSelectedLocationId: () => Option.some(locationId),
+    ClickedLocation: ({ locationId }) =>
+      Option.match(findLocation(model, locationId), {
+        onNone: () => ({ model }),
+        onSome: ({ lng, lat }) => ({
+          model: evo(model, {
+            maybeSelectedLocationId: () => Option.some(locationId),
+          }),
+          commands: [
+            FlyTo({
+              maybeHostId: model.maybeMapHostId,
+              lng,
+              lat,
+              zoom: SELECTED_LOCATION_ZOOM,
             }),
-            [
-              FlyTo({
-                maybeHostId: model.maybeMapHostId,
-                lng: lng,
-                lat: lat,
-                zoom: SELECTED_LOCATION_ZOOM,
-              }),
-            ],
           ],
         }),
+      }),
 
-      UpdatedSearchQuery: ({ value }) => [
-        evo(model, { searchQuery: () => value }),
-        [],
-      ],
-
-      ClickedFindMe: () => [
-        evo(model, { geolocateState: () => GeolocateLocating() }),
-        [LockBodyScroll(), Geolocate()],
-      ],
-
-      DismissedGeolocate: () => [
-        evo(model, { geolocateState: () => GeolocateIdle() }),
-        [UnlockBodyScroll()],
-      ],
-
-      SucceededGeolocate: ({ lng, lat }) => [
-        evo(model, {
-          maybeUserLocation: () => Option.some({ lng, lat }),
-          geolocateState: () => GeolocateIdle(),
-        }),
-        [
-          UnlockBodyScroll(),
-          FlyTo({
-            maybeHostId: model.maybeMapHostId,
-            lng: lng,
-            lat: lat,
-            zoom: USER_LOCATION_ZOOM,
-          }),
-        ],
-      ],
-
-      FailedGeolocate: ({ reason }) => [
-        evo(model, { geolocateState: () => GeolocateFailed({ reason }) }),
-        [],
-      ],
-
-      SucceededFlyTo: () => [model, []],
-      FailedFlyTo: () => [model, []],
-      CompletedFocusSearchInput: () => [model, []],
-      CompletedLockBodyScroll: () => [model, []],
-      CompletedUnlockBodyScroll: () => [model, []],
+    UpdatedSearchQuery: ({ value }) => ({
+      model: evo(model, { searchQuery: () => value }),
     }),
-  )
+
+    ClickedFindMe: () => ({
+      model: evo(model, {
+        geolocateState: () => GeolocateState.Locating(),
+      }),
+      commands: [LockBodyScroll(), Geolocate()],
+    }),
+
+    DismissedGeolocate: () => ({
+      model: evo(model, {
+        geolocateState: () => GeolocateState.Idle(),
+      }),
+      commands: [UnlockBodyScroll()],
+    }),
+
+    SucceededGeolocate: ({ lng, lat }) => ({
+      model: evo(model, {
+        maybeUserLocation: () => Option.some({ lng, lat }),
+        geolocateState: () => GeolocateState.Idle(),
+      }),
+      commands: [
+        UnlockBodyScroll(),
+        FlyTo({
+          maybeHostId: model.maybeMapHostId,
+          lng: lng,
+          lat: lat,
+          zoom: USER_LOCATION_ZOOM,
+        }),
+      ],
+    }),
+
+    FailedGeolocate: ({ reason }) => ({
+      model: evo(model, {
+        geolocateState: () => GeolocateState.Failed({ reason }),
+      }),
+    }),
+
+    SucceededFlyTo: () => ({ model }),
+    FailedFlyTo: () => ({ model }),
+    CompletedFocusSearchInput: () => ({ model }),
+    CompletedLockBodyScroll: () => ({ model }),
+    CompletedUnlockBodyScroll: () => ({ model }),
+  })
 
 // INIT
 
-export const init: Runtime.ApplicationInit<Model, Message> = () => [
-  {
+export const init: Runtime.ApplicationInit<Model, Message> = () => ({
+  model: {
     locations: featuredLocations,
     searchQuery: '',
     maybeMapHostId: Option.none(),
@@ -326,66 +303,66 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => [
     maybeBounds: Option.none(),
     maybeSelectedLocationId: Option.none(),
     maybeUserLocation: Option.none(),
-    geolocateState: GeolocateIdle(),
+    geolocateState: GeolocateState.Idle(),
   },
-  [FocusSearchInput()],
-]
+  commands: [FocusSearchInput()],
+})
 
 // MAP MOUNT
 
-export const MountMap = Mount.define(
-  'MountMap',
-  { hostId: S.String },
-  SucceededMountMap,
-  FailedMountMap,
-)(
-  ({ hostId }) =>
-    element =>
-      Effect.gen(function* () {
-        if (!(element instanceof HTMLElement)) {
-          return FailedMountMap({ reason: 'Map host is not an HTMLElement.' })
-        }
-        return yield* Effect.gen(function* () {
-          yield* Effect.acquireRelease(
-            Effect.gen(function* () {
-              const maplibre = yield* Effect.tryPromise(
-                () => import('maplibre-gl'),
-              )
-              const map = new maplibre.Map({
-                container: element,
-                style: 'https://demotiles.maplibre.org/style.json',
-                center: [0, 20],
-                zoom: INITIAL_MAP_ZOOM,
-              })
+const mountMap = (element: Element, hostId: string) =>
+  Effect.gen(function* () {
+    if (!(element instanceof HTMLElement)) {
+      return Message.FailedMountMap({
+        reason: 'Map host is not an HTMLElement.',
+      })
+    }
 
-              Array.forEach(featuredLocations, ({ id, lng, lat }) => {
-                const markerElement = document.createElement('button')
-                markerElement.setAttribute('data-location-id', id)
-                markerElement.setAttribute('aria-label', `Marker: ${id}`)
-                markerElement.className = markerStyle
-                new maplibre.Marker({ element: markerElement })
-                  .setLngLat([lng, lat])
-                  .addTo(map)
-              })
+    return yield* Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.gen(function* () {
+          const maplibre = yield* Effect.tryPromise(() => import('maplibre-gl'))
+          maplibre.setWorkerUrl(maplibreWorkerUrl)
+          const map = new maplibre.Map({
+            container: element,
+            style: 'https://demotiles.maplibre.org/style.json',
+            center: [0, 20],
+            zoom: INITIAL_MAP_ZOOM,
+          })
 
-              setMap(hostId, map)
-              return map
-            }),
-            () => Effect.sync(() => removeMap(hostId)),
-          )
+          Array.forEach(featuredLocations, ({ id, lng, lat }) => {
+            const markerElement = document.createElement('button')
+            markerElement.setAttribute('data-location-id', id)
+            markerElement.setAttribute('aria-label', `Marker: ${id}`)
+            markerElement.className = markerStyle
+            new maplibre.Marker({ element: markerElement })
+              .setLngLat([lng, lat])
+              .addTo(map)
+          })
 
-          return SucceededMountMap({ hostId })
-        }).pipe(
-          Effect.catch(error =>
-            Effect.succeed(
-              FailedMountMap({
-                reason: error instanceof Error ? error.message : `${error}`,
-              }),
-            ),
-          ),
-        )
-      }),
-)
+          setMap(hostId, map)
+          return map
+        }),
+        () => Effect.sync(() => removeMap(hostId)),
+      )
+
+      return Message.SucceededMountMap({ hostId })
+    }).pipe(
+      Effect.catch(error =>
+        Effect.succeed(
+          Message.FailedMountMap({
+            reason: error instanceof Error ? error.message : `${error}`,
+          }),
+        ),
+      ),
+    )
+  })
+
+export const MountMap = Mount.define('MountMap', {
+  args: { hostId: S.String },
+  messages: [Message.SucceededMountMap, Message.FailedMountMap],
+  execute: ({ element, hostId }) => mountMap(element, hostId),
+})
 
 // SUBSCRIPTIONS
 
@@ -405,7 +382,10 @@ const streamMapEvents = (hostId: string) =>
       Effect.sync(() =>
         Option.map(getMap(hostId), map => {
           const onMoveEnd = () => {
-            Queue.offerUnsafe(queue, MovedMap({ bounds: boundsFromMap(map) }))
+            Queue.offerUnsafe(
+              queue,
+              Message.MovedMap({ bounds: boundsFromMap(map) }),
+            )
           }
 
           const onContainerClick = (event: MouseEvent) => {
@@ -419,13 +399,16 @@ const streamMapEvents = (hostId: string) =>
             }
             const locationId = marker.dataset['locationId']
             if (locationId !== undefined) {
-              Queue.offerUnsafe(queue, ClickedMarker({ locationId }))
+              Queue.offerUnsafe(queue, Message.ClickedMarker({ locationId }))
             }
           }
 
           map.on('moveend', onMoveEnd)
           map.getContainer().addEventListener('click', onContainerClick)
-          Queue.offerUnsafe(queue, MovedMap({ bounds: boundsFromMap(map) }))
+          Queue.offerUnsafe(
+            queue,
+            Message.MovedMap({ bounds: boundsFromMap(map) }),
+          )
 
           return { map, onMoveEnd, onContainerClick }
         }),
@@ -523,7 +506,7 @@ const sidebarView = (model: Model, h: HtmlBuilder<Message>): Html => {
               type: 'search',
               value: model.searchQuery,
               placeholder: 'Filter locations',
-              onInput: value => UpdatedSearchQuery({ value }),
+              onInput: value => Message.UpdatedSearchQuery({ value }),
               toView: attributes =>
                 h.input([
                   ...attributes.input,
@@ -570,7 +553,7 @@ const locationListItemView =
       [
         Button.view(
           {
-            onClick: ClickedLocation({ locationId: location.id }),
+            onClick: Message.ClickedLocation({ locationId: location.id }),
             toView: attributes =>
               h.button(
                 [
@@ -601,13 +584,13 @@ const locationListItemView =
   }
 
 const footerView = (model: Model, h: HtmlBuilder<Message>): Html => {
-  const isLocating = model.geolocateState._tag === 'GeolocateLocating'
+  const isLocating = model.geolocateState._tag === 'Locating'
   return h.div(
     [h.Class('border-t border-slate-200 px-5 py-3 space-y-2')],
     [
       Button.view(
         {
-          onClick: ClickedFindMe(),
+          onClick: Message.ClickedFindMe(),
           isDisabled: isLocating,
           toView: attributes =>
             h.button(
@@ -695,15 +678,13 @@ const geolocateOverlayView = (
   state: GeolocateState,
   h: HtmlBuilder<Message>,
 ): Html =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      GeolocateIdle: () => h.empty,
-      GeolocateLocating: () =>
-        geolocateOverlayShellView(geolocateLocatingContentView(h), h),
-      GeolocateFailed: ({ reason }) =>
-        geolocateOverlayShellView(geolocateFailedContentView(reason, h), h),
-    }),
-  )
+  GeolocateState.match(state, {
+    Idle: () => h.empty,
+    Locating: () =>
+      geolocateOverlayShellView(geolocateLocatingContentView(h), h),
+    Failed: ({ reason }) =>
+      geolocateOverlayShellView(geolocateFailedContentView(reason, h), h),
+  })
 
 const geolocateOverlayShellView = (
   content: Html,
@@ -754,7 +735,7 @@ const geolocateFailedContentView = (
       h.p([h.Class('text-sm text-slate-600')], [reason]),
       Button.view(
         {
-          onClick: DismissedGeolocate(),
+          onClick: Message.DismissedGeolocate(),
           toView: attributes =>
             h.button(
               [

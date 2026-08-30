@@ -8,9 +8,9 @@ import {
   Stream,
   pipe,
 } from 'effect'
-import { AsyncData, Command, Mount, Submodel } from 'foldkit'
+import { AsyncData, Command, Mount, Submodel, Update } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Disclosure, Tabs } from '@foldkit/ui'
@@ -49,31 +49,15 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-const GotSourceFileTabsMessage = m('GotSourceFileTabsMessage', {
-  message: Tabs.Message,
-})
-export const ChangedExampleUrl = m('ChangedExampleUrl', { url: S.String })
-const ToggledLivePreview = m('ToggledLivePreview', {
-  isOpen: S.Boolean,
-})
-const RequestedExampleSources = m('RequestedExampleSources', {
-  slug: S.String,
-})
-export const SucceededLoadExampleSources = m('SucceededLoadExampleSources', {
-  sources: ExampleSources,
-})
-export const FailedLoadExampleSources = m('FailedLoadExampleSources', {
-  error: S.String,
+export const Message = defineMessageUnion({
+  GotSourceFileTabsMessage: { message: Tabs.Message },
+  ChangedExampleUrl: { url: S.String },
+  ToggledLivePreview: { isOpen: S.Boolean },
+  RequestedExampleSources: { slug: S.String },
+  SucceededLoadExampleSources: { sources: ExampleSources },
+  FailedLoadExampleSources: { error: S.String },
 })
 
-export const Message = S.Union([
-  GotSourceFileTabsMessage,
-  ChangedExampleUrl,
-  ToggledLivePreview,
-  RequestedExampleSources,
-  SucceededLoadExampleSources,
-  FailedLoadExampleSources,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
@@ -83,16 +67,19 @@ export type Message = typeof Message.Type
  *  complete. */
 export const LoadExampleSources = Command.define('LoadExampleSources', {
   args: { slug: S.String },
-  messages: [SucceededLoadExampleSources, FailedLoadExampleSources],
+  messages: [
+    Message.SucceededLoadExampleSources,
+    Message.FailedLoadExampleSources,
+  ],
   execute: ({ slug }) =>
     Effect.tryPromise({
       try: () => loadSourcesForSlug(slug),
       catch: error =>
         error instanceof Error ? error.message : `Unknown example: ${slug}`,
     }).pipe(
-      Effect.map(sources => SucceededLoadExampleSources({ sources })),
+      Effect.map(sources => Message.SucceededLoadExampleSources({ sources })),
       Effect.catch(error =>
-        Effect.succeed(FailedLoadExampleSources({ error })),
+        Effect.succeed(Message.FailedLoadExampleSources({ error })),
       ),
     ),
 })
@@ -117,22 +104,25 @@ const isExampleUrlMessageFromIframe = (
   event.data.type === BRIDGE_MESSAGE_TYPE &&
   typeof event.data.url === 'string'
 
-const ObserveExampleUrlMessages = Mount.defineStream(
-  'ObserveExampleUrlMessages',
-  ChangedExampleUrl,
-)(element => {
+const observeExampleUrlMessages = (element: Element) => {
   if (!(element instanceof HTMLIFrameElement)) {
     return Stream.empty
   }
-  return Stream.callback<typeof ChangedExampleUrl.Type>(queue =>
+
+  return Stream.callback<typeof Message.ChangedExampleUrl.Type>(queue =>
     Effect.acquireRelease(
       Effect.sync(() => {
         const handler = (event: MessageEvent) => {
           if (!isExampleUrlMessageFromIframe(event, element)) {
             return
           }
-          Queue.offerUnsafe(queue, ChangedExampleUrl({ url: event.data.url }))
+
+          Queue.offerUnsafe(
+            queue,
+            Message.ChangedExampleUrl({ url: event.data.url }),
+          )
         }
+
         window.addEventListener('message', handler)
         return handler
       }),
@@ -140,120 +130,94 @@ const ObserveExampleUrlMessages = Mount.defineStream(
         Effect.sync(() => window.removeEventListener('message', handler)),
     ).pipe(Effect.flatMap(() => Effect.never)),
   )
-})
+}
+
+const ObserveExampleUrlMessages = Mount.defineStream(
+  'ObserveExampleUrlMessages',
+  {
+    messages: [Message.ChangedExampleUrl],
+    execute: ({ element }) => observeExampleUrlMessages(element),
+  },
+)
 
 // INIT
 
-export const init = (): readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message>>,
-] => [
-  {
+type UpdateReturn = Update.Return<Model, Message>
+
+export const init = (): UpdateReturn => ({
+  model: {
     sourceFileTabs: Tabs.init({ id: 'source-file-tabs' }),
     maybeActiveSourceFilePath: Option.none(),
     maybeExampleUrl: Option.none(),
     isLivePreviewOpen: true,
     currentSources: CurrentSourcesAsyncData.Idle(),
   },
-  [],
-]
+})
 
 export const boot = (
   maybeInitialSlug: Option.Option<string>,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] => {
-  const [model, initCommands] = init()
-  return Option.match(maybeInitialSlug, {
-    onNone: () => [model, initCommands],
-    onSome: slug => {
-      const [bootedModel, bootCommands] = update(
-        model,
-        RequestedExampleSources({ slug }),
-      )
-      return [bootedModel, [...initCommands, ...bootCommands]]
-    },
+  maybeExampleSources: Option.Option<
+    typeof ExampleSources.Type
+  > = Option.none(),
+): UpdateReturn => {
+  const init_ = init()
+  return Option.match(maybeExampleSources, {
+    onNone: () =>
+      Option.match(maybeInitialSlug, {
+        onNone: () => init_,
+        onSome: slug =>
+          update(init_.model, Message.RequestedExampleSources({ slug })),
+      }),
+    onSome: sources =>
+      update(init_.model, Message.SucceededLoadExampleSources({ sources })),
   })
 }
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
-      GotSourceFileTabsMessage: ({ message }) => {
-        const [nextTabs, tabsCommands, maybeOutMessage] = SourceFileTabs.update(
-          model.sourceFileTabs,
-          message,
-        )
-
-        const nextMaybeActiveSourceFilePath = Option.match(maybeOutMessage, {
-          onNone: () => model.maybeActiveSourceFilePath,
-          onSome: M.type<Tabs.OutMessage>().pipe(
-            M.tagsExhaustive({
-              Selected: ({ value }) => Option.some(value),
-            }),
-          ),
-        })
-
-        return [
-          evo(model, {
-            sourceFileTabs: () => nextTabs,
-            maybeActiveSourceFilePath: () => nextMaybeActiveSourceFilePath,
-          }),
-          Command.mapMessages(tabsCommands, message =>
-            GotSourceFileTabsMessage({ message }),
-          ),
-        ]
-      },
-      ChangedExampleUrl: ({ url }) => [
-        evo(model, { maybeExampleUrl: () => Option.some(url) }),
-        [],
-      ],
-      ToggledLivePreview: ({ isOpen }) => [
-        evo(model, { isLivePreviewOpen: () => isOpen }),
-        [],
-      ],
-
-      RequestedExampleSources: ({ slug }) => [
-        evo(model, {
-          sourceFileTabs: () => Tabs.init({ id: 'source-file-tabs' }),
-          maybeActiveSourceFilePath: () => Option.none(),
-          maybeExampleUrl: () => Option.none(),
-          currentSources: () => CurrentSourcesAsyncData.Loading(),
-        }),
-        [LoadExampleSources({ slug })],
-      ],
-
-      SucceededLoadExampleSources: ({ sources }) => [
-        evo(model, {
-          maybeActiveSourceFilePath: () =>
-            pipe(
-              sources.files,
-              Array.head,
-              Option.map(file => file.path),
-            ),
-          currentSources: () =>
-            CurrentSourcesAsyncData.Success({ data: sources }),
-        }),
-        [],
-      ],
-
-      FailedLoadExampleSources: ({ error }) => [
-        evo(model, {
-          currentSources: () => CurrentSourcesAsyncData.Failure({ error }),
-        }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    GotSourceFileTabsMessage: ({ message }) =>
+      foldSourceFileTabs(model, message),
+    ChangedExampleUrl: ({ url }) => ({
+      model: evo(model, { maybeExampleUrl: () => Option.some(url) }),
     }),
-  )
+    ToggledLivePreview: ({ isOpen }) => ({
+      model: evo(model, { isLivePreviewOpen: () => isOpen }),
+    }),
+
+    RequestedExampleSources: ({ slug }) => ({
+      model: evo(model, {
+        sourceFileTabs: () => Tabs.init({ id: 'source-file-tabs' }),
+        maybeActiveSourceFilePath: () => Option.none(),
+        maybeExampleUrl: () => Option.none(),
+        currentSources: () => CurrentSourcesAsyncData.Loading(),
+      }),
+      commands: [LoadExampleSources({ slug })],
+    }),
+
+    SucceededLoadExampleSources: ({ sources }) => ({
+      model: evo(model, {
+        maybeActiveSourceFilePath: () =>
+          pipe(
+            sources.files,
+            Array.head,
+            Option.map(file => file.path),
+          ),
+        currentSources: () =>
+          CurrentSourcesAsyncData.Success({ data: sources }),
+      }),
+    }),
+
+    FailedLoadExampleSources: ({ error }) => ({
+      model: evo(model, {
+        currentSources: () => CurrentSourcesAsyncData.Failure({ error }),
+      }),
+    }),
+  })
 
 export const informRouteChanged = (model: Model, slug: string) =>
-  update(model, RequestedExampleSources({ slug }))
+  update(model, Message.RequestedExampleSources({ slug }))
 
 // VIEW
 
@@ -275,7 +239,7 @@ const chromeRecommendedHint = (): Html =>
 
 const launchPlaygroundSection = (
   meta: ExampleMeta,
-  isChromium: boolean,
+  isShowingChromeHint: boolean,
 ): Html =>
   ih.div(
     [ih.Class('flex flex-col items-start gap-1')],
@@ -287,11 +251,11 @@ const launchPlaygroundSection = (
         ],
         [Icon.bolt('w-4 h-4'), 'Launch Playground'],
       ),
-      ...(isChromium ? [] : [chromeRecommendedHint()]),
+      ...(isShowingChromeHint ? [chromeRecommendedHint()] : []),
     ],
   )
 
-const headerView = (meta: ExampleMeta, isChromium: boolean): Html =>
+const headerView = (meta: ExampleMeta, isShowingChromeHint: boolean): Html =>
   ih.div(
     [ih.Class('mb-6')],
     [
@@ -313,13 +277,11 @@ const headerView = (meta: ExampleMeta, isChromium: boolean): Html =>
       ih.div(
         [ih.Class('flex flex-col items-start gap-3 mt-3')],
         [
-          launchPlaygroundSection(meta, isChromium),
+          launchPlaygroundSection(meta, isShowingChromeHint),
           ih.a(
             [
               ih.Href(exampleSourceHref(meta.slug)),
-              ih.Class(
-                'text-sm text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500',
-              ),
+              ih.Class('link-accent text-sm'),
             ],
             ['View source on GitHub'],
           ),
@@ -364,6 +326,20 @@ const disclosureChevron = (isOpen: boolean): Html =>
     [Icon.chevronDown('w-4 h-4')],
   )
 
+const playgroundOnlyNotice = (meta: ExampleMeta): Html =>
+  ih.div(
+    [
+      ih.Class(
+        'rounded-xl border border-gray-200 dark:border-gray-700/50 px-4 py-3 text-sm text-gray-700 dark:text-gray-300',
+      ),
+    ],
+    [
+      `${meta.title} renders each page on a server at request time, so a ` +
+        'static preview cannot demonstrate it. Launch the playground to see ' +
+        'the server round-trip live, or run the example locally.',
+    ],
+  )
+
 const livePreviewDisclosureView = (
   isLivePreviewOpen: boolean,
   meta: ExampleMeta,
@@ -375,7 +351,7 @@ const livePreviewDisclosureView = (
     {
       id: 'live-preview',
       isOpen: isLivePreviewOpen,
-      onToggle: isOpen => ToggledLivePreview({ isOpen }),
+      onToggle: isOpen => Message.ToggledLivePreview({ isOpen }),
       toView: attributes =>
         h.div(
           [],
@@ -438,6 +414,28 @@ const livePreviewDisclosureView = (
   )
 
 const SourceFileTabs = Tabs.create()
+
+const foldSourceFileTabsOutMessage = M.type<Tabs.OutMessage>().pipe(
+  M.withReturnType<Update.Step<Model, Message>>(),
+  M.tagsExhaustive({
+    Selected:
+      ({ value }) =>
+      model => ({
+        model: evo(model, {
+          maybeActiveSourceFilePath: () => Option.some(value),
+        }),
+      }),
+  }),
+)
+
+const foldSourceFileTabs = Update.foldChild({
+  update: SourceFileTabs.update,
+  read: (model: Model) => Option.some(model.sourceFileTabs),
+  write: (model, nextSourceFileTabs) =>
+    evo(model, { sourceFileTabs: () => nextSourceFileTabs }),
+  toParentMessage: message => Message.GotSourceFileTabsMessage({ message }),
+  foldOutMessage: foldSourceFileTabsOutMessage,
+})
 
 const TAB_BUTTON_BASE =
   'px-3 py-2 lg:py-1.5 whitespace-nowrap lg:whitespace-normal lg:w-full lg:text-left text-xs font-mono transition cursor-pointer'
@@ -532,7 +530,7 @@ const sourceCodeView = (
           ],
         ),
     },
-    toParentMessage: message => GotSourceFileTabsMessage({ message }),
+    toParentMessage: message => Message.GotSourceFileTabsMessage({ message }),
   })
 }
 
@@ -608,7 +606,7 @@ const sourcesFailureView = (error: string): Html =>
 type ViewInputs = Readonly<{
   slug: string
   isNarrowViewport: boolean
-  isChromium: boolean
+  isShowingChromeHint: boolean
   renderCopyButton: RenderCopyButton
 }>
 
@@ -623,7 +621,11 @@ type ViewInputs = Readonly<{
  * Submodel's `toParentMessage`.
  */
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { slug, isNarrowViewport, isChromium, renderCopyButton }, h): Html =>
+  (
+    model,
+    { slug, isNarrowViewport, isShowingChromeHint, renderCopyButton },
+    h,
+  ): Html =>
     Option.match(findBySlug(slug), {
       onNone: () => h.div([], ['Example not found']),
       onSome: meta =>
@@ -631,14 +633,16 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
           slug,
           [],
           [
-            headerView(meta, isChromium),
-            livePreviewDisclosureView(
-              model.isLivePreviewOpen,
-              meta,
-              slug,
-              model.maybeExampleUrl,
-              h,
-            ),
+            headerView(meta, isShowingChromeHint),
+            meta.livePreview === 'PlaygroundOnly'
+              ? playgroundOnlyNotice(meta)
+              : livePreviewDisclosureView(
+                  model.isLivePreviewOpen,
+                  meta,
+                  slug,
+                  model.maybeExampleUrl,
+                  h,
+                ),
             h.div(
               [h.Class('mt-6')],
               [

@@ -4,7 +4,7 @@ import { twMerge } from 'tailwind-merge'
 
 import { Icon } from './icon'
 import { type TableOfContentsEntry } from './main'
-import { ClickedCopyLink, type Message } from './message'
+import { Message } from './message'
 
 /**
  * Builds the copy-link control beside a section heading.
@@ -28,7 +28,7 @@ const headingLinkButton = (
         'px-0.5 py-1 rounded transition-opacity text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 focus-visible:text-gray-800 dark:focus-visible:text-gray-200 focus-visible:opacity-100 cursor-pointer hover-capable:opacity-0 hover-capable:group-hover:opacity-100',
       ),
       h.AriaLabel(`Copy link to ${text}`),
-      h.OnClick(ClickedCopyLink({ hash: id })),
+      h.OnClick(Message.ClickedCopyLink({ hash: id })),
     ],
     [Icon.link('w-5 h-5')],
   )
@@ -47,15 +47,7 @@ export const defaultRenderHeadingLink =
     headingLinkButton(id, text, h)
 
 export const link = (href: string, text: string): Html =>
-  ih.a(
-    [
-      ih.Href(href),
-      ih.Class(
-        'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal',
-      ),
-    ],
-    [text],
-  )
+  ih.a([ih.Href(href), ih.Class('link-accent font-normal')], [text])
 
 export const pageTitle = (id: string, text: string): Html =>
   ih.h1(
@@ -297,7 +289,7 @@ export const diagram = (content: string): Html =>
   ih.pre(
     [
       ih.Class(
-        'mb-4 mx-auto w-fit max-w-full text-[#403d4a] dark:text-[#E0DEE6] text-sm p-4 overflow-x-auto rounded-lg bg-gray-100 dark:bg-[#1c1a20] border border-gray-200 dark:border-gray-700/50',
+        'code-surface mb-4 mx-auto w-fit max-w-full text-sm p-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700/50',
       ),
     ],
     [content],

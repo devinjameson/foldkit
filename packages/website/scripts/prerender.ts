@@ -2,24 +2,25 @@ import {
   Array,
   Console,
   DateTime,
-  Deferred,
   Effect,
   Match as M,
   Option,
   Record,
   Schema as S,
-  Stream,
   String as String_,
   pipe,
 } from 'effect'
 import { FileSystem } from 'effect'
-import { ChildProcess } from 'effect/unstable/process'
+import type { PlatformError } from 'effect/PlatformError'
+import { Server } from 'foldkit/experimental'
+import { Window } from 'happy-dom'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { type Browser, chromium } from 'playwright'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { chromium } from 'playwright'
 
 import { NodeRuntime, NodeServices } from '@effect/platform-node'
 
+import type * as ServerEntry from '../src/entry.server'
 import {
   type ApiModule,
   moduleNameToSlug,
@@ -28,101 +29,10 @@ import {
 } from '../src/page/apiReference/domain'
 import { TypeDocJson } from '../src/page/apiReference/typedoc'
 import { BLOG_DESCRIPTION, BLOG_RSS_PATH } from '../src/page/blog/meta'
-import { exampleSlugs } from '../src/page/example/meta'
+import { exampleSlugs, examples } from '../src/page/example/meta'
 import {
-  AiMcpRoute,
-  AiOverviewRoute,
-  AiSkillsRoute,
-  ApiModuleRoute,
   AppRoute,
-  AsyncDataRoute,
-  BestPracticesImmutabilityRoute,
-  BestPracticesKeyingRoute,
-  BestPracticesMessagesRoute,
-  BestPracticesSideEffectsRoute,
-  BlogPostRoute,
-  BlogRoute,
-  ComingFromReactRoute,
-  ComingFromTanStackQueryRoute,
-  CoreArchitectureRoute,
-  CoreCanvasRoute,
-  CoreCommandsRoute,
-  CoreCounterExampleRoute,
-  CoreCrashViewRoute,
-  CoreCustomElementRoute,
-  CoreDevToolsRoute,
-  CoreDomRoute,
-  CoreEmbeddingRoute,
-  CoreFileRoute,
-  CoreFreezeModelRoute,
-  CoreHttpRoute,
-  CoreInitAndFlagsRoute,
-  CoreManagedResourcesRoute,
-  CoreMessagesRoute,
-  CoreModelRoute,
-  CoreMountRoute,
-  CorePreserveScrollRoute,
-  CoreRenderRoute,
-  CoreResourcesRoute,
-  CoreRuntimeRoute,
-  CoreSlowWarningsRoute,
-  CoreSubmodelRoute,
-  CoreSubscriptionsRoute,
-  CoreUpdateRoute,
-  CoreViewMemoizationRoute,
-  CoreViewRoute,
-  CoreViewTransitionsRoute,
-  EffectAtomComparisonRoute,
-  ElmComparisonRoute,
-  ExampleDetailRoute,
-  ExamplesRoute,
-  FieldValidationRoute,
-  GettingStartedRoute,
-  HomeRoute,
-  ManifestoRoute,
-  NewsletterRoute,
-  PatternsInformingSubmodelsRoute,
-  PatternsSubscriptionOrganizationRoute,
-  PerformanceRoute,
-  ProjectOrganizationRoute,
-  ReactComparisonRoute,
-  RoadmapRoute,
-  RoutingAndNavigationRoute,
-  TestingRoute,
-  TestingSceneRoute,
-  TestingStoryRoute,
-  ToolingLintingRoute,
-  TypingTerminalRoute,
-  UiAnchorRoute,
-  UiAnimationRoute,
-  UiButtonRoute,
-  UiCalendarRoute,
-  UiCheckboxRoute,
-  UiComboboxRoute,
-  UiDatePickerRoute,
-  UiDialogRoute,
-  UiDisclosureRoute,
-  UiDragAndDropRoute,
-  UiFieldsetRoute,
-  UiFileDropRoute,
-  UiInputRoute,
-  UiListboxRoute,
-  UiMenuRoute,
-  UiNavRoute,
-  UiOverviewRoute,
-  UiPopoverRoute,
-  UiRadioGroupRoute,
-  UiSelectRoute,
-  UiSelectionSubmodelsRoute,
-  UiSliderRoute,
-  UiSwitchRoute,
-  UiTabsRoute,
-  UiTextareaRoute,
-  UiToastRoute,
-  UiTooltipRoute,
-  UiVirtualListRoute,
-  WhatAboutSsrRoute,
-  WhyNoJsxRoute,
+  aboutRouter,
   aiMcpRouter,
   aiOverviewRouter,
   aiSkillsRouter,
@@ -136,6 +46,8 @@ import {
   blogRouter,
   comingFromReactRouter,
   comingFromTanStackQueryRouter,
+  contactRouter,
+  contentApiRouter,
   coreArchitectureRouter,
   coreCanvasRouter,
   coreCommandsRouter,
@@ -157,6 +69,7 @@ import {
   coreRenderRouter,
   coreResourcesRouter,
   coreRuntimeRouter,
+  coreServerRenderingRouter,
   coreSlowWarningsRouter,
   coreSubmodelRouter,
   coreSubscriptionsRouter,
@@ -177,6 +90,7 @@ import {
   patternsSubscriptionOrganizationRouter,
   performanceRouter,
   playgroundRouter,
+  privacyRouter,
   projectOrganizationRouter,
   reactComparisonRouter,
   roadmapRouter,
@@ -198,6 +112,7 @@ import {
   uiDragAndDropRouter,
   uiFieldsetRouter,
   uiFileDropRouter,
+  uiHoverIntentRouter,
   uiInputRouter,
   uiListboxRouter,
   uiMenuRouter,
@@ -214,16 +129,20 @@ import {
   uiToastRouter,
   uiTooltipRouter,
   uiVirtualListRouter,
-  whatAboutSsrRouter,
   whyNoJsxRouter,
 } from '../src/route'
 import { type BlogPostEntry, blogPostSlugs, blogPosts } from './blogPosts'
+import {
+  API_BASE_PATH,
+  type ApiPageEntry,
+  contentApiDocuments,
+} from './contentApi'
 import {
   type LlmsFullEntry,
   type LlmsIndexEntry,
   buildLlmsFull,
   buildLlmsIndex,
-  extractPageMarkdown,
+  extractMarkdownFromRenderedDocument,
   shouldExportMarkdown,
   urlPathToMarkdownPath,
 } from './markdown'
@@ -233,229 +152,223 @@ import { generateOgImages, injectMetaTags } from './og-image'
 // ROUTES
 
 export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
-  HomeRoute(),
-  NewsletterRoute(),
-  ManifestoRoute(),
-  WhyNoJsxRoute(),
-  WhatAboutSsrRoute(),
-  PerformanceRoute(),
-  GettingStartedRoute(),
-  RoadmapRoute(),
-  ComingFromReactRoute(),
-  ComingFromTanStackQueryRoute(),
-  ReactComparisonRoute(),
-  EffectAtomComparisonRoute(),
-  ElmComparisonRoute(),
-  RoutingAndNavigationRoute(),
-  FieldValidationRoute(),
-  TestingRoute(),
-  TestingStoryRoute(),
-  TestingSceneRoute(),
-  ExamplesRoute(),
-  ...Array.map(exampleSlugs, slug => ExampleDetailRoute({ exampleSlug: slug })),
-  TypingTerminalRoute(),
-  BestPracticesSideEffectsRoute(),
-  BestPracticesMessagesRoute(),
-  BestPracticesKeyingRoute(),
-  BestPracticesImmutabilityRoute(),
-  ProjectOrganizationRoute(),
-  ToolingLintingRoute(),
-  CoreArchitectureRoute(),
-  CoreCounterExampleRoute(),
-  CoreModelRoute(),
-  CoreMessagesRoute(),
-  CoreUpdateRoute(),
-  CoreViewRoute(),
-  CoreCommandsRoute(),
-  CoreMountRoute(),
-  CoreCustomElementRoute(),
-  CoreSubscriptionsRoute(),
-  CoreInitAndFlagsRoute(),
-  CoreDomRoute(),
-  CoreRenderRoute(),
-  CoreFileRoute(),
-  CoreHttpRoute(),
-  CoreCanvasRoute(),
-  CoreRuntimeRoute(),
-  CoreResourcesRoute(),
-  CoreManagedResourcesRoute(),
-  CoreDevToolsRoute(),
-  CoreCrashViewRoute(),
-  CoreViewTransitionsRoute(),
-  CoreSlowWarningsRoute(),
-  CoreFreezeModelRoute(),
-  CorePreserveScrollRoute(),
-  CoreSubmodelRoute(),
-  AsyncDataRoute(),
-  PatternsInformingSubmodelsRoute(),
-  PatternsSubscriptionOrganizationRoute(),
-  CoreViewMemoizationRoute(),
-  CoreEmbeddingRoute(),
-  UiOverviewRoute(),
-  UiSelectionSubmodelsRoute(),
-  UiTabsRoute(),
-  UiNavRoute(),
-  UiDisclosureRoute(),
-  UiDialogRoute(),
-  UiMenuRoute(),
-  UiPopoverRoute(),
-  UiListboxRoute(),
-  UiRadioGroupRoute(),
-  UiSelectRoute(),
-  UiSliderRoute(),
-  UiSwitchRoute(),
-  UiButtonRoute(),
-  UiCalendarRoute(),
-  UiDatePickerRoute(),
-  UiCheckboxRoute(),
-  UiComboboxRoute(),
-  UiInputRoute(),
-  UiTextareaRoute(),
-  UiFieldsetRoute(),
-  UiDragAndDropRoute(),
-  UiFileDropRoute(),
-  UiToastRoute(),
-  UiTooltipRoute(),
-  UiAnimationRoute(),
-  UiAnchorRoute(),
-  UiVirtualListRoute(),
-  AiOverviewRoute(),
-  AiSkillsRoute(),
-  AiMcpRoute(),
-  BlogRoute(),
-  ...Array.map(blogPostSlugs, slug => BlogPostRoute({ postSlug: slug })),
+  AppRoute.Home(),
+  AppRoute.Newsletter(),
+  AppRoute.Manifesto(),
+  AppRoute.WhyNoJsx(),
+  AppRoute.Performance(),
+  AppRoute.GettingStarted(),
+  AppRoute.Roadmap(),
+  AppRoute.ComingFromReact(),
+  AppRoute.ComingFromTanStackQuery(),
+  AppRoute.ReactComparison(),
+  AppRoute.EffectAtomComparison(),
+  AppRoute.ElmComparison(),
+  AppRoute.RoutingAndNavigation(),
+  AppRoute.FieldValidation(),
+  AppRoute.Testing(),
+  AppRoute.TestingStory(),
+  AppRoute.TestingScene(),
+  AppRoute.Examples(),
+  ...Array.map(exampleSlugs, slug =>
+    AppRoute.ExampleDetail({ exampleSlug: slug }),
+  ),
+  AppRoute.TypingTerminal(),
+  AppRoute.BestPracticesSideEffects(),
+  AppRoute.BestPracticesMessages(),
+  AppRoute.BestPracticesKeying(),
+  AppRoute.BestPracticesImmutability(),
+  AppRoute.ProjectOrganization(),
+  AppRoute.ToolingLinting(),
+  AppRoute.CoreArchitecture(),
+  AppRoute.CoreCounterExample(),
+  AppRoute.CoreModel(),
+  AppRoute.CoreMessages(),
+  AppRoute.CoreUpdate(),
+  AppRoute.CoreView(),
+  AppRoute.CoreCommands(),
+  AppRoute.CoreMount(),
+  AppRoute.CoreCustomElement(),
+  AppRoute.CoreSubscriptions(),
+  AppRoute.CoreInitAndFlags(),
+  AppRoute.CoreDom(),
+  AppRoute.CoreRender(),
+  AppRoute.CoreFile(),
+  AppRoute.CoreHttp(),
+  AppRoute.CoreCanvas(),
+  AppRoute.CoreRuntime(),
+  AppRoute.CoreServerRendering(),
+  AppRoute.CoreResources(),
+  AppRoute.CoreManagedResources(),
+  AppRoute.CoreDevTools(),
+  AppRoute.CoreCrashView(),
+  AppRoute.CoreViewTransitions(),
+  AppRoute.CoreSlowWarnings(),
+  AppRoute.CoreFreezeModel(),
+  AppRoute.CorePreserveScroll(),
+  AppRoute.CoreSubmodel(),
+  AppRoute.AsyncData(),
+  AppRoute.PatternsInformingSubmodels(),
+  AppRoute.PatternsSubscriptionOrganization(),
+  AppRoute.CoreViewMemoization(),
+  AppRoute.CoreEmbedding(),
+  AppRoute.UiOverview(),
+  AppRoute.UiSelectionSubmodels(),
+  AppRoute.UiTabs(),
+  AppRoute.UiNav(),
+  AppRoute.UiDisclosure(),
+  AppRoute.UiDialog(),
+  AppRoute.UiMenu(),
+  AppRoute.UiPopover(),
+  AppRoute.UiListbox(),
+  AppRoute.UiRadioGroup(),
+  AppRoute.UiSelect(),
+  AppRoute.UiSlider(),
+  AppRoute.UiSwitch(),
+  AppRoute.UiButton(),
+  AppRoute.UiCalendar(),
+  AppRoute.UiDatePicker(),
+  AppRoute.UiCheckbox(),
+  AppRoute.UiCombobox(),
+  AppRoute.UiInput(),
+  AppRoute.UiTextarea(),
+  AppRoute.UiFieldset(),
+  AppRoute.UiDragAndDrop(),
+  AppRoute.UiFileDrop(),
+  AppRoute.UiHoverIntent(),
+  AppRoute.UiToast(),
+  AppRoute.UiTooltip(),
+  AppRoute.UiAnimation(),
+  AppRoute.UiAnchor(),
+  AppRoute.UiVirtualList(),
+  AppRoute.AiOverview(),
+  AppRoute.AiSkills(),
+  AppRoute.AiMcp(),
+  AppRoute.ContentApi(),
+  AppRoute.About(),
+  AppRoute.Contact(),
+  AppRoute.Privacy(),
+  AppRoute.Blog(),
+  ...Array.map(blogPostSlugs, slug => AppRoute.BlogPost({ postSlug: slug })),
 ]
 
+const PLAYGROUND_ROUTES: ReadonlyArray<AppRoute> = Array.map(
+  exampleSlugs,
+  exampleSlug => AppRoute.Playground({ exampleSlug }),
+)
+
 export const routeToUrlPath = (route: AppRoute): string =>
-  M.value(route).pipe(
-    M.withReturnType<string>(),
-    M.tagsExhaustive({
-      Home: () => homeRouter(),
-      Manifesto: () => manifestoRouter(),
-      WhyNoJsx: () => whyNoJsxRouter(),
-      WhatAboutSsr: () => whatAboutSsrRouter(),
-      Performance: () => performanceRouter(),
-      GettingStarted: () => gettingStartedRouter(),
-      Roadmap: () => roadmapRouter(),
-      ComingFromReact: () => comingFromReactRouter(),
-      ComingFromTanStackQuery: () => comingFromTanStackQueryRouter(),
-      ReactComparison: () => reactComparisonRouter(),
-      EffectAtomComparison: () => effectAtomComparisonRouter(),
-      ElmComparison: () => elmComparisonRouter(),
-      RoutingAndNavigation: () => routingAndNavigationRouter(),
-      FieldValidation: () => fieldValidationRouter(),
-      Testing: () => testingRouter(),
-      TestingStory: () => testingStoryRouter(),
-      TestingScene: () => testingSceneRouter(),
-      Examples: () => examplesRouter(),
-      ExampleDetail: ({ exampleSlug }) => exampleDetailRouter({ exampleSlug }),
-      TypingTerminal: () => typingTerminalRouter(),
-      BestPracticesSideEffects: () => bestPracticesSideEffectsRouter(),
-      BestPracticesMessages: () => bestPracticesMessagesRouter(),
-      BestPracticesKeying: () => bestPracticesKeyingRouter(),
-      BestPracticesImmutability: () => bestPracticesImmutabilityRouter(),
-      ProjectOrganization: () => projectOrganizationRouter(),
-      ToolingLinting: () => toolingLintingRouter(),
-      CoreArchitecture: () => coreArchitectureRouter(),
-      CoreCounterExample: () => coreCounterExampleRouter(),
-      CoreModel: () => coreModelRouter(),
-      CoreMessages: () => coreMessagesRouter(),
-      CoreUpdate: () => coreUpdateRouter(),
-      CoreView: () => coreViewRouter(),
-      CoreCommands: () => coreCommandsRouter(),
-      CoreMount: () => coreMountRouter(),
-      CoreCustomElement: () => coreCustomElementRouter(),
-      CoreSubscriptions: () => coreSubscriptionsRouter(),
-      CoreInitAndFlags: () => coreInitAndFlagsRouter(),
-      CoreDom: () => coreDomRouter(),
-      CoreRender: () => coreRenderRouter(),
-      CoreFile: () => coreFileRouter(),
-      CoreHttp: () => coreHttpRouter(),
-      CoreCanvas: () => coreCanvasRouter(),
-      CoreRuntime: () => coreRuntimeRouter(),
-      CoreResources: () => coreResourcesRouter(),
-      CoreManagedResources: () => coreManagedResourcesRouter(),
-      CoreDevTools: () => coreDevToolsRouter(),
-      CoreCrashView: () => coreCrashViewRouter(),
-      CoreViewTransitions: () => coreViewTransitionsRouter(),
-      CoreSlowWarnings: () => coreSlowWarningsRouter(),
-      CoreFreezeModel: () => coreFreezeModelRouter(),
-      CorePreserveScroll: () => corePreserveScrollRouter(),
-      CoreSubmodel: () => coreSubmodelRouter(),
-      AsyncData: () => asyncDataRouter(),
-      PatternsInformingSubmodels: () => patternsInformingSubmodelsRouter(),
-      PatternsSubscriptionOrganization: () =>
-        patternsSubscriptionOrganizationRouter(),
-      CoreViewMemoization: () => coreViewMemoizationRouter(),
-      CoreEmbedding: () => coreEmbeddingRouter(),
-      UiOverview: () => uiOverviewRouter(),
-      UiSelectionSubmodels: () => uiSelectionSubmodelsRouter(),
-      UiTabs: () => uiTabsRouter(),
-      UiNav: () => uiNavRouter(),
-      UiDisclosure: () => uiDisclosureRouter(),
-      UiDialog: () => uiDialogRouter(),
-      UiMenu: () => uiMenuRouter(),
-      UiPopover: () => uiPopoverRouter(),
-      UiListbox: () => uiListboxRouter(),
-      UiRadioGroup: () => uiRadioGroupRouter(),
-      UiSelect: () => uiSelectRouter(),
-      UiSlider: () => uiSliderRouter(),
-      UiSwitch: () => uiSwitchRouter(),
-      UiButton: () => uiButtonRouter(),
-      UiCalendar: () => uiCalendarRouter(),
-      UiDatePicker: () => uiDatePickerRouter(),
-      UiCheckbox: () => uiCheckboxRouter(),
-      UiCombobox: () => uiComboboxRouter(),
-      UiInput: () => uiInputRouter(),
-      UiTextarea: () => uiTextareaRouter(),
-      UiFieldset: () => uiFieldsetRouter(),
-      UiDragAndDrop: () => uiDragAndDropRouter(),
-      UiFileDrop: () => uiFileDropRouter(),
-      UiToast: () => uiToastRouter(),
-      UiTooltip: () => uiTooltipRouter(),
-      UiAnimation: () => uiAnimationRouter(),
-      UiAnchor: () => uiAnchorRouter(),
-      UiVirtualList: () => uiVirtualListRouter(),
-      AiOverview: () => aiOverviewRouter(),
-      AiSkills: () => aiSkillsRouter(),
-      AiMcp: () => aiMcpRouter(),
-      ApiModule: ({ moduleSlug }) => apiModuleRouter({ moduleSlug }),
-      Playground: ({ exampleSlug }) => playgroundRouter({ exampleSlug }),
-      Newsletter: () => newsletterRouter(),
-      Blog: () => blogRouter(),
-      BlogPost: ({ postSlug }) => blogPostRouter({ postSlug }),
-      NotFound: () => '/',
-    }),
-  )
+  AppRoute.match<string>(route, {
+    Home: () => homeRouter(),
+    Manifesto: () => manifestoRouter(),
+    WhyNoJsx: () => whyNoJsxRouter(),
+    Performance: () => performanceRouter(),
+    GettingStarted: () => gettingStartedRouter(),
+    Roadmap: () => roadmapRouter(),
+    ComingFromReact: () => comingFromReactRouter(),
+    ComingFromTanStackQuery: () => comingFromTanStackQueryRouter(),
+    ReactComparison: () => reactComparisonRouter(),
+    EffectAtomComparison: () => effectAtomComparisonRouter(),
+    ElmComparison: () => elmComparisonRouter(),
+    RoutingAndNavigation: () => routingAndNavigationRouter(),
+    FieldValidation: () => fieldValidationRouter(),
+    Testing: () => testingRouter(),
+    TestingStory: () => testingStoryRouter(),
+    TestingScene: () => testingSceneRouter(),
+    Examples: () => examplesRouter(),
+    ExampleDetail: ({ exampleSlug }) => exampleDetailRouter({ exampleSlug }),
+    TypingTerminal: () => typingTerminalRouter(),
+    BestPracticesSideEffects: () => bestPracticesSideEffectsRouter(),
+    BestPracticesMessages: () => bestPracticesMessagesRouter(),
+    BestPracticesKeying: () => bestPracticesKeyingRouter(),
+    BestPracticesImmutability: () => bestPracticesImmutabilityRouter(),
+    ProjectOrganization: () => projectOrganizationRouter(),
+    ToolingLinting: () => toolingLintingRouter(),
+    CoreArchitecture: () => coreArchitectureRouter(),
+    CoreCounterExample: () => coreCounterExampleRouter(),
+    CoreModel: () => coreModelRouter(),
+    CoreMessages: () => coreMessagesRouter(),
+    CoreUpdate: () => coreUpdateRouter(),
+    CoreView: () => coreViewRouter(),
+    CoreCommands: () => coreCommandsRouter(),
+    CoreMount: () => coreMountRouter(),
+    CoreCustomElement: () => coreCustomElementRouter(),
+    CoreSubscriptions: () => coreSubscriptionsRouter(),
+    CoreInitAndFlags: () => coreInitAndFlagsRouter(),
+    CoreDom: () => coreDomRouter(),
+    CoreRender: () => coreRenderRouter(),
+    CoreFile: () => coreFileRouter(),
+    CoreHttp: () => coreHttpRouter(),
+    CoreCanvas: () => coreCanvasRouter(),
+    CoreRuntime: () => coreRuntimeRouter(),
+    CoreServerRendering: () => coreServerRenderingRouter(),
+    CoreResources: () => coreResourcesRouter(),
+    CoreManagedResources: () => coreManagedResourcesRouter(),
+    CoreDevTools: () => coreDevToolsRouter(),
+    CoreCrashView: () => coreCrashViewRouter(),
+    CoreViewTransitions: () => coreViewTransitionsRouter(),
+    CoreSlowWarnings: () => coreSlowWarningsRouter(),
+    CoreFreezeModel: () => coreFreezeModelRouter(),
+    CorePreserveScroll: () => corePreserveScrollRouter(),
+    CoreSubmodel: () => coreSubmodelRouter(),
+    AsyncData: () => asyncDataRouter(),
+    PatternsInformingSubmodels: () => patternsInformingSubmodelsRouter(),
+    PatternsSubscriptionOrganization: () =>
+      patternsSubscriptionOrganizationRouter(),
+    CoreViewMemoization: () => coreViewMemoizationRouter(),
+    CoreEmbedding: () => coreEmbeddingRouter(),
+    UiOverview: () => uiOverviewRouter(),
+    UiSelectionSubmodels: () => uiSelectionSubmodelsRouter(),
+    UiTabs: () => uiTabsRouter(),
+    UiNav: () => uiNavRouter(),
+    UiDisclosure: () => uiDisclosureRouter(),
+    UiDialog: () => uiDialogRouter(),
+    UiMenu: () => uiMenuRouter(),
+    UiPopover: () => uiPopoverRouter(),
+    UiListbox: () => uiListboxRouter(),
+    UiRadioGroup: () => uiRadioGroupRouter(),
+    UiSelect: () => uiSelectRouter(),
+    UiSlider: () => uiSliderRouter(),
+    UiSwitch: () => uiSwitchRouter(),
+    UiButton: () => uiButtonRouter(),
+    UiCalendar: () => uiCalendarRouter(),
+    UiDatePicker: () => uiDatePickerRouter(),
+    UiCheckbox: () => uiCheckboxRouter(),
+    UiCombobox: () => uiComboboxRouter(),
+    UiInput: () => uiInputRouter(),
+    UiTextarea: () => uiTextareaRouter(),
+    UiFieldset: () => uiFieldsetRouter(),
+    UiDragAndDrop: () => uiDragAndDropRouter(),
+    UiFileDrop: () => uiFileDropRouter(),
+    UiHoverIntent: () => uiHoverIntentRouter(),
+    UiToast: () => uiToastRouter(),
+    UiTooltip: () => uiTooltipRouter(),
+    UiAnimation: () => uiAnimationRouter(),
+    UiAnchor: () => uiAnchorRouter(),
+    UiVirtualList: () => uiVirtualListRouter(),
+    AiOverview: () => aiOverviewRouter(),
+    AiSkills: () => aiSkillsRouter(),
+    AiMcp: () => aiMcpRouter(),
+    ApiModule: ({ moduleSlug }) => apiModuleRouter({ moduleSlug }),
+    ContentApi: () => contentApiRouter(),
+    About: () => aboutRouter(),
+    Contact: () => contactRouter(),
+    Privacy: () => privacyRouter(),
+    Playground: ({ exampleSlug }) => playgroundRouter({ exampleSlug }),
+    Newsletter: () => newsletterRouter(),
+    Blog: () => blogRouter(),
+    BlogPost: ({ postSlug }) => blogPostRouter({ postSlug }),
+    NotFound: ({ path }) => path,
+  })
+
+export const INDEX_OUTPUT_PATH = 'index.html'
 
 export const routeToOutputPath = (route: AppRoute): string => {
   const urlPath = routeToUrlPath(route)
-  return urlPath === '/' ? 'index.html' : `${urlPath.slice(1)}/index.html`
+  return urlPath === '/'
+    ? INDEX_OUTPUT_PATH
+    : `${urlPath.slice(1)}/${INDEX_OUTPUT_PATH}`
 }
-
-const ROOT_PLACEHOLDER = '<div id="root"></div>'
-
-export const injectHtml = (baseHtml: string, renderedHtml: string): string =>
-  baseHtml.replace(ROOT_PLACEHOLDER, `<div id="root">${renderedHtml}</div>`)
-
-// PLAYGROUND SHELL
-
-// NOTE: Playground routes are deliberately excluded from STATIC_ROUTES: the
-// WebContainer editor can't be statically rendered, and every entry into it is
-// a full document load for cross-origin isolation. With no file of its own,
-// Vercel's SPA catch-all serves the prerendered home page for
-// `/playground/<slug>`, so the landing view flashes before the app boots and
-// swaps in the editor. We prerender this neutral shell once and route
-// `/playground/*` to it instead (see deploy-website.yml and the preview
-// fallback in vite.config.ts). The markup mirrors the booting spinner in
-// `src/page/playground.ts`; every class here must already appear in app source
-// because Tailwind scans source, not this injected string.
-const PLAYGROUND_SHELL_MARKUP = `<div class="flex flex-col h-screen bg-white dark:bg-gray-900"><div class="flex-1 flex items-center justify-center px-6 py-20 text-center"><div class="max-w-sm flex flex-col items-center"><div class="w-8 h-8 mb-6 rounded-full border-2 border-gray-300 dark:border-gray-700 border-t-gray-900 dark:border-t-gray-100 animate-spin" role="status" aria-label="Loading"></div><div class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Starting playground…</div><div class="text-sm text-gray-600 dark:text-gray-400">Hang tight. The preview will appear automatically. First load takes about 30 seconds.</div></div></div></div>`
-
-const PLAYGROUND_SHELL_OUTPUT_PATH = 'playground/index.html'
-
-export const buildPlaygroundShellHtml = (baseHtml: string): string =>
-  injectHtml(baseHtml, PLAYGROUND_SHELL_MARKUP)
 
 export const enumerateRoutes = (
   apiModuleSlugs: ReadonlyArray<string>,
@@ -463,7 +376,9 @@ export const enumerateRoutes = (
   pipe(
     STATIC_ROUTES,
     Array.appendAll(
-      Array.map(apiModuleSlugs, moduleSlug => ApiModuleRoute({ moduleSlug })),
+      Array.map(apiModuleSlugs, moduleSlug =>
+        AppRoute.ApiModule({ moduleSlug }),
+      ),
     ),
   )
 
@@ -474,103 +389,96 @@ const WEBSITE_DIR = resolve(SCRIPT_DIR, '..')
 const DIST_DIR = resolve(WEBSITE_DIR, 'dist')
 const API_JSON_PATH = resolve(WEBSITE_DIR, 'src/generated/api.json')
 const API_UI_JSON_PATH = resolve(WEBSITE_DIR, 'src/generated/api-ui.json')
+const INDEX_PATH = resolve(DIST_DIR, INDEX_OUTPUT_PATH)
+const TEMPLATE_COPY_PATH = resolve(
+  WEBSITE_DIR,
+  'node_modules/.cache/foldkit/prerender-template.html',
+)
+const CONTAINER_ID = 'root'
+const CONTAINER_PLACEHOLDER = `<div id="${CONTAINER_ID}"></div>`
 
-// SERVICES
+// SERVER ENTRY
 
-const PREVIEW_PORT = 4173
-const PREVIEW_BASE_URL = `http://localhost:${PREVIEW_PORT}`
+const SERVER_ENTRY_PATH = resolve(WEBSITE_DIR, 'dist-server/entry.server.js')
 
-const previewServerResource = Effect.acquireRelease(
-  Effect.gen(function* () {
-    const cmd = ChildProcess.make(
-      'pnpm',
-      [
-        'exec',
-        'vite',
-        'preview',
-        '--port',
-        String(PREVIEW_PORT),
-        '--strictPort',
-      ],
-      { cwd: WEBSITE_DIR },
-    )
-
-    const serverProcess = yield* cmd
-    const ready = yield* Deferred.make<void>()
-
-    const checkLine = (line: string): Effect.Effect<void> =>
-      line.includes('localhost')
-        ? Deferred.succeed(ready, undefined).pipe(Effect.asVoid)
-        : Effect.void
-
-    yield* serverProcess.stdout.pipe(
-      Stream.decodeText({ encoding: 'utf-8' }),
-      Stream.splitLines,
-      Stream.runForEach(checkLine),
-      Effect.forkDetach,
-    )
-
-    yield* Deferred.await(ready)
-    return serverProcess
-  }),
-  serverProcess => Effect.ignore(serverProcess.kill()),
-).pipe(Effect.asVoid)
-
-const playwrightBrowserResource = Effect.acquireRelease(
-  Effect.tryPromise(() => chromium.launch({ headless: true })),
-  browser => Effect.promise(() => browser.close()),
+// NOTE: the app module graph uses Vite-only specifiers (`virtual:*`, `.md`,
+// `?raw`, `import.meta.glob`), so it cannot be imported by tsx directly. The
+// `preprerender` script builds `src/entry.server.ts` with `vite build --ssr`
+// first, and this dynamic import loads that bundle.
+const loadServerEntry: Effect.Effect<typeof ServerEntry> = Effect.promise(
+  () => import(pathToFileURL(SERVER_ENTRY_PATH).href),
 )
 
-type CapturedPage = Readonly<{ html: string; markdown: string }>
+type RenderedPage = Readonly<{
+  application: Server.RenderedApplication
+  markdown: string
+}>
 
-// NOTE: tsx/esbuild wraps named arrow functions with a `__name(fn, "name")`
-// helper to preserve debug names. When Playwright ships our extraction
-// function to the page via `fn.toString()`, the body still references
-// `__name`, which doesn't exist in browser scope. The no-op polyfill keeps
-// `page.evaluate` calls from crashing without touching the foldkit bundle
-// (Vite scopes its own `__name` per module, so the global shim is never
-// reached by app code).
-const PAGE_INIT_SCRIPT = `
-  Object.defineProperty(window, "__FOLDKIT_PRERENDER__", {
-    value: true,
-    writable: false,
-  });
-  window.__name = (target) => target;
-`
+const API_SECTION_MARKER = 'data-pagefind-meta="section"'
 
-const captureRoutePage = (browser: Browser, url: string, route: AppRoute) =>
+const extractMarkdownFromHtml = (html: string): Effect.Effect<string> =>
   Effect.acquireUseRelease(
-    Effect.tryPromise(() => browser.newPage()),
-    page =>
-      Effect.gen(function* () {
-        yield* Effect.tryPromise(() => page.addInitScript(PAGE_INIT_SCRIPT))
-        yield* Effect.tryPromise(() => page.goto(url))
-        yield* Effect.tryPromise(() =>
-          page.waitForFunction(() => {
-            const firstChild = document.body.firstElementChild
-            return (
-              firstChild !== null &&
-              firstChild.id !== 'root' &&
-              firstChild.children.length > 0
-            )
-          }),
-        )
-        if (route._tag === 'ApiModule') {
-          yield* Effect.tryPromise(() =>
-            page.waitForSelector('h1[data-pagefind-meta="section"]'),
-          )
-        }
-        const html = yield* Effect.tryPromise(() =>
-          page.evaluate(() => document.body.firstElementChild?.outerHTML ?? ''),
-        )
-        const markdown = shouldExportMarkdown(route)
-          ? yield* extractPageMarkdown(page)
-          : ''
-        const captured: CapturedPage = { html, markdown }
-        return captured
+    Effect.sync(() => new Window()),
+    window =>
+      Effect.sync(() => {
+        window.document.body.innerHTML = html
+        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+        const renderedDocument = window.document as unknown as Document
+        return extractMarkdownFromRenderedDocument(renderedDocument)
       }),
-    page => Effect.promise(() => page.close()),
+    window => Effect.promise(() => window.happyDOM.close()),
   )
+
+const renderRoutePage = (serverEntry: typeof ServerEntry, route: AppRoute) =>
+  Effect.gen(function* () {
+    const urlPath = routeToUrlPath(route)
+    const result = yield* Effect.promise(() =>
+      serverEntry.renderPage(new Request(`${SITE_URL}${urlPath}`)),
+    )
+    if (result._tag === 'Responded') {
+      return yield* Effect.fail(
+        new Error(
+          `The server entry returned a complete Response while prerendering ${urlPath}; static HTML generation requires a Rendered result.`,
+        ),
+      )
+    }
+    if (result.status !== undefined && result.status !== 200) {
+      return yield* Effect.fail(
+        new Error(
+          `The server entry returned status ${result.status} while prerendering ${urlPath}; the static host cannot preserve that status in an HTML file.`,
+        ),
+      )
+    }
+    if (result.headers !== undefined) {
+      return yield* Effect.fail(
+        new Error(
+          `The server entry returned response headers while prerendering ${urlPath}; the static host cannot preserve them in an HTML file.`,
+        ),
+      )
+    }
+    const rendered = result.application
+
+    if (
+      route._tag === 'ApiModule' &&
+      !rendered.html.includes(API_SECTION_MARKER)
+    ) {
+      return yield* Effect.fail(
+        new Error(
+          `API module page ${urlPath} rendered without its section heading; ` +
+            'the API data seeding in entry.server.ts has regressed.',
+        ),
+      )
+    }
+
+    const markdown = shouldExportMarkdown(route)
+      ? yield* extractMarkdownFromHtml(rendered.html)
+      : ''
+    const renderedPage: RenderedPage = {
+      application: rendered,
+      markdown,
+    }
+    return renderedPage
+  })
 
 // PRERENDER
 
@@ -619,7 +527,7 @@ const buildApiModuleNameResolver = (
 
 const prerenderRoute =
   (
-    browser: Browser,
+    serverEntry: typeof ServerEntry,
     baseHtml: string,
     resolveApiModuleName: ApiModuleNameResolver,
   ) =>
@@ -627,11 +535,14 @@ const prerenderRoute =
     Effect.gen(function* () {
       const urlPath = routeToUrlPath(route)
       const outputPath = routeToOutputPath(route)
-      const url = `${PREVIEW_BASE_URL}${urlPath}`
       const outputFilePath = resolve(DIST_DIR, outputPath)
 
-      const captured = yield* captureRoutePage(browser, url, route)
-      const injectedHtml = injectHtml(baseHtml, captured.html)
+      const captured = yield* renderRoutePage(serverEntry, route)
+      const injectedHtml = Server.injectIntoTemplate(
+        baseHtml,
+        captured.application,
+        { containerId: CONTAINER_ID },
+      )
       const outputHtml = injectMetaTags(
         injectedHtml,
         route,
@@ -661,7 +572,7 @@ const prerenderRoute =
         route,
         urlPath,
         markdown: captured.markdown,
-        html: captured.html,
+        html: captured.application.html,
       })
     }).pipe(
       Effect.catch(error =>
@@ -671,6 +582,100 @@ const prerenderRoute =
         ),
       ),
     )
+
+// PLAYGROUND SHELLS
+
+// NOTE: Playground routes are deliberately excluded from STATIC_ROUTES: the
+// WebContainer editor can't be statically rendered per slug, and every entry
+// into it is a full document load for cross-origin isolation. A single Counter
+// render supplies the app shell and Flags payload that `Runtime.hydrate`
+// requires. Each known slug gets a copy with its own metadata, so direct loads
+// and link previews describe the requested example. Hydrating another example
+// against the Counter shell rebuilds the mismatching subtree, the designed
+// hydration fallback. The canonical Counter copy at `/playground/index.html`
+// remains the fallback for unknown slugs (see deploy-website.yml and the
+// preview fallback in vite.config.ts).
+const PLAYGROUND_SHELL_ROUTE = AppRoute.Playground({ exampleSlug: 'counter' })
+
+const PLAYGROUND_SHELL_OUTPUT_PATH = 'playground/index.html'
+
+const prerenderPlaygroundShells = (
+  serverEntry: typeof ServerEntry,
+  baseHtml: string,
+  resolveApiModuleName: ApiModuleNameResolver,
+) =>
+  Effect.gen(function* () {
+    const captured = yield* renderRoutePage(serverEntry, PLAYGROUND_SHELL_ROUTE)
+    const shellHtml = Server.injectIntoTemplate(
+      baseHtml,
+      captured.application,
+      { containerId: CONTAINER_ID },
+    )
+
+    const fs = yield* FileSystem.FileSystem
+    const writeShell = (route: AppRoute, outputPath: string) => {
+      const urlPath = routeToUrlPath(route)
+      const outputHtml = injectMetaTags(
+        shellHtml,
+        route,
+        urlPath,
+        resolveApiModuleName,
+      )
+      const outputFilePath = resolve(DIST_DIR, outputPath)
+
+      return Effect.gen(function* () {
+        yield* fs.makeDirectory(dirname(outputFilePath), { recursive: true })
+        yield* fs.writeFileString(outputFilePath, outputHtml)
+      })
+    }
+
+    yield* writeShell(PLAYGROUND_SHELL_ROUTE, PLAYGROUND_SHELL_OUTPUT_PATH)
+    yield* Effect.forEach(
+      PLAYGROUND_ROUTES,
+      route => writeShell(route, routeToOutputPath(route)),
+      { concurrency: 4 },
+    )
+
+    yield* Console.log(
+      `  ✓ ${PLAYGROUND_ROUTES.length} /playground/* metadata shells`,
+    )
+  })
+
+// NOT FOUND PAGE
+
+// NOTE: the static host serves this file with a real 404 status for every
+// unknown path (see scripts/website-vercel-config.mjs). Without it, unknown
+// paths answer 200 with the app shell and agents conclude every path exists.
+export const NOT_FOUND_ROUTE = AppRoute.NotFound({ path: '/404' })
+
+export const NOT_FOUND_OUTPUT_PATH = '404.html'
+
+const prerenderNotFoundPage = (
+  serverEntry: typeof ServerEntry,
+  baseHtml: string,
+  resolveApiModuleName: ApiModuleNameResolver,
+) =>
+  Effect.gen(function* () {
+    const captured = yield* renderRoutePage(serverEntry, NOT_FOUND_ROUTE)
+    const injectedHtml = Server.injectIntoTemplate(
+      baseHtml,
+      captured.application,
+      { containerId: CONTAINER_ID },
+    )
+    const outputHtml = injectMetaTags(
+      injectedHtml,
+      NOT_FOUND_ROUTE,
+      routeToUrlPath(NOT_FOUND_ROUTE),
+      resolveApiModuleName,
+    )
+
+    const fs = yield* FileSystem.FileSystem
+    yield* fs.writeFileString(
+      resolve(DIST_DIR, NOT_FOUND_OUTPUT_PATH),
+      outputHtml,
+    )
+    yield* Console.log(`  ✓ /${NOT_FOUND_OUTPUT_PATH}`)
+  })
 
 // SITEMAP
 
@@ -834,6 +839,96 @@ ${items}
 </rss>`
 }
 
+// TEMPLATE
+
+// NOTE: the generated `/` is written over `index.html`, which is also where
+// the client build leaves the template, so reading the template from that file
+// works once and then reads back a page whose placeholder is already replaced.
+// The built file is authoritative while it still holds the placeholder, and
+// the cached copy it leaves behind is what lets a re-run against one client
+// build generate the same pages. The placeholder is the condition
+// `injectIntoTemplate` itself enforces, so a static render, which carries no
+// hydration stamp, is covered by the same test.
+// Takes its paths so a test can drive it over a directory it controls; the
+// prerender itself always runs it over the build.
+export const readTemplateFrom = (
+  indexPath: string,
+  templateCopyPath: string,
+): Effect.Effect<string, PlatformError, FileSystem.FileSystem> =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+
+    const isBuilt = yield* fs.exists(indexPath)
+    if (!isBuilt) {
+      return yield* Effect.die(
+        new Error(
+          `Cannot prerender without a client build: "${indexPath}" does not exist.`,
+        ),
+      )
+    }
+
+    const builtIndex = yield* fs.readFileString(indexPath)
+    const isTemplate = builtIndex.includes(CONTAINER_PLACEHOLDER)
+    if (isTemplate) {
+      yield* fs.makeDirectory(dirname(templateCopyPath), { recursive: true })
+      yield* fs.writeFileString(templateCopyPath, builtIndex)
+      return builtIndex
+    }
+
+    const hasTemplateCopy = yield* fs.exists(templateCopyPath)
+    if (!hasTemplateCopy) {
+      return yield* Effect.die(
+        new Error(
+          `Cannot prerender: "${indexPath}" no longer holds the ${CONTAINER_PLACEHOLDER} placeholder, and no copy of the template remains. Run the client build again.`,
+        ),
+      )
+    }
+
+    return yield* fs.readFileString(templateCopyPath)
+  })
+
+const readTemplate = readTemplateFrom(INDEX_PATH, TEMPLATE_COPY_PATH)
+
+// CONTENT API
+
+const writeJsonDocument = (relativePath: string, document: unknown) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const filePath = resolve(DIST_DIR, relativePath.replace(/^\//, ''))
+
+    yield* fs.makeDirectory(dirname(filePath), { recursive: true })
+    yield* fs.writeFileString(
+      filePath,
+      `${JSON.stringify(document, null, 2)}\n`,
+    )
+  })
+
+// NOTE: `404.json` is written here rather than kept in `public/` so the site's
+// JSON error body and the API's own not-found body stay one document. The
+// static host serves it for unknown paths (see scripts/website-vercel-config.mjs).
+const writeContentApi = (
+  entries: ReadonlyArray<ApiPageEntry>,
+  generated: string,
+) =>
+  Effect.gen(function* () {
+    const documents = contentApiDocuments({
+      pages: entries,
+      examples,
+      posts: blogPosts,
+      generated,
+    })
+
+    yield* Effect.forEach(
+      documents,
+      ({ path, document }) => writeJsonDocument(path, document),
+      { concurrency: 8 },
+    )
+
+    yield* Console.log(
+      `  ✓ ${API_BASE_PATH} (${documents.length} JSON documents)`,
+    )
+  })
+
 // PROGRAM
 
 const resultToIndexEntry =
@@ -841,6 +936,14 @@ const resultToIndexEntry =
   (result: PrerenderResult): LlmsIndexEntry => ({
     urlPath: result.urlPath,
     metadata: routeToMetadata(result.route, resolveApiModuleName),
+  })
+
+const resultToApiPageEntry =
+  (resolveApiModuleName: ApiModuleNameResolver) =>
+  (result: PrerenderResult): ApiPageEntry => ({
+    urlPath: result.urlPath,
+    metadata: routeToMetadata(result.route, resolveApiModuleName),
+    markdown: result.markdown,
   })
 
 const resultToFullEntry =
@@ -852,11 +955,19 @@ const resultToFullEntry =
     orderIndex,
   })
 
+// NOTE: page rendering runs through the server bundle with no browser, but
+// blog cover share cards still rasterize through a real page, so OG image
+// generation holds the one remaining Playwright browser.
+const playwrightBrowserResource = Effect.acquireRelease(
+  Effect.tryPromise(() => chromium.launch({ headless: true })),
+  browser => Effect.promise(() => browser.close()),
+)
+
 const program = Effect.scoped(
   Effect.gen(function* () {
     yield* Console.log('Starting prerender...')
 
-    yield* previewServerResource
+    const serverEntry = yield* loadServerEntry
     const browser = yield* playwrightBrowserResource
 
     const apiModules = yield* readApiModules
@@ -867,7 +978,11 @@ const program = Effect.scoped(
     const routes = enumerateRoutes(apiModuleSlugs)
 
     yield* generateOgImages(
-      routes,
+      pipe(
+        routes,
+        Array.appendAll(PLAYGROUND_ROUTES),
+        Array.append(NOT_FOUND_ROUTE),
+      ),
       routeToUrlPath,
       DIST_DIR,
       resolveApiModuleName,
@@ -875,23 +990,31 @@ const program = Effect.scoped(
     )
 
     const fs = yield* FileSystem.FileSystem
-    const baseHtml = yield* fs.readFileString(resolve(DIST_DIR, 'index.html'))
+    const baseHtml = yield* readTemplate
 
-    const playgroundShellPath = resolve(DIST_DIR, PLAYGROUND_SHELL_OUTPUT_PATH)
-    yield* fs.makeDirectory(dirname(playgroundShellPath), { recursive: true })
-    yield* fs.writeFileString(
-      playgroundShellPath,
-      buildPlaygroundShellHtml(baseHtml),
+    yield* prerenderPlaygroundShells(
+      serverEntry,
+      baseHtml,
+      resolveApiModuleName,
     )
-    yield* Console.log('  ✓ /playground/* shell')
+
+    yield* prerenderNotFoundPage(serverEntry, baseHtml, resolveApiModuleName)
 
     const results = yield* Effect.forEach(
       routes,
-      prerenderRoute(browser, baseHtml, resolveApiModuleName),
+      prerenderRoute(serverEntry, baseHtml, resolveApiModuleName),
       { concurrency: 4 },
     )
 
     const successfulResults = Array.getSomes(results)
+    const failedResults = Array.filter(results, Option.isNone)
+    if (Array.isArrayNonEmpty(failedResults)) {
+      return yield* Effect.die(
+        new Error(
+          `Failed to prerender ${failedResults.length} routes. See the errors above.`,
+        ),
+      )
+    }
     const markdownResults = Array.filter(
       successfulResults,
       result => result.markdown.length > 0,
@@ -931,6 +1054,11 @@ const program = Effect.scoped(
     yield* fs.writeFileString(
       resolve(DIST_DIR, 'llms-full.txt'),
       buildLlmsFull(fullEntries, lastModification),
+    )
+
+    yield* writeContentApi(
+      Array.map(markdownResults, resultToApiPageEntry(resolveApiModuleName)),
+      lastModification,
     )
 
     yield* Console.log(

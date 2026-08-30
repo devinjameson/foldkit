@@ -1,10 +1,10 @@
-import { Effect, Fiber, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Fiber, Option, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Command } from '../command/index.js'
 import { type DevToolsStore, INIT_INDEX } from '../devTools/store.js'
 import { __htmlBuilder } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
+import type * as Update from '../update/index.js'
 import { __setDevToolsOverlay, makeElement } from './runtime.js'
 import {
   __decideViewTransition,
@@ -162,9 +162,10 @@ describe('__resolveStartViewTransition', () => {
   })
 })
 
-const ClickedTransition = m('ClickedTransition')
-const ClickedPlain = m('ClickedPlain')
-const Message = S.Union([ClickedTransition, ClickedPlain])
+const Message = defineMessageUnion({
+  ClickedTransition: {},
+  ClickedPlain: {},
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({ label: S.String })
@@ -172,17 +173,11 @@ type Model = typeof Model.Type
 
 const h = __htmlBuilder<Message>()
 
-const update = (
-  _model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<Command<Message>>]>(),
-    M.tagsExhaustive({
-      ClickedTransition: () => [{ label: 'transitioned' }, []],
-      ClickedPlain: () => [{ label: 'plain' }, []],
-    }),
-  )
+const update = (_model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedTransition: () => ({ model: { label: 'transitioned' } }),
+    ClickedPlain: () => ({ model: { label: 'plain' } }),
+  })
 
 describe('makeElement with viewTransition', () => {
   let container: HTMLElement
@@ -230,12 +225,15 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model =>
         h.div(
           [],
-          [h.button([h.OnClick(ClickedTransition())], ['go']), model.label],
+          [
+            h.button([h.OnClick(Message.ClickedTransition())], ['go']),
+            model.label,
+          ],
         ),
       container,
       viewTransition: () => true,
@@ -296,14 +294,14 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model =>
         h.div(
           [],
           [
-            h.button([h.OnClick(ClickedTransition())], ['transition']),
-            h.button([h.OnClick(ClickedPlain())], ['plain']),
+            h.button([h.OnClick(Message.ClickedTransition())], ['transition']),
+            h.button([h.OnClick(Message.ClickedPlain())], ['plain']),
             model.label,
           ],
         ),
@@ -361,14 +359,14 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model =>
         h.div(
           [],
           [
-            h.button([h.OnClick(ClickedTransition())], ['transition']),
-            h.button([h.OnClick(ClickedPlain())], ['plain']),
+            h.button([h.OnClick(Message.ClickedTransition())], ['transition']),
+            h.button([h.OnClick(Message.ClickedPlain())], ['plain']),
             model.label,
           ],
         ),
@@ -417,12 +415,15 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model =>
         h.div(
           [],
-          [h.button([h.OnClick(ClickedTransition())], ['go']), model.label],
+          [
+            h.button([h.OnClick(Message.ClickedTransition())], ['go']),
+            model.label,
+          ],
         ),
       container,
       viewTransition: ({ message }) => message._tag === 'ClickedTransition',
@@ -476,12 +477,15 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model =>
         h.div(
           [],
-          [h.button([h.OnClick(ClickedTransition())], ['go']), model.label],
+          [
+            h.button([h.OnClick(Message.ClickedTransition())], ['go']),
+            model.label,
+          ],
         ),
       container,
       viewTransition: () => true,
@@ -522,7 +526,7 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model => {
         if (model.label === 'plain') {
@@ -531,8 +535,8 @@ describe('makeElement with viewTransition', () => {
         return h.div(
           [],
           [
-            h.button([h.OnClick(ClickedTransition())], ['transition']),
-            h.button([h.OnClick(ClickedPlain())], ['plain']),
+            h.button([h.OnClick(Message.ClickedTransition())], ['transition']),
+            h.button([h.OnClick(Message.ClickedPlain())], ['plain']),
             model.label,
           ],
         )
@@ -576,12 +580,15 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model =>
         h.div(
           [],
-          [h.button([h.OnClick(ClickedTransition())], ['go']), model.label],
+          [
+            h.button([h.OnClick(Message.ClickedTransition())], ['go']),
+            model.label,
+          ],
         ),
       container,
       viewTransition: () => true,
@@ -621,14 +628,14 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model =>
         h.div(
           [],
           [
-            h.button([h.OnClick(ClickedTransition())], ['transition']),
-            h.button([h.OnClick(ClickedPlain())], ['plain']),
+            h.button([h.OnClick(Message.ClickedTransition())], ['transition']),
+            h.button([h.OnClick(Message.ClickedPlain())], ['plain']),
             model.label,
           ],
         ),
@@ -677,12 +684,15 @@ describe('makeElement with viewTransition', () => {
 
     const element = makeElement({
       Model,
-      init: () => [{ label: 'initial' }, []],
+      init: () => ({ model: { label: 'initial' } }),
       update,
       view: model =>
         h.div(
           [],
-          [h.button([h.OnClick(ClickedTransition())], ['go']), model.label],
+          [
+            h.button([h.OnClick(Message.ClickedTransition())], ['go']),
+            model.label,
+          ],
         ),
       container,
       viewTransition: () => true,

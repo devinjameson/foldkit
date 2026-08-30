@@ -1,7 +1,7 @@
 import { Option, Schema as S } from 'effect'
 import { describe, expect, it } from 'vitest'
 
-import { ts } from '../schema/index.js'
+import { defineMessageUnion, taggedStruct } from '../schema/index.js'
 import {
   indexMessageSchemaDocument,
   narrowToVariant,
@@ -13,23 +13,15 @@ const expectSome = <A>(option: Option.Option<A>): A => {
   return Option.getOrThrow(option)
 }
 
-const ChildOpened = ts('Opened')
-const ChildClosed = ts('Closed')
-const ChildMessage = S.Union([ChildOpened, ChildClosed])
+const ChildMessage = defineMessageUnion({ Opened: {}, Closed: {} })
 
-const Completed = ts('Completed')
-const ScrolledSidebar = ts('ScrolledSidebar', { scroll: S.Number })
-const ClickedLink = ts('ClickedLink', { href: S.String })
-const GotChildMessage = ts('GotChildMessage', { message: ChildMessage })
-const WithMaybeNote = ts('WithMaybeNote', { maybeNote: S.Option(S.String) })
-
-const Message = S.Union([
-  Completed,
-  ScrolledSidebar,
-  ClickedLink,
-  GotChildMessage,
-  WithMaybeNote,
-])
+const Message = defineMessageUnion({
+  Completed: {},
+  ScrolledSidebar: { scroll: S.Number },
+  ClickedLink: { href: S.String },
+  GotChildMessage: { message: ChildMessage },
+  WithMaybeNote: { maybeNote: S.Option(S.String) },
+})
 
 const document = S.toJsonSchemaDocument(Message)
 
@@ -166,12 +158,12 @@ describe('narrowToVariant', () => {
   })
 
   it('returns None for a variant with multiple tagged-union payload fields', () => {
-    const TwoUnionsVariant = ts('TwoUnions', {
+    const TwoUnions = taggedStruct('TwoUnions', {
       message: ChildMessage,
       fallback: ChildMessage,
     })
-    const messageWithTwoUnions = S.Union([TwoUnionsVariant])
-    const twoUnionDoc = S.toJsonSchemaDocument(messageWithTwoUnions)
+    const unionWithTwoUnions = S.Union([TwoUnions])
+    const twoUnionDoc = S.toJsonSchemaDocument(unionWithTwoUnions)
     expect(narrowToVariant(twoUnionDoc, 'TwoUnions.Opened')).toEqual(
       Option.none(),
     )

@@ -1,7 +1,7 @@
 import { Option } from 'effect'
 
 import { Location, featuredLocations } from './locations'
-import { GeolocateIdle, type Model } from './main'
+import { GeolocateState, type Model } from './main'
 
 export const initialModel: Model = {
   locations: featuredLocations,
@@ -11,7 +11,7 @@ export const initialModel: Model = {
   maybeBounds: Option.none(),
   maybeSelectedLocationId: Option.none(),
   maybeUserLocation: Option.none(),
-  geolocateState: GeolocateIdle(),
+  geolocateState: GeolocateState.Idle(),
 }
 
 export const mountedModel: Model = {

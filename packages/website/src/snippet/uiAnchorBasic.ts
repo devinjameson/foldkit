@@ -4,35 +4,35 @@
 import { Effect, Schema as S } from 'effect'
 import { Mount } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 import { AnchorConfig, anchorSetup } from '@foldkit/ui/anchor'
 
 // Every Mount Definition declares at least one result Message. Name it after
 // the Definition, the way a Command's result Message is named after the
 // Command:
-const CompletedAnchorPanel = m('CompletedAnchorPanel')
+const Message = defineMessageUnion({
+  CompletedAnchorPanel: {},
+})
 
-// Mount.define takes the Definition name, a Schema for the args captured at
-// mount, and the result Message. anchorSetup is a plain DOM function that
+// Mount.define takes the Definition name and a config: a Schema for the args
+// captured at mount, the result Messages, and execute. execute receives the
+// live element alongside those args. anchorSetup is a plain DOM function that
 // returns a cleanup, so it goes inside Effect.sync and the cleanup is
 // registered with Effect.acquireRelease. Construct the resource inside the
 // acquire body, never before it, or it leaks on interruption:
-const AnchorPanel = Mount.define(
-  'AnchorPanel',
-  { buttonId: S.String, anchor: AnchorConfig },
-  CompletedAnchorPanel,
-)(
-  ({ buttonId, anchor }) =>
-    element =>
-      Effect.gen(function* () {
-        yield* Effect.acquireRelease(
-          Effect.sync(() => anchorSetup(element, { buttonId, anchor })),
-          cleanup => Effect.sync(cleanup),
-        )
-        return CompletedAnchorPanel()
-      }),
-)
+const AnchorPanel = Mount.define('AnchorPanel', {
+  args: { buttonId: S.String, anchor: AnchorConfig },
+  messages: [Message.CompletedAnchorPanel],
+  execute: ({ element, buttonId, anchor }) =>
+    Effect.gen(function* () {
+      yield* Effect.acquireRelease(
+        Effect.sync(() => anchorSetup(element, { buttonId, anchor })),
+        cleanup => Effect.sync(cleanup),
+      )
+      return Message.CompletedAnchorPanel()
+    }),
+})
 
 // The trigger needs a stable id, because that is what anchorSetup resolves
 // the button by. Render the panel only while it is open, and spread the Mount

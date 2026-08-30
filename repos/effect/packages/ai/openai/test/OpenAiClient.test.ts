@@ -291,12 +291,38 @@ describe("OpenAiClient", () => {
         assert.strictEqual(result.reason._tag, "AuthenticationError")
         if (result.reason._tag === "AuthenticationError") {
           assert.strictEqual(result.reason.kind, "InvalidKey")
+          assert.strictEqual(
+            result.reason.description,
+            "Invalid API key (POST https://api.openai.com/v1/responses) [code: invalid_api_key] [requestId: req_openai]"
+          )
+          assert.include(result.reason.message, "Invalid API key")
         }
       }).pipe(Effect.provide(makeTestLayer(undefined, {
         _tag: "Json",
         status: 401,
-        body: { error: { message: "Invalid API key" } }
+        body: { error: { message: "Invalid API key", type: "invalid_request_error", code: "invalid_api_key" } },
+        headers: { "x-request-id": "req_openai" }
       }))))
+
+    it("preserves and truncates a fallback HTTP response", () => {
+      const body = `${"a".repeat(200)}b`
+      const reason = Errors.mapStatusCodeToReason({
+        status: 400,
+        headers: {},
+        message: undefined,
+        metadata: { errorCode: null, errorType: null, requestId: null },
+        http: makeHttpContext("https://api.openai.com/v1/responses", body)
+      })
+
+      assert.strictEqual(reason._tag, "InvalidRequestError")
+      if (reason._tag !== "InvalidRequestError") {
+        throw new Error("Expected InvalidRequestError")
+      }
+      assert.strictEqual(
+        reason.description,
+        `HTTP 400 (POST https://api.openai.com/v1/responses) Response: ${"a".repeat(200)}...`
+      )
+    })
 
     it.effect("maps 403 status to AuthenticationError with InsufficientPermissions", () =>
       Effect.gen(function*() {
@@ -307,6 +333,8 @@ describe("OpenAiClient", () => {
         assert.strictEqual(result.reason._tag, "AuthenticationError")
         if (result.reason._tag === "AuthenticationError") {
           assert.strictEqual(result.reason.kind, "InsufficientPermissions")
+          assert.include(result.reason.description ?? "", "Access denied")
+          assert.include(result.reason.message, "Access denied")
         }
       }).pipe(Effect.provide(makeTestLayer(undefined, {
         _tag: "Json",
@@ -346,6 +374,34 @@ describe("OpenAiClient", () => {
             code: "insufficient_quota"
           }
         }
+      }))))
+
+    it.effect("maps OpenAI-compatible 402 errors to QuotaExhaustedError", () =>
+      Effect.gen(function*() {
+        const client = yield* OpenAiClient.OpenAiClient
+        const result = yield* client.createResponse({ model: "grok-4", input: "test" }).pipe(Effect.flip)
+
+        assert.strictEqual(result._tag, "AiError")
+        assert.strictEqual(result.reason._tag, "QuotaExhaustedError")
+        assert.isFalse(result.isRetryable)
+      }).pipe(Effect.provide(makeTestLayer(undefined, {
+        _tag: "Json",
+        status: 402,
+        body: { error: "Your balance is too low", code: "billing_insufficient_balance" }
+      }))))
+
+    it.effect("maps OpenAI-compatible insufficient balance errors to QuotaExhaustedError", () =>
+      Effect.gen(function*() {
+        const client = yield* OpenAiClient.OpenAiClient
+        const result = yield* client.createResponse({ model: "grok-4", input: "test" }).pipe(Effect.flip)
+
+        assert.strictEqual(result._tag, "AiError")
+        assert.strictEqual(result.reason._tag, "QuotaExhaustedError")
+        assert.isFalse(result.isRetryable)
+      }).pipe(Effect.provide(makeTestLayer(undefined, {
+        _tag: "Json",
+        status: 429,
+        body: { error: "Your balance is too low", code: "billing_insufficient_balance" }
       }))))
 
     it("mapStatusCodeToReason detects insufficient_quota as QuotaExhaustedError", () => {
@@ -585,6 +641,9 @@ type MockResponse =
         readonly type?: string
         readonly code?: string | null
       }
+    } | {
+      readonly error: string
+      readonly code?: string
     }
     readonly status?: number | undefined
     readonly headers?: Record<string, string> | undefined
@@ -738,3 +797,14 @@ const makeResponse = (
     }
   })
 }
+
+const makeHttpContext = (url: string, body: string) => ({
+  request: {
+    method: "POST" as const,
+    url,
+    urlParams: [],
+    hash: undefined,
+    headers: {}
+  },
+  body
+})

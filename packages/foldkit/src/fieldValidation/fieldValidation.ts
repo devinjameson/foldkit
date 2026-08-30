@@ -1,4 +1,12 @@
-import { Array, Option, Result, Schema as S, String, pipe } from 'effect'
+import {
+  Array,
+  Function,
+  Option,
+  Result,
+  Schema as S,
+  String,
+  pipe,
+} from 'effect'
 
 import { type Rule, type RuleMessage, resolveMessage } from './rule.js'
 
@@ -121,6 +129,81 @@ export const makeRules = <A = string>(
 })
 
 // OPERATIONS
+
+/** Handles every field state. `onNotValidated`, `onValidating`, and `onValid`
+ *  each receive the state's `value`; `onInvalid` alone receives the whole
+ *  `{ value, errors }` payload object because `Invalid` carries two fields.
+ *  Data-first with the field, or data-last for pipelines.
+ *
+ *  @example
+ *  ```typescript
+ *  FieldValidation.match(model.email, {
+ *    onNotValidated: () => 'Not checked yet',
+ *    onValidating: value => `Checking ${value}...`,
+ *    onValid: () => 'Looks good',
+ *    onInvalid: ({ errors }) => errors.join(', '),
+ *  })
+ *  ```
+ */
+// NOTE: match uses a refinement chain instead of Match because
+// tagsExhaustive returns Unify<B>, which does not reduce when the
+// handlers return a caller's naked generic.
+export const match: {
+  <A, B, C = B, D = B, F = B>(
+    handlers: Readonly<{
+      onNotValidated: (value: A) => B
+      onValidating: (value: A) => C
+      onValid: (value: A) => D
+      onInvalid: (
+        payload: Readonly<{
+          value: A
+          errors: Array.NonEmptyReadonlyArray<string>
+        }>,
+      ) => F
+    }>,
+  ): (self: Field<A>) => B | C | D | F
+  <A, B, C = B, D = B, F = B>(
+    self: Field<A>,
+    handlers: Readonly<{
+      onNotValidated: (value: A) => B
+      onValidating: (value: A) => C
+      onValid: (value: A) => D
+      onInvalid: (
+        payload: Readonly<{
+          value: A
+          errors: Array.NonEmptyReadonlyArray<string>
+        }>,
+      ) => F
+    }>,
+  ): B | C | D | F
+} = Function.dual(
+  2,
+  <A, B>(
+    self: Field<A>,
+    handlers: Readonly<{
+      onNotValidated: (value: A) => B
+      onValidating: (value: A) => B
+      onValid: (value: A) => B
+      onInvalid: (
+        payload: Readonly<{
+          value: A
+          errors: Array.NonEmptyReadonlyArray<string>
+        }>,
+      ) => B
+    }>,
+  ): B => {
+    if (self._tag === 'NotValidated') {
+      return handlers.onNotValidated(self.value)
+    }
+    if (self._tag === 'Validating') {
+      return handlers.onValidating(self.value)
+    }
+    if (self._tag === 'Valid') {
+      return handlers.onValid(self.value)
+    }
+    return handlers.onInvalid({ value: self.value, errors: self.errors })
+  },
+)
 
 /** Validates a new value and returns the next field state.
  *

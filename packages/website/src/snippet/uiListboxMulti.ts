@@ -1,10 +1,10 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match as M, Option } from 'effect'
+import { Array, Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Listbox } from '@foldkit/ui'
@@ -25,18 +25,17 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Listbox Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     selectedPeople: [],
     listboxMulti: Listbox.Multi.init({ id: 'people' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Wrap Listbox's Messages so they can flow through your update:
-const GotListboxMultiMessage = m('GotListboxMultiMessage', {
-  message: Listbox.Message,
+const Message = defineMessageUnion({
+  GotListboxMultiMessage: { message: Listbox.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. `Selected` carries
@@ -49,15 +48,14 @@ const foldListboxMultiOutMessage = M.type<Listbox.OutMessage<Person>>().pipe(
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [
-        evo(model, {
+      model => ({
+        model: evo(model, {
           selectedPeople: () =>
             Array.contains(model.selectedPeople, value)
               ? Array.filter(model.selectedPeople, person => person !== value)
               : Array.append(model.selectedPeople, value),
         }),
-        [],
-      ],
+      }),
   }),
 )
 
@@ -70,11 +68,11 @@ const foldListboxMulti = Update.foldChild({
   read: (model: Model) => Option.some(model.listboxMulti),
   write: (model, nextListboxMulti) =>
     evo(model, { listboxMulti: () => nextListboxMulti }),
-  toParentMessage: message => GotListboxMultiMessage({ message }),
+  toParentMessage: message => Message.GotListboxMultiMessage({ message }),
   foldOutMessage: foldListboxMultiOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotListboxMultiMessage: ({ message }) => foldListboxMulti(model, message)
 
 const people: ReadonlyArray<Person> = [
@@ -117,5 +115,5 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
       backdropClassName: 'fixed inset-0',
       anchor: { placement: 'bottom-start', gap: 4, padding: 8 },
     },
-    toParentMessage: message => GotListboxMultiMessage({ message }),
+    toParentMessage: message => Message.GotListboxMultiMessage({ message }),
   })

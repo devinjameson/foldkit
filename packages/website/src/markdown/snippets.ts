@@ -11,21 +11,24 @@ export type Snippet = Readonly<{ raw: string; highlighted: string }>
 
 type SnippetEntry = readonly [string, Snippet]
 
-const rawByPath = import.meta.glob<string>('../snippet/*.{ts,tsx,elm,json}', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-})
+const rawByPath = import.meta.glob<string>(
+  '../snippet/*.{ts,tsx,elm,json,html,sh}',
+  {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  },
+)
 
 const highlightedByPath = import.meta.glob<string>(
-  '../snippet/*.{ts,tsx,elm,json}',
+  '../snippet/*.{ts,tsx,elm,json,html,sh}',
   { query: '?highlighted', import: 'default', eager: true },
 )
 
 const snippetName = (path: string): Option.Option<string> =>
   pipe(
     Array.last(String.split(path, '/')),
-    Option.map(String.replace(/\.(?:ts|tsx|elm|json)$/, '')),
+    Option.map(String.replace(/\.(?:ts|tsx|elm|json|html|sh)$/, '')),
   )
 
 // NOTE: CSS snippets arrive through a virtual module rather than the glob
@@ -38,9 +41,10 @@ const registry: Record<string, Snippet> = pipe(
   Array.filterMap(([path, raw]) =>
     pipe(
       Option.all([snippetName(path), Record_.get(highlightedByPath, path)]),
-      Option.map(
-        ([name, highlighted]): SnippetEntry => [name, { raw, highlighted }],
-      ),
+      Option.map(([name, highlighted]): SnippetEntry => [
+        name,
+        { raw, highlighted },
+      ]),
       Result.fromOption(() => undefined),
     ),
   ),

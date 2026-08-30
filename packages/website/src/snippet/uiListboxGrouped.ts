@@ -1,10 +1,10 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Listbox } from '@foldkit/ui'
@@ -31,18 +31,17 @@ const Model = S.Struct({
 })
 
 // In your init function, initialize the Listbox Submodel with a unique id:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     maybeCharacter: Option.none(),
     listbox: Listbox.init({ id: 'character' }),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Wrap Listbox's Messages so they can flow through your update:
-const GotListboxMessage = m('GotListboxMessage', {
-  message: Listbox.Message,
+const Message = defineMessageUnion({
+  GotListboxMessage: { message: Listbox.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. On selection, the
@@ -54,7 +53,9 @@ const foldListboxOutMessage = M.type<Listbox.OutMessage>().pipe(
   M.tagsExhaustive({
     Selected:
       ({ value }) =>
-      model => [evo(model, { maybeCharacter: () => Option.some(value) }), []],
+      model => ({
+        model: evo(model, { maybeCharacter: () => Option.some(value) }),
+      }),
   }),
 )
 
@@ -66,11 +67,11 @@ const foldListbox = Update.foldChild({
   update: CharacterListbox.update,
   read: (model: Model) => Option.some(model.listbox),
   write: (model, nextListbox) => evo(model, { listbox: () => nextListbox }),
-  toParentMessage: message => GotListboxMessage({ message }),
+  toParentMessage: message => Message.GotListboxMessage({ message }),
   foldOutMessage: foldListboxOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotListboxMessage: ({ message }) => foldListbox(model, message)
 
 const characters: ReadonlyArray<Character> = [
@@ -121,5 +122,5 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
       backdropClassName: 'fixed inset-0',
       anchor: { placement: 'bottom-start', gap: 4, padding: 8 },
     },
-    toParentMessage: message => GotListboxMessage({ message }),
+    toParentMessage: message => Message.GotListboxMessage({ message }),
   })

@@ -29,7 +29,7 @@ Slider exposes `data-dragging` while the user is actively dragging, `data-disabl
 | `data-dragging`    | Present on the root, track, filled track, and thumb while the user is actively dragging. |
 | `data-disabled`    | Present on all groups when isDisabled is true.                                           |
 | `data-readonly`    | Present on all groups when isReadOnly is true.                                           |
-| `data-orientation` | Present on the root. Always "horizontal" in v1; vertical is planned.                     |
+| `data-orientation` | Present on the root. Always "horizontal"; vertical orientation is not supported.         |
 
 ## Keyboard Interaction
 
@@ -105,7 +105,7 @@ Attribute groups provided to the `toView` callback.
 
 ### OutMessage {#out-message}
 
-Messages emitted to the parent through the third element of `[Model, Commands, Option<OutMessage>]`. Parents fold the OutMessage in the `foldOutMessage` of their [`Update.foldChild`](/core/submodel#fold-child) config.
+Messages emitted to the parent through the optional `outMessage` field. Parents fold the OutMessage in the `foldOutMessage` of their [`Update.foldChild`](/core/submodel#fold-child) config.
 
 | Name           | Type                | Default | Description                                                                                                                                                                                                                         |
 | -------------- | ------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

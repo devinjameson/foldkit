@@ -1,7 +1,6 @@
 import { clsx } from 'clsx'
 import { Match as M, Option, String as S } from 'effect'
 import { AsyncData } from 'foldkit'
-import type { Field } from 'foldkit/fieldValidation'
 import {
   Html,
   type HtmlBuilder,
@@ -12,27 +11,22 @@ import {
 import { pageNeighbors } from '../docsNav'
 import { Icon } from '../icon'
 import { Link } from '../link'
-import {
-  type EmailSubscriptionStatus,
-  type Model,
-  type TableOfContentsEntry,
-} from '../main'
-import {
-  ClickedOpenMobileMenu,
-  GotApiReferenceMessage,
-  GotComingFromReactMessage,
-  GotExampleDetailMessage,
-  GotSearchMessage,
-  GotUiPageMessage,
-  type Message,
-} from '../message'
+import { type Model, type TableOfContentsEntry } from '../main'
+import { Message } from '../message'
 import * as Page from '../page'
 import { defaultRenderHeadingLink } from '../prose'
 import { type DocsRoute, homeRouter } from '../route'
 import * as Search from '../search'
+import { Message as SearchMessage } from '../search/message'
 import { defaultRenderCopyButton } from './codeBlock'
 import { headerNavView } from './headerNav'
-import { betaTag, emailFormView, iconLink, skipNavLink } from './shared'
+import {
+  betaTag,
+  emailFormView,
+  iconLink,
+  siteLinksView,
+  skipNavLink,
+} from './shared'
 import { mobileMenuView, sidebarView } from './sidebar'
 import {
   mobileTableOfContentsView,
@@ -44,8 +38,8 @@ const PagefindBody = ih.DataAttribute('pagefind-body', '')
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 const LlmIgnore = ih.DataAttribute('llm-ignore', '')
 
-const openSearchDialog: Message = GotSearchMessage({
-  message: Search.ClickedOpenSearch(),
+const openSearchDialog: Message = Message.GotSearchMessage({
+  message: SearchMessage.ClickedOpenSearch(),
 })
 
 /**
@@ -60,7 +54,7 @@ export const searchSubmodelView = (
     slotId: 'search',
     model: model.search,
     view: Search.view,
-    toParentMessage: message => GotSearchMessage({ message }),
+    toParentMessage: message => Message.GotSearchMessage({ message }),
   })
 
 const searchKeyboardWarmupSelector = `#${Search.KEYBOARD_WARMUP_INPUT_ID}`
@@ -103,7 +97,9 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
                 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-sm hover:border-gray-400 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer',
               ),
               h.AriaLabel('Search documentation'),
-              h.OnClickFocus(searchKeyboardWarmupSelector, openSearchDialog),
+              h.OnClick(openSearchDialog, {
+                focusSelector: searchKeyboardWarmupSelector,
+              }),
             ],
             [
               Icon.magnifyingGlass('w-4 h-4'),
@@ -119,7 +115,7 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
               ),
             ],
           ),
-          themeSelector(model.themePreference, h),
+          themeSelector(model.maybeThemePreference, h),
           h.div(
             [h.Class('hidden md:flex items-center gap-3 md:gap-4')],
             [
@@ -147,7 +143,9 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
                 'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
               ),
               h.AriaLabel('Search documentation'),
-              h.OnClickFocus(searchKeyboardWarmupSelector, openSearchDialog),
+              h.OnClick(openSearchDialog, {
+                focusSelector: searchKeyboardWarmupSelector,
+              }),
             ],
             [Icon.magnifyingGlass('w-5 h-5')],
           ),
@@ -158,7 +156,7 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
               ),
               h.AriaExpanded(model.mobileMenuDialog.isOpen),
               h.AriaLabel('Toggle menu'),
-              h.OnClick(ClickedOpenMobileMenu()),
+              h.OnClick(Message.ClickedOpenMobileMenu()),
             ],
             [Icon.menu('w-6 h-6')],
           ),
@@ -170,15 +168,13 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
 // DOCS FOOTER
 
 export const docsFooterView = (
-  emailField: Field<string>,
-  emailSubscriptionStatus: EmailSubscriptionStatus,
   currentYear: number,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.footer(
     [
       h.Class(
-        'px-4 py-6 md:px-6 mt-6 border-t border-gray-300 dark:border-gray-800',
+        'px-4 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:px-6 mt-6 border-t border-gray-300 dark:border-gray-800',
       ),
     ],
     [
@@ -190,26 +186,7 @@ export const docsFooterView = (
         [h.Class('text-sm text-gray-600 dark:text-gray-300 mb-4')],
         ['New releases, patterns, and the occasional deep dive.'],
       ),
-      M.value(emailSubscriptionStatus).pipe(
-        M.withReturnType<Html>(),
-        M.when('Succeeded', () =>
-          h.p(
-            [
-              h.AriaLive('polite'),
-              h.Class('text-accent-600 dark:text-accent-400 font-normal'),
-            ],
-            ['You’re in! Check your email for confirmation.'],
-          ),
-        ),
-        M.orElse(status =>
-          emailFormView(
-            emailField,
-            status,
-            'flex flex-col sm:flex-row gap-3 max-w-md',
-            h,
-          ),
-        ),
-      ),
+      emailFormView,
       h.hr([
         h.Class(
           'my-6 -mx-4 md:-mx-6 border-t border-gray-300 dark:border-gray-800',
@@ -225,9 +202,7 @@ export const docsFooterView = (
               h.a(
                 [
                   h.Href(`${Link.websiteSource}/src/main.ts`),
-                  h.Class(
-                    'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500',
-                  ),
+                  h.Class('link-accent'),
                 ],
                 ['Foldkit'],
               ),
@@ -235,6 +210,7 @@ export const docsFooterView = (
             ],
           ),
           h.p([h.Class('mt-1')], [`© ${currentYear} Devin Jameson`]),
+          siteLinksView,
         ],
       ),
     ],
@@ -338,7 +314,6 @@ export const searchWeight = (tag: string): string =>
       'EffectAtomComparison',
       'ElmComparison',
       'WhyNoJsx',
-      'WhatAboutSsr',
       'Performance',
       'Roadmap',
       S.startsWith('Testing'),
@@ -371,10 +346,10 @@ const withoutTableOfContents = (content: Html): DocsPageView => ({
 })
 
 const toApiReferenceMessage = (message: Page.ApiReference.Message): Message =>
-  GotApiReferenceMessage({ message })
+  Message.GotApiReferenceMessage({ message })
 
 const toUiPageMessage = (message: Page.UiPages.Message): Message =>
-  GotUiPageMessage({ message })
+  Message.GotUiPageMessage({ message })
 
 const renderApiReference = (
   apiReference: Page.ApiReference.Model,
@@ -423,11 +398,6 @@ export const docsView = (
           lazyDocsContent(Page.WhyNoJsx.view, [model.copiedSnippets, h]),
           Page.WhyNoJsx.tableOfContents,
         ),
-      WhatAboutSsr: () =>
-        withTableOfContents(
-          Page.WhatAboutSsr.view(h),
-          Page.WhatAboutSsr.tableOfContents,
-        ),
       Roadmap: () =>
         withTableOfContents(Page.Roadmap.view(h), Page.Roadmap.tableOfContents),
       Performance: () =>
@@ -442,7 +412,8 @@ export const docsView = (
             model: model.comingFromReact,
             view: Page.ComingFromReact.view,
             viewInputs: { renderCopyButton, renderHeadingLink },
-            toParentMessage: message => GotComingFromReactMessage({ message }),
+            toParentMessage: message =>
+              Message.GotComingFromReactMessage({ message }),
           }),
           Page.ComingFromReact.tableOfContents,
         ),
@@ -517,10 +488,14 @@ export const docsView = (
             viewInputs: {
               slug: exampleSlug,
               isNarrowViewport: model.isNarrowViewport,
-              isChromium: model.isChromium,
+              isShowingChromeHint: Option.contains(
+                model.maybeIsChromium,
+                false,
+              ),
               renderCopyButton,
             },
-            toParentMessage: message => GotExampleDetailMessage({ message }),
+            toParentMessage: message =>
+              Message.GotExampleDetailMessage({ message }),
           }),
         ),
       BestPracticesSideEffects: () =>
@@ -692,6 +667,14 @@ export const docsView = (
           lazyDocsContent(Page.Core.Runtime.view, [model.copiedSnippets, h]),
           Page.Core.Runtime.tableOfContents,
         ),
+      CoreServerRendering: () =>
+        withTableOfContents(
+          lazyDocsContent(Page.Core.CoreServerRendering.view, [
+            model.copiedSnippets,
+            h,
+          ]),
+          Page.Core.CoreServerRendering.tableOfContents,
+        ),
       CoreResources: () =>
         withTableOfContents(
           lazyDocsContent(Page.Core.Resources.view, [model.copiedSnippets, h]),
@@ -804,6 +787,17 @@ export const docsView = (
             h,
           ]),
           Page.UiPages.AnchorPage.tableOfContents,
+        ),
+      UiHoverIntent: () =>
+        withTableOfContents(
+          h.submodel({
+            slotId: 'ui-HoverIntent',
+            model: model.uiPages,
+            view: Page.UiPages.HoverIntentPage.view,
+            viewInputs: { renderCopyButton, renderHeadingLink },
+            toParentMessage: toUiPageMessage,
+          }),
+          Page.UiPages.HoverIntentPage.tableOfContents,
         ),
       UiButton: () =>
         withTableOfContents(
@@ -1099,6 +1093,17 @@ export const docsView = (
           lazyDocsContent(Page.AiMcp.view, [model.copiedSnippets, h]),
           Page.AiMcp.tableOfContents,
         ),
+      ContentApi: () =>
+        withTableOfContents(
+          lazyDocsContent(Page.ContentApi.view, [model.copiedSnippets, h]),
+          Page.ContentApi.tableOfContents,
+        ),
+      About: () =>
+        withTableOfContents(Page.About.view(h), Page.About.tableOfContents),
+      Contact: () =>
+        withTableOfContents(Page.Contact.view(h), Page.Contact.tableOfContents),
+      Privacy: () =>
+        withTableOfContents(Page.Privacy.view(h), Page.Privacy.tableOfContents),
       NotFound: ({ path }) =>
         withoutTableOfContents(Page.NotFound.view(path, homeRouter())),
     }),
@@ -1163,17 +1168,7 @@ export const docsView = (
                   ),
                 ],
               ),
-              h.div(
-                [PagefindIgnore],
-                [
-                  docsFooterView(
-                    model.emailField,
-                    model.emailSubscriptionStatus,
-                    model.currentYear,
-                    h,
-                  ),
-                ],
-              ),
+              h.div([PagefindIgnore], [docsFooterView(model.currentYear, h)]),
             ],
           ),
           Option.match(currentPageTableOfContents, {

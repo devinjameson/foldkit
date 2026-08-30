@@ -6,7 +6,7 @@ import { Calendar, DatePicker } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
 
 import * as Icon from '../../icon'
-import { GotDatePickerBasicDemoMessage, type UiMessage } from '../message'
+import { UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const triggerClassName =
@@ -255,7 +255,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
             ),
           },
           toParentMessage: message =>
-            GotDatePickerBasicDemoMessage({ message }),
+            UiMessage.GotDatePickerBasicDemoMessage({ message }),
         }),
       ],
     )

@@ -3,7 +3,7 @@ import { Submodel } from 'foldkit'
 
 import { notFoundView } from '../../notFoundView'
 import { homeRouter } from '../../route'
-import { GotLoginMessage, Message } from './message'
+import { Message } from './message'
 import { Model } from './model'
 import * as Home from './page/home'
 import * as Login from './page/login'
@@ -20,7 +20,7 @@ export const view = Submodel.defineView<Model, Message>((model, h) =>
               slotId: 'login',
               model: model.loginModel,
               view: Login.view,
-              toParentMessage: message => GotLoginMessage({ message }),
+              toParentMessage: message => Message.GotLoginMessage({ message }),
             }),
           NotFound: ({ path }) =>
             notFoundView(path, homeRouter(), 'Go Home', h),

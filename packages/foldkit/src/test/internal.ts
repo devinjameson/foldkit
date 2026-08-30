@@ -73,8 +73,7 @@ export type ResolvableCommandDefinition<Name extends string, ResultMessage> =
 /** A Definition or Command instance accepted by Story and Scene resolution
  * APIs. */
 export type ResolvableCommandMatcher =
-  | ResolvableCommandDefinition<string, unknown>
-  | AnyCommandInstance<unknown>
+  ResolvableCommandDefinition<string, unknown> | AnyCommandInstance<unknown>
 
 type ResultMessageForMatcher<Matcher extends ResolvableCommandMatcher> =
   Matcher extends ResolvableCommandDefinition<string, infer ResultMessage>
@@ -167,9 +166,24 @@ export const formatMountMatcher = (matcher: MountMatcher): string =>
     ? matcher.name
     : `${matcher.name}${formatArgs(matcher.args)}`
 
-type UpdateResult<Model, OutMessage> =
-  | readonly [Model, ReadonlyArray<AnyCommand>]
-  | readonly [Model, ReadonlyArray<AnyCommand>, OutMessage]
+/**
+ * Result shape used after Story and Scene replace executable Commands with
+ * assertion metadata. Plain returns retain `outMessage?: never`, so code that
+ * consumes only the Model and Commands cannot discard an OutMessage.
+ *
+ * @internal
+ */
+export type SimulationUpdateReturn<Model, OutMessage> =
+  | Readonly<{
+      model: Model
+      commands?: ReadonlyArray<AnyCommand>
+      outMessage?: never
+    }>
+  | Readonly<{
+      model: Model
+      commands?: ReadonlyArray<AnyCommand>
+      outMessage?: OutMessage
+    }>
 
 /** A Command matcher (Definition or Instance) paired with the raw result
  *  Message to resolve a pending Command with. Definition matchers resolve by
@@ -212,8 +226,11 @@ export type BaseInternal<Model, Message, OutMessage = undefined> = Readonly<{
   model: Model
   message: Message | undefined
   commands: ReadonlyArray<AnyCommand>
-  outMessage: OutMessage
-  updateFn: (model: Model, message: Message) => UpdateResult<Model, OutMessage>
+  outMessage: OutMessage | undefined
+  updateFn: (
+    model: Model,
+    message: Message,
+  ) => SimulationUpdateReturn<Model, OutMessage>
   resolvers: ReadonlyArray<ResolverEntry>
 }>
 
@@ -273,21 +290,19 @@ export const resolveByMatcher = <Model, Message, OutMessage>(
             Array.remove(internal.commands, commandIndex),
             matchedCommand,
           )
-          const [nextModel, newCommands, ...rest] = internal.updateFn(
+          const messageUpdate = internal.updateFn(
             internal.model,
             resolverMessage,
           )
-          const outMessage = Array.matchLeft(rest, {
-            onEmpty: () => internal.outMessage,
-            onNonEmpty: firstOutMessage => firstOutMessage,
-          })
-
           return {
             ...internal,
-            model: nextModel,
+            model: messageUpdate.model,
             message: resolverMessage,
-            commands: Array.appendAll(remainingCommands, newCommands),
-            outMessage,
+            commands: Array.appendAll(
+              remainingCommands,
+              messageUpdate.commands ?? [],
+            ),
+            outMessage: messageUpdate.outMessage,
           }
         }),
       ),
@@ -660,21 +675,20 @@ export const resolveMountByMatcher = <Model, Message>(
             resultMessage,
           ) as Message
           const remaining = Array.remove(pendingMounts, index)
-          const [nextModel, newCommands, ...rest] = internal.updateFn(
+          const messageUpdate = internal.updateFn(
             internal.model,
             resolverMessage,
           )
-          const outMessage = Array.matchLeft(rest, {
-            onEmpty: () => internal.outMessage,
-            onNonEmpty: firstOutMessage => firstOutMessage,
-          })
           return {
             internal: {
               ...internal,
-              model: nextModel,
+              model: messageUpdate.model,
               message: resolverMessage,
-              commands: Array.appendAll(internal.commands, newCommands),
-              outMessage,
+              commands: Array.appendAll(
+                internal.commands,
+                messageUpdate.commands ?? [],
+              ),
+              outMessage: messageUpdate.outMessage,
             },
             pendingMounts: remaining,
           }

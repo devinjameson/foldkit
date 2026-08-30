@@ -1,4 +1,5 @@
 import { Array, Match as M, Option, Schema as S, pipe } from 'effect'
+import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { basename, extname, join, relative, resolve } from 'node:path'
 import { codeToHtml } from 'shiki'
@@ -49,17 +50,24 @@ const highlightLanguage = (filePath: string): string => {
   if (filePath.endsWith('.tsx')) {
     return 'tsx'
   }
+  if (filePath.endsWith('.sh')) {
+    return 'bash'
+  }
   if (filePath.endsWith('.elm')) {
     return 'elm'
   }
   if (filePath.endsWith('.json')) {
     return 'json'
   }
+  if (filePath.endsWith('.html')) {
+    return 'html'
+  }
   return 'typescript'
 }
 
 const highlightCodePlugin = (): Plugin => ({
   name: 'highlight-code',
+  enforce: 'pre',
   async transform(_code, id) {
     if (!id.includes('?highlighted')) {
       return undefined
@@ -652,7 +660,13 @@ const RESOLVED_EXAMPLE_SOURCES_PREFIX = '\0' + EXAMPLE_SOURCES_PREFIX
 
 const EXAMPLE_SLUG_SET: Set<string> = new Set(exampleSlugs)
 
-const EXAMPLE_FILE_EXTENSIONS = new Set(['.ts', '.tsx', '.css', '.md'])
+export const EXAMPLE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
+  '.ts',
+  '.tsx',
+  '.css',
+  '.md',
+  '.mjs',
+])
 
 const langFromExtension = (filePath: string): string => {
   const extension = extname(filePath)
@@ -665,8 +679,21 @@ const langFromExtension = (filePath: string): string => {
   if (extension === '.md') {
     return 'markdown'
   }
+  if (extension === '.mjs') {
+    return 'javascript'
+  }
   return 'typescript'
 }
+
+export const EXAMPLE_SOURCE_ROOTS: ReadonlyArray<string> = [
+  'src',
+  'server',
+  'scripts',
+]
+
+// The build command reads the config, which is where a generated project
+// computes its build id, so a reader of an example's source has to be shown it.
+export const EXAMPLE_ROOT_FILES: ReadonlyArray<string> = ['vite.config.ts']
 
 const collectSourceFiles = async (
   directory: string,
@@ -674,6 +701,11 @@ const collectSourceFiles = async (
   const entries = await readdir(directory, {
     recursive: true,
     withFileTypes: true,
+  }).catch((error: unknown) => {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return []
+    }
+    throw error
   })
   return entries
     .filter(
@@ -762,9 +794,18 @@ const highlightExampleSourcesPlugin = (): Plugin => ({
     }
 
     const exampleDirectory = resolve(__dirname, `../../examples/${slug}`)
-    const sourceDirectory = join(exampleDirectory, 'src')
-    const allFiles = await collectSourceFiles(sourceDirectory)
-    const sortedFiles = sortExampleFiles(allFiles, exampleDirectory)
+    const collected = await Promise.all(
+      EXAMPLE_SOURCE_ROOTS.map(root =>
+        collectSourceFiles(join(exampleDirectory, root)),
+      ),
+    )
+    const rootFiles = EXAMPLE_ROOT_FILES.map(fileName =>
+      join(exampleDirectory, fileName),
+    ).filter(filePath => existsSync(filePath))
+    const sortedFiles = sortExampleFiles(
+      [...collected.flat(), ...rootFiles],
+      exampleDirectory,
+    )
 
     const files = await Promise.all(
       sortedFiles.map(filePath =>
@@ -805,18 +846,20 @@ const embeddedExampleRedirectPlugin = (): Plugin => ({
 // boots in `pnpm dev` and `pnpm preview`. The deployed Vercel config is
 // the source of truth; this is the dev-mode equivalent.
 //
-// CORP same-origin goes on every response (not just /playground/*) so
-// that Monaco's editor and worker scripts loaded by the credentialless
-// /playground/* page satisfy COEP. Workers in credentialless contexts
-// require their script URLs to return a CORP-compatible response, and
-// Vite serves those from non-/playground paths.
+// CORP same-origin goes on every response so Monaco's scripts satisfy
+// the playground page's embedder policy. Monaco worker responses also
+// carry COEP credentialless so their WorkerGlobalScope stays isolated.
 const setIsolationHeaders = (
   url: string | undefined,
   res: { setHeader: (name: string, value: string) => void },
 ) => {
+  const isPlaygroundRequest = url?.startsWith('/playground/') ?? false
+  const isMonacoWorkerRequest = url?.startsWith('/monacoworkers/') ?? false
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
-  if (url?.startsWith('/playground/')) {
+  if (isPlaygroundRequest || isMonacoWorkerRequest) {
     res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless')
+  }
+  if (isPlaygroundRequest) {
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
   }
 }
@@ -839,17 +882,34 @@ const playgroundIsolationHeadersPlugin = (): Plugin => ({
 
 // NOTE: Mirrors the `/playground/(.*)` rewrite in
 // .github/workflows/deploy-website.yml so the prerendered build can be
-// verified with `pnpm preview`. Playground routes aren't prerendered, so the
-// SPA fallback would otherwise serve the home page and flash the landing view
-// before the app boots. `pnpm dev` needs nothing: there's no prerender, so
-// `#root` is empty and there's no landing markup to flash.
+// verified with `pnpm preview`. A prerender writes metadata shells for known
+// Playground slugs; builds without those files and unknown slugs still need
+// the shared shell so the SPA fallback doesn't flash the landing view before
+// the app boots. `pnpm dev` needs nothing: there's no prerender, so `#root` is
+// empty and there's no landing markup to flash.
 const playgroundShellFallbackPlugin = (): Plugin => ({
   name: 'playground-shell-fallback',
   configurePreviewServer(server) {
     server.middlewares.use((req, _res, next) => {
       if (req.url) {
         const { pathname, search } = new URL(req.url, 'http://localhost')
-        if (
+        const isPrerenderedPlaygroundRoute = Array.some(
+          exampleSlugs,
+          exampleSlug =>
+            pathname === `/playground/${exampleSlug}` &&
+            existsSync(
+              resolve(
+                import.meta.dirname,
+                'dist',
+                'playground',
+                exampleSlug,
+                'index.html',
+              ),
+            ),
+        )
+        if (isPrerenderedPlaygroundRoute) {
+          req.url = `${pathname}/index.html${search}`
+        } else if (
           pathname.startsWith('/playground/') &&
           pathname !== '/playground/index.html'
         ) {
@@ -864,7 +924,10 @@ const playgroundShellFallbackPlugin = (): Plugin => ({
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    foldkit({ devToolsMcpPort: 9988 }),
+    foldkit({
+      devToolsMcpPort: 9988,
+      ssr: { serverEntry: '/src/entry.server.ts' },
+    }),
     markdown({ islands: islandAttributes, frontmatter: PostFrontmatter }),
     embeddedExampleRedirectPlugin(),
     playgroundIsolationHeadersPlugin(),

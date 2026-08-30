@@ -1,4 +1,4 @@
-import { Effect, Option, Predicate } from 'effect'
+import { Effect, Fiber, Option, Predicate } from 'effect'
 import * as Dom from 'foldkit/dom'
 import type { ChildAttribute, HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
@@ -10,19 +10,12 @@ import { describe, it } from '@effect/vitest'
 import * as Animation from '../animation/index.js'
 import {
   CloseDialog,
-  Closed,
-  CompletedCloseDialog,
-  CompletedReleaseDialogResources,
-  CompletedShowDialog,
-  type Message,
+  Message,
   type Model,
-  Opened,
+  OutMessage,
   ReleaseDialogResources,
   type RenderInfo,
-  RequestedClose,
-  RequestedOpen,
   ShowDialog,
-  Unmounted,
   descriptionId,
   init,
   initialFocusMarkerAttribute,
@@ -150,9 +143,9 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test' })),
-          Story.message(RequestedOpen()),
-          Story.expectOutMessage(Opened()),
-          Story.Command.resolve(ShowDialog, CompletedShowDialog()),
+          Story.message(Message.RequestedOpen()),
+          Story.expectOutMessage(OutMessage.Opened()),
+          Story.Command.resolve(ShowDialog, Message.SucceededShowDialog()),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
           }),
@@ -163,13 +156,13 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test' })),
-          Story.message(RequestedOpen()),
+          Story.message(Message.RequestedOpen()),
           Story.Command.resolve(
             ShowDialog({
               id: 'test',
               focusSelector: initialFocusMarkerSelector,
             }),
-            CompletedShowDialog(),
+            Message.SucceededShowDialog(),
           ),
         )
       })
@@ -178,10 +171,10 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', focusSelector: '#search-input' })),
-          Story.message(RequestedOpen()),
+          Story.message(Message.RequestedOpen()),
           Story.Command.resolve(
             ShowDialog({ id: 'test', focusSelector: '#search-input' }),
-            CompletedShowDialog(),
+            Message.SucceededShowDialog(),
           ),
         )
       })
@@ -190,7 +183,7 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', isOpen: true })),
-          Story.message(RequestedOpen()),
+          Story.message(Message.RequestedOpen()),
           Story.expectNoOutMessage(),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
@@ -202,9 +195,9 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', isOpen: true })),
-          Story.message(RequestedClose()),
-          Story.expectOutMessage(Closed()),
-          Story.Command.resolve(CloseDialog, CompletedCloseDialog()),
+          Story.message(Message.RequestedClose()),
+          Story.expectOutMessage(OutMessage.Closed()),
+          Story.Command.resolve(CloseDialog, Message.CompletedCloseDialog()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
           }),
@@ -215,7 +208,7 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test' })),
-          Story.message(RequestedClose()),
+          Story.message(Message.RequestedClose()),
           Story.expectNoOutMessage(),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -223,14 +216,28 @@ describe('Dialog', () => {
         )
       })
 
-      it('returns model unchanged on CompletedShowDialog', () => {
-        const originalModel = init({ id: 'test' })
+      it('returns model unchanged on SucceededShowDialog while open', () => {
+        const originalModel = init({ id: 'test', isOpen: true })
         Story.story(
           update,
           Story.given(originalModel),
-          Story.message(CompletedShowDialog()),
+          Story.message(Message.SucceededShowDialog()),
           Story.model(model => {
             expect(model).toBe(originalModel)
+          }),
+          Story.Command.expectNone(),
+        )
+      })
+
+      it('dispatches CloseDialog when the show succeeds after the dialog closed', () => {
+        Story.story(
+          update,
+          Story.given(init({ id: 'test' })),
+          Story.message(Message.SucceededShowDialog()),
+          Story.expectNoOutMessage(),
+          Story.Command.resolve(CloseDialog, Message.CompletedCloseDialog()),
+          Story.model(model => {
+            expect(model.isOpen).toBe(false)
           }),
         )
       })
@@ -241,12 +248,15 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', isAnimated: true })),
-          Story.message(RequestedOpen()),
+          Story.message(Message.RequestedOpen()),
           Story.Command.expectHas(ShowDialog, Animation.WaitForPaint),
           Story.Command.resolveAll(
-            [ShowDialog, CompletedShowDialog()],
-            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
-            [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
+            [ShowDialog, Message.SucceededShowDialog()],
+            [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+            [
+              Animation.WaitForAnimationSettled,
+              Animation.Message.EndedAnimation(),
+            ],
           ),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
@@ -259,15 +269,18 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', isOpen: true, isAnimated: true })),
-          Story.message(RequestedClose()),
+          Story.message(Message.RequestedClose()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
             expect(model.animation.transitionState).toBe('LeaveStart')
           }),
           Story.Command.resolveAll(
-            [Animation.WaitForPaint, Animation.CompletedWaitForPaint()],
-            [Animation.WaitForAnimationSettled, Animation.EndedAnimation()],
-            [CloseDialog, CompletedCloseDialog()],
+            [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+            [
+              Animation.WaitForAnimationSettled,
+              Animation.Message.EndedAnimation(),
+            ],
+            [CloseDialog, Message.CompletedCloseDialog()],
           ),
           Story.model(model => {
             expect(model.animation.transitionState).toBe('Idle')
@@ -288,7 +301,28 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(leavingModel),
-          Story.message(RequestedClose()),
+          Story.message(Message.RequestedClose()),
+          Story.model(model => {
+            expect(model).toBe(leavingModel)
+          }),
+          Story.Command.expectNone(),
+        )
+      })
+
+      it('dispatches no CloseDialog when the show succeeds during the leave animation', () => {
+        const leavingModel = {
+          ...init({ id: 'test', isOpen: true, isAnimated: true }),
+          isOpen: false,
+          animation: {
+            id: 'test-panel',
+            isShowing: false,
+            transitionState: 'LeaveStart' as const,
+          },
+        }
+        Story.story(
+          update,
+          Story.given(leavingModel),
+          Story.message(Message.SucceededShowDialog()),
           Story.model(model => {
             expect(model).toBe(leavingModel)
           }),
@@ -309,7 +343,7 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(leavingModel),
-          Story.message(RequestedClose()),
+          Story.message(Message.RequestedClose()),
           Story.model(model => {
             expect(model).toBe(leavingModel)
           }),
@@ -323,14 +357,14 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', isOpen: true })),
-          Story.message(Unmounted()),
+          Story.message(Message.Unmounted()),
           Story.expectNoOutMessage(),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
           }),
           Story.Command.resolve(
             ReleaseDialogResources,
-            CompletedReleaseDialogResources(),
+            Message.CompletedReleaseDialogResources(),
           ),
         )
       })
@@ -348,7 +382,7 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(leavingModel),
-          Story.message(Unmounted()),
+          Story.message(Message.Unmounted()),
           Story.expectNoOutMessage(),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
@@ -356,7 +390,7 @@ describe('Dialog', () => {
           }),
           Story.Command.resolve(
             ReleaseDialogResources,
-            CompletedReleaseDialogResources(),
+            Message.CompletedReleaseDialogResources(),
           ),
         )
       })
@@ -366,7 +400,7 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(closedModel),
-          Story.message(Unmounted()),
+          Story.message(Message.Unmounted()),
           Story.expectNoOutMessage(),
           Story.model(model => {
             expect(model).toBe(closedModel)
@@ -380,10 +414,95 @@ describe('Dialog', () => {
         Story.story(
           update,
           Story.given(originalModel),
-          Story.message(CompletedReleaseDialogResources()),
+          Story.message(Message.CompletedReleaseDialogResources()),
           Story.model(model => {
             expect(model).toBe(originalModel)
           }),
+        )
+      })
+    })
+
+    describe('FailedShowDialog', () => {
+      it('closes the model without emitting Closed or releasing resources', () => {
+        Story.story(
+          update,
+          Story.given(init({ id: 'test', isOpen: true })),
+          Story.message(Message.FailedShowDialog()),
+          Story.expectNoOutMessage(),
+          Story.model(model => {
+            expect(model.isOpen).toBe(false)
+          }),
+          Story.Command.expectNone(),
+        )
+      })
+
+      it('resets a running enter animation to Idle', () => {
+        const enteringModel = {
+          ...init({ id: 'test', isOpen: true, isAnimated: true }),
+          animation: {
+            id: 'test-panel',
+            isShowing: true,
+            transitionState: 'EnterAnimating' as const,
+          },
+        }
+        Story.story(
+          update,
+          Story.given(enteringModel),
+          Story.message(Message.FailedShowDialog()),
+          Story.expectNoOutMessage(),
+          Story.model(model => {
+            expect(model.isOpen).toBe(false)
+            expect(model.animation.transitionState).toBe('Idle')
+          }),
+          Story.Command.expectNone(),
+        )
+      })
+
+      it('resets a running leave animation to Idle', () => {
+        const leavingModel = {
+          ...init({ id: 'test', isOpen: true, isAnimated: true }),
+          isOpen: false,
+          animation: {
+            id: 'test-panel',
+            isShowing: false,
+            transitionState: 'LeaveAnimating' as const,
+          },
+        }
+        Story.story(
+          update,
+          Story.given(leavingModel),
+          Story.message(Message.FailedShowDialog()),
+          Story.expectNoOutMessage(),
+          Story.model(model => {
+            expect(model.isOpen).toBe(false)
+            expect(model.animation.transitionState).toBe('Idle')
+          }),
+          Story.Command.expectNone(),
+        )
+      })
+
+      it('does nothing when the dialog is already closed', () => {
+        const closedModel = init({ id: 'test' })
+        Story.story(
+          update,
+          Story.given(closedModel),
+          Story.message(Message.FailedShowDialog()),
+          Story.expectNoOutMessage(),
+          Story.model(model => {
+            expect(model).toBe(closedModel)
+          }),
+          Story.Command.expectNone(),
+        )
+      })
+
+      it('dispatches no CloseDialog when the dialog is closed after a failed show', () => {
+        Story.story(
+          update,
+          Story.given(init({ id: 'test', isOpen: true })),
+          Story.message(Message.FailedShowDialog()),
+          Story.message(Message.RequestedClose()),
+          Story.expectNoOutMessage(),
+          Story.Command.expectNone(),
         )
       })
     })
@@ -484,6 +603,139 @@ describe('Dialog', () => {
     )
   })
 
+  describe('Command resource cleanup', () => {
+    it.effect(
+      'ShowDialog reports FailedShowDialog and releases the scroll lock when the dialog is gone before it shows',
+      () =>
+        Effect.gen(function* () {
+          const showDialog = yield* ShowDialog({
+            id: 'missing-dialog',
+            focusSelector: initialFocusMarkerSelector,
+          }).effect
+
+          expect(showDialog).toEqual(Message.FailedShowDialog())
+          expect(document.documentElement.style.overflow).not.toBe('hidden')
+        }),
+    )
+
+    it.effect(
+      'ShowDialog releases the scroll lock when it is interrupted before the dialog shows',
+      () =>
+        Effect.gen(function* () {
+          const showDialog = yield* Effect.forkChild(
+            ShowDialog({
+              id: 'missing-dialog',
+              focusSelector: initialFocusMarkerSelector,
+            }).effect,
+          )
+
+          yield* Effect.yieldNow
+          expect(document.documentElement.style.overflow).toBe('hidden')
+
+          yield* Fiber.interrupt(showDialog)
+
+          expect(document.documentElement.style.overflow).not.toBe('hidden')
+        }),
+    )
+
+    it.effect(
+      'CloseDialog releases the dialog resources when the dialog is gone before it closes',
+      () => {
+        const dialog = document.createElement('dialog')
+        dialog.id = 'vanishing-dialog'
+        document.body.appendChild(dialog)
+
+        return Effect.gen(function* () {
+          const showDialog = yield* ShowDialog({
+            id: 'vanishing-dialog',
+            focusSelector: initialFocusMarkerSelector,
+          }).effect
+
+          expect(showDialog).toEqual(Message.SucceededShowDialog())
+          expect(document.documentElement.style.overflow).toBe('hidden')
+
+          dialog.remove()
+
+          const closeDialog = yield* CloseDialog({ id: 'vanishing-dialog' })
+            .effect
+
+          expect(closeDialog).toEqual(Message.CompletedCloseDialog())
+          expect(document.documentElement.style.overflow).not.toBe('hidden')
+        }).pipe(
+          Effect.ensuring(
+            Dom.releaseDialogResources('vanishing-dialog').pipe(
+              Effect.andThen(Effect.sync(() => dialog.remove())),
+            ),
+          ),
+        )
+      },
+    )
+
+    it.effect(
+      'CloseDialog leaves the scroll lock alone when the dialog holds no resources',
+      () => {
+        const dialog = document.createElement('dialog')
+        dialog.id = 'phantom-dialog'
+        dialog.open = true
+        document.body.appendChild(dialog)
+
+        return Effect.gen(function* () {
+          yield* Dom.lockScroll
+
+          const closeDialog = yield* CloseDialog({ id: 'phantom-dialog' })
+            .effect
+
+          expect(closeDialog).toEqual(Message.CompletedCloseDialog())
+          expect(document.documentElement.style.overflow).toBe('hidden')
+        }).pipe(
+          Effect.ensuring(
+            Dom.unlockScroll.pipe(
+              Effect.andThen(Effect.sync(() => dialog.remove())),
+            ),
+          ),
+        )
+      },
+    )
+
+    it.effect(
+      'CloseDialog leaves the scroll lock alone when it runs before the show completes',
+      () => {
+        const dialog = document.createElement('dialog')
+        dialog.id = 'racing-dialog'
+        document.body.appendChild(dialog)
+
+        return Effect.gen(function* () {
+          yield* Dom.lockScroll
+
+          const showDialog = yield* Effect.forkChild(
+            ShowDialog({
+              id: 'racing-dialog',
+              focusSelector: initialFocusMarkerSelector,
+            }).effect,
+          )
+
+          yield* Effect.yieldNow
+          yield* CloseDialog({ id: 'racing-dialog' }).effect
+
+          expect(document.documentElement.style.overflow).toBe('hidden')
+
+          dialog.remove()
+
+          const showDialogMessage = yield* Fiber.join(showDialog)
+
+          expect(showDialogMessage).toEqual(Message.FailedShowDialog())
+          expect(document.documentElement.style.overflow).toBe('hidden')
+        }).pipe(
+          Effect.ensuring(
+            Dom.unlockScroll.pipe(
+              Effect.andThen(Effect.sync(() => dialog.remove())),
+            ),
+          ),
+        )
+      },
+    )
+  })
+
   describe('view OnUnmount gating', () => {
     it('includes the OnUnmount backstop on the dialog while it is open', () => {
       expect(dialogHasOnUnmount(init({ id: 'test', isOpen: true }))).toBe(true)
@@ -491,6 +743,21 @@ describe('Dialog', () => {
 
     it('omits the OnUnmount backstop while the dialog is closed', () => {
       expect(dialogHasOnUnmount(init({ id: 'test' }))).toBe(false)
+    })
+
+    it('renders the dialog closed with no OnUnmount backstop after a failed show', () => {
+      const dialogShowFailed = update(
+        init({ id: 'test', isOpen: true }),
+        Message.FailedShowDialog(),
+      )
+
+      expect(
+        hasDataAttribute(
+          renderGroup(dialogShowFailed.model, render => render.dialog),
+          'open',
+        ),
+      ).toBe(false)
+      expect(dialogHasOnUnmount(dialogShowFailed.model)).toBe(false)
     })
   })
 })

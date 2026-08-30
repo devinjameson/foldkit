@@ -1,5 +1,5 @@
 import { Option, Schema as S } from 'effect'
-import type * as Command from 'foldkit/command'
+import { type Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 import type { View as SubmodelView } from 'foldkit/submodel'
 
@@ -7,12 +7,8 @@ import {
   type BaseInitConfig,
   BaseModel,
   type BaseViewInputs,
-  Closed,
-  type Message,
-  Opened,
-  type OutMessage,
-  SelectedItem,
-  Selected as SharedSelected,
+  Message,
+  OutMessage,
   baseInit,
   closedBaseModel,
   makeUpdate,
@@ -38,42 +34,48 @@ export const init = (config: InitConfig): Model => baseInit(config)
 
 // UPDATE
 
-/** Processes a combobox message and returns the next model, commands, and optional OutMessage. Stays open on selection (multi-select behavior) and emits a `Selected({ value })` OutMessage the parent folds by toggling the value's membership. Closing never emits `ClearedSelection`: the multi-select input rests empty by design, so an empty input on close carries no intent to clear. Clearing a multi-select is toggling its values off, one `Selected` at a time. The input always rests empty on close, so this ignores the message's `restingInputValue`; multi consumers pass `''`. */
+/** Processes a Combobox Message and returns the next Model, optional Commands,
+ *  and an optional OutMessage. Selection leaves the multi-select Combobox open
+ *  and emits `Selected({ value })` for the parent to fold by toggling
+ *  membership.
+ *  Closing never emits `ClearedSelection` because its input rests empty by
+ *  design. Clear the selection by toggling each value off. */
 export const update = makeUpdate<Model>({
-  handleClose: model => [
-    evo(closedBaseModel(model), { inputValue: () => '' }),
-    Option.none(),
-  ],
+  handleClose: model => ({
+    model: evo(closedBaseModel(model), { inputValue: () => '' }),
+  }),
 
-  handleSelectedItem: (model, item) => [
+  handleSelectedItem: (model, item) => ({
     model,
-    [],
-    Option.some(SharedSelected({ value: item })),
-  ],
+    outMessage: OutMessage.Selected({ value: item }),
+  }),
 
-  handleImmediateActivation: (model, item) => [
+  handleImmediateActivation: (model, item) => ({
     model,
-    Option.some(SharedSelected({ value: item })),
-  ],
+    outMessage: OutMessage.Selected({ value: item }),
+  }),
 })
 
 type UpdateReturn = ReturnType<typeof update>
 
-/** Programmatically opens the combobox, updating the model and returning
- *  focus and modal commands. Use this in domain-event handlers to open the combobox. */
+/** Programmatically opens the Combobox, updating the Model and returning
+ *  focus and modal Commands. Use this in domain-event handlers. */
 export const open = (model: Model): UpdateReturn =>
-  update(model, Opened({ maybeActiveItemIndex: Option.none() }))
+  update(model, Message.Opened({ maybeActiveItemIndex: Option.none() }))
 
-/** Programmatically closes the combobox, updating the model and returning
- *  focus and modal commands. The multi-select input always rests empty on
+/** Programmatically closes the Combobox, updating the Model and returning
+ *  focus and modal Commands. The multi-select input always rests empty on
  *  close. Use this in domain-event handlers to close the combobox. */
 export const close = (model: Model): UpdateReturn =>
-  update(model, Closed({ restingInputValue: '', isClearable: true }))
+  update(model, Message.Closed({ restingInputValue: '', isClearable: true }))
 
 /** Programmatically activates an item in the multi-select combobox. Emits
  *  `Selected({ value })`; the parent toggles the value's membership. */
 export const selectItem = (model: Model, item: string): UpdateReturn =>
-  update(model, SelectedItem({ item, displayText: item, wasSelected: false }))
+  update(
+    model,
+    Message.SelectedItem({ item, displayText: item, wasSelected: false }),
+  )
 
 // VIEW
 
@@ -82,6 +84,12 @@ export type ViewInputs<Item extends string> = BaseViewInputs<Item>
 
 const internalView = makeView<Model>({ ariaMultiSelectable: true })
 
+type BundleUpdateReturn<Item extends string> = Update.ReturnWithOutMessage<
+  Model,
+  Message,
+  OutMessage<Item>
+>
+
 /** The `view`, `update`, and programmatic helpers that
  *  `Combobox.Multi.create` returns, bound to one `Item` type. Name it to
  *  annotate a value that holds a created bundle, such as a field on a
@@ -89,47 +97,21 @@ const internalView = makeView<Model>({ ariaMultiSelectable: true })
  *  calling `create` itself. */
 export type Bundle<Item extends string = string> = Readonly<{
   view: SubmodelView<Model, Message, ViewInputs<Item>>
-  update: (
-    model: Model,
-    message: Message,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  selectItem: (
-    model: Model,
-    item: Item,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  open: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
-  close: (
-    model: Model,
-  ) => readonly [
-    Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
+  update: (model: Model, message: Message) => BundleUpdateReturn<Item>
+  selectItem: (model: Model, item: Item) => BundleUpdateReturn<Item>
+  open: (model: Model) => BundleUpdateReturn<Item>
+  close: (model: Model) => BundleUpdateReturn<Item>
 }>
 
 /** Pairs the multi-select combobox's `view` and `update` (and programmatic
  *  helpers) behind a single Item-typed entry point. `selectItem` emits
  *  `Selected({ value })`; the parent toggles the value's membership. */
 export const create = <Item extends string = string>(): Bundle<Item> => {
-  type UpdateReturn = readonly [
+  type UpdateReturn = Update.ReturnWithOutMessage<
     Model,
-    ReadonlyArray<Command.Command<Message>>,
-    Option.Option<OutMessage<Item>>,
-  ]
+    Message,
+    OutMessage<Item>
+  >
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   const typedUpdate = update as (model: Model, message: Message) => UpdateReturn
   return {
@@ -138,11 +120,17 @@ export const create = <Item extends string = string>(): Bundle<Item> => {
     selectItem: (model, item) =>
       typedUpdate(
         model,
-        SelectedItem({ item, displayText: item, wasSelected: false }),
+        Message.SelectedItem({ item, displayText: item, wasSelected: false }),
       ),
     open: model =>
-      typedUpdate(model, Opened({ maybeActiveItemIndex: Option.none() })),
+      typedUpdate(
+        model,
+        Message.Opened({ maybeActiveItemIndex: Option.none() }),
+      ),
     close: model =>
-      typedUpdate(model, Closed({ restingInputValue: '', isClearable: true })),
+      typedUpdate(
+        model,
+        Message.Closed({ restingInputValue: '', isClearable: true }),
+      ),
   }
 }

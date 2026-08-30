@@ -1,10 +1,10 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Effect, Match as M, Option } from 'effect'
+import { Effect, Match as M, Option, Schema as S } from 'effect'
 import { Calendar, Update } from 'foldkit'
 import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { DatePicker, Calendar as UiCalendar } from '@foldkit/ui'
@@ -31,8 +31,8 @@ const flags = Effect.gen(function* () {
 
 // In your init function, pass the flags-resolved today into DatePicker.init.
 // Optional: constrain the selectable range with minDate / maxDate.
-const init = (flags: Flags) => [
-  {
+const init = (flags: Flags) => ({
+  model: {
     datePickerDemo: DatePicker.init({
       id: 'date-picker-demo',
       today: flags.today,
@@ -42,13 +42,12 @@ const init = (flags: Flags) => [
     maybeSelectedDate: Option.none(),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the DatePicker Message in your parent Message. DatePicker handles
 // Calendar + Popover routing internally. You only need one wrapper:
-const GotDatePickerMessage = m('GotDatePickerMessage', {
-  message: DatePicker.Message,
+const Message = defineMessageUnion({
+  GotDatePickerMessage: { message: DatePicker.Message },
 })
 
 // At module scope, fold the OutMessage into your own Model. `SelectedDate`
@@ -67,16 +66,17 @@ const foldDatePickerOutMessage = M.type<DatePicker.OutMessage>().pipe(
     // source of truth for the selection.
     SelectedDate:
       ({ date }) =>
-      model => [evo(model, { maybeSelectedDate: () => Option.some(date) }), []],
+      model => ({
+        model: evo(model, { maybeSelectedDate: () => Option.some(date) }),
+      }),
     // The user cleared the selection. Reset the parent's field.
-    ClearedDate: () => model => [
-      evo(model, { maybeSelectedDate: () => Option.none() }),
-      [],
-    ],
+    ClearedDate: () => model => ({
+      model: evo(model, { maybeSelectedDate: () => Option.none() }),
+    }),
     // The child has emitted `ChangedViewMonth`. In this arm the parent can
     // update its own state or dispatch its own Commands, for example
     // prefetch month data, fire analytics, or trigger a downstream Command.
-    ChangedViewMonth: () => model => [model, []],
+    ChangedViewMonth: () => model => ({ model }),
   }),
 )
 
@@ -89,11 +89,11 @@ const foldDatePicker = Update.foldChild({
   read: (model: Model) => Option.some(model.datePickerDemo),
   write: (model, nextDatePickerDemo) =>
     evo(model, { datePickerDemo: () => nextDatePickerDemo }),
-  toParentMessage: message => GotDatePickerMessage({ message }),
+  toParentMessage: message => Message.GotDatePickerMessage({ message }),
   foldOutMessage: foldDatePickerOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotDatePickerMessage: ({ message }) => foldDatePicker(model, message)
 
 // Class names live at module scope, and each view mode gets its own view
@@ -316,7 +316,7 @@ const view = (model: Model, h: HtmlBuilder<Message>) => {
           // Optional: enable hidden form input for native <form> submission:
           name: 'appointment-date',
         },
-        toParentMessage: message => GotDatePickerMessage({ message }),
+        toParentMessage: message => Message.GotDatePickerMessage({ message }),
       }),
     ],
   )

@@ -1,8 +1,8 @@
 import { clsx } from 'clsx'
-import { Effect, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Option, Schema as S } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
@@ -14,7 +14,7 @@ import { Counter, islandAttributes } from './island'
 import { proseView } from './prose'
 import * as Route from './route'
 
-export { HomeRoute, NotFoundRoute, PostRoute, PostsRoute } from './route'
+export { AppRoute } from './route'
 
 // MODEL
 
@@ -26,85 +26,72 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const ClickedLink = m('ClickedLink', { request: UrlRequest })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const GotCounterMessage = m('GotCounterMessage', {
-  message: Counter.Message,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  GotCounterMessage: { message: Counter.Message },
 })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-  GotCounterMessage,
-])
 export type Message = typeof Message.Type
 
 // INIT
 
 export const init: Runtime.RoutingApplicationInit<Model, Message> = (
   url: Url,
-) => [{ route: Route.urlToAppRoute(url), counter: Counter.init }, []]
+) => ({ model: { route: Route.urlToAppRoute(url), counter: Counter.init } })
 
 // COMMAND
 
 const NavigateInternal = Command.define('NavigateInternal', {
   args: { url: S.String },
-  messages: [CompletedNavigateInternal],
+  messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
-    pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())),
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
   args: { href: S.String },
-  messages: [CompletedLoadExternal],
-  execute: ({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())),
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
 })
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+type UpdateReturn = Update.Return<Model, Message>
 
 const foldCounter = Update.foldChild({
   update: Counter.update,
   read: (model: Model) => Option.some(model.counter),
   write: (model, nextCounter) => evo(model, { counter: () => nextCounter }),
-  toParentMessage: message => GotCounterMessage({ message }),
+  toParentMessage: message => Message.GotCounterMessage({ message }),
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tags({
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [NavigateInternal({ url: urlToString(url) })],
-            ],
-            External: ({ href }) => [model, [LoadExternal({ href })]],
-          }),
-        ),
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedLink: ({ request }) =>
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
+        }),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
-      ChangedUrl: ({ url }) => {
-        const nextRoute = Route.urlToAppRoute(url)
-        return [evo(model, { route: () => nextRoute }), []]
-      },
+    ChangedUrl: ({ url }) => {
+      const nextRoute = Route.urlToAppRoute(url)
+      return { model: evo(model, { route: () => nextRoute }) }
+    },
 
-      GotCounterMessage: ({ message }) => foldCounter(model, message),
-    }),
-    M.tag('CompletedNavigateInternal', 'CompletedLoadExternal', () => [
-      model,
-      [],
-    ]),
-    M.exhaustive,
-  )
+    GotCounterMessage: ({ message }) => foldCounter(model, message),
+    CompletedNavigateInternal: () => ({ model }),
+    CompletedLoadExternal: () => ({ model }),
+  })
 
 // VIEW
 
@@ -123,7 +110,7 @@ const islandViews = (model: Model, h: HtmlBuilder<Message>): Markdown.Islands =>
             slotId: `counter-${occurrenceIndex}`,
             model: model.counter,
             view: Counter.view,
-            toParentMessage: message => GotCounterMessage({ message }),
+            toParentMessage: message => Message.GotCounterMessage({ message }),
           }),
         ],
       ),
@@ -330,28 +317,24 @@ const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
   )
 
 const routeTitle = (route: Route.AppRoute): string =>
-  M.value(route).pipe(
-    M.tagsExhaustive({
-      Home: () => 'Devin Jameson',
-      Posts: () => 'Posts | Devin Jameson',
-      Post: ({ slug }) =>
-        Option.match(findPost(slug), {
-          onNone: () => 'Post Not Found | Devin Jameson',
-          onSome: post => `${post.title} | Devin Jameson`,
-        }),
-      NotFound: () => 'Not Found | Devin Jameson',
-    }),
-  )
+  Route.AppRoute.match(route, {
+    Home: () => 'Devin Jameson',
+    Posts: () => 'Posts | Devin Jameson',
+    Post: ({ slug }) =>
+      Option.match(findPost(slug), {
+        onNone: () => 'Post Not Found | Devin Jameson',
+        onSome: post => `${post.title} | Devin Jameson`,
+      }),
+    NotFound: () => 'Not Found | Devin Jameson',
+  })
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Home: () => homeView(model, h),
-      Posts: () => postsView(h),
-      Post: ({ slug }) => postView(slug, model, h),
-      NotFound: ({ path }) => notFoundView(path, h),
-    }),
-  )
+  const routeContent = Route.AppRoute.match(model.route, {
+    Home: () => homeView(model, h),
+    Posts: () => postsView(h),
+    Post: ({ slug }) => postView(slug, model, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   return {
     title: routeTitle(model.route),

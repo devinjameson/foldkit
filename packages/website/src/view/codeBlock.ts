@@ -3,7 +3,7 @@ import { HashSet } from 'effect'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { Icon } from '../icon'
-import { ClickedCopySnippet, type Message } from '../message'
+import { Message } from '../message'
 
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 
@@ -51,10 +51,10 @@ const copyButtonWithIndicator = (
   const copyButton = h.button(
     [
       h.Class(
-        'p-2 rounded transition cursor-pointer border border-gray-300 dark:border-gray-700/50 bg-gray-100 dark:bg-[#1c1a20] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700/30',
+        'p-2 rounded transition cursor-pointer border border-gray-300 dark:border-gray-700/50 bg-[var(--code-background)] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700/30',
       ),
       h.AriaLabel(ariaLabel),
-      h.OnClick(ClickedCopySnippet({ text: textToCopy })),
+      h.OnClick(Message.ClickedCopySnippet({ text: textToCopy })),
     ],
     [Icon.copy()],
   )
@@ -97,9 +97,7 @@ export const codeBlock = (
   const content = ih.pre(
     [
       ...languageAttribute,
-      ih.Class(
-        'text-[#403d4a] dark:text-[#E0DEE6] text-sm p-4 pr-14 overflow-x-auto !rounded-none !border-none',
-      ),
+      ih.Class('text-sm p-4 pr-14 overflow-x-auto !rounded-none !border-none'),
     ],
     [code],
   )
@@ -109,7 +107,7 @@ export const codeBlock = (
       PagefindIgnore,
       ih.Class(
         clsx(
-          'relative min-w-0 rounded-lg bg-gray-100 dark:bg-[#1c1a20] border border-gray-200 dark:border-gray-700/50',
+          'code-surface relative min-w-0 rounded-lg border border-gray-200 dark:border-gray-700/50',
           className,
         ),
       ),

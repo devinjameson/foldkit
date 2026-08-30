@@ -1,6 +1,7 @@
 import { Schema as S } from 'effect'
+import { type Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
 import { evo } from 'foldkit/struct'
 
@@ -16,13 +17,18 @@ const sections: ReadonlyArray<Section> = ['Dashboard', 'Projects', 'Settings']
 const Model = S.Struct({ current: Section })
 type Model = typeof Model.Type
 
-const ClickedSection = m('ClickedSection', { section: Section })
-type Message = typeof ClickedSection.Type
+const Message = defineMessageUnion({
+  ClickedSection: { section: Section },
+})
 
-const update = (model: Model, message: Message): readonly [Model, []] => [
-  evo(model, { current: () => message.section }),
-  [],
-]
+type Message = typeof Message.Type
+
+const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedSection: ({ section }) => ({
+      model: evo(model, { current: () => section }),
+    }),
+  })
 
 const sectionToHref = (section: Section): string => `#${section.toLowerCase()}`
 
@@ -37,7 +43,10 @@ const sceneView = (model: Model, h: HtmlBuilder<Message>) => {
         nav,
         items.map(item =>
           h.a(
-            [...item.link, h.OnClick(ClickedSection({ section: item.value }))],
+            [
+              ...item.link,
+              h.OnClick(Message.ClickedSection({ section: item.value })),
+            ],
             [item.value],
           ),
         ),

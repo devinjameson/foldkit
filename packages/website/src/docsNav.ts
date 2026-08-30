@@ -12,6 +12,7 @@ import {
   bestPracticesSideEffectsRouter,
   comingFromReactRouter,
   comingFromTanStackQueryRouter,
+  contentApiRouter,
   coreArchitectureRouter,
   coreCanvasRouter,
   coreCommandsRouter,
@@ -33,6 +34,7 @@ import {
   coreRenderRouter,
   coreResourcesRouter,
   coreRuntimeRouter,
+  coreServerRenderingRouter,
   coreSlowWarningsRouter,
   coreSubmodelRouter,
   coreSubscriptionsRouter,
@@ -71,6 +73,7 @@ import {
   uiDragAndDropRouter,
   uiFieldsetRouter,
   uiFileDropRouter,
+  uiHoverIntentRouter,
   uiInputRouter,
   uiListboxRouter,
   uiMenuRouter,
@@ -87,7 +90,6 @@ import {
   uiToastRouter,
   uiTooltipRouter,
   uiVirtualListRouter,
-  whatAboutSsrRouter,
   whyNoJsxRouter,
 } from './route'
 import { type GroupKey } from './sidebarStorage'
@@ -142,7 +144,7 @@ export const docsSections: ReadonlyArray<DocsSection> = [
         {
           _tag: 'Manifesto',
           href: manifestoRouter(),
-          label: 'Manifesto',
+          label: 'Why Foldkit',
         },
         {
           _tag: 'GettingStarted',
@@ -220,6 +222,11 @@ export const docsSections: ReadonlyArray<DocsSection> = [
           _tag: 'CoreRuntime',
           href: coreRuntimeRouter(),
           label: 'Runtime',
+        },
+        {
+          _tag: 'CoreServerRendering',
+          href: coreServerRenderingRouter(),
+          label: 'Server Rendering',
         },
         {
           _tag: 'CoreEmbedding',
@@ -416,11 +423,6 @@ export const docsSections: ReadonlyArray<DocsSection> = [
           label: 'Why no JSX?',
         },
         {
-          _tag: 'WhatAboutSsr',
-          href: whatAboutSsrRouter(),
-          label: 'What about SSR?',
-        },
-        {
           _tag: 'Performance',
           href: performanceRouter(),
           label: 'Performance',
@@ -525,6 +527,11 @@ export const docsSections: ReadonlyArray<DocsSection> = [
           label: 'Tooltip',
         },
         {
+          _tag: 'UiHoverIntent',
+          href: uiHoverIntentRouter(),
+          label: 'Hover Intent',
+        },
+        {
           _tag: 'UiToast',
           href: uiToastRouter(),
           label: 'Toast',
@@ -603,6 +610,11 @@ export const docsSections: ReadonlyArray<DocsSection> = [
           _tag: 'AiMcp',
           href: aiMcpRouter(),
           label: 'DevTools MCP',
+        },
+        {
+          _tag: 'ContentApi',
+          href: contentApiRouter(),
+          label: 'Content API',
         },
       ],
     ],

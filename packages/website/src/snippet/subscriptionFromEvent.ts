@@ -1,12 +1,12 @@
 import { Effect, Schema as S, Stream } from 'effect'
 import { Subscription } from 'foldkit'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
 // MESSAGE
 
-const PressedKey = m('PressedKey', { key: S.String })
-
-const Message = S.Union([PressedKey])
+const Message = defineMessageUnion({
+  PressedKey: { key: S.String },
+})
 type Message = typeof Message.Type
 
 // MODEL
@@ -29,7 +29,7 @@ const subscriptions = Subscription.make<Model, Message>()(entry => ({
           Subscription.fromEvent<KeyboardEvent, Message>({
             target: window,
             type: 'keydown',
-            toMessage: event => PressedKey({ key: event.key }),
+            toMessage: event => Message.PressedKey({ key: event.key }),
           }),
           Effect.sync(() => isListening),
         ),

@@ -1,15 +1,34 @@
-import { Option, Record, Schema as S } from 'effect'
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { Array, Option, Record, Schema as S } from 'effect'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
+import { dirname, join, resolve, sep } from 'node:path'
 import type { Plugin } from 'vite'
 
 const DEV_TOOLS_PACKAGE_NAME = '@foldkit/devtools'
+const FOLDKIT_PACKAGE_NAME = 'foldkit'
 const DEV_TOOLS_VITE_EXPORT = './vite'
 const DEV_TOOLS_OVERLAY_MODULE_ID = 'virtual:foldkit-devtools-overlay'
 const RESOLVED_DEV_TOOLS_OVERLAY_MODULE_ID = `\0${DEV_TOOLS_OVERLAY_MODULE_ID}`
+const DEV_TOOLS_VITE_IMPORT_SPECIFIER = `${DEV_TOOLS_PACKAGE_NAME}${DEV_TOOLS_VITE_EXPORT.slice(1)}`
+const DEV_TOOLS_HOST_IMPORT_SPECIFIER = 'foldkit/devtools-host'
+// NOTE: Vite's dependency scan cannot discover this virtual module's imports.
+// Declaring registry-installed imports before the first request avoids a
+// mid-session reoptimization and page reload.
+const DEV_TOOLS_OVERLAY_IMPORTS: ReadonlyArray<{
+  specifier: string
+  packageName: string
+}> = [
+  {
+    specifier: DEV_TOOLS_VITE_IMPORT_SPECIFIER,
+    packageName: DEV_TOOLS_PACKAGE_NAME,
+  },
+  {
+    specifier: DEV_TOOLS_HOST_IMPORT_SPECIFIER,
+    packageName: FOLDKIT_PACKAGE_NAME,
+  },
+]
 const DEV_TOOLS_OVERLAY_MODULE_SOURCE = `
-import { overlay } from '@foldkit/devtools/vite'
-import { __setDevToolsOverlay } from 'foldkit/devtools-host'
+import { overlay } from '${DEV_TOOLS_VITE_IMPORT_SPECIFIER}'
+import { __setDevToolsOverlay } from '${DEV_TOOLS_HOST_IMPORT_SPECIFIER}'
 
 __setDevToolsOverlay(overlay)
 `
@@ -59,13 +78,23 @@ const findDirectoryUpward = (
 // package is installed, and `resolve.paths` appends this module's own lookup
 // chain, which under pnpm includes the hoisted virtual store. Both would make
 // the answer depend on something other than what the application installed.
-const devToolsPackageJsonPath = (directory: string): string =>
-  join(directory, 'node_modules', DEV_TOOLS_PACKAGE_NAME, 'package.json')
+const installedPackageJsonPath = (
+  directory: string,
+  packageName: string,
+): string => join(directory, 'node_modules', packageName, 'package.json')
+
+const findInstalledPackageJsonPath = (
+  root: string,
+  packageName: string,
+): Option.Option<string> =>
+  findDirectoryUpward(resolve(root), directory =>
+    existsSync(installedPackageJsonPath(directory, packageName)),
+  ).pipe(
+    Option.map(directory => installedPackageJsonPath(directory, packageName)),
+  )
 
 const findDevToolsPackageJsonPath = (root: string): Option.Option<string> =>
-  findDirectoryUpward(resolve(root), directory =>
-    existsSync(devToolsPackageJsonPath(directory)),
-  ).pipe(Option.map(devToolsPackageJsonPath))
+  findInstalledPackageJsonPath(root, DEV_TOOLS_PACKAGE_NAME)
 
 // NOTE: the virtual module imports `@foldkit/devtools/vite` statically, so an
 // installed copy that predates that export point would fail the build rather
@@ -90,6 +119,26 @@ const findApplicationPackageJsonPath = (root: string): Option.Option<string> =>
   findDirectoryUpward(resolve(root), directory =>
     existsSync(applicationPackageJsonPath(directory)),
   ).pipe(Option.map(applicationPackageJsonPath))
+
+const resolvePackageDirectory = Option.liftThrowable(
+  (packageJsonPath: string) => realpathSync(dirname(packageJsonPath)),
+)
+
+// NOTE: Vite serves linked packages from source rather than pre-bundling them.
+// A registry-installed package has a real path under `node_modules`, while a
+// workspace link resolves to its source checkout; force-including a link would
+// cache its current source and hide edits. Each owner is checked independently
+// because one package may be linked while the other is installed.
+const isPackageResolvedIntoNodeModules = (
+  root: string,
+  packageName: string,
+): boolean =>
+  findInstalledPackageJsonPath(root, packageName).pipe(
+    Option.flatMap(resolvePackageDirectory),
+    Option.exists(packageDirectory =>
+      packageDirectory.split(sep).includes('node_modules'),
+    ),
+  )
 
 const isDevToolsProductionDependency = (root: string): boolean =>
   findApplicationPackageJsonPath(root).pipe(
@@ -125,6 +174,24 @@ export const devToolsOverlayPlugin = (): Plugin => {
 
   return {
     name: 'foldkit:devtools-overlay',
+    config: (userConfig, environment) => {
+      const root = userConfig.root ?? process.cwd()
+      if (
+        environment.command !== 'serve' ||
+        !shouldInjectDevToolsOverlay(environment.command, root)
+      ) {
+        return undefined
+      }
+
+      const include = DEV_TOOLS_OVERLAY_IMPORTS.filter(({ packageName }) =>
+        isPackageResolvedIntoNodeModules(root, packageName),
+      ).map(({ specifier }) => specifier)
+
+      return Array.match(include, {
+        onEmpty: () => undefined,
+        onNonEmpty: () => ({ optimizeDeps: { include } }),
+      })
+    },
     configResolved: config => {
       isInjectionEnabled = shouldInjectDevToolsOverlay(
         config.command,

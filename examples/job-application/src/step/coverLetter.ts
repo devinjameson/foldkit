@@ -1,6 +1,6 @@
-import { Match as M, Schema as S } from 'effect'
-import { Command } from 'foldkit'
-import { m } from 'foldkit/message'
+import { Schema as S } from 'effect'
+import { type Update } from 'foldkit'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 // MODEL
@@ -12,9 +12,10 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const UpdatedContent = m('UpdatedContent', { value: S.String })
+export const Message = defineMessageUnion({
+  UpdatedContent: { value: S.String },
+})
 
-export const Message = S.Union([UpdatedContent])
 export type Message = typeof Message.Type
 
 // INIT
@@ -25,12 +26,9 @@ export const init = (): Model => ({
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      UpdatedContent: ({ value }) => [evo(model, { content: () => value }), []],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    UpdatedContent: ({ value }) => ({
+      model: evo(model, { content: () => value }),
     }),
-  )
+  })

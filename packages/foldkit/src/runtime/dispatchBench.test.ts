@@ -1,9 +1,10 @@
-import { Effect, Match as M, Number, Predicate, Schema as S } from 'effect'
+import { Effect, Number, Predicate, Schema as S } from 'effect'
 import { describe, it } from 'vitest'
 
 import { Document, __htmlBuilder, __requireDispatch } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
+import type * as Update from '../update/index.js'
 import { makeApplication } from './runtime.js'
 
 /**
@@ -38,9 +39,10 @@ const isBenchEnabled = readBenchFlag() === '1'
 const Model = S.Struct({ count: S.Number })
 type Model = typeof Model.Type
 
-const Increment = m('Increment')
-const Done = m('Done')
-const Message = S.Union([Increment, Done])
+const Message = defineMessageUnion({
+  Increment: {},
+  Done: {},
+})
 type Message = typeof Message.Type
 
 let captureDispatch: ((d: (message: unknown) => void) => void) | null = null
@@ -57,7 +59,9 @@ const view = (model: Model): Document => {
   }
 }
 
-const init = (): readonly [Model, ReadonlyArray<never>] => [{ count: 0 }, []]
+type UpdateReturn = Update.Return<Model, Message>
+
+const init = (): UpdateReturn => ({ model: { count: 0 } })
 
 const runOnce = async (messageCount: number): Promise<number> => {
   const container = document.createElement('div')
@@ -69,20 +73,14 @@ const runOnce = async (messageCount: number): Promise<number> => {
     resolveDone = resolve
   })
 
-  const update = (
-    model: Model,
-    message: Message,
-  ): readonly [Model, ReadonlyArray<never>] =>
-    M.value(message).pipe(
-      M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-      M.tagsExhaustive({
-        Increment: () => [evo(model, { count: Number.increment }), []],
-        Done: () => {
-          resolveDone()
-          return [model, []]
-        },
-      }),
-    )
+  const update = (model: Model, message: Message) =>
+    Message.match<UpdateReturn>(message, {
+      Increment: () => ({ model: evo(model, { count: Number.increment }) }),
+      Done: () => {
+        resolveDone()
+        return { model }
+      },
+    })
 
   let capturedDispatch: ((message: unknown) => void) | null = null
   captureDispatch = d => {
@@ -116,9 +114,9 @@ const runOnce = async (messageCount: number): Promise<number> => {
 
   const start = performance.now()
   for (let index = 0; index < messageCount; index++) {
-    dispatch(Increment())
+    dispatch(Message.Increment())
   }
-  dispatch(Done())
+  dispatch(Message.Done())
   await done
   const elapsed = performance.now() - start
 

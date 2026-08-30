@@ -10,29 +10,16 @@ import * as Animation from '../animation/index.js'
 import { create, init, update } from './multi.js'
 import type { Model, ViewInputs } from './multi.js'
 import {
-  ActivatedItem,
   AnchorCombobox,
   AttachComboboxPreventBlur,
-  Closed,
-  CompletedAnchorCombobox,
-  CompletedAttachComboboxPreventBlur,
-  CompletedFocusInput,
-  CompletedInertOthers,
-  CompletedLockScroll,
-  CompletedPortalComboboxBackdrop,
-  CompletedRestoreInert,
-  CompletedScrollIntoView,
-  CompletedUnlockScroll,
   FocusInput,
   InertOthers,
   LockScroll,
-  type Message,
-  Opened,
+  Message,
+  OutMessage,
   PortalComboboxBackdrop,
   RestoreInert,
   ScrollIntoView,
-  Selected,
-  SelectedItem,
   UnlockScroll,
   inputId,
 } from './shared.js'
@@ -42,22 +29,22 @@ const view = TestCombobox.view
 
 const acknowledgeAnchor = Scene.Mount.resolve(
   AnchorCombobox,
-  CompletedAnchorCombobox(),
+  Message.CompletedAnchorCombobox(),
 )
 const acknowledgeBackdrop = Scene.Mount.resolve(
   PortalComboboxBackdrop,
-  CompletedPortalComboboxBackdrop(),
+  Message.CompletedPortalComboboxBackdrop(),
 )
 const acknowledgePreventBlur = Scene.Mount.resolve(
   AttachComboboxPreventBlur,
-  CompletedAttachComboboxPreventBlur(),
+  Message.CompletedAttachComboboxPreventBlur(),
 )
 
 const givenClosed = Story.given(init({ id: 'test' }))
 
 const givenOpenMulti = flow(
   givenClosed,
-  Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
+  Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
 )
 
 describe('Combobox.Multi', () => {
@@ -87,13 +74,13 @@ describe('Combobox.Multi', () => {
           update,
           givenOpenMulti,
           Story.message(
-            SelectedItem({
+            Message.SelectedItem({
               item: 'apple',
               displayText: 'Apple',
               wasSelected: false,
             }),
           ),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
         )
       })
 
@@ -102,7 +89,7 @@ describe('Combobox.Multi', () => {
           update,
           givenOpenMulti,
           Story.message(
-            SelectedItem({
+            Message.SelectedItem({
               item: 'apple',
               displayText: 'Apple',
               wasSelected: false,
@@ -119,21 +106,21 @@ describe('Combobox.Multi', () => {
           update,
           givenOpenMulti,
           Story.message(
-            SelectedItem({
+            Message.SelectedItem({
               item: 'apple',
               displayText: 'Apple',
               wasSelected: false,
             }),
           ),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
           Story.message(
-            SelectedItem({
+            Message.SelectedItem({
               item: 'apple',
               displayText: 'Apple',
               wasSelected: true,
             }),
           ),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
         )
       })
 
@@ -142,21 +129,21 @@ describe('Combobox.Multi', () => {
           update,
           givenOpenMulti,
           Story.message(
-            SelectedItem({
+            Message.SelectedItem({
               item: 'apple',
               displayText: 'Apple',
               wasSelected: false,
             }),
           ),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
           Story.message(
-            SelectedItem({
+            Message.SelectedItem({
               item: 'banana',
               displayText: 'Banana',
               wasSelected: false,
             }),
           ),
-          Story.expectOutMessage(Selected({ value: 'banana' })),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'banana' })),
         )
       })
 
@@ -165,15 +152,18 @@ describe('Combobox.Multi', () => {
           update,
           givenOpenMulti,
           Story.message(
-            ActivatedItem({
+            Message.ActivatedItem({
               index: 2,
               activationTrigger: 'Keyboard',
               maybeImmediateSelection: Option.none(),
             }),
           ),
-          Story.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+          Story.Command.resolve(
+            ScrollIntoView,
+            Message.CompletedScrollIntoView(),
+          ),
           Story.message(
-            SelectedItem({
+            Message.SelectedItem({
               item: 'apple',
               displayText: 'Apple',
               wasSelected: false,
@@ -196,9 +186,9 @@ describe('Combobox.Multi', () => {
             inputValue: 'app',
           }),
           Story.message(
-            Closed({ restingInputValue: 'Apple', isClearable: true }),
+            Message.Closed({ restingInputValue: 'Apple', isClearable: true }),
           ),
-          Story.Command.resolve(FocusInput, CompletedFocusInput()),
+          Story.Command.resolve(FocusInput, Message.CompletedFocusInput()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
             expect(model.inputValue).toBe('')
@@ -210,10 +200,14 @@ describe('Combobox.Multi', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', nullable: true })),
-          Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
-          Story.message(Closed({ restingInputValue: '', isClearable: true })),
+          Story.message(
+            Message.Opened({ maybeActiveItemIndex: Option.some(0) }),
+          ),
+          Story.message(
+            Message.Closed({ restingInputValue: '', isClearable: true }),
+          ),
           Story.expectNoOutMessage(),
-          Story.Command.resolve(FocusInput, CompletedFocusInput()),
+          Story.Command.resolve(FocusInput, Message.CompletedFocusInput()),
           Story.model(model => {
             expect(model.isOpen).toBe(false)
           }),
@@ -227,7 +221,7 @@ describe('Combobox.Multi', () => {
           update,
           Story.given(closedModel),
           Story.message(
-            Closed({ restingInputValue: 'Stale', isClearable: true }),
+            Message.Closed({ restingInputValue: 'Stale', isClearable: true }),
           ),
           Story.expectNoOutMessage(),
           Story.Command.expectNone(),
@@ -244,9 +238,11 @@ describe('Combobox.Multi', () => {
         Story.story(
           update,
           Story.given(init({ id: 'test', immediate: true })),
-          Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
           Story.message(
-            ActivatedItem({
+            Message.Opened({ maybeActiveItemIndex: Option.some(0) }),
+          ),
+          Story.message(
+            Message.ActivatedItem({
               index: 0,
               activationTrigger: 'Keyboard',
               maybeImmediateSelection: Option.some({
@@ -254,10 +250,13 @@ describe('Combobox.Multi', () => {
               }),
             }),
           ),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
-          Story.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
+          Story.Command.resolve(
+            ScrollIntoView,
+            Message.CompletedScrollIntoView(),
+          ),
           Story.message(
-            ActivatedItem({
+            Message.ActivatedItem({
               index: 0,
               activationTrigger: 'Keyboard',
               maybeImmediateSelection: Option.some({
@@ -265,8 +264,11 @@ describe('Combobox.Multi', () => {
               }),
             }),
           ),
-          Story.expectOutMessage(Selected({ value: 'apple' })),
-          Story.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+          Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
+          Story.Command.resolve(
+            ScrollIntoView,
+            Message.CompletedScrollIntoView(),
+          ),
           Story.model(model => {
             expect(model.isOpen).toBe(true)
           }),
@@ -278,10 +280,10 @@ describe('Combobox.Multi', () => {
   describe('modal commands', () => {
     const givenOpenModal = flow(
       Story.given(init({ id: 'test', isModal: true })),
-      Story.message(Opened({ maybeActiveItemIndex: Option.some(0) })),
+      Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
       Story.Command.resolveAllExact(
-        [LockScroll, CompletedLockScroll()],
-        [InertOthers, CompletedInertOthers()],
+        [LockScroll, Message.CompletedLockScroll()],
+        [InertOthers, Message.CompletedInertOthers()],
       ),
     )
 
@@ -289,11 +291,13 @@ describe('Combobox.Multi', () => {
       Story.story(
         update,
         givenOpenModal,
-        Story.message(Closed({ restingInputValue: '', isClearable: true })),
+        Story.message(
+          Message.Closed({ restingInputValue: '', isClearable: true }),
+        ),
         Story.Command.resolveAllExact(
-          [FocusInput, CompletedFocusInput()],
-          [UnlockScroll, CompletedUnlockScroll()],
-          [RestoreInert, CompletedRestoreInert()],
+          [FocusInput, Message.CompletedFocusInput()],
+          [UnlockScroll, Message.CompletedUnlockScroll()],
+          [RestoreInert, Message.CompletedRestoreInert()],
         ),
         Story.model(model => {
           expect(model.isOpen).toBe(false)
@@ -306,7 +310,7 @@ describe('Combobox.Multi', () => {
         update,
         givenOpenModal,
         Story.message(
-          SelectedItem({
+          Message.SelectedItem({
             item: 'apple',
             displayText: 'Apple',
             wasSelected: false,
@@ -316,7 +320,7 @@ describe('Combobox.Multi', () => {
         Story.model(model => {
           expect(model.isOpen).toBe(true)
         }),
-        Story.expectOutMessage(Selected({ value: 'apple' })),
+        Story.expectOutMessage(OutMessage.Selected({ value: 'apple' })),
       )
     })
   })
@@ -603,7 +607,7 @@ describe('Combobox.Multi', () => {
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.click(item(1)),
-          Scene.expectOutMessage(Selected({ value: 'Banana' })),
+          Scene.expectOutMessage(OutMessage.Selected({ value: 'Banana' })),
         )
       })
 
@@ -640,7 +644,10 @@ describe('Combobox.Multi', () => {
           Scene.keydown(input, 'ArrowDown'),
           Scene.expect(item(1)).toHaveAttr('data-active', ''),
           Scene.expectNoOutMessage(),
-          Scene.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+          Scene.Command.resolve(
+            ScrollIntoView,
+            Message.CompletedScrollIntoView(),
+          ),
         )
       })
 
@@ -663,7 +670,10 @@ describe('Combobox.Multi', () => {
           Scene.expect(item(0)).toHaveAttr('data-selected', ''),
           Scene.expect(item(1)).not.toHaveAttr('data-selected'),
           Scene.expectNoOutMessage(),
-          Scene.Command.resolve(ScrollIntoView, CompletedScrollIntoView()),
+          Scene.Command.resolve(
+            ScrollIntoView,
+            Message.CompletedScrollIntoView(),
+          ),
         )
       })
 
@@ -698,7 +708,7 @@ describe('Combobox.Multi', () => {
           acknowledgeBackdrop,
           Scene.keydown(input, 'Escape'),
           Scene.expectNoOutMessage(),
-          Scene.Command.resolve(FocusInput, CompletedFocusInput()),
+          Scene.Command.resolve(FocusInput, Message.CompletedFocusInput()),
           Scene.Mount.expectEnded(AnchorCombobox, PortalComboboxBackdrop),
         )
       })
@@ -714,7 +724,7 @@ describe('Combobox.Multi', () => {
           acknowledgeBackdrop,
           Scene.keydown(input, 'Escape'),
           Scene.expectNoOutMessage(),
-          Scene.Command.resolve(FocusInput, CompletedFocusInput()),
+          Scene.Command.resolve(FocusInput, Message.CompletedFocusInput()),
           Scene.Mount.expectEnded(AnchorCombobox, PortalComboboxBackdrop),
         )
       })

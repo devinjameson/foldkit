@@ -1,28 +1,26 @@
-import { Match as M, Number, Schema as S } from 'effect'
+import { Number, Schema as S } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { type Document, __htmlBuilder } from '../html/index.js'
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
+import type * as Update from '../update/index.js'
 import { makeApplication, run } from './runtime.js'
 
-const ClickedIncrement = m('ClickedIncrement')
-const Message = S.Union([ClickedIncrement])
+const Message = defineMessageUnion({
+  ClickedIncrement: {},
+})
 type Message = typeof Message.Type
 
 const Model = S.Struct({ count: S.Number })
 type Model = typeof Model.Type
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<never>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<never>]>(),
-    M.tagsExhaustive({
-      ClickedIncrement: () => [evo(model, { count: Number.increment }), []],
+const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedIncrement: () => ({
+      model: evo(model, { count: Number.increment }),
     }),
-  )
+  })
 
 const APP_TEXT = 'page-lifecycle-app-content'
 
@@ -33,7 +31,7 @@ const view = (model: Model): Document => ({
   body: h.div(
     [h.Id('page-lifecycle-app')],
     [
-      h.button([h.OnClick(ClickedIncrement())], ['increment']),
+      h.button([h.OnClick(Message.ClickedIncrement())], ['increment']),
       `${APP_TEXT}:${model.count}`,
     ],
   ),
@@ -73,7 +71,7 @@ describe('run + page lifecycle events', () => {
     run(
       makeApplication({
         Model,
-        init: () => [{ count: 0 }, []],
+        init: () => ({ model: { count: 0 } }),
         update,
         view,
         container,

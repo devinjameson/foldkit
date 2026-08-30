@@ -8,7 +8,7 @@ import {
   Schema as S,
 } from 'effect'
 
-import { ts } from '../schema/index.js'
+import { taggedStruct } from '../schema/index.js'
 
 // STATE
 
@@ -53,20 +53,15 @@ export type Success<A> = Readonly<{ _tag: 'Success'; data: A }>
  *  (`match`) and channel-named where one handler covers multiple tags
  *  (`matchData`, `mapBoth`). */
 export type AsyncData<A, E> =
-  | Idle
-  | Loading
-  | Refreshing<A>
-  | Failure<E>
-  | Stale<A, E>
-  | Success<A>
+  Idle | Loading | Refreshing<A> | Failure<E> | Stale<A, E> | Success<A>
 
 /** Constructs the `Idle` state. A parameter-free callable Schema, so it can
  *  also serve as a Union member. */
-export const Idle = ts('Idle')
+export const Idle = taggedStruct('Idle')
 
 /** Constructs the `Loading` state. A parameter-free callable Schema, so it
  *  can also serve as a Union member. */
-export const Loading = ts('Loading')
+export const Loading = taggedStruct('Loading')
 
 /** Constructs a `Refreshing` state holding the previous good data. Plain
  *  value builder, generic in `A`; use the `Schema` factory's `Refreshing`
@@ -166,10 +161,13 @@ export const Schema = <A, AI, E, EI>(
   dataSchema: S.Codec<A, AI>,
   errorSchema: S.Codec<E, EI>,
 ): AsyncDataSchema<A, AI, E, EI> => {
-  const RefreshingSchema = ts('Refreshing', { data: dataSchema })
-  const FailureSchema = ts('Failure', { error: errorSchema })
-  const StaleSchema = ts('Stale', { error: errorSchema, data: dataSchema })
-  const SuccessSchema = ts('Success', { data: dataSchema })
+  const RefreshingSchema = taggedStruct('Refreshing', { data: dataSchema })
+  const FailureSchema = taggedStruct('Failure', { error: errorSchema })
+  const StaleSchema = taggedStruct('Stale', {
+    error: errorSchema,
+    data: dataSchema,
+  })
+  const SuccessSchema = taggedStruct('Success', { data: dataSchema })
   const schema = S.Union([
     Idle,
     Loading,
@@ -756,8 +754,7 @@ const allRecord = (
  *  struct of all datas. */
 export const all: <
   const Inputs extends
-    | Iterable<AsyncData<any, any>>
-    | Record<string, AsyncData<any, any>>,
+    Iterable<AsyncData<any, any>> | Record<string, AsyncData<any, any>>,
 >(
   inputs: Inputs,
 ) => [Inputs] extends [ReadonlyArray<AsyncData<any, any>>]
@@ -825,10 +822,9 @@ export const all: <
  *  })
  *
  *  // One update arm folds it in, whatever the previous state was:
- *  SettledLoadNotes: ({ result }) => [
- *    evo(model, { notes: AsyncData.settle(result) }),
- *    [],
- *  ]
+ *  SettledLoadNotes: ({ result }) => ({
+ *    model: evo(model, { notes: AsyncData.settle(result) }),
+ *  })
  *  ```
  */
 export const settle: {

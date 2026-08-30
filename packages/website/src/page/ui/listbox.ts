@@ -5,12 +5,7 @@ import { Listbox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/listbox'
 
 import { Icon } from '../../icon'
-import {
-  GotListboxDemoMessage,
-  GotListboxGroupedDemoMessage,
-  GotListboxMultiDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import type { ListboxItem } from './model'
 
 // DEMO CONTENT
@@ -50,19 +45,13 @@ const GROUPED_CHARACTERS: ReadonlyArray<Character> = [
 ]
 
 const triggerClassName =
-  'inline-flex items-center justify-between gap-2 min-w-48 px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+  'demo-neutral-button inline-flex min-w-48 items-center justify-between gap-2'
 
-const itemsClassName =
-  'w-(--button-width) rounded-lg border border-gray-200 dark:border-gray-700 bg-cream dark:bg-gray-800 shadow-lg overflow-hidden z-10 outline-none'
+const itemsClassName = 'demo-popup-surface w-(--button-width) overflow-hidden'
 
-const itemClassName =
-  'group px-3 py-2 text-base text-gray-700 dark:text-gray-200 cursor-pointer data-[active]:bg-gray-100 dark:data-[active]:bg-gray-700/50'
+const itemClassName = 'demo-option group'
 
-const groupedItemClassName =
-  'group px-3 py-2 text-base text-gray-700 dark:text-gray-200 cursor-pointer data-[active]:bg-gray-100 dark:data-[active]:bg-gray-700/50'
-
-const groupHeadingClassName =
-  'px-3 pt-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500'
+const groupHeadingClassName = 'demo-option-heading'
 
 const separatorClassName = 'border-t border-gray-200 dark:border-gray-700'
 
@@ -90,13 +79,10 @@ export const basicDemo = (
 
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
-          [
-            h.For(Listbox.buttonId(listboxModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
+          [h.For(Listbox.buttonId(listboxModel.id)), h.Class('demo-label')],
           ['Family member'],
         ),
         h.div(
@@ -133,7 +119,8 @@ export const basicDemo = (
                 ]),
                 attributes: childAttributes([h.Class(wrapperClassName)]),
               },
-              toParentMessage: message => GotListboxDemoMessage({ message }),
+              toParentMessage: message =>
+                Message.GotListboxDemoMessage({ message }),
             }),
           ],
         ),
@@ -157,12 +144,12 @@ export const multiSelectDemo = (
 
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
           [
             h.For(Listbox.Multi.buttonId(listboxModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+            h.Class('demo-label'),
           ],
           ['Family members'],
         ),
@@ -201,7 +188,7 @@ export const multiSelectDemo = (
                 attributes: childAttributes([h.Class(wrapperClassName)]),
               },
               toParentMessage: message =>
-                GotListboxMultiDemoMessage({ message }),
+                Message.GotListboxMultiDemoMessage({ message }),
             }),
           ],
         ),
@@ -222,13 +209,10 @@ export const groupedDemo = (
 
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
-          [
-            h.For(Listbox.buttonId(listboxModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
+          [h.For(Listbox.buttonId(listboxModel.id)), h.Class('demo-label')],
           ['Character'],
         ),
         h.div(
@@ -252,7 +236,7 @@ export const groupedDemo = (
                   h.Class(separatorClassName),
                 ]),
                 itemToConfig: character => ({
-                  className: groupedItemClassName,
+                  className: itemClassName,
                   content: h.div(
                     [h.Class('flex items-center gap-2')],
                     [
@@ -275,7 +259,7 @@ export const groupedDemo = (
                 attributes: childAttributes([h.Class(wrapperClassName)]),
               },
               toParentMessage: message =>
-                GotListboxGroupedDemoMessage({ message }),
+                Message.GotListboxGroupedDemoMessage({ message }),
             }),
           ],
         ),

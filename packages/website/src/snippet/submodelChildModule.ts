@@ -1,7 +1,7 @@
 // page/settings.ts
-import { Match as M, Schema as S } from 'effect'
-import { Command } from 'foldkit'
-import { m } from 'foldkit/message'
+import { Schema as S } from 'effect'
+import { type Update } from 'foldkit'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 // MODEL
@@ -22,36 +22,25 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const ChangedTheme = m('ChangedTheme', { theme: Theme })
-export const ChangedFontSize = m('ChangedFontSize', { fontSize: FontSize })
-export const ToggledNotifications = m('ToggledNotifications')
+export const Message = defineMessageUnion({
+  ChangedTheme: { theme: Theme },
+  ChangedFontSize: { fontSize: FontSize },
+  ToggledNotifications: {},
+})
 
-export const Message = S.Union([
-  ChangedTheme,
-  ChangedFontSize,
-  ToggledNotifications,
-])
 export type Message = typeof Message.Type
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<
-      readonly [Model, ReadonlyArray<Command.Command<Message>>]
-    >(),
-    M.tagsExhaustive({
-      ChangedTheme: ({ theme }) => [evo(model, { theme: () => theme }), []],
-      ChangedFontSize: ({ fontSize }) => [
-        evo(model, { fontSize: () => fontSize }),
-        [],
-      ],
-      ToggledNotifications: () => [
-        evo(model, { notificationsEnabled: enabled => !enabled }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    ChangedTheme: ({ theme }) => ({
+      model: evo(model, { theme: () => theme }),
     }),
-  )
+    ChangedFontSize: ({ fontSize }) => ({
+      model: evo(model, { fontSize: () => fontSize }),
+    }),
+    ToggledNotifications: () => ({
+      model: evo(model, { notificationsEnabled: enabled => !enabled }),
+    }),
+  })

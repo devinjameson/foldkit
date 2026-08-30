@@ -14,7 +14,7 @@ import {
 import { AsyncData, Render, Subscription } from 'foldkit'
 
 import { type Model } from '../main'
-import { ChangedActiveSection, type Message } from '../message'
+import { Message } from '../message'
 import * as Page from '../page'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
@@ -29,7 +29,6 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
           M.tags({
             Manifesto: () => Page.Manifesto.tableOfContents,
             WhyNoJsx: () => Page.WhyNoJsx.tableOfContents,
-            WhatAboutSsr: () => Page.WhatAboutSsr.tableOfContents,
             Performance: () => Page.Performance.tableOfContents,
             GettingStarted: () => Page.GettingStarted.tableOfContents,
             Roadmap: () => Page.Roadmap.tableOfContents,
@@ -84,6 +83,8 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
             CoreHttp: () => Page.Core.CoreHttp.tableOfContents,
             CoreCanvas: () => Page.Core.CoreCanvas.tableOfContents,
             CoreRuntime: () => Page.Core.Runtime.tableOfContents,
+            CoreServerRendering: () =>
+              Page.Core.CoreServerRendering.tableOfContents,
             CoreResources: () => Page.Core.Resources.tableOfContents,
             CoreManagedResources: () =>
               Page.Core.ManagedResources.tableOfContents,
@@ -128,6 +129,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
             UiTooltip: () => Page.UiPages.TooltipPage.tableOfContents,
             UiAnimation: () => Page.UiPages.AnimationPage.tableOfContents,
             UiAnchor: () => Page.UiPages.AnchorPage.tableOfContents,
+            UiHoverIntent: () => Page.UiPages.HoverIntentPage.tableOfContents,
             UiVirtualList: () => Page.UiPages.VirtualListPage.tableOfContents,
             UiOverview: () => Page.UiPages.OverviewPage.tableOfContents,
             UiSelectionSubmodels: () =>
@@ -135,6 +137,10 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
             AiOverview: () => Page.AiOverview.tableOfContents,
             AiSkills: () => Page.AiSkills.tableOfContents,
             AiMcp: () => Page.AiMcp.tableOfContents,
+            ContentApi: () => Page.ContentApi.tableOfContents,
+            About: () => Page.About.tableOfContents,
+            Contact: () => Page.Contact.tableOfContents,
+            Privacy: () => Page.Privacy.tableOfContents,
             TypingTerminal: () => Page.TypingTerminal.tableOfContents,
           }),
           M.tag(
@@ -157,7 +163,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
         }
       },
       dependenciesToStream: ({ sections }) =>
-        Stream.callback<typeof ChangedActiveSection.Type>(queue =>
+        Stream.callback<typeof Message.ChangedActiveSection.Type>(queue =>
           Effect.gen(function* () {
             if (!Array.isReadonlyArrayNonEmpty(sections)) {
               return yield* Effect.never
@@ -192,7 +198,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
                       onSome: sectionId => {
                         Queue.offerUnsafe(
                           queue,
-                          ChangedActiveSection({ sectionId }),
+                          Message.ChangedActiveSection({ sectionId }),
                         )
                       },
                     })

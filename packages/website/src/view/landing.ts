@@ -13,14 +13,7 @@ import * as DemoTab from '../demoTab'
 import { Icon } from '../icon'
 import { Link } from '../link'
 import { type Model } from '../main'
-import {
-  ClickedOpenMobileMenu,
-  GotAsyncCounterDemoMessage,
-  GotDemoTabsMessage,
-  GotNotePlayerDemoMessage,
-  GotPlaygroundMenuMessage,
-  type Message,
-} from '../message'
+import { Message } from '../message'
 import * as Page from '../page'
 import {
   type ExampleMeta,
@@ -28,9 +21,14 @@ import {
   examples,
   findBySlug,
 } from '../page/example/meta'
-import { coreArchitectureRouter, homeRouter } from '../route'
+import { gettingStartedRouter, homeRouter } from '../route'
 import { headerNavView } from './headerNav'
-import { betaTag, emailSignupContentView, skipNavLink } from './shared'
+import {
+  betaTag,
+  emailSignupContentView,
+  siteLinksView,
+  skipNavLink,
+} from './shared'
 import { mobileMenuView } from './sidebar'
 import { themeSelector } from './themeSelector'
 
@@ -71,16 +69,16 @@ const landingHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
           ),
           h.div(
             [h.Class('hidden md:flex')],
-            [themeSelector(model.themePreference, h)],
+            [themeSelector(model.maybeThemePreference, h)],
           ),
           h.a(
             [
-              h.Href(coreArchitectureRouter()),
+              h.Href(gettingStartedRouter()),
               h.Class(
-                'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 text-sm font-normal transition hover:bg-accent-700 dark:hover:bg-accent-600',
+                'button-accent inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm',
               ),
             ],
-            ['Dive In', Icon.arrowRight('w-4 h-4')],
+            ['Get started', Icon.arrowRight('w-4 h-4')],
           ),
           h.button(
             [
@@ -89,7 +87,7 @@ const landingHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
               ),
               h.AriaExpanded(model.mobileMenuDialog.isOpen),
               h.AriaLabel('Toggle menu'),
-              h.OnClick(ClickedOpenMobileMenu()),
+              h.OnClick(Message.ClickedOpenMobileMenu()),
             ],
             [Icon.menu('w-6 h-6')],
           ),
@@ -104,7 +102,7 @@ const landingFooter = (currentYear: number): Html =>
   ih.footer(
     [
       ih.Class(
-        'px-6 py-8 md:px-12 lg:px-20 border-t border-gray-300 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400',
+        'px-6 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] md:px-12 lg:px-20 border-t border-gray-300 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400',
       ),
     ],
     [
@@ -115,9 +113,7 @@ const landingFooter = (currentYear: number): Html =>
           ih.a(
             [
               ih.Href(`${Link.websiteSource}/src/main.ts`),
-              ih.Class(
-                'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500',
-              ),
+              ih.Class('link-accent'),
             ],
             ['Foldkit'],
           ),
@@ -125,6 +121,7 @@ const landingFooter = (currentYear: number): Html =>
         ],
       ),
       ih.p([ih.Class('mt-1')], [`© ${currentYear} Devin Jameson`]),
+      siteLinksView,
     ],
   )
 
@@ -138,11 +135,11 @@ const demoTabPanelClassName =
 
 const toAsyncCounterDemoMessage = (
   message: Page.AsyncCounterDemo.Message,
-): Message => GotAsyncCounterDemoMessage({ message })
+): Message => Message.GotAsyncCounterDemoMessage({ message })
 
 const toNotePlayerDemoMessage = (
   message: Page.NotePlayerDemo.Message,
-): Message => GotNotePlayerDemoMessage({ message })
+): Message => Message.GotNotePlayerDemoMessage({ message })
 
 const renderAsyncCounterDemo = (
   maybeAsyncCounterDemo: Option.Option<Page.AsyncCounterDemo.Model>,
@@ -213,13 +210,13 @@ const chromeRecommendedHint: Html = ih.p(
   ['Requires a Chromium browser'],
 )
 
-const withChromeRecommendedHint = (menu: Html, isChromium: boolean): Html =>
-  isChromium
-    ? menu
-    : ih.div(
+const withChromeRecommendedHint = (menu: Html, isShowingHint: boolean): Html =>
+  isShowingHint
+    ? ih.div(
         [ih.Class('flex flex-col items-start gap-1')],
         [menu, chromeRecommendedHint],
       )
+    : menu
 
 const playgroundItemContent = (meta: ExampleMeta): Html =>
   ih.div(
@@ -287,7 +284,7 @@ const playgroundMenuView = (
       ]),
       attributes: childAttributes([h.Class('relative inline-block')]),
     },
-    toParentMessage: message => GotPlaygroundMenuMessage({ message }),
+    toParentMessage: message => Message.GotPlaygroundMenuMessage({ message }),
   })
 
 // VIEW
@@ -303,19 +300,13 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
     h,
   ])
 
-  const emailSignupView = emailSignupContentView(
-    model.emailField,
-    model.emailSubscriptionStatus,
-    h,
-  )
-
   const playgroundMenu = withChromeRecommendedHint(
     playgroundMenuView(
       model.playgroundMenu,
       examples.map(example => example.slug),
       h,
     ),
-    model.isChromium,
+    Option.contains(model.maybeIsChromium, false),
   )
 
   const buttonLabelFor = (tab: DemoTab.Tab): string =>
@@ -365,7 +356,7 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
           ],
         ),
     },
-    toParentMessage: message => GotDemoTabsMessage({ message }),
+    toParentMessage: message => Message.GotDemoTabsMessage({ message }),
   })
 
   return h.div(
@@ -384,7 +375,7 @@ export const landingView = (model: Model, h: HtmlBuilder<Message>) => {
           Page.Landing.view(
             model.copiedSnippets,
             demoTabsView,
-            emailSignupView,
+            emailSignupContentView,
             playgroundMenu,
             model.aiHeadingToggleCount,
             model.maybeGitHubStarCount,
@@ -411,13 +402,7 @@ export const newsletterView = (model: Model, h: HtmlBuilder<Message>) =>
             'flex-1 flex items-center justify-center px-6 pb-20 pt-[calc(var(--header-height)+5rem)] md:px-12 lg:px-20',
           ),
         ],
-        [
-          emailSignupContentView(
-            model.emailField,
-            model.emailSubscriptionStatus,
-            h,
-          ),
-        ],
+        [emailSignupContentView],
       ),
       landingFooter(model.currentYear),
     ],

@@ -7,3 +7,5 @@ export const Session = S.Struct({
 })
 
 export type Session = typeof Session.Type
+
+export const SessionJsonString = S.fromJsonString(S.toCodecJson(Session))

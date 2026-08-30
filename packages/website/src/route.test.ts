@@ -46,6 +46,10 @@ describe('route table', () => {
       expect(parsed._tag).toBe(expectedTag(name))
     },
   )
+
+  test('builds the Why Foldkit page at its renamed URL', () => {
+    expect(Route.manifestoRouter()).toBe('/get-started/why-foldkit')
+  })
 })
 
 describe('blog routes', () => {
@@ -57,7 +61,7 @@ describe('blog routes', () => {
     )
 
     expect(parsed).toEqual(
-      Route.BlogPostRoute({ postSlug: 'introducing-the-foldkit-blog' }),
+      Route.AppRoute.BlogPost({ postSlug: 'introducing-the-foldkit-blog' }),
     )
   })
 
@@ -69,7 +73,7 @@ describe('blog routes', () => {
     const parsed = Route.urlToAppRoute(
       Option.getOrThrow(urlFromString(`${SITE}${path}`)),
     )
-    expect(parsed).toEqual(Route.BlogPostRoute({ postSlug: 'some-post' }))
+    expect(parsed).toEqual(Route.AppRoute.BlogPost({ postSlug: 'some-post' }))
   })
 
   test('leaves /blog/rss.xml to the static feed file', () => {
@@ -85,13 +89,18 @@ describe('section predicates', () => {
   const cases: ReadonlyArray<
     readonly [string, Route.AppRoute, boolean, boolean]
   > = [
-    ['GettingStarted', Route.GettingStartedRoute(), true, false],
-    ['CoreArchitecture', Route.CoreArchitectureRoute(), true, false],
-    ['Home', Route.HomeRoute(), false, false],
-    ['Newsletter', Route.NewsletterRoute(), false, false],
-    ['NotFound', Route.NotFoundRoute({ path: '/missing' }), false, false],
-    ['Blog', Route.BlogRoute(), false, true],
-    ['BlogPost', Route.BlogPostRoute({ postSlug: 'some-post' }), false, true],
+    ['GettingStarted', Route.AppRoute.GettingStarted(), true, false],
+    ['CoreArchitecture', Route.AppRoute.CoreArchitecture(), true, false],
+    ['Home', Route.AppRoute.Home(), false, false],
+    ['Newsletter', Route.AppRoute.Newsletter(), false, false],
+    ['NotFound', Route.AppRoute.NotFound({ path: '/missing' }), false, false],
+    ['Blog', Route.AppRoute.Blog(), false, true],
+    [
+      'BlogPost',
+      Route.AppRoute.BlogPost({ postSlug: 'some-post' }),
+      false,
+      true,
+    ],
   ]
 
   test.each(cases)(

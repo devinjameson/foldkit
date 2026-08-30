@@ -1,9 +1,10 @@
 import chalk from 'chalk'
-import { Console, Effect, FileSystem, Option, Path } from 'effect'
+import { Console, Effect, FileSystem, Match, Option, Path, pipe } from 'effect'
 import { Prompt } from 'effect/unstable/cli'
 import { spawnSync } from 'node:child_process'
 
 import { type Example, examples } from '../examples.js'
+import { type Rendering, Scaffold, renderings } from '../rendering.js'
 import { createProject } from '../utils/files.js'
 import {
   type PackageManager,
@@ -14,8 +15,10 @@ import { validateProjectName } from '../validateName.js'
 
 type CreateInput = Readonly<{
   name: Option.Option<string>
+  rendering: Option.Option<Rendering>
   example: Option.Option<Example>
   packageManager: Option.Option<PackageManager>
+  maybeDependencyManifestsDirectory: Option.Option<string>
 }>
 
 const isWindows = process.platform === 'win32'
@@ -27,6 +30,15 @@ const promptForName = Prompt.text({
       onNone: () => Effect.succeed(value),
       onSome: message => Effect.fail(message),
     }),
+})
+
+const promptForRendering = Prompt.select<Rendering>({
+  message: 'Pick a rendering mode',
+  choices: renderings.map(({ value, title, description }) => ({
+    value,
+    title,
+    description,
+  })),
 })
 
 const promptForExample = Prompt.autoComplete({
@@ -48,21 +60,45 @@ const promptForPackageManager = Prompt.select<PackageManager>({
   ],
 })
 
+const resolveScaffold = (
+  rendering: Rendering,
+  maybeExample: Option.Option<Example>,
+) =>
+  Match.value(rendering).pipe(
+    Match.when('spa', () =>
+      pipe(
+        maybeExample,
+        Option.match({
+          onNone: () => promptForExample,
+          onSome: Effect.succeed,
+        }),
+        Effect.map(example => Scaffold.Spa({ example })),
+      ),
+    ),
+    Match.when('ssg', () => Effect.succeed(Scaffold.Ssg())),
+    Match.when('ssr', () => Effect.succeed(Scaffold.Ssr())),
+    Match.exhaustive,
+  )
+
 const resolveInput = (input: CreateInput) =>
   Effect.gen(function* () {
     const name = yield* Option.match(input.name, {
       onNone: () => promptForName,
       onSome: Effect.succeed,
     })
-    const example = yield* Option.match(input.example, {
-      onNone: () => promptForExample,
+    const rendering = yield* Option.match(input.rendering, {
+      onNone: () => promptForRendering,
       onSome: Effect.succeed,
     })
+    if (rendering !== 'spa' && Option.isSome(input.example)) {
+      yield* Effect.fail('The --example flag only applies to spa rendering.')
+    }
+    const scaffold = yield* resolveScaffold(rendering, input.example)
     const packageManager = yield* Option.match(input.packageManager, {
       onNone: () => promptForPackageManager,
       onSome: Effect.succeed,
     })
-    return { name, example, packageManager }
+    return { name, scaffold, packageManager }
   })
 
 const validateProject = (
@@ -97,14 +133,14 @@ const validateProject = (
 const setupProject = (
   name: string,
   projectPath: string,
-  example: Example,
+  scaffold: Scaffold,
   packageManager: PackageManager,
 ) =>
   Effect.gen(function* () {
     yield* Console.log(chalk.blue('🚀 Creating your Foldkit app...'))
     yield* Console.log('')
 
-    yield* createProject(name, projectPath, example, packageManager)
+    yield* createProject(name, projectPath, scaffold, packageManager)
 
     yield* Console.log(chalk.green(`✅ Created project`))
     yield* Console.log('')
@@ -113,14 +149,20 @@ const setupProject = (
 const installProjectDependencies = (
   projectPath: string,
   packageManager: PackageManager,
-  example: Example,
+  scaffold: Scaffold,
+  maybeDependencyManifestsDirectory: Option.Option<string>,
 ) =>
   Effect.gen(function* () {
     yield* Console.log(
       chalk.blue(`📦 Installing dependencies with ${packageManager}...`),
     )
 
-    yield* installDependencies(projectPath, packageManager, example)
+    yield* installDependencies(
+      projectPath,
+      packageManager,
+      scaffold,
+      maybeDependencyManifestsDirectory,
+    )
 
     yield* Console.log(chalk.green('✅ Dependencies installed'))
     yield* Console.log('')
@@ -183,13 +225,26 @@ const displaySuccessMessage = (name: string, packageManager: PackageManager) =>
 
 export const create = (input: CreateInput) =>
   Effect.gen(function* () {
-    const { name, example, packageManager } = yield* resolveInput(input)
+    const { name, scaffold, packageManager } = yield* resolveInput(input)
     const path = yield* Path.Path
+    if (
+      Option.isSome(input.maybeDependencyManifestsDirectory) &&
+      !path.isAbsolute(input.maybeDependencyManifestsDirectory.value)
+    ) {
+      return yield* Effect.fail(
+        'CREATE_FOLDKIT_APP_DEPENDENCY_MANIFESTS_DIRECTORY must be an absolute path.',
+      )
+    }
     const projectPath = path.resolve(name)
 
     yield* validateProject(name, projectPath, packageManager)
-    yield* setupProject(name, projectPath, example, packageManager)
-    yield* installProjectDependencies(projectPath, packageManager, example)
+    yield* setupProject(name, projectPath, scaffold, packageManager)
+    yield* installProjectDependencies(
+      projectPath,
+      packageManager,
+      scaffold,
+      input.maybeDependencyManifestsDirectory,
+    )
     yield* displaySuccessMessage(name, packageManager)
 
     return name

@@ -3,13 +3,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { VirtualList } from '@foldkit/ui'
 
-import {
-  ClickedVirtualListScrollToMiddle,
-  ClickedVirtualListVariableScrollToMiddle,
-  GotVirtualListDemoMessage,
-  GotVirtualListVariableDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 
 // SAMPLE DATA
 
@@ -144,7 +138,7 @@ const timeAgoClassName =
   'text-right text-xs text-gray-500 dark:text-gray-400 tabular-nums'
 
 const buttonClassName =
-  'rounded bg-accent-600 hover:bg-accent-700 cursor-pointer px-3 py-1.5 text-sm font-medium text-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-600 focus-visible:ring-offset-2'
+  'button-accent rounded cursor-pointer px-3 py-1.5 text-sm shadow-sm'
 
 const headerClassName =
   'flex items-end justify-between text-sm text-gray-600 dark:text-gray-400'
@@ -164,7 +158,7 @@ export const virtualListDemo = (
             h.button(
               [
                 h.Class(buttonClassName),
-                h.OnClick(ClickedVirtualListScrollToMiddle()),
+                h.OnClick(Message.ClickedVirtualListScrollToMiddle()),
               ],
               ['Jump to middle'],
             ),
@@ -200,7 +194,8 @@ export const virtualListDemo = (
               ),
             containerClassName,
           },
-          toParentMessage: message => GotVirtualListDemoMessage({ message }),
+          toParentMessage: message =>
+            Message.GotVirtualListDemoMessage({ message }),
         }),
       ],
     ),
@@ -342,7 +337,7 @@ export const virtualListVariableDemo = (
             h.button(
               [
                 h.Class(buttonClassName),
-                h.OnClick(ClickedVirtualListVariableScrollToMiddle()),
+                h.OnClick(Message.ClickedVirtualListVariableScrollToMiddle()),
               ],
               ['Jump to middle'],
             ),
@@ -363,7 +358,7 @@ export const virtualListVariableDemo = (
             containerClassName,
           },
           toParentMessage: message =>
-            GotVirtualListVariableDemoMessage({ message }),
+            Message.GotVirtualListVariableDemoMessage({ message }),
         }),
       ],
     ),

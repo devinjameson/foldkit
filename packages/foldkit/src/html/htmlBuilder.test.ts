@@ -1,11 +1,13 @@
 import { Context, Number, Schema as S } from 'effect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { MountTracker } from '../mount/index.js'
+import { isClientOnlyProperty } from '../propertyProvenance.js'
 import { Dispatch } from '../runtime/index.js'
 import { embed, makeElement } from '../runtime/runtime.js'
 import { evo } from '../struct/index.js'
+import type * as Update from '../update/index.js'
 import { beginRender, createBoundaryRegistry } from './boundary.js'
 import * as HtmlModule from './index.js'
 import {
@@ -25,16 +27,19 @@ import { defineView } from './submodel.js'
 
 type ChildModel = Readonly<{ value: number }>
 
-const ClickedChild = m('ClickedChild', { value: S.Number })
-const ChildMessage = S.Union([ClickedChild])
+const ChildMessage = defineMessageUnion({
+  ClickedChild: { value: S.Number },
+})
 type ChildMessage = typeof ChildMessage.Type
 
-const GotChildMessage = m('GotChildMessage', { message: ChildMessage })
-const ParentMessage = S.Union([GotChildMessage])
+const ParentMessage = defineMessageUnion({
+  GotChildMessage: { message: ChildMessage },
+})
 type ParentMessage = typeof ParentMessage.Type
 
-const ClickedApp = m('ClickedApp')
-const AppMessage = S.Union([ClickedApp])
+const AppMessage = defineMessageUnion({
+  ClickedApp: {},
+})
 type AppMessage = typeof AppMessage.Type
 
 const runtimeContext = (dispatchSync: DispatchSync) =>
@@ -56,7 +61,10 @@ const runtimeContext = (dispatchSync: DispatchSync) =>
   )
 
 const childView = defineView<ChildModel, ChildMessage>((model, h) =>
-  h.button([h.OnClick(ClickedChild({ value: model.value }))], ['fire']),
+  h.button(
+    [h.OnClick(ChildMessage.ClickedChild({ value: model.value }))],
+    ['fire'],
+  ),
 )
 
 // TYPE GUARANTEES
@@ -72,7 +80,7 @@ describe('HtmlBuilder type guarantees', () => {
         [
           // @ts-expect-error `Message` defaults to `never`, so omitting the type
           // arguments must not widen the builder to accept any Message at all
-          h.OnClick(ClickedApp()),
+          h.OnClick(AppMessage.ClickedApp()),
         ],
         ['x'],
       ),
@@ -97,7 +105,8 @@ describe('HtmlBuilder type guarantees', () => {
           slotId: 'omits-view-inputs',
           model: { value: 0 },
           view: needsInputs,
-          toParentMessage: message => GotChildMessage({ message }),
+          toParentMessage: message =>
+            ParentMessage.GotChildMessage({ message }),
         },
       )
 
@@ -110,7 +119,7 @@ describe('HtmlBuilder type guarantees', () => {
         h.button(
           [
             // @ts-expect-error an app-level Message is not part of this Submodel's union
-            h.OnClick(ClickedApp()),
+            h.OnClick(AppMessage.ClickedApp()),
           ],
           ['x'],
         ),
@@ -120,7 +129,7 @@ describe('HtmlBuilder type guarantees', () => {
 
   it('rejects passing a child builder to a helper typed for the app builder', () => {
     const appHeaderView = (h: HtmlBuilder<AppMessage>): Html =>
-      h.button([h.OnClick(ClickedApp())], ['header'])
+      h.button([h.OnClick(AppMessage.ClickedApp())], ['header'])
 
     const childViewUsingAppHelper = defineView<ChildModel, ChildMessage>(
       (_model, h) =>
@@ -138,14 +147,14 @@ describe('HtmlBuilder type guarantees', () => {
         model: { value: 1 },
         view: childView,
         // @ts-expect-error the lift must produce the embedding frame's Message
-        toParentMessage: () => ClickedApp(),
+        toParentMessage: () => AppMessage.ClickedApp(),
       })
     expect(typeof embedWithForeignLift).toBe('function')
   })
 
   it('refuses handler construction on inertHtml', () => {
     // @ts-expect-error inertHtml's Message is never, so no handler is expressible
-    inertHtml.OnClick(ClickedApp())
+    inertHtml.OnClick(AppMessage.ClickedApp())
     expect(inertHtml.empty).toBeNull()
   })
 
@@ -165,6 +174,13 @@ describe('HtmlBuilder type guarantees', () => {
 // RUNTIME GUARANTEES
 
 describe('HtmlBuilder runtime guarantees', () => {
+  it('keeps a typed property client-only where the element does not reflect it', () => {
+    const div = __htmlBuilder<never>().div([inertHtml.Type('button')])
+
+    expect(div?.data?.props?.['type']).toBe('button')
+    expect(isClientOnlyProperty(div?.data?.props, 'type')).toBe(true)
+  })
+
   afterEach(() => {
     document.body.innerHTML = ''
   })
@@ -208,7 +224,7 @@ describe('HtmlBuilder runtime guarantees', () => {
         slotId: 'child',
         model: { value: 7 },
         view: childView,
-        toParentMessage: message => GotChildMessage({ message }),
+        toParentMessage: message => ParentMessage.GotChildMessage({ message }),
       })
 
       /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -268,8 +284,7 @@ describe('HtmlBuilder runtime guarantees', () => {
   })
 
   it('supplies the root view its builder in a live runtime and routes clicks to update', async () => {
-    const ClickedIncrement = m('ClickedIncrement')
-    const Message = S.Union([ClickedIncrement])
+    const Message = defineMessageUnion({ ClickedIncrement: {} })
     type Message = typeof Message.Type
     const Model = S.Struct({ count: S.Number })
     type Model = typeof Model.Type
@@ -280,19 +295,18 @@ describe('HtmlBuilder runtime guarantees', () => {
 
     const widget = makeElement({
       Model,
-      init: () => [{ count: 0 }, []],
+      init: () => ({ model: { count: 0 } }),
       update: (
         model: Model,
         _message: Message,
-      ): readonly [Model, ReadonlyArray<never>] => [
-        evo(model, { count: Number.increment }),
-        [],
-      ],
+      ): Update.Return<Model, Message> => ({
+        model: evo(model, { count: Number.increment }),
+      }),
       view: (model, h) =>
         h.div(
           [],
           [
-            h.button([h.OnClick(ClickedIncrement())], ['increment']),
+            h.button([h.OnClick(Message.ClickedIncrement())], ['increment']),
             h.div([], [`count:${model.count}`]),
           ],
         ),
@@ -314,8 +328,7 @@ describe('HtmlBuilder runtime guarantees', () => {
   })
 
   it('passes an explicitly undefined viewInputs through as the inputs argument', async () => {
-    const IgnoredChildRender = m('IgnoredChildRender')
-    const Message = S.Union([IgnoredChildRender])
+    const Message = defineMessageUnion({ IgnoredChildRender: {} })
     type Message = typeof Message.Type
     const Model = S.Struct({ ready: S.Boolean })
     type Model = typeof Model.Type
@@ -340,18 +353,18 @@ describe('HtmlBuilder runtime guarantees', () => {
 
     const widget = makeElement({
       Model,
-      init: () => [{ ready: true }, []],
+      init: () => ({ model: { ready: true } }),
       update: (
         model: Model,
         _message: Message,
-      ): readonly [Model, ReadonlyArray<never>] => [model, []],
+      ): Update.Return<Model, Message> => ({ model }),
       view: (_model, h) =>
         h.submodel({
           slotId: 'child',
           model: { id: 'child' },
           view: childView,
           viewInputs: undefined,
-          toParentMessage: () => IgnoredChildRender(),
+          toParentMessage: () => Message.IgnoredChildRender(),
         }),
       container,
     })

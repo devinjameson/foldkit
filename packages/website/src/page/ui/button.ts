@@ -2,13 +2,13 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Button } from '@foldkit/ui'
 
-import { ClickedButtonDemo, type Message } from './message'
+import { Message } from './message'
 import type { Model } from './model'
 
 // DEMO CONTENT
 
 const buttonClassName =
-  'inline-flex items-center gap-2 rounded-lg bg-accent-600 px-3 py-2 text-base font-semibold text-white shadow-sm transition-colors hover:not-data-[disabled]:bg-accent-600/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
+  'button-accent inline-flex items-center gap-2 rounded-lg px-3 py-2 text-base shadow-sm cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
 
 // VIEW
 
@@ -19,7 +19,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
       [
         Button.view(
           {
-            onClick: ClickedButtonDemo(),
+            onClick: Message.ClickedButtonDemo(),
             toView: attributes =>
               h.button(
                 [...attributes.button, h.Class(buttonClassName)],

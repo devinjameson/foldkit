@@ -10,14 +10,7 @@ import { Combobox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/combobox'
 
 import { Icon } from '../../icon'
-import {
-  GotComboboxDemoMessage,
-  GotComboboxMultiDemoMessage,
-  GotComboboxNullableDemoMessage,
-  GotComboboxPlacementLockDemoMessage,
-  GotComboboxSelectOnFocusDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 import type { City } from './model'
 
 // DEMO CONTENT
@@ -35,14 +28,12 @@ const CITIES: ReadonlyArray<City> = [
   'Zurich',
 ]
 
-const inputClassName =
-  'w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white pl-3 pr-10 py-2 text-base outline-none focus:ring-2 focus:ring-accent-500'
+const inputClassName = 'demo-field-input pr-10'
 
 const buttonClassName =
   'absolute inset-y-0 right-0 flex items-center px-4 cursor-pointer text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors'
 
-const itemsClassName =
-  'w-(--button-width) rounded-lg border border-gray-200 dark:border-gray-700 bg-cream dark:bg-gray-800 shadow-lg overflow-hidden z-10 outline-none'
+const itemsClassName = 'demo-popup-surface w-(--button-width) overflow-hidden'
 
 const COMBOBOX_ANCHOR: AnchorConfig = {
   placement: 'bottom-start',
@@ -50,8 +41,7 @@ const COMBOBOX_ANCHOR: AnchorConfig = {
   padding: 8,
 }
 
-const itemClassName =
-  'px-3 py-2 text-base text-gray-700 dark:text-gray-200 cursor-pointer data-[active]:bg-gray-100 dark:data-[active]:bg-gray-700/50 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed'
+const itemClassName = 'demo-option'
 
 const backdropClassName = 'fixed inset-0 z-0'
 
@@ -120,13 +110,10 @@ export const comboboxDemo = (
 ) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
-          [
-            h.For(Combobox.inputId(comboboxModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
+          [h.For(Combobox.inputId(comboboxModel.id)), h.Class('demo-label')],
           ['City'],
         ),
         h.div(
@@ -146,7 +133,8 @@ export const comboboxDemo = (
                 }),
                 maybeSelectedValue: maybeSelectedCity,
               },
-              toParentMessage: message => GotComboboxDemoMessage({ message }),
+              toParentMessage: message =>
+                Message.GotComboboxDemoMessage({ message }),
             }),
           ],
         ),
@@ -162,12 +150,12 @@ export const nullableDemo = (
 ) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
           [
             h.For(Combobox.inputId(comboboxNullableModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+            h.Class('demo-label'),
           ],
           ['City'],
         ),
@@ -189,7 +177,7 @@ export const nullableDemo = (
                 maybeSelectedValue: maybeSelectedCity,
               },
               toParentMessage: message =>
-                GotComboboxNullableDemoMessage({ message }),
+                Message.GotComboboxNullableDemoMessage({ message }),
             }),
           ],
         ),
@@ -205,12 +193,12 @@ export const selectOnFocusDemo = (
 ) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
           [
             h.For(Combobox.inputId(comboboxSelectOnFocusModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+            h.Class('demo-label'),
           ],
           ['City'],
         ),
@@ -232,7 +220,7 @@ export const selectOnFocusDemo = (
                 maybeSelectedValue: maybeSelectedCity,
               },
               toParentMessage: message =>
-                GotComboboxSelectOnFocusDemoMessage({ message }),
+                Message.GotComboboxSelectOnFocusDemoMessage({ message }),
             }),
           ],
         ),
@@ -254,12 +242,12 @@ export const placementLockDemo = (
     ],
     [
       h.div(
-        [h.Class('flex flex-col gap-1.5')],
+        [h.Class('demo-field')],
         [
           h.label(
             [
               h.For(Combobox.inputId(comboboxPlacementLockModel.id)),
-              h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+              h.Class('demo-label'),
             ],
             ['City'],
           ),
@@ -287,7 +275,7 @@ export const placementLockDemo = (
                   openOnFocus: true,
                 },
                 toParentMessage: message =>
-                  GotComboboxPlacementLockDemoMessage({ message }),
+                  Message.GotComboboxPlacementLockDemoMessage({ message }),
               }),
             ],
           ),
@@ -309,12 +297,12 @@ export const multiDemo = (
 ) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
           [
             h.For(Combobox.inputId(comboboxMultiModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+            h.Class('demo-label'),
           ],
           ['Cities'],
         ),
@@ -345,7 +333,7 @@ export const multiDemo = (
                 selectedValues: selectedCities,
               },
               toParentMessage: message =>
-                GotComboboxMultiDemoMessage({ message }),
+                Message.GotComboboxMultiDemoMessage({ message }),
             }),
           ],
         ),

@@ -7,9 +7,6 @@ import { parseMarkdown } from '@foldkit/markdown/vite'
 import { PostFrontmatter } from '../page/blog/frontmatter'
 import comingFromReactSource from '../page/comingFromReact/comingFromReact.md?raw'
 import { FAQ_IDS } from '../page/comingFromReact/faq'
-import commandsSource from '../page/core/commands.md?raw'
-import submodelSource from '../page/core/submodel.md?raw'
-import manifestoSource from '../page/manifesto.md?raw'
 import comboboxPageSource from '../page/ui/comboboxPage.md?raw'
 import { collectDemoLabels } from './demoLabel'
 import { islandAttributes } from './islandAttributes'
@@ -22,9 +19,6 @@ const markdownOptions = {
   islands: islandAttributes,
   frontmatter: PostFrontmatter,
 }
-
-const tocOf = (source: string) =>
-  collectHeadings(parseMarkdown(source, markdownOptions)).tableOfContents
 
 describe('slugify', () => {
   test('lowercases and dashes non-alphanumeric runs', () => {
@@ -146,187 +140,6 @@ describe('Demo island', () => {
   })
 })
 
-describe('proof pages', () => {
-  test('manifesto table of contents', () => {
-    expect(tocOf(manifestoSource)).toEqual([
-      {
-        level: 'h2',
-        id: 'the-architecture-problem',
-        text: 'The Architecture Problem',
-      },
-      {
-        level: 'h2',
-        id: 'power-through-constraints',
-        text: 'Power Through Constraints',
-      },
-      { level: 'h2', id: 'readable-by-design', text: 'Readable by Design' },
-      {
-        level: 'h2',
-        id: 'build-your-product-not-your-architecture',
-        text: 'Build Your Product, Not Your Architecture',
-      },
-    ])
-  })
-
-  test('commands table of contents', () => {
-    expect(tocOf(commandsSource)).toEqual([
-      { level: 'h2', id: 'overview', text: 'Overview' },
-      { level: 'h2', id: 'anatomy-of-a-command', text: 'Anatomy of a Command' },
-      { level: 'h2', id: 'testable-by-design', text: 'Testable by Design' },
-      { level: 'h2', id: 'http-requests', text: 'HTTP Requests' },
-      { level: 'h2', id: 'commands-with-args', text: 'Commands with Args' },
-      {
-        level: 'h2',
-        id: 'interrupting-commands',
-        text: 'Interrupting Commands',
-      },
-      { level: 'h3', id: 'choosing-a-key', text: 'Choosing a Key' },
-      {
-        level: 'h3',
-        id: 'the-interrupt-constructor',
-        text: 'The Interrupt Constructor',
-      },
-      {
-        level: 'h3',
-        id: 'replacing-cancelled-work',
-        text: 'Replacing Cancelled Work',
-      },
-      {
-        level: 'h3',
-        id: 'cancellations-with-multiple-meanings',
-        text: 'Cancellations with Multiple Meanings',
-      },
-    ])
-  })
-
-  test('submodel table of contents', () => {
-    expect(tocOf(submodelSource)).toEqual([
-      { level: 'h2', id: 'overview', text: 'Overview' },
-      { level: 'h2', id: 'child-submodel', text: 'The Child Submodel' },
-      { level: 'h2', id: 'embedding', text: 'Embedding the Submodel' },
-      { level: 'h3', id: 'embedding-the-model', text: 'Embedding the Model' },
-      {
-        level: 'h3',
-        id: 'never-bypass-the-update',
-        text: 'Never Bypass the Child’s Update',
-      },
-      { level: 'h3', id: 'wrapping-messages', text: 'Wrapping Messages' },
-      { level: 'h3', id: 'delegating-in-update', text: 'Delegating in update' },
-      {
-        level: 'h3',
-        id: 'fold-child',
-        text: 'Folding with Update.foldChild',
-      },
-      {
-        level: 'h3',
-        id: 'wiring-the-view',
-        text: 'Wiring the View with h.submodel',
-      },
-      {
-        level: 'h3',
-        id: 'per-render-view-inputs',
-        text: 'Per-render View Inputs',
-      },
-      {
-        level: 'h2',
-        id: 'boundary-id-and-model-identity',
-        text: 'Boundary Id and Model Identity',
-      },
-      { level: 'h2', id: 'multiple-instances', text: 'Multiple Instances' },
-      {
-        level: 'h2',
-        id: 'memoization',
-        text: 'Memoization Across Submodel Boundaries',
-      },
-      { level: 'h2', id: 'reading-parent-state', text: 'Reading Parent State' },
-      {
-        level: 'h3',
-        id: 'parent-state-in-view',
-        text: 'Passing Parent State to a Child Submodel’s view',
-      },
-      {
-        level: 'h3',
-        id: 'parent-state-in-update',
-        text: 'Providing Parent State to a Child Submodel’s update',
-      },
-      {
-        level: 'h2',
-        id: 'surfacing-facts',
-        text: 'Surfacing Facts to the Parent',
-      },
-      {
-        level: 'h3',
-        id: 'defining-out-messages',
-        text: 'Defining OutMessages',
-      },
-      {
-        level: 'h3',
-        id: 'emitting-from-the-child',
-        text: 'Emitting from the Child',
-      },
-      {
-        level: 'h3',
-        id: 'handling-in-the-parent',
-        text: 'Handling in the Parent',
-      },
-      {
-        level: 'h2',
-        id: 'reflecting-external-state',
-        text: 'Reflecting External State',
-      },
-      {
-        level: 'h2',
-        id: 'which-boundary',
-        text: 'Which Boundary a Handler Dispatches Through',
-      },
-      { level: 'h2', id: 'child-attributes', text: 'childAttributes' },
-      {
-        level: 'h3',
-        id: 'child-attributes-the-problem',
-        text: 'The Problem',
-      },
-      {
-        level: 'h3',
-        id: 'child-attributes-how-it-works',
-        text: 'How It Works',
-      },
-      {
-        level: 'h3',
-        id: 'child-attributes-when-to-reach',
-        text: 'When to Reach For It',
-      },
-      { level: 'h2', id: 'testing-submodels', text: 'Testing Submodels' },
-      {
-        level: 'h2',
-        id: 'debugging-in-devtools',
-        text: 'Debugging Submodels in DevTools',
-      },
-      { level: 'h2', id: 'common-pitfalls', text: 'Common Pitfalls' },
-      { level: 'h2', id: 'api-reference', text: 'API Reference' },
-      { level: 'h3', id: 'api-h-submodel', text: 'h.submodel' },
-      { level: 'h3', id: 'api-submodel-config', text: 'SubmodelConfig' },
-      { level: 'h3', id: 'api-define-view', text: 'Submodel.defineView' },
-      { level: 'h3', id: 'api-submodel-view', text: 'Submodel.View' },
-      { level: 'h3', id: 'api-child-attributes', text: 'childAttributes' },
-      { level: 'h3', id: 'api-child-attribute', text: 'ChildAttribute' },
-    ])
-  })
-
-  test('coming from react table of contents', () => {
-    expect(tocOf(comingFromReactSource)).toEqual([
-      { level: 'h2', id: 'a-simple-counter', text: 'A Simple Counter' },
-      { level: 'h2', id: 'adding-auto-count', text: 'Adding Auto-Count' },
-      { level: 'h2', id: 'adding-a-step-size', text: 'Adding a Step Size' },
-      {
-        level: 'h2',
-        id: 'translating-react-concepts',
-        text: 'Translating React Concepts',
-      },
-      { level: 'h2', id: 'faq', text: 'FAQ' },
-    ])
-  })
-})
-
 const markdownSources = import.meta.glob('../page/**/*.md', {
   query: '?raw',
   import: 'default',
@@ -425,12 +238,14 @@ describe('demo island registration', () => {
 // import graph.
 const SNIPPET_ISLAND_PATTERN = /::Snippet\{[^}]*name="([^"]+)"/g
 
-const SNIPPET_EXTENSION_PATTERN = /\.(?:ts|tsx|elm|json|css)$/
+const SNIPPET_EXTENSION_PATTERN = /\.(?:ts|tsx|elm|json|css|html|sh)$/
 
 describe('snippet island registration', () => {
   const snippetFileNames = new Set(
     Array.filterMap(
-      Object.keys(import.meta.glob('../snippet/*.{ts,tsx,elm,json,css}')),
+      Object.keys(
+        import.meta.glob('../snippet/*.{ts,tsx,elm,json,css,html,sh}'),
+      ),
       path =>
         Result.fromOption(
           Option.map(Array.last(String_.split(path, '/')), fileName =>

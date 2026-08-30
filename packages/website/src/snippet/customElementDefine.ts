@@ -1,7 +1,7 @@
 import { Schema as S } from 'effect'
 import { CustomElement } from 'foldkit'
 import type { Html, HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import 'vanilla-colorful/hex-color-picker.js'
 
 import '@shoelace-style/shoelace/dist/components/qr-code/qr-code.js'
@@ -37,9 +37,9 @@ const qrCode = CustomElement.define({
   events: {},
 })
 
-const ChangedFillColor = m('ChangedFillColor', { value: S.String })
-
-const Message = S.Union([ChangedFillColor])
+const Message = defineMessageUnion({
+  ChangedFillColor: { value: S.String },
+})
 type Message = typeof Message.Type
 
 // Inside a view, mint typed builders with `withMessage(h)`. The view's
@@ -64,7 +64,7 @@ export const designerView = (
       fillPicker([
         fillPicker.Color(model.fillColor),
         fillPicker.OnColorChanged(detail =>
-          ChangedFillColor({ value: detail.value }),
+          Message.ChangedFillColor({ value: detail.value }),
         ),
       ]),
       qr([

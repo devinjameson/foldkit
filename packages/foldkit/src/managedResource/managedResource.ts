@@ -252,11 +252,13 @@ export type EntryBuilder<Model, Message> = <
  *   `Layer`-built resource therefore needs only `release: () => Effect.void`:
  *   the `Layer` finalizers run automatically when the scope closes.
  * - `release` — Tears down the resource. Errors thrown here are silently
- *   swallowed: release must not block cleanup. Resources that register their
- *   teardown as scope finalizers in `acquire` leave this as `() => Effect.void`.
+ *   swallowed, but the runtime still clears the resource reference and
+ *   dispatches `onReleased()` so bookkeeping completes. Resources that
+ *   register their teardown as scope finalizers in `acquire` leave this as
+ *   `() => Effect.void`.
  * - `onAcquired` — Message dispatched when `acquire` succeeds.
  * - `onAcquireError` — Message dispatched when `acquire` fails.
- * - `onReleased` — Message dispatched after `release` completes.
+ * - `onReleased` — Message dispatched after `release` is attempted.
  *
  * @example
  * ```ts

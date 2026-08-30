@@ -2,11 +2,7 @@ import type { HtmlBuilder } from 'foldkit/html'
 
 import { Slider } from '@foldkit/ui'
 
-import {
-  GotSliderRatingDemoMessage,
-  GotSliderVolumeDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 
 // SHARED STYLES
 
@@ -27,10 +23,10 @@ const trackClassName =
   'h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 data-[disabled]:cursor-not-allowed'
 
 const filledTrackClassName =
-  'h-full rounded-full bg-accent-600 data-[disabled]:bg-gray-400'
+  'h-full rounded-full bg-accent-600 dark:bg-accent-500 data-[disabled]:bg-gray-400'
 
 const thumbClassName =
-  'h-5 w-5 rounded-full bg-white border-2 border-accent-600 shadow cursor-grab focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-600 focus-visible:ring-offset-2 data-[dragging]:cursor-grabbing data-[disabled]:cursor-not-allowed data-[disabled]:border-gray-400'
+  'h-5 w-5 rounded-full bg-white border-2 border-accent-600 dark:border-accent-500 shadow cursor-grab focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-600 dark:focus-visible:ring-accent-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 data-[dragging]:cursor-grabbing data-[disabled]:cursor-not-allowed data-[disabled]:border-gray-400'
 
 // VIEW
 
@@ -95,7 +91,8 @@ export const sliderDemo = (
                 ],
               ),
           },
-          toParentMessage: message => GotSliderRatingDemoMessage({ message }),
+          toParentMessage: message =>
+            Message.GotSliderRatingDemoMessage({ message }),
         }),
         h.submodel({
           slotId: volumeModel.id,
@@ -139,7 +136,8 @@ export const sliderDemo = (
                 ],
               ),
           },
-          toParentMessage: message => GotSliderVolumeDemoMessage({ message }),
+          toParentMessage: message =>
+            Message.GotSliderVolumeDemoMessage({ message }),
         }),
       ],
     ),

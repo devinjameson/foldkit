@@ -1,24 +1,28 @@
 # Why no JSX?
 
-Foldkit is plain TypeScript. There is no JSX, no transform, no compiler step. The view is built with a typed function-call DSL. Developers coming from JSX often ask why Foldkit doesn’t use it, and whether it could. This is the answer to both.
+Foldkit views use plain TypeScript function calls instead of JSX. They do not need a JSX transform or a JSX runtime. Foldkit applications do still use the required `@foldkit/vite-plugin`, which transforms application functions to assign view identity and provides Model-preserving hot reload. The choice on this page is about the view authoring syntax, not whether application code passes through build tooling.
 
-## Recognition speed vs readability
+## Familiarity and Type Safety
 
-When a developer says JSX is easier to read, they usually mean they read it faster. That measurement is real. After years of working in JSX, an angle bracket lights up neurons that a function call does not. That is recognition speed. It belongs to the reader, not to the syntax.
+JSX has a familiarity advantage. Developers who have used it for years recognize an element tree immediately, while a function-call DSL takes time to learn.
 
-Readability is a property of the code: how completely it communicates what it does, what it accepts, and what it can produce. A typed function call wins that comparison. Every attribute is a known constructor. Every event handler returns a known Message type. Children are a typed array, not an opaque variadic.
+Foldkit chooses a different advantage. Each view receives an `HtmlBuilder<Message>`, so ordinary TypeScript generics connect the view's Message union to every event attribute it creates. Attribute constructors also carry their value types, and children are explicit arrays of `Html | string`.
 
-Familiarity is real, but it is a complaint about ramp-up, not about the syntax. A week into using the DSL, the recognition gap closes and unfamiliarity stops being the bottleneck.
+Whether that syntax feels easier to read depends on the reader. The reason Foldkit uses it is more specific: the builder preserves a local Message constraint that lowercase JSX cannot express.
 
-## The DSL in thirty seconds
+## DSL Basics
 
-Each HTML element is a function on the builder `h` that every view receives: `h.div`, `h.button`, `h.p`, `h.input`. Each one returns `Html`. Attributes are passed as an array of typed values, children as an array of `Html | string`. Event handlers like `OnClick` and `OnInput` produce typed Messages. The builder is typed `HtmlBuilder<Message>` for the view's own `Message` union, so every handler built with it is constrained to produce a Message that belongs to that union. The compiler enforces it.
+The builder passed to a view contains a function for each HTML element: `h.div`, `h.button`, `h.p`, and `h.input`. Attributes are an array of typed constructors. Children, when an element has any, are a second array. Each element returns `Html`.
 
-For the full tour of how views work, see [View](/core/view).
+Event attributes either take a Message value or translate a curated event payload into one. Because the builder is typed for the view's Message union, a handler cannot dispatch a Message from some other part of the application.
 
-## Side by side
+For a complete introduction, see [View](/core/view).
 
-### A button with an event
+## Side-by-Side Examples
+
+These comparisons use React, the JSX environment most readers know. JSX syntax itself does not define event behavior.
+
+### Button Events
 
 A button with a click handler in JSX:
 
@@ -28,9 +32,9 @@ The same button in the Foldkit DSL:
 
 ::Snippet{name="comparisonDslButton" label="DSL button" class="mb-6"}
 
-The shapes are different. `OnClick` does not take a function. It takes a value of the Message type. That value flows through the entire app, gets logged in DevTools, replays in tests, and lands in `update`. JSX reaches into closures. The DSL hands you a fact.
+In JSX, `onClick` can run whatever callback the parent supplied. Foldkit's `OnClick` accepts a Message value. The Runtime dispatches that Message, update handles it, and DevTools can record it. The event stays on the same explicit data path as every other state change.
 
-### An input
+### Input Values
 
 An email input in JSX:
 
@@ -40,13 +44,15 @@ The same input in the DSL:
 
 ::Snippet{name="comparisonDslInput" label="DSL input" class="mb-6"}
 
-In JSX you write `(e) => onChange(e.target.value)`. The handler signature leaks the SyntheticEvent shape into your code. In the DSL, `OnInput(value => ...)` extracts the value for you. The handler only cares about the data you actually want.
+The React handler receives an event object, so the example extracts `e.target.value` before calling the application callback. Foldkit's `OnInput` extracts the string first. Its translator only receives the value it needs and returns a Message.
 
-The DSL ships [typed handlers for the standard HTML event surface](/api-reference/html#type-Html/Attribute). `OnPointerDown` hands you `pointerType, button, screenX, screenY, clientX, clientY`. `OnFileChange` hands you a list of files with metadata. `OnKeyDown` hands you the key and a typed modifier set.
+The DSL provides [typed handlers for the standard HTML event surface](/api-reference/html#type-Html/Attribute). For example: `OnPointerDown` passes the pointer type, button, screen and client coordinates, and timestamp; `OnFileChange` passes a `ReadonlyArray<File>`; and `OnKeyDown` passes the key with typed Shift, Control, Alt, and Meta state.
 
-The natural follow-up question is: what if I need a field a typed handler does not expose? Today you cannot reach it through the DSL. The set of handlers is closed. In practice this is rarely the limit you hit, because the curated payloads cover the fields you usually want. The places it does bite are specialized: pen pressure on pointer events for drawing apps, `isComposing` on input events for IME-aware text editors, multi-touch gesture data, and custom events dispatched by third-party widgets. We plan to add a typed escape hatch the way Elm does, with a decoder that fails safely on missing fields, before v1.0.0 ships. Until then, the set is what it is.
+Those curated payloads are intentionally narrower than the browser's event objects. `OnPointerDown` does not expose pen pressure, `OnInput` does not expose `isComposing`, and the pointer handlers do not expose a touch list. Foldkit does not currently provide a general native-event decoder. When an interaction needs another native field, a [`Mount.defineStream`](/core/mount) can attach a listener to the live element and emit Messages for its lifetime.
 
-### Conditional rendering
+Third-party web component events use a different path. [`CustomElement.define`](/core/custom-element) describes each `CustomEvent` payload with Schema and creates typed `On*` attributes for it.
+
+### Conditional Rendering
 
 Four-way dispatch in JSX:
 
@@ -56,18 +62,22 @@ The same dispatch in the DSL:
 
 ::Snippet{name="comparisonDslConditional" label="DSL conditional" class="mb-6"}
 
-With `Data.TaggedEnum` and `Match` from effect-ts, JSX gets dispatch parity. Both versions are exhaustive. Both fail to compile if you add a fifth variant without handling it. Without those tools, JSX is back to ternaries, `&&`, and extracted helper components, with exhaustiveness on you.
+Both examples use Effect's Match over a tagged Schema union, so both are exhaustive. Adding another status without adding an arm fails to compile in either version.
 
-The remaining difference is structural. JSX is an expression syntax, so the match lives inside `{...}` braces inside a wrapping element, and every arm returns a React node. The DSL returns `Html` directly into the children array because the tree already is an array of values. No wrapping required. No expression embedding. The dispatch sits at the same level as everything else in the view.
+The syntactic difference is where the matched value goes. JSX embeds it between braces inside the element. The DSL places the resulting `Html` directly in the children array. The exhaustive match does the same job in both.
 
-## Could Foldkit add JSX?
+## The JSX Type Constraint
 
-JSX is not magic. A bundler compiles `<div class="x">hi</div>` into a function call like `jsx('div', { class: 'x', children: 'hi' })`, and Foldkit could ship a JSX runtime that maps that props bag onto the same element factories the DSL already uses. Views are plain functions that return virtual nodes. No hooks, no reactivity tracking, no compile-time magic. At runtime, JSX support would be a small adapter.
+A JSX runtime for Foldkit would be technically possible. A JSX transform turns `<div class="x">hi</div>` into a function call, and an adapter could map the resulting props object onto Foldkit's element factories.
 
-The blocker is the type system. Everything above about typed handlers rests on one mechanism: each view receives a builder typed `HtmlBuilder<Message>`, parameterizing every element factory by that view's Message union. The runtime supplies the builder for the frame the view renders in, so the union `h` carries is the one the frame's dispatcher routes. TypeScript resolves lowercase JSX tags like `<div>` through `JSX.IntrinsicElements`, a single non-generic interface shared by the whole project. There is no way for `<div onClick={...}>` to infer a Message type from the view function around it.
+The difficult part is preserving the Message guarantee. A Foldkit view receives an `HtmlBuilder<Message>` value, so the view's Message type flows through normal generic function calls. TypeScript checks a lowercase JSX tag such as `<div>` against the `JSX.IntrinsicElements` type selected for that source file. That lookup cannot take a type argument from the view function surrounding the tag.
 
-That leaves three ways to wire it up, and each one gives up something the DSL refuses to give up. Type handlers as `unknown`, and any Message compiles in any view; the guarantee this page advertises is gone. Declare your app’s Message type into `JSX.IntrinsicElements` globally, and the first Submodel breaks it, because a Foldkit codebase routinely has several Message unions live at once and one global type cannot represent that. Or skip lowercase tags entirely and derive capitalized components from the view’s builder, `const { Div, Button } = jsxElements(h)`, which preserves the typing and throws away the familiarity that was the only reason to want JSX.
+The available designs all weaken the reason for adding JSX:
 
-Even a perfectly typed JSX layer would be a second authoring syntax: a parallel set of docs, examples, and edge cases, with every future view feature needing two mappings. That is a permanent cost paid to soften a ramp-up that closes in a week.
+- Type event props broadly, and a view can dispatch a Message that does not belong to its union.
+- Configure JSX around one application Message type, and files containing multiple Submodel Message unions lose the local guarantee.
+- Use capitalized generic components derived from the view's builder, and the result no longer has the lowercase HTML syntax developers expect from JSX.
 
-So the precise answer is sharper than a style preference. JSX as syntax is feasible. JSX with the DSL’s guarantee, in the lowercase form people actually want, is not. “Every handler in this subtree produces a Message from this view’s union” is not something JSX’s type model can say. Foldkit isn’t avoiding JSX. It expresses a constraint JSX cannot.
+A JSX layer would also become a second authoring surface. Documentation, examples, event mappings, and future view features would need to cover both syntaxes.
+
+The decision is not that function calls are universally easier to read. It is that the DSL expresses the view's local Message constraint directly, while lowercase JSX does not. Foldkit keeps that guarantee instead of adding a more familiar syntax that weakens it.

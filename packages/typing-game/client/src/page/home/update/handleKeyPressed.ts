@@ -1,23 +1,13 @@
 import { Array, Match as M, Number, Option, flow, pipe } from 'effect'
-import { Command } from 'foldkit'
+import { type Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
 import { RoomsClient } from '../../../rpc'
 import { CreateRoom, FocusRoomIdInput, FocusUsernameInput } from '../command'
 import { Message } from '../message'
-import {
-  EnterRoomId,
-  EnterUsername,
-  HOME_ACTIONS,
-  HomeAction,
-  Model,
-  SelectAction,
-} from '../model'
+import { HOME_ACTIONS, HomeAction, HomeStep, Model } from '../model'
 
-type UpdateReturn = readonly [
-  Model,
-  ReadonlyArray<Command.Command<Message, never, RoomsClient>>,
-]
+type UpdateReturn = Update.Return<Model, Message, RoomsClient>
 const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export const handleKeyPressed =
@@ -26,12 +16,12 @@ export const handleKeyPressed =
     M.value(model.homeStep).pipe(
       withUpdateReturn,
       M.tag('SelectAction', whenSelectAction(model, key)),
-      M.orElse(() => [model, []]),
+      M.orElse(() => ({ model })),
     )
 
 const whenSelectAction =
   (model: Model, key: string) =>
-  (selectAction: SelectAction): UpdateReturn =>
+  (selectAction: typeof HomeStep.SelectAction.Type): UpdateReturn =>
     M.value(key).pipe(
       withUpdateReturn,
       M.when('ArrowUp', () =>
@@ -41,21 +31,23 @@ const whenSelectAction =
         moveSelection(Number.increment)(model, selectAction),
       ),
       M.when('Enter', () => confirmSelection(model)(selectAction)),
-      M.orElse(() => [model, []]),
+      M.orElse(() => ({ model })),
     )
 
 const moveSelection =
   (f: (index: number) => number) =>
-  (model: Model, { username, selectedAction }: SelectAction): UpdateReturn => [
-    evo(model, {
+  (
+    model: Model,
+    { username, selectedAction }: typeof HomeStep.SelectAction.Type,
+  ): UpdateReturn => ({
+    model: evo(model, {
       homeStep: () =>
-        SelectAction({
+        HomeStep.SelectAction({
           username,
           selectedAction: cycleAction(f)(selectedAction),
         }),
     }),
-    [],
-  ]
+  })
 
 const cycleAction =
   (f: (a: number) => number) => (selectedAction: HomeAction) => {
@@ -79,28 +71,28 @@ const cycleAction =
 
 const confirmSelection =
   (model: Model) =>
-  (selectAction: SelectAction): UpdateReturn =>
+  (selectAction: typeof HomeStep.SelectAction.Type): UpdateReturn =>
     M.value(selectAction.selectedAction).pipe(
       withUpdateReturn,
-      M.when('CreateRoom', () => [
+      M.when('CreateRoom', () => ({
         model,
-        [CreateRoom({ username: selectAction.username })],
-      ]),
-      M.when('JoinRoom', () => [
-        evo(model, {
+        commands: [CreateRoom({ username: selectAction.username })],
+      })),
+      M.when('JoinRoom', () => ({
+        model: evo(model, {
           homeStep: () =>
-            EnterRoomId({
+            HomeStep.EnterRoomId({
               username: selectAction.username,
               roomId: '',
             }),
         }),
-        [FocusRoomIdInput()],
-      ]),
-      M.when('ChangeUsername', () => [
-        evo(model, {
-          homeStep: () => EnterUsername({ username: '' }),
+        commands: [FocusRoomIdInput()],
+      })),
+      M.when('ChangeUsername', () => ({
+        model: evo(model, {
+          homeStep: () => HomeStep.EnterUsername({ username: '' }),
         }),
-        [FocusUsernameInput()],
-      ]),
+        commands: [FocusUsernameInput()],
+      })),
       M.exhaustive,
     )

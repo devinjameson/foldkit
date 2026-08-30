@@ -1,6 +1,6 @@
 import { Array, Match as M, Option, Schema as S, pipe } from 'effect'
-import { Command, File, Update } from 'foldkit'
-import { m } from 'foldkit/message'
+import { File, Update } from 'foldkit'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { FileDrop } from '@foldkit/ui'
@@ -17,24 +17,13 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const GotResumeDropMessage = m('GotResumeDropMessage', {
-  message: FileDrop.Message,
-})
-export const GotAdditionalFilesDropMessage = m(
-  'GotAdditionalFilesDropMessage',
-  { message: FileDrop.Message },
-)
-export const RemovedResume = m('RemovedResume')
-export const RemovedAdditionalFile = m('RemovedAdditionalFile', {
-  fileIndex: S.Number,
+export const Message = defineMessageUnion({
+  GotResumeDropMessage: { message: FileDrop.Message },
+  GotAdditionalFilesDropMessage: { message: FileDrop.Message },
+  RemovedResume: {},
+  RemovedAdditionalFile: { fileIndex: S.Number },
 })
 
-export const Message = S.Union([
-  GotResumeDropMessage,
-  GotAdditionalFilesDropMessage,
-  RemovedResume,
-  RemovedAdditionalFile,
-])
 export type Message = typeof Message.Type
 
 // INIT
@@ -48,15 +37,13 @@ export const init = (): Model => ({
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-
 const foldResumeDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
   M.withReturnType<Update.Step<Model, Message>>(),
   M.tagsExhaustive({
     ReceivedFiles:
       ({ files }) =>
-      model => [
-        evo(model, {
+      model => ({
+        model: evo(model, {
           maybeResume: () =>
             pipe(
               files,
@@ -64,9 +51,8 @@ const foldResumeDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
               Option.orElse(() => model.maybeResume),
             ),
         }),
-        [],
-      ],
-    RejectedNonFiles: () => model => [model, []],
+      }),
+    RejectedNonFiles: () => model => ({ model }),
   }),
 )
 
@@ -75,7 +61,7 @@ const foldResumeDrop = Update.foldChild({
   read: (model: Model) => Option.some(model.resumeDrop),
   write: (model, nextResumeDrop) =>
     evo(model, { resumeDrop: () => nextResumeDrop }),
-  toParentMessage: message => GotResumeDropMessage({ message }),
+  toParentMessage: message => Message.GotResumeDropMessage({ message }),
   foldOutMessage: foldResumeDropOutMessage,
 })
 
@@ -84,13 +70,12 @@ const foldAdditionalFilesDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
   M.tagsExhaustive({
     ReceivedFiles:
       ({ files }) =>
-      model => [
-        evo(model, {
+      model => ({
+        model: evo(model, {
           additionalFiles: Array.appendAll(files),
         }),
-        [],
-      ],
-    RejectedNonFiles: () => model => [model, []],
+      }),
+    RejectedNonFiles: () => model => ({ model }),
   }),
 )
 
@@ -99,29 +84,25 @@ const foldAdditionalFilesDrop = Update.foldChild({
   read: (model: Model) => Option.some(model.additionalFilesDrop),
   write: (model, nextAdditionalFilesDrop) =>
     evo(model, { additionalFilesDrop: () => nextAdditionalFilesDrop }),
-  toParentMessage: message => GotAdditionalFilesDropMessage({ message }),
+  toParentMessage: message =>
+    Message.GotAdditionalFilesDropMessage({ message }),
   foldOutMessage: foldAdditionalFilesDropOutMessage,
 })
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      GotResumeDropMessage: ({ message }) => foldResumeDrop(model, message),
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    GotResumeDropMessage: ({ message }) => foldResumeDrop(model, message),
 
-      GotAdditionalFilesDropMessage: ({ message }) =>
-        foldAdditionalFilesDrop(model, message),
+    GotAdditionalFilesDropMessage: ({ message }) =>
+      foldAdditionalFilesDrop(model, message),
 
-      RemovedResume: () => [
-        evo(model, { maybeResume: () => Option.none() }),
-        [],
-      ],
-
-      RemovedAdditionalFile: ({ fileIndex }) => [
-        evo(model, {
-          additionalFiles: Array.remove(fileIndex),
-        }),
-        [],
-      ],
+    RemovedResume: () => ({
+      model: evo(model, { maybeResume: () => Option.none() }),
     }),
-  )
+
+    RemovedAdditionalFile: ({ fileIndex }) => ({
+      model: evo(model, {
+        additionalFiles: Array.remove(fileIndex),
+      }),
+    }),
+  })

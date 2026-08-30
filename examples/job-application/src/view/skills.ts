@@ -4,6 +4,7 @@ import type { Html } from 'foldkit/html'
 import { Button } from '@foldkit/ui'
 
 import { Skills } from '../step'
+import { Message } from '../step/skills'
 import { skillEntryView } from './skillEntry'
 
 export const skillsView = Submodel.defineView<Skills.Model, Skills.Message>(
@@ -23,13 +24,13 @@ export const skillsView = Submodel.defineView<Skills.Model, Skills.Message>(
               model: entry,
               view: skillEntryView,
               toParentMessage: message =>
-                Skills.GotEntryMessage({ entryId: entry.id, message }),
+                Message.GotEntryMessage({ entryId: entry.id, message }),
             }),
           ),
         ),
         Button.view(
           {
-            onClick: Skills.ClickedAddEntry(),
+            onClick: Message.ClickedAddEntry(),
             toView: attributes =>
               h.button(
                 [

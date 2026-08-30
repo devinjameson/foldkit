@@ -6,32 +6,17 @@ import { Button, Checkbox, Input, RadioGroup } from '@foldkit/ui'
 
 import * as Icon from './icon'
 import {
-  ClickedBack,
-  ClickedCancel,
-  ClickedContinue,
-  ClickedPlaceOrder,
-  ClickedStartOver,
+  CheckoutState,
+  Discount,
   EDITIONS,
   EditionRadioGroup,
-  GotEditionRadioGroupMessage,
-  SubmittedPromoCode,
-  ToggledPaymentMethod,
-  ToggledTermsAccepted,
-  UpdatedPromoCode,
+  Message,
+  type Model,
+  Promo,
   checkoutMachine,
   editionName,
   isReviewReady,
   promoToMaybeDiscount,
-} from './main'
-import type {
-  Cart,
-  CheckoutState,
-  Confirmed,
-  Discount,
-  Message,
-  Model,
-  Payment,
-  Review,
 } from './main'
 
 // VIEW
@@ -53,43 +38,37 @@ const cancelButtonClassName =
   'cursor-pointer text-sm font-medium text-stone-600 underline decoration-stone-400 underline-offset-4 transition-colors hover:text-orange-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-900'
 
 const stateEyebrow = (state: typeof CheckoutState.Type): string =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Cart: () => 'Bag',
-      Shipping: () => 'Delivery',
-      Payment: () => 'Payment',
-      Review: () => 'Review',
-      Placing: () => 'Order',
-      Confirmed: () => 'Order',
-      Cancelled: () => 'Checkout',
-    }),
-  )
+  CheckoutState.match(state, {
+    Cart: () => 'Bag',
+    Shipping: () => 'Delivery',
+    Payment: () => 'Payment',
+    Review: () => 'Review',
+    Placing: () => 'Order',
+    Confirmed: () => 'Order',
+    Cancelled: () => 'Checkout',
+  })
 
 const stateTitle = (state: typeof CheckoutState.Type): string =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Cart: () => 'Your order',
-      Shipping: () => 'Delivery details',
-      Payment: () => 'Payment',
-      Review: () => 'Review and place order',
-      Placing: () => 'Processing your order',
-      Confirmed: () => 'Thank you',
-      Cancelled: () => 'Checkout cancelled',
-    }),
-  )
+  CheckoutState.match(state, {
+    Cart: () => 'Your order',
+    Shipping: () => 'Delivery details',
+    Payment: () => 'Payment',
+    Review: () => 'Review and place order',
+    Placing: () => 'Processing your order',
+    Confirmed: () => 'Thank you',
+    Cancelled: () => 'Checkout cancelled',
+  })
 
 const stateDescription = (state: typeof CheckoutState.Type): string =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Cart: () => 'Choose your edition before continuing to checkout.',
-      Shipping: () => 'Confirm where we should send your hardcover.',
-      Payment: () => 'Select a saved payment method for this order.',
-      Review: () => 'Check the details below before placing your order.',
-      Placing: () => 'Please keep this page open for a moment.',
-      Confirmed: () => 'Your order is confirmed and a receipt is on its way.',
-      Cancelled: () => 'Nothing was charged. Your selection has been saved.',
-    }),
-  )
+  CheckoutState.match(state, {
+    Cart: () => 'Choose your edition before continuing to checkout.',
+    Shipping: () => 'Confirm where we should send your hardcover.',
+    Payment: () => 'Select a saved payment method for this order.',
+    Review: () => 'Check the details below before placing your order.',
+    Placing: () => 'Please keep this page open for a moment.',
+    Confirmed: () => 'Your order is confirmed and a receipt is on its way.',
+    Cancelled: () => 'Nothing was charged. Your selection has been saved.',
+  })
 
 const progressSteps: ReadonlyArray<string> = [
   'Bag',
@@ -432,7 +411,7 @@ const editionOptionView = (
 const cancelCheckoutButton = (h: HtmlBuilder<Message>): Html =>
   Button.view(
     {
-      onClick: ClickedCancel(),
+      onClick: Message.ClickedCancel(),
       toView: attributes =>
         h.button(
           [...attributes.button, h.Class(cancelButtonClassName)],
@@ -443,7 +422,7 @@ const cancelCheckoutButton = (h: HtmlBuilder<Message>): Html =>
   )
 
 const cartView = (
-  state: typeof Cart.Type,
+  state: typeof CheckoutState.Cart.Type,
   editionRadioGroup: RadioGroup.Model,
   h: HtmlBuilder<Message>,
 ): Html => {
@@ -511,7 +490,7 @@ const cartView = (
                 ),
             },
             toParentMessage: message =>
-              GotEditionRadioGroupMessage({ message }),
+              Message.GotEditionRadioGroupMessage({ message }),
           }),
         ],
       ),
@@ -525,7 +504,7 @@ const cartView = (
           cancelCheckoutButton(h),
           Button.view(
             {
-              onClick: ClickedContinue(),
+              onClick: Message.ClickedContinue(),
               toView: attributes =>
                 h.button(
                   [...attributes.button, h.Class(primaryButtonClassName)],
@@ -673,7 +652,7 @@ const shippingView = (h: HtmlBuilder<Message>): Html =>
         [
           Button.view(
             {
-              onClick: ClickedBack(),
+              onClick: Message.ClickedBack(),
               toView: attributes =>
                 h.button(
                   [
@@ -690,7 +669,7 @@ const shippingView = (h: HtmlBuilder<Message>): Html =>
           h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
           Button.view(
             {
-              onClick: ClickedContinue(),
+              onClick: Message.ClickedContinue(),
               toView: attributes =>
                 h.button(
                   [
@@ -710,7 +689,7 @@ const shippingView = (h: HtmlBuilder<Message>): Html =>
   )
 
 const paymentView = (
-  state: typeof Payment.Type,
+  state: typeof CheckoutState.Payment.Type,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.div(
@@ -743,7 +722,8 @@ const paymentView = (
             {
               id: 'saved-card',
               isChecked: state.isPaymentMethodSelected,
-              onToggle: isSelected => ToggledPaymentMethod({ isSelected }),
+              onToggle: isSelected =>
+                Message.ToggledPaymentMethod({ isSelected }),
               toView: attributes =>
                 h.div(
                   [
@@ -831,7 +811,7 @@ const paymentView = (
         [
           Button.view(
             {
-              onClick: ClickedBack(),
+              onClick: Message.ClickedBack(),
               toView: attributes =>
                 h.button(
                   [
@@ -852,7 +832,7 @@ const paymentView = (
           h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
           Button.view(
             {
-              onClick: ClickedContinue(),
+              onClick: Message.ClickedContinue(),
               isDisabled: !state.isPaymentMethodSelected,
               toView: attributes =>
                 h.button(
@@ -873,7 +853,7 @@ const paymentView = (
   )
 
 const reviewView = (
-  state: typeof Review.Type,
+  state: typeof CheckoutState.Review.Type,
   h: HtmlBuilder<Message>,
 ): Html => {
   const isReadyToPlace = isReviewReady(state)
@@ -979,7 +959,7 @@ const reviewView = (
               ),
               Button.view(
                 {
-                  onClick: ToggledPaymentMethod({
+                  onClick: Message.ToggledPaymentMethod({
                     isSelected: !state.isPaymentMethodSelected,
                   }),
                   toView: attributes =>
@@ -1007,13 +987,16 @@ const reviewView = (
         [h.Class('grid gap-2')],
         [
           h.form(
-            [h.Class('flex items-end gap-3'), h.OnSubmit(SubmittedPromoCode())],
+            [
+              h.Class('flex items-end gap-3'),
+              h.OnSubmit(Message.SubmittedPromoCode()),
+            ],
             [
               Input.view(
                 {
                   id: 'promo-code',
                   value: state.promoCodeInput,
-                  onInput: value => UpdatedPromoCode({ value }),
+                  onInput: value => Message.UpdatedPromoCode({ value }),
                   toView: attributes =>
                     h.div(
                       [h.Class('grid flex-1 gap-2 sm:max-w-xs')],
@@ -1051,28 +1034,26 @@ const reviewView = (
               ),
             ],
           ),
-          M.value(state.promo).pipe(
-            M.tagsExhaustive({
-              NoPromo: () => h.p([h.Class(promoFeedbackClassName)], ['']),
-              AppliedPromo: ({ discount }) =>
-                h.p(
-                  [h.Class(clsx(promoFeedbackClassName, 'text-orange-800'))],
-                  [`${discount.code} applied · ${discount.percentOff}% off`],
-                ),
-              RejectedPromo: () =>
-                h.p(
-                  [h.Class(clsx(promoFeedbackClassName, 'text-red-700'))],
-                  ["That code isn't recognized."],
-                ),
-            }),
-          ),
+          Promo.match(state.promo, {
+            NoPromo: () => h.p([h.Class(promoFeedbackClassName)], ['']),
+            AppliedPromo: ({ discount }) =>
+              h.p(
+                [h.Class(clsx(promoFeedbackClassName, 'text-orange-800'))],
+                [`${discount.code} applied · ${discount.percentOff}% off`],
+              ),
+            RejectedPromo: () =>
+              h.p(
+                [h.Class(clsx(promoFeedbackClassName, 'text-red-700'))],
+                ["That code isn't recognized."],
+              ),
+          }),
         ],
       ),
       Checkbox.view(
         {
           id: 'accept-terms',
           isChecked: state.isTermsAccepted,
-          onToggle: isAccepted => ToggledTermsAccepted({ isAccepted }),
+          onToggle: isAccepted => Message.ToggledTermsAccepted({ isAccepted }),
           toView: attributes =>
             h.div(
               [
@@ -1108,7 +1089,7 @@ const reviewView = (
                       [
                         ...attributes.description,
                         h.OnClick(
-                          ToggledTermsAccepted({
+                          Message.ToggledTermsAccepted({
                             isAccepted: !state.isTermsAccepted,
                           }),
                         ),
@@ -1136,7 +1117,7 @@ const reviewView = (
         [
           Button.view(
             {
-              onClick: ClickedBack(),
+              onClick: Message.ClickedBack(),
               toView: attributes =>
                 h.button(
                   [
@@ -1153,7 +1134,7 @@ const reviewView = (
           h.div([h.Class('sm:justify-self-center')], [cancelCheckoutButton(h)]),
           Button.view(
             {
-              onClick: ClickedPlaceOrder(),
+              onClick: Message.ClickedPlaceOrder(),
               isDisabled: !isReadyToPlace,
               toView: attributes =>
                 h.button(
@@ -1200,7 +1181,7 @@ const placingView = (h: HtmlBuilder<Message>): Html =>
   )
 
 const confirmedView = (
-  state: typeof Confirmed.Type,
+  state: typeof CheckoutState.Confirmed.Type,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.div(
@@ -1240,7 +1221,7 @@ const confirmedView = (
       ),
       Button.view(
         {
-          onClick: ClickedStartOver(),
+          onClick: Message.ClickedStartOver(),
           toView: attributes =>
             h.button(
               [
@@ -1280,7 +1261,7 @@ const cancelledView = (h: HtmlBuilder<Message>): Html =>
       ),
       Button.view(
         {
-          onClick: ClickedStartOver(),
+          onClick: Message.ClickedStartOver(),
           toView: attributes =>
             h.button(
               [
@@ -1300,17 +1281,15 @@ const checkoutContentView = (
   editionRadioGroup: RadioGroup.Model,
   h: HtmlBuilder<Message>,
 ): Html =>
-  M.value(state).pipe(
-    M.tagsExhaustive({
-      Cart: cartState => cartView(cartState, editionRadioGroup, h),
-      Shipping: () => shippingView(h),
-      Payment: paymentState => paymentView(paymentState, h),
-      Review: reviewState => reviewView(reviewState, h),
-      Placing: () => placingView(h),
-      Confirmed: confirmedState => confirmedView(confirmedState, h),
-      Cancelled: () => cancelledView(h),
-    }),
-  )
+  CheckoutState.match(state, {
+    Cart: cartState => cartView(cartState, editionRadioGroup, h),
+    Shipping: () => shippingView(h),
+    Payment: paymentState => paymentView(paymentState, h),
+    Review: reviewState => reviewView(reviewState, h),
+    Placing: () => placingView(h),
+    Confirmed: confirmedState => confirmedView(confirmedState, h),
+    Cancelled: () => cancelledView(h),
+  })
 
 const checkoutPanelView = (
   state: typeof CheckoutState.Type,

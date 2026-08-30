@@ -5,7 +5,7 @@ import { Disclosure } from '@foldkit/ui'
 import { Icon } from '../../icon'
 import { type Message } from '../../main'
 import { slotDocPage } from '../../markdown'
-import { ToggledMapMessagesUnderHood } from '../../message'
+import { Message as Message2 } from '../../message'
 import { defaultRenderHeadingLink, inlineCode } from '../../prose'
 import * as Snippet from '../../snippet'
 import {
@@ -35,18 +35,13 @@ const mapMessagesUnderHoodDemo = (
     {
       id: MAP_MESSAGES_DISCLOSURE_ID,
       isOpen: isMapMessagesUnderHoodOpen,
-      onToggle: isOpen => ToggledMapMessagesUnderHood({ isOpen }),
+      onToggle: isOpen => Message2.ToggledMapMessagesUnderHood({ isOpen }),
       toView: attributes =>
         h.div(
           [h.Class('mb-8')],
           [
             h.button(
-              [
-                ...attributes.button,
-                h.Class(
-                  'w-full flex items-center justify-between px-4 py-3 text-left text-base font-normal cursor-pointer transition border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white hover:bg-gray-200/50 dark:hover:bg-gray-800 rounded-lg data-[open]:rounded-b-none select-none',
-                ),
-              ],
+              [...attributes.button, h.Class('docs-disclosure-button')],
               [
                 h.span([], ['Under the hood: the Command.mapMessages chain']),
                 h.span(
@@ -61,12 +56,7 @@ const mapMessagesUnderHoodDemo = (
             ),
             isMapMessagesUnderHoodOpen
               ? h.div(
-                  [
-                    ...attributes.panel,
-                    h.Class(
-                      'px-4 py-3 border-x border-b border-gray-300 dark:border-gray-700 rounded-b-lg text-gray-800 dark:text-gray-200',
-                    ),
-                  ],
+                  [...attributes.panel, h.Class('docs-disclosure-panel')],
                   [
                     h.div(
                       [h.Class('-mt-8')],
@@ -91,6 +81,8 @@ const mapMessagesUnderHoodDemo = (
                         'Two small layers compose into ',
                         inlineCode('mapMessages'),
                         '. ',
+                        inlineCode('commands ?? []'),
+                        ' turns an omitted Commands field into a concrete empty array, then ',
                         inlineCode('Array.map'),
                         ' iterates; ',
                         inlineCode('mapMessage'),

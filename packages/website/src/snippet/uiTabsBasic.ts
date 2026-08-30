@@ -1,10 +1,10 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Tabs } from '@foldkit/ui'
@@ -23,18 +23,17 @@ const Model = S.Struct({
 
 // In your init function, initialize the Tabs Submodel with a unique id and
 // pick the starting active tab:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     tabs: Tabs.init({ id: 'framework-tabs' }),
     activeFramework: 'Foldkit',
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed the Tabs Message in your parent Message:
-const GotTabsMessage = m('GotTabsMessage', {
-  message: Tabs.Message,
+const Message = defineMessageUnion({
+  GotTabsMessage: { message: Tabs.Message },
 })
 
 // Declare a typed Tabs factory once at module scope. The Value generic
@@ -64,7 +63,7 @@ const foldTabsOutMessage = M.type<Tabs.OutMessage<Framework>>().pipe(
     // selection, or trigger a panel content fetch.
     Selected:
       ({ value }) =>
-      model => [evo(model, { activeFramework: () => value }), []],
+      model => ({ model: evo(model, { activeFramework: () => value }) }),
   }),
 )
 
@@ -76,11 +75,11 @@ const foldTabs = Update.foldChild({
   update: FrameworkTabs.update,
   read: (model: Model) => Option.some(model.tabs),
   write: (model, nextTabs) => evo(model, { tabs: () => nextTabs }),
-  toParentMessage: message => GotTabsMessage({ message }),
+  toParentMessage: message => Message.GotTabsMessage({ message }),
   foldOutMessage: foldTabsOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotTabsMessage: ({ message }) => foldTabs(model, message)
 
 // Inside your view function, embed the tabs via h.submodel and pass the
@@ -123,5 +122,5 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
           ],
         ),
     },
-    toParentMessage: message => GotTabsMessage({ message }),
+    toParentMessage: message => Message.GotTabsMessage({ message }),
   })

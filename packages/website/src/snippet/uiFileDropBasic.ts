@@ -1,10 +1,10 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Effect, Match as M, Option } from 'effect'
+import { Match as M, Option, Schema as S } from 'effect'
 import { File, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { FileDrop } from '@foldkit/ui'
@@ -17,18 +17,17 @@ const Model = S.Struct({
 })
 
 // Initialize both fields:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     uploader: FileDrop.init({ id: 'uploader' }),
     uploadedFiles: [],
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed FileDrop's Message in your parent Message:
-const GotFileDropMessage = m('GotFileDropMessage', {
-  message: FileDrop.Message,
+const Message = defineMessageUnion({
+  GotFileDropMessage: { message: FileDrop.Message },
 })
 
 // At module scope, fold the OutMessage FileDrop emits when files arrive (via
@@ -40,15 +39,14 @@ const foldFileDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
   M.tagsExhaustive({
     ReceivedFiles:
       ({ files }) =>
-      model => [
-        evo(model, {
+      model => ({
+        model: evo(model, {
           uploadedFiles: () => [...model.uploadedFiles, ...files],
         }),
-        [],
-      ],
+      }),
     // Fires when something is dropped but no files came through (e.g.
     // a drag of text or a URL). Ignore, or show a hint to the user.
-    RejectedNonFiles: () => model => [model, []],
+    RejectedNonFiles: () => model => ({ model }),
   }),
 )
 
@@ -59,11 +57,11 @@ const foldFileDrop = Update.foldChild({
   update: FileDrop.update,
   read: (model: Model) => Option.some(model.uploader),
   write: (model, nextUploader) => evo(model, { uploader: () => nextUploader }),
-  toParentMessage: message => GotFileDropMessage({ message }),
+  toParentMessage: message => Message.GotFileDropMessage({ message }),
   foldOutMessage: foldFileDropOutMessage,
 })
 
-// Inside your update function's M.tagsExhaustive({...}), call the fold:
+// In the corresponding Message.match handler, call the fold:
 GotFileDropMessage: ({ message }) => foldFileDrop(model, message)
 
 // Render the drop zone. The `toView` callback receives attribute groups.
@@ -93,5 +91,5 @@ const view = (model: Model, h: HtmlBuilder<Message>) =>
           ],
         ),
     },
-    toParentMessage: message => GotFileDropMessage({ message }),
+    toParentMessage: message => Message.GotFileDropMessage({ message }),
   })

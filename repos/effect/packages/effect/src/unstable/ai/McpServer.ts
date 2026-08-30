@@ -50,7 +50,6 @@ import type * as McpProtocol from "./McpProtocol.ts"
 import * as McpSchema from "./McpSchema.ts"
 import {
   CallToolResult,
-  Elicit,
   ElicitationDeclined,
   EnabledWhen,
   GetPromptResult,
@@ -89,14 +88,21 @@ import type * as Toolkit from "./Toolkit.ts"
 
 type CompletionContext = typeof Complete.payloadSchema.Type["context"]
 
+interface QueuedServerNotification {
+  readonly notification: McpCore.ServerNotification
+  readonly targetClientId?: number | undefined
+}
+
 const internalState = new WeakMap<object, {
   readonly core: McpCore.McpCore
-  readonly notifications: Queue.Dequeue<McpCore.ServerNotification>
+  readonly notifications: Queue.Dequeue<QueuedServerNotification>
 }>()
 type ServerExtensions = NonNullable<typeof ServerCapabilities.Type["extensions"]>
 type ServerNotificationRequest<
-  R extends Rpc.Any = RpcGroup.Rpcs<typeof ServerNotificationRpcs>
+  R extends Rpc.Any = RpcGroup.Rpcs<typeof BroadcastServerNotificationRpcs>
 > = R extends Rpc.Any ? RpcMessage.Request<R> : never
+
+const BroadcastServerNotificationRpcs = ServerNotificationRpcs.omit("notifications/elicitation/complete")
 
 const validateStructuredContent = (
   toolName: string,
@@ -165,7 +171,11 @@ const toInternalServerNotification = (
  * @since 4.0.0
  */
 export class McpServer extends Context.Service<McpServer, {
-  readonly notifications: RpcClient.RpcClient<RpcGroup.Rpcs<typeof ServerNotificationRpcs>>
+  readonly notifications: RpcClient.RpcClient<RpcGroup.Rpcs<typeof BroadcastServerNotificationRpcs>>
+  readonly notifyElicitationComplete: (options: {
+    readonly clientId: number
+    readonly elicitationId: string
+  }) => Effect.Effect<void>
   readonly initializedClients: Set<number>
   readonly tools: ReadonlyArray<{
     readonly tool: McpTool
@@ -270,9 +280,9 @@ export class McpServer extends Context.Service<McpServer, {
       readonly prompt: Prompt
       readonly annotations: Context.Context<never>
     }> = []
-    const notificationsQueue = yield* Queue.make<McpCore.ServerNotification>()
+    const notificationsQueue = yield* Queue.make<QueuedServerNotification>()
     const listChangedHandles = new Map<string, any>()
-    const notifications = yield* RpcClient.makeNoSerialization(ServerNotificationRpcs, {
+    const notifications = yield* RpcClient.makeNoSerialization(BroadcastServerNotificationRpcs, {
       spanPrefix: "McpServer/Notifications",
       onFromClient: (options) =>
         Effect.suspend((): Effect.Effect<void> => {
@@ -289,13 +299,13 @@ export class McpServer extends Context.Service<McpServer, {
               listChangedHandles.set(
                 message.tag,
                 setTimeout(() => {
-                  Queue.offerUnsafe(notificationsQueue, notification)
+                  Queue.offerUnsafe(notificationsQueue, { notification })
                   listChangedHandles.delete(message.tag)
                 }, 0)
               )
             }
           } else {
-            Queue.offerUnsafe(notificationsQueue, notification)
+            Queue.offerUnsafe(notificationsQueue, { notification })
           }
           return notifications.write({
             clientId: 0,
@@ -308,6 +318,11 @@ export class McpServer extends Context.Service<McpServer, {
 
     const service = McpServer.of({
       notifications: notifications.client,
+      notifyElicitationComplete: ({ clientId, elicitationId }) =>
+        Queue.offer(notificationsQueue, {
+          notification: McpCore.ServerNotification.ElicitationComplete({ elicitationId }),
+          targetClientId: clientId
+        }),
       initializedClients: new Set(),
       get tools() {
         return tools
@@ -646,6 +661,9 @@ const layerMcpProtocolState = (
 export const run: (options: {
   readonly name: string
   readonly version: string
+  readonly description?: string | undefined
+  readonly websiteUrl?: string | undefined
+  readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
   readonly protocols: Arr.NonEmptyReadonlyArray<McpProtocol.ProtocolAdapter>
   readonly extensions?: ServerExtensions | undefined
 }) => Effect.Effect<
@@ -655,6 +673,9 @@ export const run: (options: {
 > = Effect.fnUntraced(function*(options: {
   readonly name: string
   readonly version: string
+  readonly description?: string | undefined
+  readonly websiteUrl?: string | undefined
+  readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
   readonly protocols: Arr.NonEmptyReadonlyArray<McpProtocol.ProtocolAdapter>
   readonly extensions?: ServerExtensions | undefined
 }) {
@@ -668,6 +689,9 @@ export const run: (options: {
 const runWithProtocolState = Effect.fnUntraced(function*(options: {
   readonly name: string
   readonly version: string
+  readonly description?: string | undefined
+  readonly websiteUrl?: string | undefined
+  readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
   readonly extensions?: ServerExtensions | undefined
 }, protocolState: McpProtocolState["Service"]) {
   const protocolRegistry = protocolState.protocolRegistry
@@ -695,17 +719,23 @@ const runWithProtocolState = Effect.fnUntraced(function*(options: {
         return {
           send(id, request, _transferables) {
             cid = id
-            return protocol.send(key.clientId, {
-              ...request,
-              headers: undefined,
-              traceId: undefined,
-              spanId: undefined,
-              sampled: undefined
-            } as any)
+            if (request._tag === "Request") {
+              return protocol.send(key.clientId, {
+                _tag: "Request",
+                id: request.id,
+                tag: request.tag,
+                payload: request.payload,
+                headers: []
+              })
+            }
+            // Ack & co are not part of FromServerEncoded, but the JSON-RPC
+            // serializer encodes them symmetrically for reverse control flow
+            return protocol.send(key.clientId, request as any)
           },
           supportsAck: true,
           supportsTransferables: false,
-          supportsStructuredClone: false
+          supportsStructuredClone: false,
+          codecFor: protocol.codecFor
         }
       }))
       const client = yield* selectedProtocol.makeReverseClient(key.profile).pipe(
@@ -1017,7 +1047,7 @@ const runWithProtocolState = Effect.fnUntraced(function*(options: {
   })
 
   yield* Queue.take(internalState.get(server)!.notifications).pipe(
-    Effect.flatMap(Effect.fnUntraced(function*(notification) {
+    Effect.flatMap(Effect.fnUntraced(function*({ notification, targetClientId }) {
       const clientIds = yield* patchedProtocol.clientIds
       for (const clientId of clientProtocols.keys()) {
         if (!clientIds.has(clientId)) {
@@ -1030,8 +1060,16 @@ const runWithProtocolState = Effect.fnUntraced(function*(options: {
         }
       }
       for (const clientId of server.initializedClients.keys()) {
+        if (targetClientId !== undefined && clientId !== targetClientId) {
+          continue
+        }
         if (!clientIds.has(clientId)) {
           server.initializedClients.delete(clientId)
+          continue
+        }
+        // This must stay below stale-client cleanup so transports without
+        // notification support still prune initializedClients.
+        if (!patchedProtocol.supportsNotifications) {
           continue
         }
         const selectedProtocol = clientProtocols.get(clientId)
@@ -1061,14 +1099,14 @@ const runWithProtocolState = Effect.fnUntraced(function*(options: {
             return
           }
           const encoded = yield* selectedProtocol.payloadCodecs(rpc).encode(projected.payload)
-          // TODO: Extend RpcServer.Protocol's outbound message contract with server-originated
-          // notifications so MCP does not need to treat this notification as an RPC response.
-          const message: RpcMessage.RequestEncoded = {
+          yield* patchedProtocol.send(clientId, {
             _tag: "Request",
+            id: "",
             tag: projected.tag,
-            payload: encoded
-          } as any
-          yield* patchedProtocol.send(clientId, message as any)
+            payload: encoded,
+            headers: [],
+            isNotification: true
+          })
         }).pipe(Effect.catchCause(() => Effect.void))
       }
     })),
@@ -1119,6 +1157,9 @@ const runWithProtocolState = Effect.fnUntraced(function*(options: {
 export const layer = (options: {
   readonly name: string
   readonly version: string
+  readonly description?: string | undefined
+  readonly websiteUrl?: string | undefined
+  readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
   readonly protocols: Arr.NonEmptyReadonlyArray<McpProtocol.ProtocolAdapter>
   readonly extensions?: ServerExtensions | undefined
 }): Layer.Layer<McpServer | McpServerClient, Cause.IllegalArgumentError, RpcServer.Protocol> =>
@@ -1129,6 +1170,9 @@ export const layer = (options: {
 const layerWithProtocolState = (options: {
   readonly name: string
   readonly version: string
+  readonly description?: string | undefined
+  readonly websiteUrl?: string | undefined
+  readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
   readonly extensions?: ServerExtensions | undefined
 }): Layer.Layer<McpServer | McpServerClient, never, RpcServer.Protocol | McpProtocolState> =>
   Layer.effectDiscard(
@@ -1163,6 +1207,9 @@ const layerWithProtocolState = (options: {
 export const layerStdio = (options: {
   readonly name: string
   readonly version: string
+  readonly description?: string | undefined
+  readonly websiteUrl?: string | undefined
+  readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
   readonly protocols: Arr.NonEmptyReadonlyArray<McpProtocol.ProtocolAdapter>
   readonly extensions?: ServerExtensions | undefined
 }): Layer.Layer<McpServer | McpServerClient, Cause.IllegalArgumentError, Stdio> =>
@@ -1183,6 +1230,7 @@ const mcpStdioSerialization = (
   return RpcSerialization.RpcSerialization.of({
     contentType: serialization.contentType,
     includesFraming: true,
+    codecFor: serialization.codecFor,
     makeUnsafe: () => {
       const frames = RpcSerialization.ndjson.makeUnsafe()
       const parser = serialization.makeUnsafe()
@@ -1269,6 +1317,9 @@ const mcpStdioSerialization = (
 export const layerHttp = (options: {
   readonly name: string
   readonly version: string
+  readonly description?: string | undefined
+  readonly websiteUrl?: string | undefined
+  readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
   readonly path: HttpRouter.PathInput
   readonly protocols: Arr.NonEmptyReadonlyArray<McpProtocol.ProtocolAdapter>
   readonly extensions?: ServerExtensions | undefined
@@ -1307,7 +1358,7 @@ const layerMcpProtocolHttp = (options: {
 > =>
   Layer.effect(RpcServer.Protocol)(Effect.gen(function*() {
     const state = yield* McpProtocolState
-    const { httpEffect, protocol } = yield* RpcServer.makeProtocolWithHttpEffect
+    const { httpEffect, protocol } = yield* RpcServer.makeProtocolWithHttpEffect()
     const router = yield* HttpRouter.HttpRouter
     yield* router.add("POST", options.path, (request) => {
       if (!isAllowedMcpOrigin(request, options.allowedOrigins)) {
@@ -1328,81 +1379,76 @@ const layerMcpProtocolHttp = (options: {
       if (sessionId !== undefined && session === undefined) {
         return Effect.succeed(HttpServerResponse.empty({ status: 404 }))
       }
-      if (
-        protocolVersion !== undefined &&
-        !state.protocolRegistry.protocols.some((protocol) => protocol.protocolVersion === protocolVersion)
-      ) {
-        return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
-      }
-      if (
-        session?.protocol.transport.requiresVersionHeader === true &&
-        protocolVersion !== session.protocol.protocolVersion
-      ) {
-        return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
-      }
+      const protocolVersionHeaderRejected = (protocolVersion !== undefined &&
+        !state.protocolRegistry.protocols.some((protocol) => protocol.protocolVersion === protocolVersion)) ||
+        (session?.protocol.transport.requiresVersionHeader === true &&
+          protocolVersion !== session.protocol.protocolVersion)
+      const parseErrorResponse = protocolVersionHeaderRejected
+        ? HttpServerResponse.empty({ status: 400 })
+        : HttpServerResponse.jsonUnsafe({
+          jsonrpc: "2.0",
+          id: null,
+          error: new McpSchema.ParseError({ message: "Parse error" })
+        })
       return request.text.pipe(
+        Effect.flatMap(Schema.decodeUnknownEffect(Schema.UnknownFromJsonString)),
         Effect.matchEffect({
-          onFailure: () =>
-            Effect.succeed(HttpServerResponse.jsonUnsafe({
-              jsonrpc: "2.0",
-              id: null,
-              error: new McpSchema.ParseError({ message: "Parse error" })
-            })),
-          onSuccess: (body) =>
-            Effect.matchEffect(Schema.decodeUnknownEffect(Schema.UnknownFromJsonString)(body), {
-              onFailure: () =>
-                Effect.succeed(HttpServerResponse.jsonUnsafe({
-                  jsonrpc: "2.0",
-                  id: null,
-                  error: new McpSchema.ParseError({ message: "Parse error" })
-                })),
-              onSuccess: (input) => {
-                if (!Array.isArray(input)) {
-                  const hasId = Predicate.hasProperty(input, "id")
-                  const id = hasId && (typeof input.id === "string" || typeof input.id === "number")
-                    ? input.id
-                    : null
-                  const isJsonRpc = Predicate.hasProperty(input, "jsonrpc") && input.jsonrpc === "2.0"
-                  const hasValidRequestId = !hasId || typeof input.id === "string" || typeof input.id === "number"
-                  const isRequest = isJsonRpc && hasValidRequestId &&
-                    Predicate.hasProperty(input, "method") && typeof input.method === "string"
-                  const hasValidResponseId = hasId &&
-                    (typeof input.id === "string" || typeof input.id === "number" || input.id === null)
-                  const hasResult = Predicate.hasProperty(input, "result")
-                  const hasError = Predicate.hasProperty(input, "error")
-                  const isResponse = isJsonRpc && hasValidResponseId && hasResult !== hasError
-                  if (!isRequest && !isResponse) {
-                    return Effect.succeed(HttpServerResponse.jsonUnsafe({
-                      jsonrpc: "2.0",
-                      id,
-                      error: new InvalidRequest({ message: "Invalid Request" })
-                    }))
-                  }
-                  const isInitialize = isInitializeJsonRpcMessage(input)
-                  if (isInitialize && sessionId !== undefined) {
-                    return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
-                  }
-                  if (!isInitialize && isRequest && sessionId === undefined) {
-                    return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
-                  }
-                  return httpEffect
-                }
-                if (input.length === 0) {
-                  return Effect.succeed(HttpServerResponse.jsonUnsafe({
-                    jsonrpc: "2.0",
-                    id: null,
-                    error: new InvalidRequest({ message: "Invalid Request" })
-                  }, { status: 400 }))
-                }
-                if (input.some(isInitializeJsonRpcMessage) || session === undefined) {
-                  return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
-                }
-                const selectedProtocol = session.protocol
-                return selectedProtocol.transport.acceptsJsonRpcBatches
-                  ? httpEffect
-                  : Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+          onFailure: () => Effect.succeed(parseErrorResponse),
+          onSuccess: (input) => {
+            if (!Array.isArray(input)) {
+              const hasId = Predicate.hasProperty(input, "id")
+              const id = hasId && (typeof input.id === "string" || typeof input.id === "number")
+                ? input.id
+                : null
+              const isJsonRpc = Predicate.hasProperty(input, "jsonrpc") && input.jsonrpc === "2.0"
+              const hasValidRequestId = !hasId || typeof input.id === "string" || typeof input.id === "number"
+              const isRequest = isJsonRpc && hasValidRequestId &&
+                Predicate.hasProperty(input, "method") && typeof input.method === "string"
+              const hasValidResponseId = hasId &&
+                (typeof input.id === "string" || typeof input.id === "number" || input.id === null)
+              const hasResult = Predicate.hasProperty(input, "result")
+              const hasError = Predicate.hasProperty(input, "error")
+              const isResponse = isJsonRpc && hasValidResponseId && hasResult !== hasError
+              const isInitialize = isRequest && isInitializeJsonRpcMessage(input)
+              // Initialize requests are exempt from the version header check:
+              // rejecting them with a 400 makes clients treat the endpoint as a
+              // legacy HTTP+SSE server and retry initialization with a GET.
+              if (!isInitialize && protocolVersionHeaderRejected) {
+                return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
               }
-            })
+              if (!isRequest && !isResponse) {
+                return Effect.succeed(HttpServerResponse.jsonUnsafe({
+                  jsonrpc: "2.0",
+                  id,
+                  error: new InvalidRequest({ message: "Invalid Request" })
+                }))
+              }
+              if (isInitialize && sessionId !== undefined) {
+                return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+              }
+              if (!isInitialize && isRequest && sessionId === undefined) {
+                return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+              }
+              return httpEffect
+            }
+            if (protocolVersionHeaderRejected) {
+              return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+            }
+            if (input.length === 0) {
+              return Effect.succeed(HttpServerResponse.jsonUnsafe({
+                jsonrpc: "2.0",
+                id: null,
+                error: new InvalidRequest({ message: "Invalid Request" })
+              }, { status: 400 }))
+            }
+            if (input.some(isInitializeJsonRpcMessage) || session === undefined) {
+              return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+            }
+            const selectedProtocol = session.protocol
+            return selectedProtocol.transport.acceptsJsonRpcBatches
+              ? httpEffect
+              : Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+          }
         })
       )
     })
@@ -2053,10 +2099,11 @@ export const elicit: <S extends Schema.ConstraintEncoder<Record<string, unknown>
   const { getClient } = yield* McpServerClient
   const client = yield* getClient
   const schema = options.schema
-  const request = Elicit.payloadSchema.make({
+  const request = yield* Schema.decodeUnknownEffect(McpSchema.ElicitRequestFormParams)({
+    mode: "form",
     message: options.message,
     requestedSchema: Tool.getJsonSchemaFromSchema(schema)
-  })
+  }).pipe(Effect.orDie)
   const res = yield* client.elicit(request).pipe(
     Effect.catchCause((cause) => Effect.fail(new ElicitationDeclined({ cause: Cause.squash(cause), request })))
   )
@@ -2132,6 +2179,9 @@ const PingRpcs = RpcGroup.make(Ping).middleware(McpServerClientMiddleware)
 const layerHandlers = (serverInfo: {
   readonly name: string
   readonly version: string
+  readonly description?: string | undefined
+  readonly websiteUrl?: string | undefined
+  readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
   readonly extensions?: ServerExtensions | undefined
 }, options: {
   readonly sessions: Sessions
@@ -2216,10 +2266,13 @@ const layerHandlers = (serverInfo: {
                 }
                 return Effect.succeed({
                   capabilities,
-                  serverInfo: {
+                  serverInfo: McpSchema.Implementation.make({
                     name: serverInfo.name,
-                    version: serverInfo.version
-                  }
+                    version: serverInfo.version,
+                    description: serverInfo.description,
+                    websiteUrl: serverInfo.websiteUrl,
+                    icons: serverInfo.icons
+                  })
                 })
               })
             }

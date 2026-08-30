@@ -3,24 +3,23 @@ import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { Popover } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
 
-import {
-  GotPopoverAnimatedDemoMessage,
-  GotPopoverBasicDemoMessage,
-  GotPopoverNestedChildDemoMessage,
-  GotPopoverNestedParentDemoMessage,
-  type Message,
-} from './message'
+import { Message } from './message'
 
 // DEMO CONTENT
 
-const triggerClassName =
-  'inline-flex items-center gap-1.5 px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+const triggerClassName = 'demo-neutral-button inline-flex items-center gap-1.5'
 
-const basicPanelClassName =
-  'w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-cream dark:bg-gray-800 shadow-lg p-4 z-10 outline-none'
+const basicPanelClassName = 'demo-popup-surface w-64 p-4'
 
-const animatedPanelClassName =
-  'w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-cream dark:bg-gray-800 shadow-lg p-4 z-10 outline-none transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0'
+const animatedPanelClassName = `${basicPanelClassName} transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0`
+
+type PanelVariant = 'Basic' | 'Animated' | 'Arrow'
+
+const panelClassNames: Readonly<Record<PanelVariant, string>> = {
+  Basic: basicPanelClassName,
+  Animated: animatedPanelClassName,
+  Arrow: `popover-panel ${basicPanelClassName}`,
+}
 
 const backdropClassName = 'fixed inset-0 z-0'
 
@@ -33,6 +32,14 @@ const POPOVER_ANCHOR: AnchorConfig = {
   gap: 4,
   padding: 8,
 }
+
+const POPOVER_ARROW_ANCHOR: AnchorConfig = {
+  placement: 'bottom-start',
+  gap: 10,
+  padding: 8,
+}
+
+const POPOVER_ARROW_PADDING = 12
 
 const NESTED_POPOVER_ANCHOR: AnchorConfig = {
   placement: 'right-start',
@@ -60,16 +67,19 @@ const panelContent = (): Html =>
 const popoverDemo = (
   popoverModel: Popover.Model,
   toMessage: (message: Popover.Message) => Message,
-  panelClassNameValue: string,
+  panelVariant: PanelVariant,
   h: HtmlBuilder<Message>,
-): Html =>
-  h.submodel({
+): Html => {
+  const isArrowDrawn = panelVariant === 'Arrow'
+
+  return h.submodel({
     slotId: popoverModel.id,
     model: popoverModel,
     view: Popover.view,
     viewInputs: {
-      anchor: POPOVER_ANCHOR,
-      toView: ({ button, panel, backdrop, isVisible }) =>
+      anchor: isArrowDrawn ? POPOVER_ARROW_ANCHOR : POPOVER_ANCHOR,
+      ...(isArrowDrawn && { arrowPadding: POPOVER_ARROW_PADDING }),
+      toView: ({ button, panel, backdrop, arrow, isVisible }) =>
         h.div(
           [h.Class(wrapperClassName)],
           [
@@ -81,8 +91,41 @@ const popoverDemo = (
               ? [
                   h.div([...backdrop, h.Class(backdropClassName)]),
                   h.div(
-                    [...panel, h.Class(panelClassNameValue)],
-                    [panelContent()],
+                    [...panel, h.Class(panelClassNames[panelVariant])],
+                    [
+                      ...(isArrowDrawn
+                        ? [
+                            h.svg(
+                              [
+                                ...arrow,
+                                h.Class('popover-arrow'),
+                                h.ViewBox('0 0 16 16'),
+                              ],
+                              [
+                                h.path([
+                                  h.Class('popover-arrow-fill'),
+                                  h.D('M 0.5 8 L 8 0.5 L 15.5 8 V 10 H 0.5 Z'),
+                                ]),
+                                h.svg(
+                                  [
+                                    h.Class('popover-arrow-outline-clip'),
+                                    h.Width('16'),
+                                    h.Height('8'),
+                                    h.ViewBox('0 0 16 8'),
+                                  ],
+                                  [
+                                    h.path([
+                                      h.Class('popover-arrow-outline'),
+                                      h.D('M 0.5 8 L 8 0.5 L 15.5 8'),
+                                    ]),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ]
+                        : []),
+                      panelContent(),
+                    ],
                   ),
                 ]
               : []),
@@ -91,68 +134,61 @@ const popoverDemo = (
     },
     toParentMessage: toMessage,
   })
+}
+
+const labeledPopoverDemo = (
+  popoverModel: Popover.Model,
+  toMessage: (message: Popover.Message) => Message,
+  panelVariant: PanelVariant,
+  h: HtmlBuilder<Message>,
+): Array<Html> => [
+  h.div(
+    [h.Class('demo-field')],
+    [
+      h.label(
+        [h.For(Popover.buttonId(popoverModel.id)), h.Class('demo-label')],
+        ['Product menu'],
+      ),
+      h.div(
+        [h.Class('relative')],
+        [popoverDemo(popoverModel, toMessage, panelVariant, h)],
+      ),
+    ],
+  ),
+]
 
 export const basicDemo = (
   popoverModel: Popover.Model,
   h: HtmlBuilder<Message>,
-) => {
-  return [
-    h.div(
-      [h.Class('flex flex-col gap-1.5')],
-      [
-        h.label(
-          [
-            h.For(Popover.buttonId(popoverModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
-          ['Product menu'],
-        ),
-        h.div(
-          [h.Class('relative')],
-          [
-            popoverDemo(
-              popoverModel,
-              message => GotPopoverBasicDemoMessage({ message }),
-              basicPanelClassName,
-              h,
-            ),
-          ],
-        ),
-      ],
-    ),
-  ]
-}
+): Array<Html> =>
+  labeledPopoverDemo(
+    popoverModel,
+    message => Message.GotPopoverBasicDemoMessage({ message }),
+    'Basic',
+    h,
+  )
 
 export const animatedDemo = (
   popoverModel: Popover.Model,
   h: HtmlBuilder<Message>,
-) => {
-  return [
-    h.div(
-      [h.Class('flex flex-col gap-1.5')],
-      [
-        h.label(
-          [
-            h.For(Popover.buttonId(popoverModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
-          ['Product menu'],
-        ),
-        h.div(
-          [h.Class('relative')],
-          [
-            popoverDemo(
-              popoverModel,
-              message => GotPopoverAnimatedDemoMessage({ message }),
-              animatedPanelClassName,
-              h,
-            ),
-          ],
-        ),
-      ],
-    ),
-  ]
-}
+): Array<Html> =>
+  labeledPopoverDemo(
+    popoverModel,
+    message => Message.GotPopoverAnimatedDemoMessage({ message }),
+    'Animated',
+    h,
+  )
+
+export const arrowDemo = (
+  popoverModel: Popover.Model,
+  h: HtmlBuilder<Message>,
+): Array<Html> =>
+  labeledPopoverDemo(
+    popoverModel,
+    message => Message.GotPopoverArrowDemoMessage({ message }),
+    'Arrow',
+    h,
+  )
 
 const nestedChildPopover = (
   childPopoverModel: Popover.Model,
@@ -200,7 +236,8 @@ const nestedChildPopover = (
           ],
         ),
     },
-    toParentMessage: message => GotPopoverNestedChildDemoMessage({ message }),
+    toParentMessage: message =>
+      Message.GotPopoverNestedChildDemoMessage({ message }),
   })
 
 export const nestedDemo = (
@@ -210,12 +247,12 @@ export const nestedDemo = (
 ) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
           [
             h.For(Popover.buttonId(parentPopoverModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
+            h.Class('demo-label'),
           ],
           ['Account'],
         ),
@@ -267,7 +304,7 @@ export const nestedDemo = (
                   ),
               },
               toParentMessage: message =>
-                GotPopoverNestedParentDemoMessage({ message }),
+                Message.GotPopoverNestedParentDemoMessage({ message }),
             }),
           ],
         ),

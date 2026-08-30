@@ -1,6 +1,6 @@
-import { Array, Match as M, Schema as S } from 'effect'
-import { Command } from 'foldkit'
-import { m } from 'foldkit/message'
+import { Array, Schema as S } from 'effect'
+import { type Update } from 'foldkit'
+import { defineMessageUnion } from 'foldkit/message'
 
 // MODEL
 
@@ -14,30 +14,24 @@ type Model = typeof Model.Type
 
 // MESSAGE
 
-const AddedTodo = m('AddedTodo')
-const ClearedDoneTodos = m('ClearedDoneTodos')
-const SelectedFilter = m('SelectedFilter', { filter: Filter })
-
-const Message = S.Union([AddedTodo, ClearedDoneTodos, SelectedFilter])
+const Message = defineMessageUnion({
+  AddedTodo: {},
+  ClearedDoneTodos: {},
+  SelectedFilter: { filter: Filter },
+})
 type Message = typeof Message.Type
 
 // UPDATE
 
-export const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command.Command<Message>>] =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      AddedTodo: () => [evo(model, { todos: Array.append(emptyTodo()) }), []],
-      ClearedDoneTodos: () => [
-        evo(model, { todos: Array.filter(todo => !todo.done) }),
-        [],
-      ],
-      SelectedFilter: ({ filter }) => [
-        evo(model, { filter: () => filter }),
-        [],
-      ],
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    AddedTodo: () => ({
+      model: evo(model, { todos: Array.append(emptyTodo()) }),
     }),
-  )
+    ClearedDoneTodos: () => ({
+      model: evo(model, { todos: Array.filter(todo => !todo.done) }),
+    }),
+    SelectedFilter: ({ filter }) => ({
+      model: evo(model, { filter: () => filter }),
+    }),
+  })

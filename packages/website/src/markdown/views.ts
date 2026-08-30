@@ -25,8 +25,7 @@ export type DocViewConfig = Readonly<{
   renderHeadingLink: RenderHeadingLink
 }>
 
-const linkClassName =
-  'text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500 font-normal'
+const linkClassName = 'link-accent font-normal'
 
 const blockquoteClassName =
   'border-l-4 border-gray-300 dark:border-gray-700 pl-4 italic text-gray-700 dark:text-gray-300 mb-4 [&>p:last-child]:mb-0'

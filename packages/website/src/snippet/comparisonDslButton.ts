@@ -1,14 +1,14 @@
 import { Schema as S } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { defineMessageUnion } from 'foldkit/message'
 
-const ClickedSave = m('ClickedSave')
-
-const Message = S.Union([ClickedSave])
+const Message = defineMessageUnion({
+  ClickedSave: {},
+})
 type Message = typeof Message.Type
 
 const saveButton = (isSaving: boolean, h: HtmlBuilder<Message>) =>
   h.button(
-    [h.Type('button'), h.Disabled(isSaving), h.OnClick(ClickedSave())],
+    [h.Type('button'), h.Disabled(isSaving), h.OnClick(Message.ClickedSave())],
     ['Save'],
   )

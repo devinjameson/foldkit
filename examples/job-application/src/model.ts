@@ -1,5 +1,5 @@
 import { Schema as S } from 'effect'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 
 import { Menu, Tabs } from '@foldkit/ui'
 
@@ -15,17 +15,12 @@ import {
 
 // SUBMISSION
 
-export const NotSubmitted = ts('NotSubmitted')
-export const Submitting = ts('Submitting')
-export const SubmitSuccess = ts('SubmitSuccess')
-export const SubmitError = ts('SubmitError', { error: S.String })
-
-export const Submission = S.Union([
-  NotSubmitted,
-  Submitting,
-  SubmitSuccess,
-  SubmitError,
-])
+export const Submission = defineTaggedUnion({
+  NotSubmitted: {},
+  Submitting: {},
+  SubmitSuccess: {},
+  SubmitError: { error: S.String },
+})
 export type Submission = typeof Submission.Type
 
 // MODEL

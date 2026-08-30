@@ -3,7 +3,6 @@ import {
   Effect,
   Exit,
   Function,
-  Match,
   Number,
   Option,
   Schema,
@@ -12,15 +11,9 @@ import {
 } from 'effect'
 import { describe, expect, it } from 'vitest'
 
-import { m } from '../message/index.js'
+import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
-import {
-  EventFrame,
-  MAX_DISPATCH_BATCH_SIZE,
-  type Request,
-  RequestDispatchMessage,
-  RequestDispatchMessages,
-} from './protocol.js'
+import { EventFrame, MAX_DISPATCH_BATCH_SIZE, Request } from './protocol.js'
 import {
   type Bridge,
   type CreateDevToolsStoreOptions,
@@ -37,23 +30,20 @@ type CounterModel = typeof CounterModel.Type
 
 const initialModel = CounterModel.make({ count: 0 })
 
-const ClickedIncrement = m('ClickedIncrement')
-const ClickedDecrement = m('ClickedDecrement')
-
-const CounterMessage = Schema.Union([ClickedIncrement, ClickedDecrement])
+const CounterMessage = defineMessageUnion({
+  ClickedIncrement: {},
+  ClickedDecrement: {},
+})
 type CounterMessage = typeof CounterMessage.Type
 
-const clickedIncrement = ClickedIncrement()
-const clickedDecrement = ClickedDecrement()
+const clickedIncrement = CounterMessage.ClickedIncrement()
+const clickedDecrement = CounterMessage.ClickedDecrement()
 
 const update = (model: CounterModel, message: CounterMessage): CounterModel =>
-  Match.value(message).pipe(
-    Match.withReturnType<CounterModel>(),
-    Match.tagsExhaustive({
-      ClickedIncrement: () => evo(model, { count: Number.increment }),
-      ClickedDecrement: () => evo(model, { count: Number.decrement }),
-    }),
-  )
+  CounterMessage.match<CounterModel>(message, {
+    ClickedIncrement: () => evo(model, { count: Number.increment }),
+    ClickedDecrement: () => evo(model, { count: Number.decrement }),
+  })
 
 const decodeCounterMessage = Schema.decodeUnknownSync(CounterMessage)
 
@@ -132,11 +122,15 @@ describe('dispatchRequest', () => {
       const { dispatched, callBridge, tagAt } = makeHarness()
 
       const response = callBridge(
-        RequestDispatchMessage({ message: { _tag: 'ClickedIncrement' } }),
+        Request.RequestDispatchMessage({
+          message: { _tag: 'ClickedIncrement' },
+        }),
       )
 
       if (response._tag !== 'ResponseDispatched') {
-        throw new Error(`Expected ResponseDispatched, got ${response._tag}`)
+        throw new Error(
+          `Expected Response.ResponseDispatched, got ${response._tag}`,
+        )
       }
       expect(response.acceptedAtIndex).toBe(2)
       expect(dispatched).toEqual([clickedIncrement])
@@ -147,7 +141,7 @@ describe('dispatchRequest', () => {
       const { dispatched, callBridge, recordedTags } = makeHarness()
 
       const response = callBridge(
-        RequestDispatchMessage({ message: { _tag: 'Nonsense' } }),
+        Request.RequestDispatchMessage({ message: { _tag: 'Nonsense' } }),
       )
 
       expect(response._tag).toBe('ResponseError')
@@ -161,7 +155,7 @@ describe('dispatchRequest', () => {
       const { dispatched, callBridge, tagAt } = makeHarness()
 
       const response = callBridge(
-        RequestDispatchMessages({
+        Request.RequestDispatchMessages({
           messages: [
             { _tag: 'ClickedIncrement' },
             { _tag: 'ClickedDecrement' },
@@ -172,7 +166,7 @@ describe('dispatchRequest', () => {
 
       if (response._tag !== 'ResponseDispatchedBatch') {
         throw new Error(
-          `Expected ResponseDispatchedBatch, got ${response._tag}`,
+          `Expected Response.ResponseDispatchedBatch, got ${response._tag}`,
         )
       }
       expect(response.acceptedAtIndices).toEqual([2, 3, 4])
@@ -195,7 +189,7 @@ describe('dispatchRequest', () => {
       })
 
       const response = callBridge(
-        RequestDispatchMessages({
+        Request.RequestDispatchMessages({
           messages: [
             { _tag: 'ClickedIncrement' },
             { _tag: 'ClickedDecrement' },
@@ -205,7 +199,7 @@ describe('dispatchRequest', () => {
 
       if (response._tag !== 'ResponseDispatchedBatch') {
         throw new Error(
-          `Expected ResponseDispatchedBatch, got ${response._tag}`,
+          `Expected Response.ResponseDispatchedBatch, got ${response._tag}`,
         )
       }
       expect(response.acceptedAtIndices).toEqual([2, 3])
@@ -219,7 +213,7 @@ describe('dispatchRequest', () => {
       const { dispatched, callBridge, recordedTags } = makeHarness()
 
       const response = callBridge(
-        RequestDispatchMessages({
+        Request.RequestDispatchMessages({
           messages: [
             { _tag: 'ClickedIncrement' },
             { _tag: 'Nonsense' },
@@ -229,7 +223,7 @@ describe('dispatchRequest', () => {
       )
 
       if (response._tag !== 'ResponseError') {
-        throw new Error(`Expected ResponseError, got ${response._tag}`)
+        throw new Error(`Expected Response.ResponseError, got ${response._tag}`)
       }
       expect(response.reason).toContain('zero-based batch position 1')
       expect(response.reason).toContain(
@@ -242,11 +236,13 @@ describe('dispatchRequest', () => {
     it('accepts an empty batch and dispatches nothing', () => {
       const { dispatched, callBridge, recordedTags } = makeHarness()
 
-      const response = callBridge(RequestDispatchMessages({ messages: [] }))
+      const response = callBridge(
+        Request.RequestDispatchMessages({ messages: [] }),
+      )
 
       if (response._tag !== 'ResponseDispatchedBatch') {
         throw new Error(
-          `Expected ResponseDispatchedBatch, got ${response._tag}`,
+          `Expected Response.ResponseDispatchedBatch, got ${response._tag}`,
         )
       }
       expect(response.acceptedAtIndices).toEqual([])
@@ -258,7 +254,7 @@ describe('dispatchRequest', () => {
       const { dispatched, callBridge, recordedTags } = makeHarness()
 
       const response = callBridge(
-        RequestDispatchMessages({
+        Request.RequestDispatchMessages({
           messages: Array.makeBy(MAX_DISPATCH_BATCH_SIZE + 1, () => ({
             _tag: 'ClickedIncrement',
           })),
@@ -266,7 +262,7 @@ describe('dispatchRequest', () => {
       )
 
       if (response._tag !== 'ResponseError') {
-        throw new Error(`Expected ResponseError, got ${response._tag}`)
+        throw new Error(`Expected Response.ResponseError, got ${response._tag}`)
       }
       expect(response.reason).toContain('Batch too large')
       expect(dispatched).toEqual([])
@@ -279,11 +275,13 @@ describe('dispatchRequest', () => {
       )
 
       const response = callBridge(
-        RequestDispatchMessages({ messages: [{ _tag: 'ClickedIncrement' }] }),
+        Request.RequestDispatchMessages({
+          messages: [{ _tag: 'ClickedIncrement' }],
+        }),
       )
 
       if (response._tag !== 'ResponseError') {
-        throw new Error(`Expected ResponseError, got ${response._tag}`)
+        throw new Error(`Expected Response.ResponseError, got ${response._tag}`)
       }
       expect(response.reason).toContain('DevToolsConfig.Message not configured')
       expect(dispatched).toEqual([])
