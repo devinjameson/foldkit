@@ -64,13 +64,13 @@ Thank you to [@hdoro](https://github.com/hdoro) for suggesting this API change!
 
 ## HoverIntent joins @foldkit/ui
 
-`@foldkit/ui` now includes `HoverIntent`, a behavior-only Submodel for interactions that reveal a panel from a trigger.
+`@foldkit/ui` now includes `HoverIntent`, a headless Submodel for interactions that reveal a panel from a trigger.
 
-It opens after a configurable pointer delay, stays open while pointer or focus moves between the trigger and panel, and closes after a configurable grace period. Focus opens immediately. Escape closes immediately and suppresses reopening until the interaction fully disengages.
+It opens after a configurable pointer delay, stays open while the pointer or focus moves between the trigger and panel, and closes after a configurable grace period. Focus opens immediately. Escape closes immediately and prevents reopening until the pointer and focus have both left.
 
-HoverIntent returns headless trigger and panel event bundles. It does not create markup, choose an ARIA role, position the panel, or style anything. A Hover Card can pair it with Anchor. A Navigation Menu can coordinate several HoverIntent Models around one shared viewport. The behavior is reusable because those product decisions remain yours.
+HoverIntent returns trigger and panel event bundles. It does not create markup, choose ARIA roles, position the panel, or style anything. A Hover Card can pair it with Anchor. A hover menu can use it to keep its items available as the pointer moves from the trigger into the panel.
 
-The new [HoverIntent docs](/ui/hover-intent) include live Hover Card and Navigation Menu examples.
+The [HoverIntent docs](/ui/hover-intent) have current examples and API details.
 
 Thank you to [@SyahrulBhudiF](https://github.com/foldkit/foldkit/pull/1179) for contributing it!
 
