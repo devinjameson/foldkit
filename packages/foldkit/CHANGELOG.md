@@ -1,5 +1,7 @@
 # foldkit
 
+## 0.156.0
+
 ## 0.155.0
 
 ### Minor Changes

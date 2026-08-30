@@ -1,5 +1,13 @@
 # @foldkit/ui
 
+## 0.156.0
+
+### Minor Changes
+
+- [#1240](https://github.com/foldkit/foldkit/pull/1240) [`12a51d6`](https://github.com/foldkit/foldkit/commit/12a51d6b03863e613436251545781cbb15b4dd2e) Thanks [@devinjameson](https://github.com/devinjameson)! - Close HoverIntent without the pointer grace delay when focus leaves the trigger and panel. The zero-delay close still lets focus moving into the panel cancel dismissal before it resolves, while explicit click-away and Tab-away interactions now feel immediate.
+
+  Add `HoverIntent.close` for parent domain events that should dismiss the panel immediately, such as selecting an item from a hover menu. It invalidates pending transitions, clears panel engagement, and emits `Closed` when visibility changes.
+
 ## 0.155.0
 
 ### Minor Changes
