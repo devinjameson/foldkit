@@ -213,8 +213,13 @@
     @apply max-w-6xl mx-auto;
   }
 
+  .button-accent,
   .cta-primary {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 font-normal text-base transition hover:bg-accent-700 dark:hover:bg-accent-600 active:bg-accent-800 dark:active:bg-accent-700;
+    @apply bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 font-normal transition hover:not-data-[disabled]:bg-accent-700 dark:hover:not-data-[disabled]:bg-accent-600 active:not-data-[disabled]:bg-accent-800 dark:active:not-data-[disabled]:bg-accent-700;
+  }
+
+  .cta-primary {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg text-base;
   }
 
   .cta-secondary {

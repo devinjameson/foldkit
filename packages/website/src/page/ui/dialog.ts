@@ -42,7 +42,7 @@ const cancelButtonClassName =
   'px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
 
 const confirmButtonClassName =
-  'px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 hover:bg-accent-700'
+  'button-accent px-4 py-2 text-base cursor-pointer rounded-lg'
 
 const dangerButtonClassName =
   'px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg bg-red-600 text-white hover:bg-red-700'

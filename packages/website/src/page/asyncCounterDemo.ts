@@ -365,8 +365,7 @@ const appPanel = (model: Model, h: HtmlBuilder<Message>): Html =>
 const actionButtonClass = (isDisabled: boolean): string =>
   clsx('px-4 py-2 rounded-lg text-sm font-normal transition', {
     'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed': isDisabled,
-    'bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 hover:bg-accent-700 dark:hover:bg-accent-600 active:bg-accent-800 dark:active:bg-accent-700 cursor-pointer':
-      !isDisabled,
+    'button-accent cursor-pointer': !isDisabled,
   })
 
 const stepperButtonClass = (isDisabled: boolean): string =>

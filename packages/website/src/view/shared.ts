@@ -95,7 +95,7 @@ export const skipNavLink: Html = ih.a(
   [
     ih.Href('#main-content'),
     ih.Class(
-      'sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-accent-600 dark:focus:bg-accent-500 focus:text-white focus:text-sm focus:font-normal',
+      'button-accent sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm',
     ),
   ],
   ['Skip to main content'],
@@ -134,9 +134,7 @@ export const emailFormView: Html = ih.form(
     ih.button(
       [
         ih.Type('submit'),
-        ih.Class(
-          'px-6 py-2.5 rounded-lg bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 font-normal transition hover:bg-accent-700 dark:hover:bg-accent-600 cursor-pointer',
-        ),
+        ih.Class('button-accent px-6 py-2.5 rounded-lg cursor-pointer'),
       ],
       ['Subscribe'],
     ),

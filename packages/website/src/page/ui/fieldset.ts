@@ -27,7 +27,7 @@ const textareaClassName =
   'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-accent-400 dark:focus:ring-accent-400 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
 
 const checkboxClassName =
-  'flex h-5 w-5 shrink-0 items-center justify-center rounded border border-gray-400 dark:border-gray-500 cursor-pointer data-[checked]:bg-accent-600 data-[checked]:border-accent-600 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
+  'flex h-5 w-5 shrink-0 items-center justify-center rounded border border-gray-400 dark:border-gray-500 cursor-pointer data-[checked]:bg-accent-600 data-[checked]:dark:bg-accent-500 data-[checked]:border-accent-600 data-[checked]:dark:border-accent-500 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
 
 const checkboxLabelClassName =
   'text-sm font-normal text-gray-900 dark:text-white cursor-pointer select-none'
@@ -41,7 +41,10 @@ const fieldsClassName = 'mt-4 flex flex-col gap-4'
 // FIELDS
 
 const checkmark = (h: HtmlBuilder<Message>): Html =>
-  h.span([h.Class('text-white text-xs')], ['✓'])
+  h.span(
+    [h.Class('text-white dark:text-accent-900 text-xs font-normal')],
+    ['✓'],
+  )
 
 const nameInput = (value: string, h: HtmlBuilder<Message>): Html =>
   Input.view(
