@@ -8,18 +8,10 @@ import type { Model } from './model'
 
 // DEMO CONTENT
 
-const selectClassName =
-  'appearance-none inline-flex items-center gap-2 w-full px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:focus:border-accent-400 dark:focus:ring-accent-400 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
-
 const selectWrapperClassName = 'relative w-full'
 
 const chevronClassName =
   'pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500'
-
-const labelClassName =
-  'block text-sm font-medium text-gray-700 dark:text-gray-300'
-
-const descriptionClassName = 'text-sm text-gray-500 dark:text-gray-400'
 
 // VIEW
 
@@ -35,17 +27,17 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
             onChange: value => Message.UpdatedSelectDemoValue({ value }),
             toView: attributes =>
               h.div(
-                [h.Class('flex flex-col gap-1.5 w-full')],
+                [h.Class('demo-field w-full')],
                 [
                   h.label(
-                    [...attributes.label, h.Class(labelClassName)],
+                    [...attributes.label, h.Class('demo-label')],
                     ['Country'],
                   ),
                   h.div(
                     [h.Class(selectWrapperClassName)],
                     [
                       h.select(
-                        [...attributes.select, h.Class(selectClassName)],
+                        [...attributes.select, h.Class('demo-field-select')],
                         [
                           h.option([h.Value('us')], ['United States']),
                           h.option([h.Value('ca')], ['Canada']),
@@ -60,7 +52,7 @@ export const basicDemo = (model: Model, h: HtmlBuilder<Message>) => {
                     ],
                   ),
                   h.span(
-                    [...attributes.description, h.Class(descriptionClassName)],
+                    [...attributes.description, h.Class('demo-description')],
                     ['Where you currently reside.'],
                   ),
                 ],
@@ -82,17 +74,17 @@ export const disabledDemo = (_model: Model, h: HtmlBuilder<Message>) => {
         value: 'us',
         toView: attributes =>
           h.div(
-            [h.Class('flex flex-col gap-1.5 w-full max-w-md')],
+            [h.Class('demo-field w-full max-w-md')],
             [
               h.label(
-                [...attributes.label, h.Class(labelClassName)],
+                [...attributes.label, h.Class('demo-label')],
                 ['Country'],
               ),
               h.div(
                 [h.Class(selectWrapperClassName)],
                 [
                   h.select(
-                    [...attributes.select, h.Class(selectClassName)],
+                    [...attributes.select, h.Class('demo-field-select')],
                     [
                       h.option([h.Value('us')], ['United States']),
                       h.option([h.Value('ca')], ['Canada']),
@@ -107,7 +99,7 @@ export const disabledDemo = (_model: Model, h: HtmlBuilder<Message>) => {
                 ],
               ),
               h.span(
-                [...attributes.description, h.Class(descriptionClassName)],
+                [...attributes.description, h.Class('demo-description')],
                 ['This select is disabled.'],
               ),
             ],

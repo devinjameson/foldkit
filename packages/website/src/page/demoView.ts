@@ -93,7 +93,7 @@ export const codePanelView = (
     [
       ih.Class(
         panelClassName +
-          ' rounded-xl order-last lg:order-none bg-gray-100 dark:bg-[#1c1a20] min-w-0',
+          ' code-surface rounded-xl order-last lg:order-none min-w-0',
       ),
       ih.DataAttribute(dataAttributeName, phase),
     ],

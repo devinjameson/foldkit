@@ -14,24 +14,19 @@ import { Message } from './message'
 
 // DEMO CONTENT
 
-const triggerClassName =
-  'inline-flex items-center gap-1.5 px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+const triggerClassName = 'demo-neutral-button inline-flex items-center gap-1.5'
 
-const basicItemsClassName =
-  'w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-cream dark:bg-gray-800 shadow-lg overflow-hidden z-10 outline-none'
+const basicItemsClassName = 'demo-popup-surface w-48 overflow-hidden'
 
-const animatedItemsClassName =
-  'w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-cream dark:bg-gray-800 shadow-lg overflow-hidden z-10 outline-none transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0'
+const animatedItemsClassName = `${basicItemsClassName} transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0`
 
-const itemClassName =
-  'px-3 py-2 text-base text-gray-700 dark:text-gray-200 cursor-pointer data-[active]:bg-gray-100 dark:data-[active]:bg-gray-700/50 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed'
+const itemClassName = 'demo-option'
 
 const backdropClassName = 'fixed inset-0 z-0'
 
 const wrapperClassName = 'relative inline-block'
 
-const headingClassName =
-  'px-3 pt-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500'
+const headingClassName = 'demo-option-heading'
 
 const ICON_SIZE = 'w-4 h-4'
 
@@ -110,13 +105,10 @@ const menuViewConfig = (itemsClassName: string) => {
 export const basicDemo = (menuModel: Menu.Model, h: HtmlBuilder<Message>) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
-          [
-            h.For(Menu.buttonId(menuModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
+          [h.For(Menu.buttonId(menuModel.id)), h.Class('demo-label')],
           ['Row actions'],
         ),
         h.div(
@@ -145,13 +137,10 @@ export const animatedDemo = (
 ) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
-          [
-            h.For(Menu.buttonId(menuModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
+          [h.For(Menu.buttonId(menuModel.id)), h.Class('demo-label')],
           ['Row actions'],
         ),
         h.div(

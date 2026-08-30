@@ -7,8 +7,7 @@ import { Message } from './message'
 
 // DEMO CONTENT
 
-const triggerClassName =
-  'inline-flex items-center gap-1.5 px-4 py-2 text-base font-normal cursor-pointer transition rounded-lg border border-gray-300 dark:border-gray-700 bg-cream dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 select-none'
+const triggerClassName = 'demo-neutral-button inline-flex items-center gap-1.5'
 
 const panelClassName =
   'rounded-md bg-gray-900 dark:bg-gray-700 px-3 py-1.5 text-sm text-white shadow-lg'
@@ -26,13 +25,10 @@ const TOOLTIP_ANCHOR: AnchorConfig = {
 export const demo = (tooltipModel: Tooltip.Model, h: HtmlBuilder<Message>) => {
   return [
     h.div(
-      [h.Class('flex flex-col gap-1.5')],
+      [h.Class('demo-field')],
       [
         h.label(
-          [
-            h.For(Tooltip.triggerId(tooltipModel.id)),
-            h.Class('text-sm font-medium text-gray-900 dark:text-white'),
-          ],
+          [h.For(Tooltip.triggerId(tooltipModel.id)), h.Class('demo-label')],
           ['Tooltip trigger'],
         ),
         h.div(

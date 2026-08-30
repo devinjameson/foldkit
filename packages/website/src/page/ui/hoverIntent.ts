@@ -5,7 +5,7 @@ import { HoverIntent } from '@foldkit/ui'
 import { Message } from './message'
 
 const triggerClassName =
-  'button-accent inline-flex cursor-pointer items-center rounded-lg px-4 py-2 text-sm shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600'
+  'button-accent inline-flex cursor-pointer items-center rounded-lg px-4 py-2 text-sm shadow-sm'
 
 const cardPanelClassName =
   'absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-900'

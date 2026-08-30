@@ -46,6 +46,7 @@
   --color-gray-850: #232129;
   --color-gray-900: #1e1c21;
   --color-gray-950: #13121a;
+  --color-accent-50: #f4fae8;
   --color-accent-100: #e8f5d0;
   --color-accent-200: #c8e494;
   --color-accent-300: #a3d154;
@@ -55,6 +56,7 @@
   --color-accent-700: #416812;
   --color-accent-800: #365610;
   --color-accent-900: #253b0a;
+  --color-accent-950: #152205;
   --font-sans: 'ABC Favorit', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-weight-normal: 350;
@@ -64,6 +66,13 @@
 :root {
   --header-height: calc(3.5rem + env(safe-area-inset-top, 0px));
   --mobile-toc-height: 2.75rem;
+  --code-foreground: #403d4a;
+  --code-background: var(--color-gray-100);
+}
+
+html.dark {
+  --code-foreground: #e0dee6;
+  --code-background: #1c1a20;
 }
 
 @media (min-width: theme(--breakpoint-md)) {
@@ -215,23 +224,112 @@
 
   .button-accent,
   .cta-primary {
-    @apply bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 font-normal transition hover:not-data-[disabled]:bg-accent-700 dark:hover:not-data-[disabled]:bg-accent-600 active:not-data-[disabled]:bg-accent-800 dark:active:not-data-[disabled]:bg-accent-700;
+    @apply bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 hover:not-data-[disabled]:bg-accent-700 dark:hover:not-data-[disabled]:bg-accent-600 active:not-data-[disabled]:bg-accent-800 dark:active:not-data-[disabled]:bg-accent-700;
   }
 
-  .cta-primary {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg text-base;
+  .button-accent {
+    @apply font-normal transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400;
+  }
+
+  .link-accent {
+    @apply text-accent-600 dark:text-accent-500 underline decoration-accent-600/30 dark:decoration-accent-500/30 hover:decoration-accent-600 dark:hover:decoration-accent-500;
+  }
+
+  .code-surface {
+    @apply bg-[var(--code-background)] text-[var(--code-foreground)];
+  }
+
+  .docs-disclosure-button {
+    @apply w-full flex items-center justify-between px-4 py-3 text-left text-base font-normal cursor-pointer transition border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white hover:bg-gray-200/50 dark:hover:bg-gray-800 rounded-lg data-[open]:rounded-b-none select-none;
+  }
+
+  .docs-disclosure-panel {
+    @apply px-4 py-3 border-x border-b border-gray-300 dark:border-gray-700 rounded-b-lg text-gray-800 dark:text-gray-200;
+  }
+
+  .cta-primary,
+  .cta-secondary,
+  .cta-amber,
+  .cta-amber-sm {
+    @apply inline-flex items-center gap-2 rounded-lg font-normal transition-colors;
+  }
+
+  .cta-primary,
+  .cta-secondary,
+  .cta-amber {
+    @apply px-6 py-3 text-base;
   }
 
   .cta-secondary {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-cream dark:bg-gray-900 text-gray-900 dark:text-white font-normal text-base transition hover:bg-gray-200 hover:border-gray-400 dark:hover:bg-gray-800 dark:hover:border-gray-400;
+    @apply border border-gray-300 dark:border-gray-600 bg-cream dark:bg-gray-900 text-gray-900 dark:text-white hover:bg-gray-200 hover:border-gray-400 dark:hover:bg-gray-800 dark:hover:border-gray-400;
   }
 
-  .cta-amber {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-amber-500 dark:bg-amber-400 text-amber-950 font-normal text-base transition hover:bg-amber-400 dark:hover:bg-amber-300 active:bg-amber-600 dark:active:bg-amber-500;
+  .cta-amber,
+  .cta-amber-sm {
+    @apply bg-amber-500 dark:bg-amber-400 text-amber-950 hover:bg-amber-400 dark:hover:bg-amber-300 active:bg-amber-600 dark:active:bg-amber-500;
   }
 
   .cta-amber-sm {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 dark:bg-amber-400 text-amber-950 font-normal text-sm transition hover:bg-amber-400 dark:hover:bg-amber-300 active:bg-amber-600 dark:active:bg-amber-500;
+    @apply px-4 py-2 text-sm;
+  }
+
+  .demo-field {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .demo-label {
+    @apply text-sm font-normal text-gray-900 dark:text-white;
+  }
+
+  .demo-description {
+    @apply text-sm text-gray-500 dark:text-gray-400;
+  }
+
+  .demo-field-input,
+  .demo-field-textarea,
+  .demo-field-select {
+    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-accent-400 dark:focus:ring-accent-400 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50;
+  }
+
+  .demo-field-input,
+  .demo-field-select {
+    @apply py-2;
+  }
+
+  .demo-field-textarea {
+    @apply py-2.5;
+  }
+
+  .demo-field-select {
+    @apply appearance-none cursor-pointer pr-10 select-none hover:not-data-[disabled]:bg-gray-50 dark:hover:not-data-[disabled]:bg-gray-700;
+  }
+
+  .demo-neutral-button {
+    @apply rounded-lg border border-gray-300 bg-cream px-4 py-2 text-base font-normal text-gray-900 transition-colors select-none cursor-pointer hover:not-data-[disabled]:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:not-data-[disabled]:bg-gray-700 dark:focus-visible:outline-accent-400;
+  }
+
+  .demo-popup-surface {
+    @apply z-10 rounded-lg border border-gray-200 bg-cream shadow-lg outline-none dark:border-gray-700 dark:bg-gray-800;
+  }
+
+  .demo-option {
+    @apply cursor-pointer px-3 py-2 text-base text-gray-700 data-[active]:bg-gray-100 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 dark:text-gray-200 dark:data-[active]:bg-gray-700/50;
+  }
+
+  .demo-option-heading {
+    @apply px-3 pt-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500;
+  }
+
+  .demo-checkbox {
+    @apply flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border border-gray-400 data-[checked]:border-accent-600 data-[checked]:bg-accent-600 data-[indeterminate]:border-accent-600 data-[indeterminate]:bg-accent-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 dark:border-gray-500 dark:data-[checked]:border-accent-500 dark:data-[checked]:bg-accent-500 dark:data-[indeterminate]:border-accent-500 dark:data-[indeterminate]:bg-accent-500 dark:focus-visible:outline-accent-400;
+  }
+
+  .demo-checkbox-mark {
+    @apply text-xs font-normal text-white dark:text-accent-900;
+  }
+
+  .demo-toggle-label {
+    @apply cursor-pointer text-sm font-normal text-gray-900 select-none dark:text-white;
   }
 
   .landing-card {

@@ -10,7 +10,7 @@ import type { Model } from './model'
 // DEMO CONTENT
 
 const dropZoneClassName =
-  'flex flex-col items-center gap-2 cursor-pointer rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-6 py-10 text-center hover:border-accent-400 select-none data-[drag-over]:border-accent-500 data-[drag-over]:bg-accent-50 dark:data-[drag-over]:bg-accent-950/30 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
+  'flex flex-col items-center gap-2 cursor-pointer rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-6 py-10 text-center hover:border-accent-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400 select-none data-[drag-over]:border-accent-500 data-[drag-over]:bg-accent-50 dark:data-[drag-over]:bg-accent-950/30 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
 
 const primaryTextClassName =
   'text-base font-medium text-gray-900 dark:text-white'

@@ -8,7 +8,7 @@ import type { Model } from './model'
 // DEMO CONTENT
 
 const buttonClassName =
-  'button-accent inline-flex items-center gap-2 rounded-lg px-3 py-2 text-base shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
+  'button-accent inline-flex items-center gap-2 rounded-lg px-3 py-2 text-base shadow-sm cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50'
 
 // VIEW
 
