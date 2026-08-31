@@ -7,7 +7,7 @@ import {
   Option,
   Predicate,
   Record,
-  String as String_,
+  String,
   SubscriptionRef,
   pipe,
 } from 'effect'
@@ -112,7 +112,7 @@ export const computeDiff = (
   const addAncestors = (path: string): void => {
     pipe(
       path,
-      String_.lastIndexOf('.'),
+      String.lastIndexOf('.'),
       Option.map(lastDot => path.substring(0, lastDot)),
       Option.filter(parent => !affected.has(parent)),
       Option.map(parent => {

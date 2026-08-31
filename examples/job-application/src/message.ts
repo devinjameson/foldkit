@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import { Menu, Tabs } from '@foldkit/ui'
@@ -38,7 +38,7 @@ export const Message = defineMessageUnion({
   ToggledPreview: {},
   ClickedSubmit: {},
   SucceededSubmitApplication: {},
-  FailedSubmitApplication: { error: S.String },
+  FailedSubmitApplication: { error: Schema.String },
 })
 
 export type Message = typeof Message.Type

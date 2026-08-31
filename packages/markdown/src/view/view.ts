@@ -1,10 +1,4 @@
-import {
-  Array,
-  Match as M,
-  Option,
-  Record as Record_,
-  Schema as S,
-} from 'effect'
+import { Array, Match, Option, Record, Schema } from 'effect'
 import { Html, inertHtml as ih } from 'foldkit/html'
 
 import {
@@ -45,13 +39,13 @@ export type InlineContent = ReadonlyArray<Html | string>
  * such as an `h.submodel` slotId.
  */
 export type IslandView = (
-  attributes: Readonly<Record<string, string>>,
+  attributes: Readonly<globalThis.Record<string, string>>,
   content: ReadonlyArray<Html>,
   occurrenceIndex: number,
 ) => Html
 
 /** Island views by directive name. */
-export type Islands = Readonly<Record<string, IslandView>>
+export type Islands = Readonly<globalThis.Record<string, IslandView>>
 
 /**
  * One typed island view per definition. Each view receives its attributes
@@ -115,12 +109,12 @@ const startAttribute = (maybeStartNumber: Option.Option<number>) =>
   })
 
 const alignmentAttribute = (alignment: Alignment) =>
-  M.value(alignment).pipe(
-    M.when('None', () => []),
-    M.when('Left', () => [ih.Style({ 'text-align': 'left' })]),
-    M.when('Center', () => [ih.Style({ 'text-align': 'center' })]),
-    M.when('Right', () => [ih.Style({ 'text-align': 'right' })]),
-    M.exhaustive,
+  Match.value(alignment).pipe(
+    Match.when('None', () => []),
+    Match.when('Left', () => [ih.Style({ 'text-align': 'left' })]),
+    Match.when('Center', () => [ih.Style({ 'text-align': 'center' })]),
+    Match.when('Right', () => [ih.Style({ 'text-align': 'right' })]),
+    Match.exhaustive,
   )
 
 /**
@@ -153,15 +147,15 @@ export const defaultViews: Views = {
   Image: ({ url, alt, maybeTitle }) =>
     ih.img([ih.Src(url), ih.Alt(alt), ...titleAttribute(maybeTitle)]),
   Heading: ({ level }, content) =>
-    M.value(level).pipe(
-      M.withReturnType<Html>(),
-      M.when(1, () => ih.h1([], content)),
-      M.when(2, () => ih.h2([], content)),
-      M.when(3, () => ih.h3([], content)),
-      M.when(4, () => ih.h4([], content)),
-      M.when(5, () => ih.h5([], content)),
-      M.when(6, () => ih.h6([], content)),
-      M.exhaustive,
+    Match.value(level).pipe(
+      Match.withReturnType<Html>(),
+      Match.when(1, () => ih.h1([], content)),
+      Match.when(2, () => ih.h2([], content)),
+      Match.when(3, () => ih.h3([], content)),
+      Match.when(4, () => ih.h4([], content)),
+      Match.when(5, () => ih.h5([], content)),
+      Match.when(6, () => ih.h6([], content)),
+      Match.exhaustive,
     ),
   Paragraph: (_paragraph, content) => ih.p([], content),
   CodeBlock: ({ value }) => ih.pre([], [ih.code([], [value])]),
@@ -188,9 +182,9 @@ export const defaultViews: Views = {
 }
 
 const inlineView = (views: Views, inline: Inline): Html | string =>
-  M.value(inline).pipe(
-    M.withReturnType<Html | string>(),
-    M.tagsExhaustive({
+  Match.value(inline).pipe(
+    Match.withReturnType<Html | string>(),
+    Match.tagsExhaustive({
       Text: views.Text,
       InlineCode: views.InlineCode,
       HardBreak: views.HardBreak,
@@ -270,7 +264,7 @@ export const islandsFor = <const Definitions extends IslandDefinitions>(
 ): Islands => {
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   const islandViewsByName = islandViews as Readonly<
-    Record<
+    globalThis.Record<
       string,
       (
         attributes: unknown,
@@ -280,11 +274,11 @@ export const islandsFor = <const Definitions extends IslandDefinitions>(
     >
   >
 
-  return Record_.map(definitions, (attributesSchema, islandName) => {
-    const decodeAttributes = S.decodeUnknownSync(attributesSchema)
+  return Record.map(definitions, (attributesSchema, islandName) => {
+    const decodeAttributes = Schema.decodeUnknownSync(attributesSchema)
 
     return (attributes, content, occurrenceIndex) =>
-      Option.match(Record_.get(islandViewsByName, islandName), {
+      Option.match(Record.get(islandViewsByName, islandName), {
         onNone: () => {
           warnMissingIslandOnce(islandName)
           return null
@@ -331,7 +325,7 @@ const islandView = (
   const occurrenceIndex = islandOccurrenceCounts.get(island.name) ?? 0
   islandOccurrenceCounts.set(island.name, occurrenceIndex + 1)
 
-  return Option.match(Record_.get(islands, island.name), {
+  return Option.match(Record.get(islands, island.name), {
     onNone: () => {
       warnMissingIslandOnce(island.name)
       return null
@@ -353,9 +347,9 @@ const blockView = (
   islandOccurrenceCounts: IslandOccurrenceCounts,
   block: Block,
 ): Html =>
-  M.value(block).pipe(
-    M.withReturnType<Html>(),
-    M.tagsExhaustive({
+  Match.value(block).pipe(
+    Match.withReturnType<Html>(),
+    Match.tagsExhaustive({
       Heading: heading =>
         views.Heading(heading, inlineContent(views, heading.content)),
       Paragraph: paragraph =>

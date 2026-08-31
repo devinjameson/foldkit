@@ -1,10 +1,10 @@
 // MODEL
 
-const Post = S.Struct({ id: S.String, title: S.String })
+const Post = Schema.Struct({ id: Schema.String, title: Schema.String })
 
-const PostsData = AsyncData.Schema(S.Array(Post), S.String)
+const PostsData = AsyncData.Schema(Schema.Array(Post), Schema.String)
 
-const Model = S.Struct({
+const Model = Schema.Struct({
   posts: PostsData.schema,
 })
 
@@ -12,7 +12,9 @@ const Model = S.Struct({
 
 const Message = defineMessageUnion({
   EnteredPostsRoute: {},
-  SettledFetchPosts: { result: S.Result(S.Array(Post), S.String) },
+  SettledFetchPosts: {
+    result: Schema.Result(Schema.Array(Post), Schema.String),
+  },
 })
 
 // COMMAND
@@ -28,7 +30,7 @@ const FetchPosts = Command.define('FetchPosts', {
 
 // UPDATE
 
-M.tagsExhaustive({
+Match.tagsExhaustive({
   EnteredPostsRoute: () =>
     Option.match(AsyncData.revalidateOrLoad(model.posts), {
       onNone: () => ({ model }),

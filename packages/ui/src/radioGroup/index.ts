@@ -1,10 +1,10 @@
 import {
   Array,
   Effect,
-  Match as M,
+  Match,
   Option,
   Predicate,
-  Schema as S,
+  Schema,
   String,
   pipe,
 } from 'effect'
@@ -22,7 +22,7 @@ import { keyToIndex } from '../keyboard.js'
 // MODEL
 
 /** Controls the radio group layout direction and which arrow keys navigate between options. */
-export const Orientation = S.Literals(['Horizontal', 'Vertical'])
+export const Orientation = Schema.Literals(['Horizontal', 'Vertical'])
 export type Orientation = typeof Orientation.Type
 
 /** Schema for the radio group's private interaction state. The selected
@@ -30,9 +30,9 @@ export type Orientation = typeof Orientation.Type
  *  so it is not stored here. `maybeFocusedIndex` is the roving-tabindex
  *  cursor: `None` means keyboard focus follows the selection, and a read-only
  *  group stores `Some(index)` while focus diverges from it. */
-export const Model = S.Struct({
-  id: S.String,
-  maybeFocusedIndex: S.Option(S.Number),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  maybeFocusedIndex: Schema.Option(Schema.Number),
 })
 
 export type Model = typeof Model.Type
@@ -42,10 +42,10 @@ export type Model = typeof Model.Type
 /** Union of all messages the radio group can produce. */
 export const Message = defineMessageUnion({
   SelectedOption: {
-    index: S.Number,
-    value: S.String,
+    index: Schema.Number,
+    value: Schema.String,
   },
-  FocusedOption: { index: S.Number },
+  FocusedOption: { index: Schema.Number },
   CompletedFocusOption: {},
 })
 
@@ -66,8 +66,8 @@ export type Selected<Value extends string = string> = Readonly<{
  *  `Update.foldChild` config handles them through `foldOutMessage`. */
 export const OutMessage = defineMessageUnion({
   Selected: {
-    value: S.String,
-    index: S.Number,
+    value: Schema.String,
+    index: Schema.Number,
   },
 })
 
@@ -103,7 +103,7 @@ const descriptionId = (id: string, index: number): string =>
 
 /** Moves focus to the option at the given index. */
 export const FocusOption = Command.define('FocusOption', {
-  args: { id: S.String, index: S.Number },
+  args: { id: Schema.String, index: Schema.Number },
   messages: [Message.CompletedFocusOption],
   execute: ({ id, index }) =>
     Dom.focus(idSelector(optionId(id, index))).pipe(
@@ -258,16 +258,16 @@ const internalView = defineView<Model, Message, ViewInputs>(
       Option.getOrElse(() => selectionTabStopIndex),
     )
 
-    const { nextKey, previousKey } = M.value(orientation).pipe(
-      M.when('Horizontal', () => ({
+    const { nextKey, previousKey } = Match.value(orientation).pipe(
+      Match.when('Horizontal', () => ({
         nextKey: 'ArrowRight',
         previousKey: 'ArrowLeft',
       })),
-      M.when('Vertical', () => ({
+      Match.when('Vertical', () => ({
         nextKey: 'ArrowDown',
         previousKey: 'ArrowUp',
       })),
-      M.exhaustive,
+      Match.exhaustive,
     )
 
     const resolveKeyIndex = keyToIndex(
@@ -289,8 +289,8 @@ const internalView = defineView<Model, Message, ViewInputs>(
       currentIndex: number,
       key: string,
     ): Option.Option<SelectedOption> =>
-      M.value(key).pipe(
-        M.whenOr(
+      Match.value(key).pipe(
+        Match.whenOr(
           nextKey,
           previousKey,
           'Home',
@@ -299,13 +299,13 @@ const internalView = defineView<Model, Message, ViewInputs>(
           'PageDown',
           () => optionSelectedAt(resolveKeyIndex(key)),
         ),
-        M.when(' ', () => optionSelectedAt(currentIndex)),
-        M.orElse(() => Option.none()),
+        Match.when(' ', () => optionSelectedAt(currentIndex)),
+        Match.orElse(() => Option.none()),
       )
 
     const handleReadOnlyKeyDown = (key: string): Option.Option<FocusedOption> =>
-      M.value(key).pipe(
-        M.whenOr(
+      Match.value(key).pipe(
+        Match.whenOr(
           nextKey,
           previousKey,
           'Home',
@@ -315,7 +315,7 @@ const internalView = defineView<Model, Message, ViewInputs>(
           () =>
             Option.some(Message.FocusedOption({ index: resolveKeyIndex(key) })),
         ),
-        M.orElse(() => Option.none()),
+        Match.orElse(() => Option.none()),
       )
 
     const handleKeyDown =

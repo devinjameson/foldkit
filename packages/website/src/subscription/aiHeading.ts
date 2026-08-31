@@ -1,4 +1,4 @@
-import { Duration, Effect, Schema as S, Stream } from 'effect'
+import { Duration, Effect, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 
 import { type Model } from '../main'
@@ -8,7 +8,7 @@ const TOGGLE_INTERVAL_MS = 3000
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   aiHeading: entry(
-    { isLandingPage: S.Boolean },
+    { isLandingPage: Schema.Boolean },
     {
       modelToDependencies: model => ({
         isLandingPage: model.route._tag === 'Home',

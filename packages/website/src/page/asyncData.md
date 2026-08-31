@@ -57,7 +57,7 @@ Because both are type-level states, “show stale data while revalidating” and
 The error Schema is simplified to `string` here; a real app usually gives each field a domain error Schema, for example a union of a tagged `NotFound` and `string`.
 :::
 
-A single field embeds `.schema` directly. A keyed cache embeds it as the value Schema of an `S.HashMap`, which is how `noteById` holds one independent `AsyncData` per `NoteId`. The Model type of a field is `typeof NotesAsyncData.schema.Type`, structurally equal to `AsyncData.AsyncData<ReadonlyArray<Note>, string>`.
+A single field embeds `.schema` directly. A keyed cache embeds it as the value Schema of an `Schema.HashMap`, which is how `noteById` holds one independent `AsyncData` per `NoteId`. The Model type of a field is `typeof NotesAsyncData.schema.Type`, structurally equal to `AsyncData.AsyncData<ReadonlyArray<Note>, string>`.
 
 To construct a value, use the namespace constructors (generic in `A`/`E`) or the factory-returned ones (tightened to the Model’s `A`/`E`). They build identical runtime values.
 

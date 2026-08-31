@@ -1,4 +1,4 @@
-import { Option, Schema as S, String } from 'effect'
+import { Option, Schema, String } from 'effect'
 import { type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -7,15 +7,19 @@ import { PeopleRoute } from '../route'
 
 // MESSAGE
 
-const Person = S.Struct({ id: S.Number, name: S.String, role: S.String })
+const Person = Schema.Struct({
+  id: Schema.Number,
+  name: Schema.String,
+  role: Schema.String,
+})
 
 export const Message = defineMessageUnion({
-  ChangedSearchInput: { value: S.String },
+  ChangedSearchInput: { value: Schema.String },
   SubmittedSearch: {},
   ChangedRoute: { route: PeopleRoute },
   SucceededFetchPeople: {
-    query: S.String,
-    people: S.Array(Person),
+    query: Schema.String,
+    people: Schema.Array(Person),
   },
 })
 export type Message = typeof Message.Type

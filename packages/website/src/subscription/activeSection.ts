@@ -3,11 +3,11 @@ import {
   Effect,
   Function,
   HashSet,
-  Match as M,
+  Match,
   MutableRef,
   Option,
   Queue,
-  Schema as S,
+  Schema,
   Stream,
   pipe,
 } from 'effect'
@@ -20,13 +20,13 @@ import * as Page from '../page'
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   activeSection: entry(
     {
-      pageId: S.String,
-      sections: S.Array(S.String),
+      pageId: Schema.String,
+      sections: Schema.Array(Schema.String),
     },
     {
       modelToDependencies: model => {
-        const currentPageTableOfContents = M.value(model.route).pipe(
-          M.tags({
+        const currentPageTableOfContents = Match.value(model.route).pipe(
+          Match.tags({
             Manifesto: () => Page.Manifesto.tableOfContents,
             WhyNoJsx: () => Page.WhyNoJsx.tableOfContents,
             Performance: () => Page.Performance.tableOfContents,
@@ -143,7 +143,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
             Privacy: () => Page.Privacy.tableOfContents,
             TypingTerminal: () => Page.TypingTerminal.tableOfContents,
           }),
-          M.tag(
+          Match.tag(
             'Home',
             'Newsletter',
             'Blog',
@@ -154,7 +154,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
             'ExampleDetail',
             () => [],
           ),
-          M.exhaustive,
+          Match.exhaustive,
         )
 
         return {

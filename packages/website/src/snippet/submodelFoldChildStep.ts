@@ -1,10 +1,10 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-const toParentDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<OutMessage | undefined>(),
-  M.tagsExhaustive({
+const toParentDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
+  Match.withReturnType<OutMessage | undefined>(),
+  Match.tagsExhaustive({
     Opened: () => undefined,
     Closed: () => OutMessage.ClosedDialog(),
   }),

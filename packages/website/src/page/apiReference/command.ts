@@ -1,4 +1,4 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import { Command } from 'foldkit'
 
 import { ParsedApiReference } from './domain'
@@ -19,7 +19,7 @@ export const LoadApiData = Command.define('LoadApiData', {
         error instanceof Error ? error.message : 'Unknown error',
     })
 
-    const parsedApi = S.decodeUnknownSync(ParsedApiReference)(
+    const parsedApi = Schema.decodeUnknownSync(ParsedApiReference)(
       parsedApiModule.default,
     )
 

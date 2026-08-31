@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S } from 'effect'
+import { Array, Option, Schema } from 'effect'
 import { inertHtml as ih } from 'foldkit/html'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -227,7 +227,9 @@ describe('view', () => {
     const root = asElement(
       view(document, {
         islands: islandsFor(
-          { Badge: S.Struct({ label: S.optionalKey(S.String) }) },
+          {
+            Badge: Schema.Struct({ label: Schema.optionalKey(Schema.String) }),
+          },
           {
             Badge: ({ label }, _content, occurrenceIndex) =>
               ih.span([], [label ?? 'none', String(occurrenceIndex)]),
@@ -246,7 +248,7 @@ describe('view', () => {
     const root = asElement(
       view(document, {
         islands: islandsFor(
-          { Gauge: S.Struct({ level: S.String }) },
+          { Gauge: Schema.Struct({ level: Schema.String }) },
           { Gauge: ({ level }) => ih.span([], [level]) },
         ),
       }),

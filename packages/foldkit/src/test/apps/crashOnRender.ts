@@ -1,4 +1,4 @@
-import { Array, Effect, Schema as S } from 'effect'
+import { Array, Effect, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Document, HtmlBuilder } from '../../html/index.js'
@@ -8,23 +8,23 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const RawSource = S.Struct({
-  kind: S.Literal('Book'),
-  id: S.String,
+export const RawSource = Schema.Struct({
+  kind: Schema.Literal('Book'),
+  id: Schema.String,
 })
 export type RawSource = typeof RawSource.Type
 
 // NOTE: the strict counterpart of RawSource, requiring a non-empty id.
 // Constructing one (or a SelectedSource Message carrying one) from an empty id
 // throws at construction time, which is what drives the render and update crash.
-export const Source = S.Struct({
-  kind: S.Literal('Book'),
-  id: S.String.check(S.isNonEmpty()),
+export const Source = Schema.Struct({
+  kind: Schema.Literal('Book'),
+  id: Schema.String.check(Schema.isNonEmpty()),
 })
 export type Source = typeof Source.Type
 
-export const Model = S.Struct({
-  sources: S.Array(RawSource),
+export const Model = Schema.Struct({
+  sources: Schema.Array(RawSource),
 })
 export type Model = typeof Model.Type
 
@@ -32,9 +32,9 @@ export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   ClickedReload: {},
-  CompletedReloadSources: { sources: S.Array(RawSource) },
+  CompletedReloadSources: { sources: Schema.Array(RawSource) },
   SelectedSource: { source: Source },
-  SubmittedNewSourceId: { id: S.String },
+  SubmittedNewSourceId: { id: Schema.String },
 })
 
 export type Message = typeof Message.Type

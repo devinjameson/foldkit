@@ -1,4 +1,4 @@
-import { Array, Match as M, Number, Option, flow, pipe } from 'effect'
+import { Array, Match, Number, Option, flow, pipe } from 'effect'
 import { type Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -8,30 +8,30 @@ import { Message } from '../message'
 import { HOME_ACTIONS, HomeAction, HomeStep, Model } from '../model'
 
 type UpdateReturn = Update.Return<Model, Message, RoomsClient>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+const withUpdateReturn = Match.withReturnType<UpdateReturn>()
 
 export const handleKeyPressed =
   (model: Model) =>
   ({ key }: { key: string }): UpdateReturn =>
-    M.value(model.homeStep).pipe(
+    Match.value(model.homeStep).pipe(
       withUpdateReturn,
-      M.tag('SelectAction', whenSelectAction(model, key)),
-      M.orElse(() => ({ model })),
+      Match.tag('SelectAction', whenSelectAction(model, key)),
+      Match.orElse(() => ({ model })),
     )
 
 const whenSelectAction =
   (model: Model, key: string) =>
   (selectAction: typeof HomeStep.SelectAction.Type): UpdateReturn =>
-    M.value(key).pipe(
+    Match.value(key).pipe(
       withUpdateReturn,
-      M.when('ArrowUp', () =>
+      Match.when('ArrowUp', () =>
         moveSelection(Number.decrement)(model, selectAction),
       ),
-      M.when('ArrowDown', () =>
+      Match.when('ArrowDown', () =>
         moveSelection(Number.increment)(model, selectAction),
       ),
-      M.when('Enter', () => confirmSelection(model)(selectAction)),
-      M.orElse(() => ({ model })),
+      Match.when('Enter', () => confirmSelection(model)(selectAction)),
+      Match.orElse(() => ({ model })),
     )
 
 const moveSelection =
@@ -72,13 +72,13 @@ const cycleAction =
 const confirmSelection =
   (model: Model) =>
   (selectAction: typeof HomeStep.SelectAction.Type): UpdateReturn =>
-    M.value(selectAction.selectedAction).pipe(
+    Match.value(selectAction.selectedAction).pipe(
       withUpdateReturn,
-      M.when('CreateRoom', () => ({
+      Match.when('CreateRoom', () => ({
         model,
         commands: [CreateRoom({ username: selectAction.username })],
       })),
-      M.when('JoinRoom', () => ({
+      Match.when('JoinRoom', () => ({
         model: evo(model, {
           homeStep: () =>
             HomeStep.EnterRoomId({
@@ -88,11 +88,11 @@ const confirmSelection =
         }),
         commands: [FocusRoomIdInput()],
       })),
-      M.when('ChangeUsername', () => ({
+      Match.when('ChangeUsername', () => ({
         model: evo(model, {
           homeStep: () => HomeStep.EnterUsername({ username: '' }),
         }),
         commands: [FocusUsernameInput()],
       })),
-      M.exhaustive,
+      Match.exhaustive,
     )

@@ -1,4 +1,4 @@
-import { Array as Array_ } from 'effect'
+import { Array } from 'effect'
 import { type ChildProcess, spawn, spawnSync } from 'node:child_process'
 import {
   chmodSync,
@@ -277,8 +277,8 @@ const stopForSignal = (exitCode: number): void => {
     return
   }
   isStoppingForSignal = true
-  void Promise.allSettled(Array.from(activeHosts, stopHost)).then(() =>
-    process.exit(exitCode),
+  void Promise.allSettled(globalThis.Array.from(activeHosts, stopHost)).then(
+    () => process.exit(exitCode),
   )
 }
 
@@ -349,7 +349,7 @@ const askRaw = (
         response.on('end', () => {
           const responseHeaders: Record<string, string | undefined> = {}
           for (const [name, value] of Object.entries(response.headers)) {
-            responseHeaders[name] = Array.isArray(value)
+            responseHeaders[name] = globalThis.Array.isArray(value)
               ? value.join(', ')
               : value
           }
@@ -436,7 +436,7 @@ const loadChromium = (): PlaywrightBrowserType => {
 
 type HydratedPage = Readonly<{
   page: PlaywrightPage
-  diagnostics: Array<string>
+  diagnostics: globalThis.Array<string>
 }>
 
 type AdoptionReading = Readonly<{
@@ -456,7 +456,7 @@ const openHydratedPage = async (
   label: string,
 ): Promise<HydratedPage> => {
   const page = await browser.newPage()
-  const diagnostics: Array<string> = []
+  const diagnostics: globalThis.Array<string> = []
   page.on('pageerror', error =>
     diagnostics.push(`page error: ${error.message}`),
   )
@@ -564,7 +564,7 @@ const assertNoBrowserDiagnostics = (
   diagnostics: ReadonlyArray<string>,
 ): void => {
   assertScaffold(
-    Array_.isReadonlyArrayEmpty(diagnostics),
+    Array.isReadonlyArrayEmpty(diagnostics),
     `${label} emitted browser errors:\n${diagnostics.join('\n')}`,
   )
 }
@@ -1069,7 +1069,7 @@ const checkSsg = async (
 }
 
 const main = async (): Promise<void> => {
-  const tarballPaths: Array<string> = []
+  const tarballPaths: globalThis.Array<string> = []
   const workspaceDir = mkdtempSync(join(tmpdir(), 'foldkit-scaffold-ssr-'))
   log(`Workspace: ${workspaceDir}`)
 

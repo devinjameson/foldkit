@@ -1,4 +1,4 @@
-import { Array, Effect, Number, Schema as S } from 'effect'
+import { Array, Effect, Number, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import * as Interruptible from '../../command/interruptible/index.js'
@@ -9,7 +9,7 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const UploadStatus = S.Literals([
+export const UploadStatus = Schema.Literals([
   'Uploading',
   'Done',
   'Cancelled',
@@ -17,15 +17,15 @@ export const UploadStatus = S.Literals([
 ])
 export type UploadStatus = typeof UploadStatus.Type
 
-export const Upload = S.Struct({
-  id: S.Number,
+export const Upload = Schema.Struct({
+  id: Schema.Number,
   status: UploadStatus,
 })
 export type Upload = typeof Upload.Type
 
-export const Model = S.Struct({
-  uploadId: S.Number,
-  uploads: S.Array(Upload),
+export const Model = Schema.Struct({
+  uploadId: Schema.Number,
+  uploads: Schema.Array(Upload),
 })
 export type Model = typeof Model.Type
 
@@ -33,12 +33,12 @@ export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   ClickedStartUpload: {},
-  ClickedRetryUpload: { uploadId: S.Number },
-  ClickedCancelUpload: { uploadId: S.Number },
-  SucceededUploadFile: { uploadId: S.Number },
-  FailedUploadFile: { uploadId: S.Number },
+  ClickedRetryUpload: { uploadId: Schema.Number },
+  ClickedCancelUpload: { uploadId: Schema.Number },
+  SucceededUploadFile: { uploadId: Schema.Number },
+  FailedUploadFile: { uploadId: Schema.Number },
   CompletedCancelUploadFile: {
-    uploadId: S.Number,
+    uploadId: Schema.Number,
     outcome: Interruptible.Outcome,
   },
 })
@@ -47,7 +47,7 @@ export type Message = typeof Message.Type
 
 // COMMAND
 
-export const UploadFileArgs = S.Struct({ uploadId: S.Number })
+export const UploadFileArgs = Schema.Struct({ uploadId: Schema.Number })
 export type UploadFileArgs = typeof UploadFileArgs.Type
 
 export const UploadFile = Command.define('UploadFile', {

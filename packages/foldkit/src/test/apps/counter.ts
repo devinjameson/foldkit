@@ -1,4 +1,4 @@
-import { Array, Effect, Number, Schema as S } from 'effect'
+import { Array, Effect, Number, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
@@ -8,9 +8,9 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  count: S.Number,
-  log: S.Array(S.Number),
+export const Model = Schema.Struct({
+  count: Schema.Number,
+  log: Schema.Array(Schema.Number),
 })
 export type Model = typeof Model.Type
 
@@ -20,14 +20,14 @@ export const Message = defineMessageUnion({
   ClickedIncrement: {},
   ClickedDecrement: {},
   ClickedFetch: {},
-  ClickedFetchById: { id: S.Number },
+  ClickedFetchById: { id: Schema.Number },
   Ticked: {},
   PolledCount: {},
   StartedThreeFetches: {},
   StartedTwoFetchesById: {},
   StartedMixedFetches: {},
-  SucceededFetchCount: { count: S.Number },
-  FailedFetchCount: { error: S.String },
+  SucceededFetchCount: { count: Schema.Number },
+  FailedFetchCount: { error: Schema.String },
 })
 
 export type Message = typeof Message.Type
@@ -40,7 +40,7 @@ export const FetchCount = Command.define('FetchCount', {
 })
 
 export const FetchCountById = Command.define('FetchCountById', {
-  args: { id: S.Number },
+  args: { id: Schema.Number },
   messages: [Message.SucceededFetchCount, Message.FailedFetchCount],
   execute: ({ id }) =>
     Effect.sync(() => Message.SucceededFetchCount({ count: id })),

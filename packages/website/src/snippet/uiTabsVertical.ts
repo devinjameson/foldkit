@@ -10,7 +10,7 @@ const Message = defineMessageUnion({
   GotTabsMessage: { message: Tabs.Message },
 })
 
-const Framework = S.Literals(['Foldkit', 'React', 'Elm'])
+const Framework = Schema.Literals(['Foldkit', 'React', 'Elm'])
 type Framework = typeof Framework.Type
 
 const FrameworkTabs = Tabs.create<Framework>()

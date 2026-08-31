@@ -1,4 +1,4 @@
-import { Array as Array_ } from 'effect'
+import { Array } from 'effect'
 
 import {
   BOOLEAN_PROPERTIES,
@@ -359,7 +359,7 @@ const collectDataAttributes = (
     const activeClasses = Object.keys(classes).filter(
       className => classes[className] === true,
     )
-    if (Array_.isArrayNonEmpty(activeClasses)) {
+    if (Array.isArrayNonEmpty(activeClasses)) {
       appendClass(attributes, activeClasses.join(' '))
     }
   }
@@ -468,7 +468,7 @@ const collectStyleAttribute = (
 }
 
 const serializeAttributes = (
-  output: Array<string>,
+  output: globalThis.Array<string>,
   attributes: Map<string, string>,
 ): void => {
   for (const [name, value] of attributes) {
@@ -497,7 +497,7 @@ const collectRawText = (node: VNode): string => {
   if (node.children === undefined) {
     return ''
   }
-  const parts: Array<string> = []
+  const parts: globalThis.Array<string> = []
   for (const child of node.children) {
     if (typeof child === 'string') {
       parts.push(child)
@@ -574,7 +574,7 @@ type SelectSelection = {
 }
 
 const serializeChildren = (
-  output: Array<string>,
+  output: globalThis.Array<string>,
   context: SerializeContext,
   node: VNode,
   depth: number,
@@ -745,7 +745,7 @@ const selectValueForChildren = (
 }
 
 const serializeElement = (
-  output: Array<string>,
+  output: globalThis.Array<string>,
   context: SerializeContext,
   node: VNode,
   selector: string,
@@ -981,7 +981,7 @@ const serializeElement = (
 }
 
 const serializeNode = (
-  output: Array<string>,
+  output: globalThis.Array<string>,
   context: SerializeContext,
   node: VNode | string | null,
   depth: number,
@@ -1050,7 +1050,7 @@ export const serializeHtml = (
   const context: SerializeContext = {
     emitHydrationMarkers: options?.emitHydrationMarkers ?? false,
   }
-  const output: Array<string> = []
+  const output: globalThis.Array<string> = []
   serializeNode(output, context, root, 0, options?.rootAttributes)
   return output.join('')
 }

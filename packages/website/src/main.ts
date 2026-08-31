@@ -5,11 +5,11 @@ import {
   Function,
   HashSet,
   Layer,
-  Match as M,
-  Number as Number_,
+  Match,
+  Number,
   Option,
-  Record as Record_,
-  Schema as S,
+  Record,
+  Schema,
   pipe,
 } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
@@ -95,22 +95,22 @@ const resolveTheme = (
   preference: ThemePreference,
   systemTheme: ResolvedTheme,
 ): ResolvedTheme =>
-  M.value(preference).pipe(
-    M.withReturnType<ResolvedTheme>(),
-    M.when('Dark', () => 'Dark'),
-    M.when('Light', () => 'Light'),
-    M.when('System', () => systemTheme),
-    M.exhaustive,
+  Match.value(preference).pipe(
+    Match.withReturnType<ResolvedTheme>(),
+    Match.when('Dark', () => 'Dark'),
+    Match.when('Light', () => 'Light'),
+    Match.when('System', () => systemTheme),
+    Match.exhaustive,
   )
 
 // FLAGS
 
-export const Flags = S.Struct({
-  currentYear: S.Number,
+export const Flags = Schema.Struct({
+  currentYear: Schema.Number,
   today: Calendar.CalendarDate,
   deployment: Deployment,
-  maybeApiData: S.Option(ApiData),
-  maybeExampleSources: S.Option(ExampleSources),
+  maybeApiData: Schema.Option(ApiData),
+  maybeExampleSources: Schema.Option(ExampleSources),
 })
 
 type Flags = typeof Flags.Type
@@ -133,9 +133,9 @@ const loadBrowserEnvironment = Effect.gen(function* () {
       const json = yield* Effect.fromOption(
         Option.fromNullishOr(yield* store.get(THEME_STORAGE_KEY)),
       )
-      const theme = yield* S.decodeEffect(S.fromJsonString(ThemePreference))(
-        json,
-      )
+      const theme = yield* Schema.decodeEffect(
+        Schema.fromJsonString(ThemePreference),
+      )(json)
       return Option.some(theme)
     },
   ).pipe(
@@ -149,7 +149,7 @@ const loadBrowserEnvironment = Effect.gen(function* () {
       const json = yield* Effect.fromOption(
         Option.fromNullishOr(yield* store.get(SIDEBAR_STORAGE_KEY)),
       )
-      const state = yield* S.decodeEffect(SidebarStateJsonString)(json)
+      const state = yield* Schema.decodeEffect(SidebarStateJsonString)(json)
       return Option.some(state)
     },
   ).pipe(
@@ -188,30 +188,30 @@ const loadBrowserEnvironment = Effect.gen(function* () {
 
 // MODEL
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   route: AppRoute,
   url: Url,
   deployment: Deployment,
-  copiedSnippets: S.HashSet(S.String),
-  maybeGitHubStarCount: S.Option(S.Number),
-  currentYear: S.Number,
+  copiedSnippets: Schema.HashSet(Schema.String),
+  maybeGitHubStarCount: Schema.Option(Schema.Number),
+  currentYear: Schema.Number,
   mobileMenuDialog: Dialog.Model,
-  isMobileTableOfContentsOpen: S.Boolean,
-  activeSection: S.Option(S.String),
-  isNarrowViewport: S.Boolean,
-  maybeIsChromium: S.Option(S.Boolean),
-  playground: S.Option(Page.Playground.Model),
+  isMobileTableOfContentsOpen: Schema.Boolean,
+  activeSection: Schema.Option(Schema.String),
+  isNarrowViewport: Schema.Boolean,
+  maybeIsChromium: Schema.Option(Schema.Boolean),
+  playground: Schema.Option(Page.Playground.Model),
   sidebarGroups: SidebarGroups,
-  isMapMessagesUnderHoodOpen: S.Boolean,
-  aiHeadingToggleCount: S.Number,
-  maybeThemePreference: S.Option(ThemePreference),
+  isMapMessagesUnderHoodOpen: Schema.Boolean,
+  aiHeadingToggleCount: Schema.Number,
+  maybeThemePreference: Schema.Option(ThemePreference),
   systemTheme: ResolvedTheme,
   resolvedTheme: ResolvedTheme,
   demoTabs: Tabs.Model,
   activeDemoTab: DemoTab.Tab,
   playgroundMenu: Menu.Model,
-  asyncCounterDemo: S.Option(Page.AsyncCounterDemo.Model),
-  notePlayerDemo: S.Option(Page.NotePlayerDemo.Model),
+  asyncCounterDemo: Schema.Option(Page.AsyncCounterDemo.Model),
+  notePlayerDemo: Schema.Option(Page.NotePlayerDemo.Model),
   uiPages: Page.UiPages.Model,
   comingFromReact: Page.ComingFromReact.Model,
   apiReference: Page.ApiReference.Model,
@@ -247,13 +247,11 @@ const initialSidebarGroups = (
   maybeSidebarState: Option.Option<SidebarState>,
   maybeActiveSectionKey: Option.Option<GroupKey>,
 ): SidebarGroups => {
-  const sidebarGroups: Record<GroupKey, boolean> = Record_.fromIterableWith(
-    GroupKey.literals,
-    key => [
+  const sidebarGroups: globalThis.Record<GroupKey, boolean> =
+    Record.fromIterableWith(GroupKey.literals, key => [
       key,
       isGroupOpenOnBoot(maybeSidebarState, maybeActiveSectionKey, key),
-    ],
-  )
+    ])
   return sidebarGroups
 }
 
@@ -452,9 +450,9 @@ type UpdateStep = Update.Step<
 
 const isPathnameEqual = (a: Url, b: Url): boolean => a.pathname === b.pathname
 
-const foldMobileMenuDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldMobileMenuDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Opened: () => model => ({ model }),
     Closed: () => model => ({ model }),
   }),
@@ -495,9 +493,9 @@ const foldMobileMenuDialogOpen = Update.foldChildStep({
   foldOutMessage: foldMobileMenuDialogOutMessage,
 })
 
-const foldDemoTabsOutMessage = M.type<Tabs.OutMessage<DemoTab.Tab>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldDemoTabsOutMessage = Match.type<Tabs.OutMessage<DemoTab.Tab>>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({
@@ -524,9 +522,11 @@ const foldDemoTabs = Update.foldChild({
 
 const foldPlaygroundMenuOutMessage: (
   outMessage: Menu.OutMessage<ExampleSlug>,
-) => Update.Step<Model, Message> = M.type<Menu.OutMessage<ExampleSlug>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+) => Update.Step<Model, Message> = Match.type<
+  Menu.OutMessage<ExampleSlug>
+>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     // NOTE: `LoadExternal` (not `NavigateInternal`).
     // WebContainer requires `window.crossOriginIsolated`,
     // which is only true when the document is loaded with
@@ -723,16 +723,16 @@ export const update = (model: Model, message: Message) =>
         onSome: activeSectionKey =>
           model.sidebarGroups[activeSectionKey]
             ? model.sidebarGroups
-            : Record_.set(model.sidebarGroups, activeSectionKey, true),
+            : Record.set(model.sidebarGroups, activeSectionKey, true),
       })
 
-      const routeSteps = M.value(nextRoute).pipe(
-        M.withReturnType<ReadonlyArray<UpdateStep>>(),
-        M.tag('ApiModule', () => [foldApiReferenceRouteChanged]),
-        M.tag('ExampleDetail', ({ exampleSlug }) => [
+      const routeSteps = Match.value(nextRoute).pipe(
+        Match.withReturnType<ReadonlyArray<UpdateStep>>(),
+        Match.tag('ApiModule', () => [foldApiReferenceRouteChanged]),
+        Match.tag('ExampleDetail', ({ exampleSlug }) => [
           foldExampleDetailRouteChanged(exampleSlug),
         ]),
-        M.orElse(() => []),
+        Match.orElse(() => []),
       )
 
       const maybeScrollSidebar = Option.liftPredicate(
@@ -903,7 +903,7 @@ export const update = (model: Model, message: Message) =>
 
     ToggledAiHeading: () => ({
       model: evo(model, {
-        aiHeadingToggleCount: Number_.increment,
+        aiHeadingToggleCount: Number.increment,
       }),
     }),
 
@@ -957,7 +957,7 @@ export const update = (model: Model, message: Message) =>
 
     ToggledSidebarGroup: ({ key, isOpen }) => {
       const nextModel = evo(model, {
-        sidebarGroups: Record_.set(key, isOpen),
+        sidebarGroups: Record.set(key, isOpen),
       })
       return { model: nextModel, commands: [saveSidebarState(nextModel)] }
     },
@@ -1009,7 +1009,7 @@ const InjectSpeedInsights = Command.define('InjectSpeedInsights', {
 })
 
 const CopySnippet = Command.define('CopySnippet', {
-  args: { text: S.String },
+  args: { text: Schema.String },
   messages: [Message.SucceededCopySnippet, Message.FailedCopySnippet],
   execute: ({ text }) =>
     Effect.tryPromise({
@@ -1022,7 +1022,7 @@ const CopySnippet = Command.define('CopySnippet', {
 })
 
 const CopyLink = Command.define('CopyLink', {
-  args: { url: S.String },
+  args: { url: Schema.String },
   messages: [Message.SucceededCopyLink, Message.FailedCopyLink],
   execute: ({ url }) =>
     Effect.tryPromise({
@@ -1039,7 +1039,7 @@ const COPY_INDICATOR_DURATION = '2 seconds'
 const WaitBeforeHidingCopiedIndicator = Command.define(
   'WaitBeforeHidingCopiedIndicator',
   {
-    args: { text: S.String },
+    args: { text: Schema.String },
     messages: [Message.CompletedWaitBeforeHidingCopiedIndicator],
     execute: ({ text }) =>
       Effect.sleep(COPY_INDICATOR_DURATION).pipe(
@@ -1057,7 +1057,7 @@ const ScrollToTop = Command.define('ScrollToTop', {
 })
 
 const ScrollToAnchor = Command.define('ScrollToAnchor', {
-  args: { hash: S.String },
+  args: { hash: Schema.String },
   messages: [Message.CompletedScrollToAnchor],
   execute: ({ hash }) =>
     Effect.gen(function* () {
@@ -1112,16 +1112,16 @@ const ApplyTheme = Command.define('ApplyTheme', {
   messages: [Message.CompletedApplyTheme],
   execute: ({ theme }) =>
     Effect.sync(() => {
-      M.value(theme).pipe(
-        M.when('Dark', () => {
+      Match.value(theme).pipe(
+        Match.when('Dark', () => {
           document.documentElement.classList.add('dark')
           setThemeColorMeta(DARK_THEME_COLOR)
         }),
-        M.when('Light', () => {
+        Match.when('Light', () => {
           document.documentElement.classList.remove('dark')
           setThemeColorMeta(LIGHT_THEME_COLOR)
         }),
-        M.exhaustive,
+        Match.exhaustive,
       )
       return Message.CompletedApplyTheme()
     }),
@@ -1149,7 +1149,7 @@ const SaveSidebarState = Command.define('SaveSidebarState', {
   execute: ({ state }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
-      const json = yield* S.encodeEffect(SidebarStateJsonString)(state)
+      const json = yield* Schema.encodeEffect(SidebarStateJsonString)(state)
       yield* store.set(SIDEBAR_STORAGE_KEY, json)
       return Message.CompletedSaveSidebarState()
     }).pipe(
@@ -1166,14 +1166,14 @@ const saveSidebarState = (model: Model) =>
   SaveSidebarState({ state: modelToSidebarState(model) })
 
 const NavigateInternal = Command.define('NavigateInternal', {
-  args: { url: S.String },
+  args: { url: Schema.String },
   messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
     pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
-  args: { href: S.String },
+  args: { href: Schema.String },
   messages: [Message.CompletedLoadExternal],
   execute: ({ href }) =>
     load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
@@ -1182,11 +1182,11 @@ const LoadExternal = Command.define('LoadExternal', {
 // VIEW
 
 export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
-  const body = M.value(model.route).pipe(
-    M.tag('Home', () => landingView(model, h)),
-    M.tag('Newsletter', () => newsletterView(model, h)),
-    M.tag('Blog', 'BlogPost', route => blogView(model, route, h)),
-    M.tag('Playground', () =>
+  const body = Match.value(model.route).pipe(
+    Match.tag('Home', () => landingView(model, h)),
+    Match.tag('Newsletter', () => newsletterView(model, h)),
+    Match.tag('Blog', 'BlogPost', route => blogView(model, route, h)),
+    Match.tag('Playground', () =>
       Option.match(model.playground, {
         onNone: () => h.empty,
         onSome: playgroundModel =>
@@ -1200,7 +1200,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           }),
       }),
     ),
-    M.orElse(route => docsView(model, route, h)),
+    Match.orElse(route => docsView(model, route, h)),
   )
 
   return {
@@ -1236,28 +1236,28 @@ const routeTitle = (
   route: AppRoute,
   apiData: Page.ApiReference.ApiDataAsyncData,
 ): string =>
-  M.value(route).pipe(
-    M.tag('Home', () => SITE_NAME),
-    M.tag('Newsletter', () => `Newsletter | ${SITE_NAME}`),
-    M.tag('Blog', () => `Blog | ${SITE_NAME}`),
-    M.tag('UiOverview', () => `Foldkit UI | ${SITE_NAME}`),
-    M.tag('AiOverview', () => `AI | ${SITE_NAME}`),
-    M.tag('Testing', () => `Testing | ${SITE_NAME}`),
-    M.tag('Examples', () => `Examples | ${SITE_NAME}`),
-    M.tag('BlogPost', ({ postSlug }) =>
+  Match.value(route).pipe(
+    Match.tag('Home', () => SITE_NAME),
+    Match.tag('Newsletter', () => `Newsletter | ${SITE_NAME}`),
+    Match.tag('Blog', () => `Blog | ${SITE_NAME}`),
+    Match.tag('UiOverview', () => `Foldkit UI | ${SITE_NAME}`),
+    Match.tag('AiOverview', () => `AI | ${SITE_NAME}`),
+    Match.tag('Testing', () => `Testing | ${SITE_NAME}`),
+    Match.tag('Examples', () => `Examples | ${SITE_NAME}`),
+    Match.tag('BlogPost', ({ postSlug }) =>
       Option.match(Page.Blog.findPostBySlug(postSlug), {
         onNone: () => `Not Found | ${SITE_NAME}`,
         onSome: ({ frontmatter }) =>
           `${frontmatter.title} | Blog | ${SITE_NAME}`,
       }),
     ),
-    M.tag('NotFound', () => `Not Found | ${SITE_NAME}`),
-    M.tag(
+    Match.tag('NotFound', () => `Not Found | ${SITE_NAME}`),
+    Match.tag(
       'ApiModule',
       ({ moduleSlug }) =>
         `${resolveApiModuleName(apiData, moduleSlug)} | API | ${SITE_NAME}`,
     ),
-    M.tag('ExampleDetail', ({ exampleSlug }) =>
+    Match.tag('ExampleDetail', ({ exampleSlug }) =>
       pipe(
         allPages,
         Array.findFirst(({ _tag }) => _tag === `ExampleDetail:${exampleSlug}`),
@@ -1267,7 +1267,7 @@ const routeTitle = (
         }),
       ),
     ),
-    M.tag('Playground', ({ exampleSlug }) =>
+    Match.tag('Playground', ({ exampleSlug }) =>
       pipe(
         allPages,
         Array.findFirst(({ _tag }) => _tag === `ExampleDetail:${exampleSlug}`),
@@ -1277,7 +1277,7 @@ const routeTitle = (
         }),
       ),
     ),
-    M.orElse(({ _tag }) =>
+    Match.orElse(({ _tag }) =>
       pipe(
         allPages,
         Array.findFirst(page => page._tag === _tag),

@@ -1,4 +1,4 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { int, literal, slash } from 'foldkit/route'
 
@@ -9,8 +9,8 @@ const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))
 const peopleRouter = pipe(
   literal('people'),
   Route.query(
-    S.Struct({
-      searchText: S.OptionFromOptional(S.String),
+    Schema.Struct({
+      searchText: Schema.OptionFromOptional(Schema.String),
     }),
   ),
   Route.mapTo(AppRoute.People),

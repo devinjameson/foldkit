@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
@@ -7,9 +7,9 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-const FocusState = S.Literals(['Outside', 'Within'])
+const FocusState = Schema.Literals(['Outside', 'Within'])
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   focusState: FocusState,
 })
 export type Model = typeof Model.Type

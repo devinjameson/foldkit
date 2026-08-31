@@ -1,4 +1,4 @@
-import { Array, Option, Record, String as String_, pipe } from 'effect'
+import { Array, Option, Record, String, pipe } from 'effect'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -138,7 +138,7 @@ describe('openapi.json', () => {
           Option.map(success => Record.keys(success.content ?? {})),
           Option.getOrElse((): ReadonlyArray<string> => []),
         ),
-        Array.some(mediaType => String_.includes('json')(mediaType)),
+        Array.some(mediaType => String.includes('json')(mediaType)),
       ),
     )
 

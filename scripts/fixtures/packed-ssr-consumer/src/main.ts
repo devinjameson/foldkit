@@ -1,16 +1,16 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { CustomElement, type Runtime, type Update } from 'foldkit'
 import { type Document, type HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
-export const Model = S.Struct({
-  count: S.Number,
-  formState: S.Literals(['Controlled', 'Released']),
+export const Model = Schema.Struct({
+  count: Schema.Number,
+  formState: Schema.Literals(['Controlled', 'Released']),
 })
 export type Model = typeof Model.Type
 
-export const Flags = S.Struct({ start: S.Number })
+export const Flags = Schema.Struct({ start: Schema.Number })
 export type Flags = typeof Flags.Type
 
 export const Message = defineMessageUnion({

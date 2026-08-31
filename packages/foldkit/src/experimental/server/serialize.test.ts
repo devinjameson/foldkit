@@ -1,4 +1,4 @@
-import { Context, Option, Schema as S } from 'effect'
+import { Context, Option, Schema } from 'effect'
 import { afterEach, beforeEach, expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -131,7 +131,7 @@ describe('serializeHtml', () => {
     // whichever the view writes last.
     const card = CustomElement.define({
       tag: 'x-inner',
-      properties: { innerHTML: S.String },
+      properties: { innerHTML: Schema.String },
       events: {},
     }).withMessage(h)
 
@@ -156,14 +156,14 @@ describe('serializeHtml', () => {
     const card = CustomElement.define({
       tag: 'x-card',
       properties: {
-        id: S.Unknown,
-        title: S.String,
-        lang: S.String,
-        dir: S.String,
-        tabIndex: S.Number,
-        hidden: S.Boolean,
-        inert: S.Boolean,
-        draggable: S.Boolean,
+        id: Schema.Unknown,
+        title: Schema.String,
+        lang: Schema.String,
+        dir: Schema.String,
+        tabIndex: Schema.Number,
+        hidden: Schema.Boolean,
+        inert: Schema.Boolean,
+        draggable: Schema.Boolean,
       },
       events: {},
     }).withMessage(h)
@@ -1007,7 +1007,7 @@ describe('one owner for an element\u2019s content', () => {
 describe('controlled select selection ownership', () => {
   const selectLikeDefinition = CustomElement.define({
     tag: 'x-select-like',
-    properties: { value: S.Unknown },
+    properties: { value: Schema.Unknown },
     events: {},
   })
   const expectClientOnlyValueRefusal = (view: Html, name: string): void => {

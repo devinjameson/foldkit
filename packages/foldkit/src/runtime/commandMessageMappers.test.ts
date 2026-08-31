@@ -1,4 +1,4 @@
-import { Effect, Fiber, Match as M, Schema as S } from 'effect'
+import { Effect, Fiber, Match, Schema } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
@@ -26,7 +26,7 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({ label: S.String })
+const Model = Schema.Struct({ label: Schema.String })
 type Model = typeof Model.Type
 
 type UpdateReturn = Update.Return<Model, Message>
@@ -34,9 +34,9 @@ type UpdateReturn = Update.Return<Model, Message>
 const update = (_model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     GotChildMessage: ({ message: childMessage }) =>
-      M.value(childMessage).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.tagsExhaustive({
+      Match.value(childMessage).pipe(
+        Match.withReturnType<UpdateReturn>(),
+        Match.tagsExhaustive({
           CompletedDoChildWork: () => ({ model: { label: 'child done' } }),
         }),
       ),

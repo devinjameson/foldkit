@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 
 import * as CustomElement from '../../customElement/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
@@ -11,22 +11,22 @@ import type * as Update from '../../update/index.js'
 export const hexColorPicker = CustomElement.define({
   tag: 'hex-color-picker',
   properties: {
-    color: S.String,
+    color: Schema.String,
   },
   events: {
-    'color-changed': S.Struct({ value: S.String }),
+    'color-changed': Schema.Struct({ value: Schema.String }),
   },
 })
 
 // MODEL
 
-export const Model = S.Struct({ color: S.String })
+export const Model = Schema.Struct({ color: Schema.String })
 export type Model = typeof Model.Type
 
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  ChangedColor: { value: S.String },
+  ChangedColor: { value: Schema.String },
 })
 
 export type Message = typeof Message.Type

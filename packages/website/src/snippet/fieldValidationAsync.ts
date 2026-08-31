@@ -1,4 +1,4 @@
-import { Effect, Match as M, Number, Schema as S } from 'effect'
+import { Effect, Match, Number, Schema } from 'effect'
 import { Command, Update } from 'foldkit'
 import { Invalid, Valid, Validating, validate } from 'foldkit/fieldValidation'
 import { evo } from 'foldkit/struct'
@@ -6,7 +6,7 @@ import { evo } from 'foldkit/struct'
 const validateEmail = validate(emailRules)
 
 const CheckEmailAvailable = Command.define('CheckEmailAvailable', {
-  args: { email: S.String, validationId: S.Number },
+  args: { email: Schema.String, validationId: Schema.Number },
   messages: [CompletedCheckEmailAvailable],
   execute: ({ email, validationId }) =>
     Effect.gen(function* () {
@@ -41,15 +41,15 @@ const update = (model: Model, message: Message) =>
       const syncResult = validateEmail(value)
       const validationId = Number.increment(model.emailValidationId)
 
-      return M.value(syncResult).pipe(
-        M.tag('Valid', () => ({
+      return Match.value(syncResult).pipe(
+        Match.tag('Valid', () => ({
           model: evo(model, {
             email: () => Validating({ value }),
             emailValidationId: () => validationId,
           }),
           commands: [CheckEmailAvailable({ email: value, validationId })],
         })),
-        M.orElse(() => ({
+        Match.orElse(() => ({
           model: evo(model, {
             email: () => syncResult,
             emailValidationId: () => validationId,

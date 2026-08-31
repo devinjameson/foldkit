@@ -1,4 +1,4 @@
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
@@ -6,18 +6,18 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  pointerDownCount: S.Number,
-  pointerUpCount: S.Number,
-  lastPointerType: S.String,
+export const Model = Schema.Struct({
+  pointerDownCount: Schema.Number,
+  pointerUpCount: Schema.Number,
+  lastPointerType: Schema.String,
 })
 export type Model = typeof Model.Type
 
 // MESSAGE
 
 const Message = defineMessageUnion({
-  PressedPointerDown: { pointerType: S.String },
-  ReleasedPointerUp: { pointerType: S.String },
+  PressedPointerDown: { pointerType: Schema.String },
+  ReleasedPointerUp: { pointerType: Schema.String },
 })
 type Message = typeof Message.Type
 

@@ -1,11 +1,4 @@
-import {
-  Array,
-  Option,
-  Predicate,
-  Schema as S,
-  SchemaIssue,
-  pipe,
-} from 'effect'
+import { Array, Option, Predicate, Schema, SchemaIssue, pipe } from 'effect'
 
 // FIELD VALIDATION
 
@@ -13,13 +6,13 @@ import {
  * A struct schema describing a flat record of string values, the shape shared
  * by island attribute definitions and frontmatter definitions.
  */
-export type FieldsSchema = S.Struct<S.Struct.Fields> &
+export type FieldsSchema = Schema.Struct<Schema.Struct.Fields> &
   Readonly<{ DecodingServices: never; EncodingServices: never }>
 
 const maybeInvalidFieldName = (error: unknown): Option.Option<string> =>
   pipe(
     error,
-    Option.liftPredicate(S.isSchemaError),
+    Option.liftPredicate(Schema.isSchemaError),
     Option.map(schemaError => schemaError.issue),
     Option.flatMap(issue =>
       issue instanceof SchemaIssue.Composite
@@ -73,7 +66,7 @@ export const validateFields = (
   }
 
   try {
-    S.decodeUnknownSync(config.schema)(config.values)
+    Schema.decodeUnknownSync(config.schema)(config.values)
   } catch (error) {
     throw new Error(
       config.invalidValues(

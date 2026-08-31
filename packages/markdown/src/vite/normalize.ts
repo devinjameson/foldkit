@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, Record as Record_ } from 'effect'
+import { Array, Match, Option, Record } from 'effect'
 import type {
   ListItem as MdastListItem,
   Table as MdastTable,
@@ -56,11 +56,13 @@ type PositionedNode = Readonly<{
 type DirectiveNode = Readonly<{
   name: string
   attributes?:
-    Readonly<Record<string, string | null | undefined>> | null | undefined
+    | Readonly<globalThis.Record<string, string | null | undefined>>
+    | null
+    | undefined
   position?: Position | undefined
 }>
 
-const UNSUPPORTED_GUIDANCE: Readonly<Record<string, string>> = {
+const UNSUPPORTED_GUIDANCE: Readonly<globalThis.Record<string, string>> = {
   html: 'Raw HTML is not part of the markdown vocabulary. Use an island directive to render custom views.',
   textDirective:
     'Inline directives are not supported. Use a leaf directive (`::Name`) on its own line, or a container directive (`:::Name`).',
@@ -99,8 +101,10 @@ const unsupported = (node: PositionedNode): never => {
 
 const normalizeAttributes = (
   attributes:
-    Readonly<Record<string, string | null | undefined>> | null | undefined,
-): Record<string, string> =>
+    | Readonly<globalThis.Record<string, string | null | undefined>>
+    | null
+    | undefined,
+): globalThis.Record<string, string> =>
   Object.fromEntries(
     Object.entries(attributes ?? {}).map(([name, value]) => [
       name,
@@ -132,9 +136,9 @@ const toSafeUrl = (
 }
 
 const toInline = (node: PhrasingContent): Inline =>
-  M.value(node).pipe(
-    M.withReturnType<Inline>(),
-    M.discriminators('type')({
+  Match.value(node).pipe(
+    Match.withReturnType<Inline>(),
+    Match.discriminators('type')({
       text: ({ value }) => Text({ value }),
       inlineCode: ({ value }) => InlineCode({ value }),
       break: () => HardBreak(),
@@ -155,16 +159,16 @@ const toInline = (node: PhrasingContent): Inline =>
           maybeTitle: Option.fromNullishOr(imageNode.title),
         }),
     }),
-    M.orElse(unsupported),
+    Match.orElse(unsupported),
   )
 
 const toAlignment = (align: 'left' | 'right' | 'center' | null): Alignment =>
-  M.value(align).pipe(
-    M.withReturnType<Alignment>(),
-    M.when('left', () => 'Left'),
-    M.when('center', () => 'Center'),
-    M.when('right', () => 'Right'),
-    M.orElse(() => 'None'),
+  Match.value(align).pipe(
+    Match.withReturnType<Alignment>(),
+    Match.when('left', () => 'Left'),
+    Match.when('center', () => 'Center'),
+    Match.when('right', () => 'Right'),
+    Match.orElse(() => 'None'),
   )
 
 const toTableRow = (row: MdastTableRow): TableRow =>
@@ -185,7 +189,7 @@ export const normalizeRoot = (
   const validateIslandAttributes = (
     directive: DirectiveNode,
     attributesSchema: IslandDefinition,
-    attributes: Readonly<Record<string, string>>,
+    attributes: Readonly<globalThis.Record<string, string>>,
   ): void =>
     validateFields({
       schema: attributesSchema,
@@ -206,7 +210,7 @@ export const normalizeRoot = (
     const { islands } = options
 
     if (islands !== undefined) {
-      Option.match(Record_.get(islands, directive.name), {
+      Option.match(Record.get(islands, directive.name), {
         onNone: () => {
           throw new Error(
             `Unknown island "${directive.name}"${sourceLocation(directive)}. ` +
@@ -241,9 +245,9 @@ export const normalizeRoot = (
     })
 
   const toBlock = (node: RootContent): Block =>
-    M.value(node).pipe(
-      M.withReturnType<Block>(),
-      M.discriminators('type')({
+    Match.value(node).pipe(
+      Match.withReturnType<Block>(),
+      Match.discriminators('type')({
         heading: ({ depth, children }) =>
           Heading({ level: depth, content: children.map(toInline) }),
         paragraph: ({ children }) =>
@@ -283,7 +287,7 @@ export const normalizeRoot = (
         containerDirective: directive =>
           toIsland(directive, directive.children.map(toBlock)),
       }),
-      M.orElse(unsupported),
+      Match.orElse(unsupported),
     )
 
   return { blocks: root.children.map(toBlock) }

@@ -1,4 +1,4 @@
-import { Number, Schema as S } from 'effect'
+import { Number, Schema } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
@@ -7,11 +7,11 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  clicks: S.Number,
-  childClicks: S.Number,
-  doubleClicks: S.Number,
-  submissions: S.Number,
+export const Model = Schema.Struct({
+  clicks: Schema.Number,
+  childClicks: Schema.Number,
+  doubleClicks: Schema.Number,
+  submissions: Schema.Number,
 })
 export type Model = typeof Model.Type
 

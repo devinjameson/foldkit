@@ -1,4 +1,4 @@
-import { Array, Context, Effect, Layer, Schema as S } from 'effect'
+import { Array, Context, Effect, Layer, Schema } from 'effect'
 import { Command } from 'foldkit'
 import * as Dom from 'foldkit/dom'
 import { pushUrl } from 'foldkit/navigation'
@@ -50,7 +50,7 @@ export class PagefindService extends Context.Service<
 }
 
 export const FetchSearchResults = Command.define('FetchSearchResults', {
-  args: { query: S.String },
+  args: { query: Schema.String },
   messages: [Message.CompletedFetchSearchResults],
   execute: ({ query }) =>
     Effect.gen(function* () {
@@ -89,7 +89,7 @@ export const FetchSearchResults = Command.define('FetchSearchResults', {
 })
 
 export const ScrollToResult = Command.define('ScrollToResult', {
-  args: { index: S.Number },
+  args: { index: Schema.Number },
   messages: [Message.CompletedScrollToResult],
   execute: ({ index }) =>
     Dom.scrollIntoView(`${SEARCH_RESULT_SELECTOR}"${index}"]`).pipe(
@@ -99,7 +99,7 @@ export const ScrollToResult = Command.define('ScrollToResult', {
 })
 
 export const NavigateToResult = Command.define('NavigateToResult', {
-  args: { url: S.String },
+  args: { url: Schema.String },
   messages: [Message.CompletedNavigateToResult],
   execute: ({ url }) =>
     pushUrl(url).pipe(Effect.as(Message.CompletedNavigateToResult())),

@@ -3,11 +3,11 @@ import {
   Effect,
   Equal,
   Function,
-  Match as M,
+  Match,
   Number,
   Option,
   Predicate,
-  Schema as S,
+  Schema,
   pipe,
 } from 'effect'
 import * as Command from 'foldkit/command'
@@ -24,15 +24,15 @@ import { Message, OutMessage } from './message.js'
 // MODEL
 
 /** Schema for the tooltip component's state. `isOpen` is visibility; `isHovered` tracks pointer on trigger; `isFocused` tracks tooltip-affirming focus on the trigger (focus arriving without a preceding mouse press, like keyboard, touch, or pen; mouse-click-induced focus is excluded since it doesn't affirm the user wants the tooltip visible); `isDismissed` suppresses re-opening after the user dismissed the tooltip (via Escape) until they disengage (leave or blur). `showDelay` is the hover-to-show duration. `maybeLastPointerType` records the most recent pointer type that pressed the trigger, so a mouse-click-induced focus can be distinguished from other focus. */
-export const Model = S.Struct({
-  id: S.String,
-  isOpen: S.Boolean,
-  isHovered: S.Boolean,
-  isFocused: S.Boolean,
-  isDismissed: S.Boolean,
-  showDelay: S.DurationFromMillis,
-  pendingShowVersion: S.Number,
-  maybeLastPointerType: S.Option(S.String),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  isOpen: Schema.Boolean,
+  isHovered: Schema.Boolean,
+  isFocused: Schema.Boolean,
+  isDismissed: Schema.Boolean,
+  showDelay: Schema.DurationFromMillis,
+  pendingShowVersion: Schema.Number,
+  maybeLastPointerType: Schema.Option(Schema.String),
 })
 
 export type Model = typeof Model.Type
@@ -77,7 +77,7 @@ export const init = (config: InitConfig): Model => ({
 /** Waits for the tooltip's show delay before emitting
  *  `CompletedWaitBeforeShowing`. */
 export const WaitBeforeShowing = Command.define('WaitBeforeShowing', {
-  args: { delay: S.DurationFromMillis, version: S.Number },
+  args: { delay: Schema.DurationFromMillis, version: Schema.Number },
   messages: [Message.CompletedWaitBeforeShowing],
   execute: ({ delay, version }) =>
     Effect.sleep(delay).pipe(
@@ -87,7 +87,7 @@ export const WaitBeforeShowing = Command.define('WaitBeforeShowing', {
 
 /** The anchor-positioning Mount this Tooltip renders on its panel. */
 export const AnchorTooltip = Mount.define('AnchorTooltip', {
-  args: { buttonId: S.String, anchor: AnchorConfig },
+  args: { buttonId: Schema.String, anchor: AnchorConfig },
   messages: [Message.CompletedAnchorTooltip],
   execute: ({ element, buttonId, anchor }) =>
     Effect.gen(function* () {
@@ -293,9 +293,11 @@ export const view = defineView<Model, Message, ViewInputs>(
     const handleTriggerKeyDown = (
       key: string,
     ): Option.Option<typeof Message.PressedEscape.Type> =>
-      M.value(key).pipe(
-        M.when('Escape', () => OptionExt.when(isOpen, Message.PressedEscape())),
-        M.orElse(() => Option.none()),
+      Match.value(key).pipe(
+        Match.when('Escape', () =>
+          OptionExt.when(isOpen, Message.PressedEscape()),
+        ),
+        Match.orElse(() => Option.none()),
       )
 
     const handleTriggerPointerDown = (

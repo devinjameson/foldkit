@@ -2,11 +2,11 @@ import {
   Effect,
   Equal,
   Function,
-  Match as M,
+  Match,
   Option,
-  Schema as S,
+  Schema,
   Stream,
-  String as String_,
+  String,
   pipe,
 } from 'effect'
 import { type Update } from 'foldkit'
@@ -23,7 +23,7 @@ import { attributeSelector } from '../internal/selectors.js'
 
 const DragState = defineTaggedUnion({
   Idle: {},
-  Dragging: { originValue: S.Number },
+  Dragging: { originValue: Schema.Number },
 })
 
 /** Schema for the slider component's private interaction state. The current
@@ -31,11 +31,11 @@ const DragState = defineTaggedUnion({
  *  not stored here. `min`/`max`/`step` are configuration the drag subscription
  *  reads to map pointer positions into values. `dragState` tracks the active
  *  drag phase and captures the pre-drag value so Escape can restore it. */
-export const Model = S.Struct({
-  id: S.String,
-  min: S.Number,
-  max: S.Number,
-  step: S.Number,
+export const Model = Schema.Struct({
+  id: Schema.String,
+  min: Schema.Number,
+  max: Schema.Number,
+  step: Schema.Number,
   dragState: DragState,
 })
 
@@ -45,16 +45,16 @@ export type Model = typeof Model.Type
 
 /** Union of all messages the slider component can produce. */
 export const Message = defineMessageUnion({
-  PressedThumb: { originValue: S.Number },
+  PressedThumb: { originValue: Schema.Number },
   PressedPointer: {
-    value: S.Number,
-    originValue: S.Number,
+    value: Schema.Number,
+    originValue: Schema.Number,
   },
-  MovedDragPointer: { value: S.Number },
+  MovedDragPointer: { value: Schema.Number },
   ReleasedDragPointer: {},
   CancelledDrag: {},
   PressedKeyboardNavigation: {
-    direction: S.Literals([
+    direction: Schema.Literals([
       'StepDecrement',
       'StepIncrement',
       'PageDecrement',
@@ -62,7 +62,7 @@ export const Message = defineMessageUnion({
       'Min',
       'Max',
     ]),
-    value: S.Number,
+    value: Schema.Number,
   },
 })
 
@@ -80,7 +80,7 @@ export type PressedKeyboardNavigation =
 
 /** Union of all out-messages the slider component can emit to its parent. */
 export const OutMessage = defineMessageUnion({
-  ChangedValue: { value: S.Number },
+  ChangedValue: { value: Schema.Number },
 })
 export type OutMessage = typeof OutMessage.Type
 
@@ -110,7 +110,7 @@ const stepDecimals = (step: number): number => {
   const text = step.toString()
   return pipe(
     text,
-    String_.indexOf('.'),
+    String.indexOf('.'),
     Option.match({
       onNone: () => 0,
       onSome: dotIndex => text.length - dotIndex - 1,
@@ -163,25 +163,29 @@ const nextValueForDirection = (
   step: number,
   direction: (typeof Message.PressedKeyboardNavigation.Type)['direction'],
 ): number =>
-  M.value(direction).pipe(
-    M.withReturnType<number>(),
-    M.when('StepIncrement', () => snapAndClamp(value + step, min, max, step)),
-    M.when('StepDecrement', () => snapAndClamp(value - step, min, max, step)),
-    M.when('PageIncrement', () =>
+  Match.value(direction).pipe(
+    Match.withReturnType<number>(),
+    Match.when('StepIncrement', () =>
+      snapAndClamp(value + step, min, max, step),
+    ),
+    Match.when('StepDecrement', () =>
+      snapAndClamp(value - step, min, max, step),
+    ),
+    Match.when('PageIncrement', () =>
       snapAndClamp(value + step * PAGE_STEP_MULTIPLIER, min, max, step),
     ),
-    M.when('PageDecrement', () =>
+    Match.when('PageDecrement', () =>
       snapAndClamp(value - step * PAGE_STEP_MULTIPLIER, min, max, step),
     ),
-    M.when('Min', () => min),
-    M.when('Max', () => max),
-    M.exhaustive,
+    Match.when('Min', () => min),
+    Match.when('Max', () => max),
+    Match.exhaustive,
   )
 
 // UPDATE
 
 type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+const withUpdateReturn = Match.withReturnType<UpdateReturn>()
 
 const withChangedValue = (
   model: Model,
@@ -206,10 +210,10 @@ const withChangedValue = (
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     PressedThumb: ({ originValue }) =>
-      M.value(model.dragState).pipe(
+      Match.value(model.dragState).pipe(
         withUpdateReturn,
-        M.tag('Dragging', () => ({ model })),
-        M.orElse(() => ({
+        Match.tag('Dragging', () => ({ model })),
+        Match.orElse(() => ({
           model: evo(model, {
             dragState: () => DragState.Dragging({ originValue }),
           }),
@@ -223,10 +227,10 @@ export const update = (model: Model, message: Message) =>
     // 0.05) see a visible jump without this guard, because the cursor sits
     // off-center on a non-zero-width thumb.
     PressedPointer: ({ value, originValue }) =>
-      M.value(model.dragState).pipe(
+      Match.value(model.dragState).pipe(
         withUpdateReturn,
-        M.tag('Dragging', () => ({ model })),
-        M.orElse(() => {
+        Match.tag('Dragging', () => ({ model })),
+        Match.orElse(() => {
           const snapped = snapAndClamp(value, model.min, model.max, model.step)
           return withChangedValue(
             evo(model, {
@@ -239,34 +243,34 @@ export const update = (model: Model, message: Message) =>
       ),
 
     MovedDragPointer: ({ value }) =>
-      M.value(model.dragState).pipe(
+      Match.value(model.dragState).pipe(
         withUpdateReturn,
-        M.tag('Dragging', () => ({
+        Match.tag('Dragging', () => ({
           model,
           outMessage: OutMessage.ChangedValue({
             value: snapAndClamp(value, model.min, model.max, model.step),
           }),
         })),
-        M.orElse(() => ({ model })),
+        Match.orElse(() => ({ model })),
       ),
 
     ReleasedDragPointer: () =>
-      M.value(model.dragState).pipe(
+      Match.value(model.dragState).pipe(
         withUpdateReturn,
-        M.tag('Dragging', () => ({
+        Match.tag('Dragging', () => ({
           model: evo(model, { dragState: () => DragState.Idle() }),
         })),
-        M.orElse(() => ({ model })),
+        Match.orElse(() => ({ model })),
       ),
 
     CancelledDrag: () =>
-      M.value(model.dragState).pipe(
+      Match.value(model.dragState).pipe(
         withUpdateReturn,
-        M.tag('Dragging', ({ originValue }) => ({
+        Match.tag('Dragging', ({ originValue }) => ({
           model: evo(model, { dragState: () => DragState.Idle() }),
           outMessage: OutMessage.ChangedValue({ value: originValue }),
         })),
-        M.orElse(() => ({ model })),
+        Match.orElse(() => ({ model })),
       ),
 
     PressedKeyboardNavigation: ({ direction, value }) =>
@@ -301,13 +305,13 @@ export const reflectRange: Reflect<
 
 // SUBSCRIPTION
 
-const DragActivity = S.Literals(['Idle', 'Active'])
+const DragActivity = Schema.Literals(['Idle', 'Active'])
 
 const dragActivityFromModel = (model: Model): typeof DragActivity.Type =>
-  M.value(model.dragState).pipe(
-    M.withReturnType<typeof DragActivity.Type>(),
-    M.tag('Dragging', () => 'Active'),
-    M.orElse(() => 'Idle'),
+  Match.value(model.dragState).pipe(
+    Match.withReturnType<typeof DragActivity.Type>(),
+    Match.tag('Dragging', () => 'Active'),
+    Match.orElse(() => 'Idle'),
   )
 
 const trackElement = (
@@ -346,9 +350,9 @@ export const subscriptionsForRoot = (
     dragPointer: entry(
       {
         dragActivity: DragActivity,
-        id: S.String,
-        min: S.Number,
-        max: S.Number,
+        id: Schema.String,
+        min: Schema.Number,
+        max: Schema.Number,
       },
       {
         modelToDependencies: model => ({
@@ -449,17 +453,17 @@ const keyToDirection = (
 ): Option.Option<
   (typeof Message.PressedKeyboardNavigation.Type)['direction']
 > =>
-  M.value(key).pipe(
-    M.withReturnType<
+  Match.value(key).pipe(
+    Match.withReturnType<
       (typeof Message.PressedKeyboardNavigation.Type)['direction']
     >(),
-    M.whenOr('ArrowRight', 'ArrowUp', () => 'StepIncrement'),
-    M.whenOr('ArrowLeft', 'ArrowDown', () => 'StepDecrement'),
-    M.when('PageUp', () => 'PageIncrement'),
-    M.when('PageDown', () => 'PageDecrement'),
-    M.when('Home', () => 'Min'),
-    M.when('End', () => 'Max'),
-    M.option,
+    Match.whenOr('ArrowRight', 'ArrowUp', () => 'StepIncrement'),
+    Match.whenOr('ArrowLeft', 'ArrowDown', () => 'StepDecrement'),
+    Match.when('PageUp', () => 'PageIncrement'),
+    Match.when('PageDown', () => 'PageDecrement'),
+    Match.when('Home', () => 'Min'),
+    Match.when('End', () => 'Max'),
+    Match.option,
   )
 
 const percentString = (fraction: number): string =>

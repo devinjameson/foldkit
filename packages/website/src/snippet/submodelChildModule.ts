@@ -1,21 +1,21 @@
 // page/settings.ts
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 // MODEL
 
-export const Theme = S.Literals(['Light', 'Dark', 'System'])
+export const Theme = Schema.Literals(['Light', 'Dark', 'System'])
 export type Theme = typeof Theme.Type
 
-export const FontSize = S.Literals(['Small', 'Medium', 'Large'])
+export const FontSize = Schema.Literals(['Small', 'Medium', 'Large'])
 export type FontSize = typeof FontSize.Type
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   theme: Theme,
   fontSize: FontSize,
-  notificationsEnabled: S.Boolean,
+  notificationsEnabled: Schema.Boolean,
 })
 
 export type Model = typeof Model.Type

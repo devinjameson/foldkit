@@ -1,12 +1,4 @@
-import {
-  Array,
-  Effect,
-  Equal,
-  Function,
-  Match as M,
-  Number,
-  Option,
-} from 'effect'
+import { Array, Effect, Equal, Function, Match, Number, Option } from 'effect'
 
 import { afterCommit, afterPaint } from '../render/render.js'
 import { ElementNotFound } from './error.js'
@@ -179,8 +171,8 @@ export const showDialog = (
         return
       }
 
-      M.value(event.key).pipe(
-        M.when('Escape', () => {
+      Match.value(event.key).pipe(
+        Match.when('Escape', () => {
           if (event.defaultPrevented) {
             return
           }
@@ -188,10 +180,10 @@ export const showDialog = (
           event.preventDefault()
           element.dispatchEvent(new Event('cancel', { cancelable: true }))
         }),
-        M.when('Tab', () => {
+        Match.when('Tab', () => {
           trapFocusWithinDialog(event, element)
         }),
-        M.orElse(Function.constVoid),
+        Match.orElse(Function.constVoid),
       )
     }
 
@@ -441,10 +433,10 @@ export const scrollIntoViewIfNotVisible = (
 ): Effect.Effect<void, ElementNotFound> =>
   Effect.gen(function* () {
     const when = options?.when ?? 'Paint'
-    yield* M.value(when).pipe(
-      M.when('Paint', () => afterPaint),
-      M.when('Commit', () => afterCommit),
-      M.exhaustive,
+    yield* Match.value(when).pipe(
+      Match.when('Paint', () => afterPaint),
+      Match.when('Commit', () => afterCommit),
+      Match.exhaustive,
     )
     const element = yield* queryHTMLElement(selector)
     Option.match(findScrollParent(element), {
@@ -497,10 +489,10 @@ export const advanceFocus = (
       return yield* Effect.fail(new ElementNotFound({ selector }))
     }
 
-    const offsetReferenceElementIndex = M.value(direction).pipe(
-      M.when('Next', () => Number.increment),
-      M.when('Previous', () => Number.decrement),
-      M.exhaustive,
+    const offsetReferenceElementIndex = Match.value(direction).pipe(
+      Match.when('Next', () => Number.increment),
+      Match.when('Previous', () => Number.decrement),
+      Match.exhaustive,
     )(referenceElementIndex.value)
 
     const nextElement = Array.get(

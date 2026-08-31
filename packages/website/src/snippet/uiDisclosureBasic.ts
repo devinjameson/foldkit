@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -9,8 +9,8 @@ import { evo } from 'foldkit/struct'
 import { Disclosure } from '@foldkit/ui'
 
 // Store the open state as a plain boolean field in your Model:
-const Model = S.Struct({
-  isFaqOpen: S.Boolean,
+const Model = Schema.Struct({
+  isFaqOpen: Schema.Boolean,
   // ...your other fields
 })
 
@@ -25,7 +25,7 @@ const init = () => ({
 // A verb-first, past-tense Message carries the new open state:
 
 const Message = defineMessageUnion({
-  ToggledFaq: { isOpen: S.Boolean },
+  ToggledFaq: { isOpen: Schema.Boolean },
 })
 
 // In the corresponding Message.match handler, store the value.

@@ -264,9 +264,9 @@ export type ChildFold<
  *    outMessage: Login.OutMessage,
  *    { liftCommand }: Update.FoldContext<Login.Message, Message>,
  *  ) =>
- *    M.value(outMessage).pipe(
- *      M.withReturnType<Update.Step<Model, Message>>(),
- *      M.tagsExhaustive({
+ *    Match.value(outMessage).pipe(
+ *      Match.withReturnType<Update.Step<Model, Message>>(),
+ *      Match.tagsExhaustive({
  *        RequestedMagicLink:
  *          ({ email }) =>
  *          model => ({
@@ -296,7 +296,7 @@ export type FoldContext<ChildMessage, ParentMessage> = Readonly<{
  *    {@link Step}. The Step receives the parent Model with the child
  *    already written back, and its Commands follow the child's in the
  *    returned batch. Match on the OutMessage tag inside
- *    (`M.tagsExhaustive`), and build a multi-step fold with
+ *    (`Match.tagsExhaustive`), and build a multi-step fold with
  *    {@link combine}. Takes an optional second parameter, a
  *    {@link FoldContext} of lifters bound to `toParentMessage`, for a
  *    Command the Step returns whose result is the child's Message. Parent Model

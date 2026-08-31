@@ -1,4 +1,4 @@
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { expect, expectTypeOf } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -19,7 +19,7 @@ import {
 const AppRoute = defineRouteUnion({
   Home: {},
   Notes: {},
-  NoteDetail: { id: S.String },
+  NoteDetail: { id: Schema.String },
 })
 
 type AppRoute = typeof AppRoute.Type

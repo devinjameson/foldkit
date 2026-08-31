@@ -1,11 +1,4 @@
-import {
-  Array,
-  Option,
-  Record as Record_,
-  Schema as S,
-  String as String_,
-  pipe,
-} from 'effect'
+import { Array, Option, Record, Schema, String, pipe } from 'effect'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -26,7 +19,9 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 
 export const PUBLIC_DIR = resolve(SCRIPT_DIR, '../public')
 
-const COVER_MIME_TYPE_BY_EXTENSION: Readonly<Record<string, string>> = {
+const COVER_MIME_TYPE_BY_EXTENSION: Readonly<
+  globalThis.Record<string, string>
+> = {
   avif: 'image/avif',
   gif: 'image/gif',
   jpeg: 'image/jpeg',
@@ -37,8 +32,8 @@ const COVER_MIME_TYPE_BY_EXTENSION: Readonly<Record<string, string>> = {
 }
 
 export const maybeCoverMimeType = (src: string): Option.Option<string> =>
-  pipe(String_.split(src, '.'), Array.lastNonEmpty, extension =>
-    Record_.get(COVER_MIME_TYPE_BY_EXTENSION, extension.toLowerCase()),
+  pipe(String.split(src, '.'), Array.lastNonEmpty, extension =>
+    Record.get(COVER_MIME_TYPE_BY_EXTENSION, extension.toLowerCase()),
   )
 
 /**
@@ -72,7 +67,7 @@ export type BlogPostEntry = Readonly<{
   maybeCoverAsset: Option.Option<CoverAsset>
 }>
 
-const decodePostFrontmatter = S.decodeUnknownSync(PostFrontmatter)
+const decodePostFrontmatter = Schema.decodeUnknownSync(PostFrontmatter)
 
 const readPostEntry = (fileName: string): BlogPostEntry => {
   const source = readFileSync(join(POST_DIR, fileName), 'utf8')

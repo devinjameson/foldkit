@@ -1,9 +1,9 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import type { Runtime } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
-const Model = S.Struct({
-  count: S.Number,
+const Model = Schema.Struct({
+  count: Schema.Number,
 })
 type Model = typeof Model.Type
 

@@ -1,10 +1,10 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { defineRouteUnion, literal, schemaSegment, slash } from 'foldkit/route'
 
 // A branded id: structurally a number, but its own type. The brand stops it
 // from being mixed up with another number, like an OrderId or a count.
-const PersonId = S.FiniteFromString.pipe(S.brand('PersonId'))
+const PersonId = Schema.FiniteFromString.pipe(Schema.brand('PersonId'))
 type PersonId = typeof PersonId.Type
 
 const AppRoute = defineRouteUnion({

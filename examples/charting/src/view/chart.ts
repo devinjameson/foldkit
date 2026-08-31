@@ -1,5 +1,5 @@
 import * as echarts from 'echarts/core'
-import { Effect, Option, Schema as S } from 'effect'
+import { Effect, Option, Schema } from 'effect'
 import { Mount } from 'foldkit'
 import type { Html } from 'foldkit/html'
 import { HtmlBuilder } from 'foldkit/html'
@@ -54,7 +54,7 @@ const mountChart = (element: Element, hostId: string) =>
   })
 
 export const MountChart = Mount.define('MountChart', {
-  args: { hostId: S.String },
+  args: { hostId: Schema.String },
   messages: [Message.SucceededMountChart, Message.FailedMountChart],
   execute: ({ element, hostId }) => mountChart(element, hostId),
 })

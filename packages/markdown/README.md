@@ -89,11 +89,11 @@ Declare each island's attributes as a Schema struct, once, in a module both your
 
 ```typescript
 // src/islands.ts
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 
 export const islandAttributes = {
-  Counter: S.Struct({ label: S.optionalKey(S.String) }),
-  Note: S.Struct({ tone: S.optionalKey(S.String) }),
+  Counter: Schema.Struct({ label: Schema.optionalKey(Schema.String) }),
+  Note: Schema.Struct({ tone: Schema.optionalKey(Schema.String) }),
 }
 ```
 
@@ -144,7 +144,7 @@ const postView = (
   })
 ```
 
-Attribute values are strings on the wire, so transforming field schemas decode past them: `S.NumberFromString` turns `::Chart{height="240"}` into `height: number`. A plain `islands` record of untyped views (`Readonly<Record<string, IslandView>>`) also works when you want to skip the schemas.
+Attribute values are strings on the wire, so transforming field schemas decode past them: `Schema.NumberFromString` turns `::Chart{height="240"}` into `height: number`. A plain `islands` record of untyped views (`Readonly<Record<string, IslandView>>`) also works when you want to skip the schemas.
 
 ## Frontmatter
 
@@ -152,11 +152,11 @@ Documents can open with a frontmatter block when the plugin is given a schema fo
 
 ```typescript
 // src/postFrontmatter.ts
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 
-export const PostFrontmatter = S.Struct({
-  title: S.String.check(S.isNonEmpty()),
-  date: S.String,
+export const PostFrontmatter = Schema.Struct({
+  title: Schema.String.check(Schema.isNonEmpty()),
+  date: Schema.String,
 })
 ```
 
@@ -187,7 +187,7 @@ Every compiled `.md` module carries a `frontmatter` named export alongside the d
 import postRaw, { frontmatter } from './post/introducing-the-blog.md'
 ```
 
-The fields arrive as the raw strings the block declares. The build validates them against the schema and discards the decoded result, so where the application needs typed values, decode the export with the same schema at runtime; validation at build time means that decode cannot fail. `S.NumberFromString` and friends do their transformation in that runtime decode, not in the emitted module.
+The fields arrive as the raw strings the block declares. The build validates them against the schema and discards the decoded result, so where the application needs typed values, decode the export with the same schema at runtime; validation at build time means that decode cannot fail. `Schema.NumberFromString` and friends do their transformation in that runtime decode, not in the emitted module.
 
 ## Vocabulary
 

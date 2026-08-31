@@ -1,13 +1,13 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { AsyncData } from 'foldkit'
 
 import { RadioGroup } from '@foldkit/ui'
 
 import { ChartMode, PackageId, Period, Telemetry } from './domain'
 
-export const TelemetryAsyncData = AsyncData.Schema(Telemetry, S.String)
+export const TelemetryAsyncData = AsyncData.Schema(Telemetry, Schema.String)
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   telemetry: TelemetryAsyncData.schema,
   chartMode: ChartMode,
   chartModeRadioGroup: RadioGroup.Model,
@@ -15,8 +15,8 @@ export const Model = S.Struct({
   packageRadioGroup: RadioGroup.Model,
   period: Period,
   periodRadioGroup: RadioGroup.Model,
-  maybeChartHostId: S.Option(S.String),
-  maybeChartError: S.Option(S.String),
-  maybeSelectedDatumId: S.Option(S.String),
+  maybeChartHostId: Schema.Option(Schema.String),
+  maybeChartError: Schema.Option(Schema.String),
+  maybeSelectedDatumId: Schema.Option(Schema.String),
 })
 export type Model = typeof Model.Type

@@ -1,10 +1,10 @@
 import {
   Array,
   Effect,
-  Match as M,
+  Match,
   Option,
   Queue,
-  Schema as S,
+  Schema,
   Stream,
   pipe,
 } from 'effect'
@@ -35,14 +35,14 @@ import {
 
 export const CurrentSourcesAsyncData = AsyncData.Schema(
   ExampleSources,
-  S.String,
+  Schema.String,
 )
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   sourceFileTabs: Tabs.Model,
-  maybeActiveSourceFilePath: S.Option(S.String),
-  maybeExampleUrl: S.Option(S.String),
-  isLivePreviewOpen: S.Boolean,
+  maybeActiveSourceFilePath: Schema.Option(Schema.String),
+  maybeExampleUrl: Schema.Option(Schema.String),
+  isLivePreviewOpen: Schema.Boolean,
   currentSources: CurrentSourcesAsyncData.schema,
 })
 export type Model = typeof Model.Type
@@ -51,11 +51,11 @@ export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   GotSourceFileTabsMessage: { message: Tabs.Message },
-  ChangedExampleUrl: { url: S.String },
-  ToggledLivePreview: { isOpen: S.Boolean },
-  RequestedExampleSources: { slug: S.String },
+  ChangedExampleUrl: { url: Schema.String },
+  ToggledLivePreview: { isOpen: Schema.Boolean },
+  RequestedExampleSources: { slug: Schema.String },
   SucceededLoadExampleSources: { sources: ExampleSources },
-  FailedLoadExampleSources: { error: S.String },
+  FailedLoadExampleSources: { error: Schema.String },
 })
 
 export type Message = typeof Message.Type
@@ -66,7 +66,7 @@ export type Message = typeof Message.Type
  *  loaded sources on success or a failure Message when the fetch does not
  *  complete. */
 export const LoadExampleSources = Command.define('LoadExampleSources', {
-  args: { slug: S.String },
+  args: { slug: Schema.String },
   messages: [
     Message.SucceededLoadExampleSources,
     Message.FailedLoadExampleSources,
@@ -415,9 +415,9 @@ const livePreviewDisclosureView = (
 
 const SourceFileTabs = Tabs.create()
 
-const foldSourceFileTabsOutMessage = M.type<Tabs.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldSourceFileTabsOutMessage = Match.type<Tabs.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({

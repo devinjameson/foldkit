@@ -1,4 +1,4 @@
-import { Match as M } from 'effect'
+import { Match } from 'effect'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import {
@@ -132,12 +132,12 @@ const buildExample = async (
   const exampleDir = resolve(EXAMPLES_DIR, slug)
   const outputDir = resolve(OUTPUT_DIR, slug)
 
-  await M.value(livePreview).pipe(
-    M.when('Prerendered', () =>
+  await Match.value(livePreview).pipe(
+    Match.when('Prerendered', () =>
       buildPrerenderedExample(exampleDir, slug, outputDir),
     ),
-    M.when('Spa', () => buildSpaExample(exampleDir, slug, outputDir)),
-    M.exhaustive,
+    Match.when('Spa', () => buildSpaExample(exampleDir, slug, outputDir)),
+    Match.exhaustive,
   )
 
   injectBridgeScript(outputDir)

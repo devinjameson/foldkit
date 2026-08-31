@@ -1,4 +1,4 @@
-import { Effect, Match as M, Schema as S } from 'effect'
+import { Effect, Match, Schema } from 'effect'
 import { type Update } from 'foldkit'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
@@ -19,7 +19,7 @@ import {
 const elementSelector = (id: string): string => idSelector(id)
 
 type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+const withUpdateReturn = Match.withReturnType<UpdateReturn>()
 
 /** Waits for paint via double-rAF before the enter/leave lifecycle advances. */
 export const WaitForPaint = Command.define('WaitForPaint', {
@@ -30,7 +30,7 @@ export const WaitForPaint = Command.define('WaitForPaint', {
 export const WaitForAnimationSettled = Command.define(
   'WaitForAnimationSettled',
   {
-    args: { id: S.String },
+    args: { id: Schema.String },
     messages: [Message.EndedAnimation],
     execute: ({ id }) =>
       Dom.waitForAnimationSettled(elementSelector(id)).pipe(
@@ -85,30 +85,30 @@ export function update(model: Model, message: Message): UpdateReturn {
     },
 
     CompletedWaitForPaint: () =>
-      M.value(model.transitionState).pipe(
+      Match.value(model.transitionState).pipe(
         withUpdateReturn,
-        M.when('EnterStart', () => ({
+        Match.when('EnterStart', () => ({
           model: evo(model, { transitionState: () => 'EnterAnimating' }),
           commands: [WaitForAnimationSettled({ id: model.id })],
         })),
-        M.when('LeaveStart', () => ({
+        Match.when('LeaveStart', () => ({
           model: evo(model, { transitionState: () => 'LeaveAnimating' }),
           outMessage: OutMessage.StartedLeaveAnimating(),
         })),
-        M.orElse(() => ({ model })),
+        Match.orElse(() => ({ model })),
       ),
 
     EndedAnimation: () =>
-      M.value(model.transitionState).pipe(
+      Match.value(model.transitionState).pipe(
         withUpdateReturn,
-        M.when('EnterAnimating', () => ({
+        Match.when('EnterAnimating', () => ({
           model: evo(model, { transitionState: () => 'Idle' }),
         })),
-        M.when('LeaveAnimating', () => ({
+        Match.when('LeaveAnimating', () => ({
           model: evo(model, { transitionState: () => 'Idle' }),
           outMessage: OutMessage.TransitionedOut(),
         })),
-        M.orElse(() => ({ model })),
+        Match.orElse(() => ({ model })),
       ),
   })
 }

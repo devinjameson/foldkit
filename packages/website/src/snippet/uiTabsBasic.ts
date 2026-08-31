@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option, Schema as S } from 'effect'
+import { Match, Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -9,13 +9,13 @@ import { evo } from 'foldkit/struct'
 
 import { Tabs } from '@foldkit/ui'
 
-const Framework = S.Literals(['Foldkit', 'React', 'Elm'])
+const Framework = Schema.Literals(['Foldkit', 'React', 'Elm'])
 type Framework = typeof Framework.Type
 
 // Add fields to your Model for the Tabs Submodel and the active tab. The
 // Submodel keeps private keyboard-focus state; the parent owns the active
 // tab value and passes it back in as selectedValue.
-const Model = S.Struct({
+const Model = Schema.Struct({
   tabs: Tabs.Model,
   activeFramework: Framework,
   // ...your other fields
@@ -54,9 +54,9 @@ const descriptions: Record<Framework, string> = {
 // value into your own Model so it flows back in as selectedValue. The arm
 // returns an Update.Step over the parent Model, which already has the next
 // Tabs Model written back:
-const foldTabsOutMessage = M.type<Tabs.OutMessage<Framework>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldTabsOutMessage = Match.type<Tabs.OutMessage<Framework>>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     // The child has emitted `Selected`. Store the selected value as the new
     // active tab. In this arm the parent can also update its own state or
     // dispatch Commands, for example route to a new URL, persist the

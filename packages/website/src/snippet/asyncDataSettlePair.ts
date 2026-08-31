@@ -9,7 +9,7 @@ const LoadAllNotes = Command.define('LoadAllNotes', {
   ),
 })
 
-M.tagsExhaustive({
+Match.tagsExhaustive({
   SucceededLoadAllNotes: ({ notes }) => ({
     model: evo(model, { allNotes: () => AsyncData.Success({ data: notes }) }),
   }),

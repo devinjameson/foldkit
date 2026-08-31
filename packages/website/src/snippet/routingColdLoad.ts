@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import { Command, Runtime } from 'foldkit'
 import { evo } from 'foldkit/struct'
 import { Url } from 'foldkit/url'
@@ -7,12 +7,12 @@ import { Url } from 'foldkit/url'
 const commandsForRoute = (
   route: AppRoute,
 ): ReadonlyArray<Command.Command<Message>> =>
-  M.value(route).pipe(
-    M.withReturnType<ReadonlyArray<Command.Command<Message>>>(),
-    M.tag('People', ({ searchText }) => [
+  Match.value(route).pipe(
+    Match.withReturnType<ReadonlyArray<Command.Command<Message>>>(),
+    Match.tag('People', ({ searchText }) => [
       FetchPeople({ searchText: Option.getOrElse(searchText, () => '') }),
     ]),
-    M.orElse(() => []),
+    Match.orElse(() => []),
   )
 
 // ...which init calls for the cold load...

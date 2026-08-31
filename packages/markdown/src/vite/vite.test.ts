@@ -1,4 +1,4 @@
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { describe, expect, it } from 'vitest'
 
 import { decodeDocument, encodeDocument } from '../ast/index.js'
@@ -279,7 +279,9 @@ describe('parseMarkdown', () => {
 
   it('accepts declared islands and validates their attributes', () => {
     const document = parseMarkdown('::Counter{label="Clicks"}', {
-      islands: { Counter: S.Struct({ label: S.optionalKey(S.String) }) },
+      islands: {
+        Counter: Schema.Struct({ label: Schema.optionalKey(Schema.String) }),
+      },
     })
 
     expect(document.blocks.map(block => block._tag)).toStrictEqual(['Island'])
@@ -299,7 +301,7 @@ describe('parseMarkdown', () => {
   it('rejects island names missing from the declared islands', () => {
     expect(() =>
       parseMarkdown('::Conuter', {
-        islands: { Counter: S.Struct({}), Note: S.Struct({}) },
+        islands: { Counter: Schema.Struct({}), Note: Schema.Struct({}) },
       }),
     ).toThrowError(
       'Unknown island "Conuter" (line 1). Allowed islands: Counter, Note.',
@@ -309,7 +311,9 @@ describe('parseMarkdown', () => {
   it('rejects attributes missing from the island schema', () => {
     expect(() =>
       parseMarkdown('::Counter{labl="Clicks"}', {
-        islands: { Counter: S.Struct({ label: S.optionalKey(S.String) }) },
+        islands: {
+          Counter: Schema.Struct({ label: Schema.optionalKey(Schema.String) }),
+        },
       }),
     ).toThrowError(
       'Unknown attribute "labl" for island "Counter" (line 1). Allowed attributes: label.',
@@ -319,7 +323,7 @@ describe('parseMarkdown', () => {
   it('rejects attributes on islands that declare none', () => {
     expect(() =>
       parseMarkdown(lines(':::Note{tone="calm"}', 'Prose.', ':::'), {
-        islands: { Note: S.Struct({}) },
+        islands: { Note: Schema.Struct({}) },
       }),
     ).toThrowError(
       'Unknown attribute "tone" for island "Note" (line 1). It takes no attributes.',
@@ -329,7 +333,7 @@ describe('parseMarkdown', () => {
   it('rejects attribute values outside the island schema', () => {
     expect(() =>
       parseMarkdown('::Counter', {
-        islands: { Counter: S.Struct({ label: S.String }) },
+        islands: { Counter: Schema.Struct({ label: Schema.String }) },
       }),
     ).toThrowError(/Invalid attributes for island "Counter" \(line 1\)/)
   })
@@ -403,7 +407,7 @@ describe('parseMarkdown', () => {
   it('rejects non-Struct island schemas', () => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const malformedOptions = {
-      islands: { Counter: S.String },
+      islands: { Counter: Schema.String },
     } as unknown as MarkdownPluginOptions
 
     expect(() => parseMarkdown('::Counter', malformedOptions)).toThrowError(
@@ -420,9 +424,9 @@ describe('parseMarkdown', () => {
 
 describe('parseMarkdownWithFrontmatter', () => {
   const frontmatterOptions: MarkdownPluginOptions = {
-    frontmatter: S.Struct({
-      title: S.String,
-      date: S.optionalKey(S.String),
+    frontmatter: Schema.Struct({
+      title: Schema.String,
+      date: Schema.optionalKey(Schema.String),
     }),
   }
 
@@ -471,7 +475,7 @@ describe('parseMarkdownWithFrontmatter', () => {
 
   it('parses field names shared with Object.prototype members', () => {
     const prototypeOptions: MarkdownPluginOptions = {
-      frontmatter: S.Struct({ toString: S.String }),
+      frontmatter: Schema.Struct({ toString: Schema.String }),
     }
 
     const { maybeFrontmatter } = parseMarkdownWithFrontmatter(
@@ -504,9 +508,9 @@ describe('parseMarkdownWithFrontmatter', () => {
 
   it('rejects values the schema does not accept, naming the offending line', () => {
     const strictOptions: MarkdownPluginOptions = {
-      frontmatter: S.Struct({
-        title: S.String,
-        count: S.NumberFromString.check(S.isFinite()),
+      frontmatter: Schema.Struct({
+        title: Schema.String,
+        count: Schema.NumberFromString.check(Schema.isFinite()),
       }),
     }
 
@@ -530,7 +534,7 @@ describe('parseMarkdownWithFrontmatter', () => {
   it('rejects a non-Struct frontmatter schema', () => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const malformedOptions = {
-      frontmatter: S.String,
+      frontmatter: Schema.String,
     } as unknown as MarkdownPluginOptions
 
     expect(() =>
@@ -546,7 +550,9 @@ describe('markdown', () => {
     source: string,
     id: string,
     options: MarkdownPluginOptions = {
-      islands: { Counter: S.Struct({ label: S.optionalKey(S.String) }) },
+      islands: {
+        Counter: Schema.Struct({ label: Schema.optionalKey(Schema.String) }),
+      },
     },
   ) => {
     const plugin = markdown(options)
@@ -581,7 +587,7 @@ describe('markdown', () => {
 
   it('emits validated frontmatter as a named export', () => {
     const frontmatterOptions: MarkdownPluginOptions = {
-      frontmatter: S.Struct({ title: S.String }),
+      frontmatter: Schema.Struct({ title: Schema.String }),
     }
 
     const withFrontmatter = runTransform(

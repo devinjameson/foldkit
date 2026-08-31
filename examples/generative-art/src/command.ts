@@ -1,4 +1,4 @@
-import { Effect, Option, Random, Schema as S } from 'effect'
+import { Effect, Option, Random, Schema } from 'effect'
 import { Command } from 'foldkit'
 
 import {
@@ -63,7 +63,12 @@ const BURST_INITIAL_SPEED_SCALE_MAX = 2.2
 const BURST_HUE_JITTER_DEGREES = 30
 
 export const GenerateBurstParticle = Command.define('GenerateBurstParticle', {
-  args: { x: S.Number, y: S.Number, angle: S.Number, hueAnchor: S.Number },
+  args: {
+    x: Schema.Number,
+    y: Schema.Number,
+    angle: Schema.Number,
+    hueAnchor: Schema.Number,
+  },
   messages: [Message.CompletedGenerateBurstParticle],
   execute: ({ x, y, angle, hueAnchor }) =>
     Effect.gen(function* () {

@@ -1,4 +1,4 @@
-import { Array, Effect, Fiber, Schema as S } from 'effect'
+import { Array, Effect, Fiber, Schema } from 'effect'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -9,7 +9,7 @@ import { __CurrentRegistry, type __Registry, __makeRegistry } from './index.js'
 
 const Message = defineMessageUnion({
   CompletedWork: {},
-  SucceededTask: { taskId: S.Number },
+  SucceededTask: { taskId: Schema.Number },
 })
 
 const provideRegistry =
@@ -20,7 +20,7 @@ const provideRegistry =
 describe('interruptible Command.define', () => {
   it('derives the key from args at construction, prefixed by the Command name', () => {
     const RunTask = Command.define('RunTask', {
-      args: { taskId: S.Number, label: S.String },
+      args: { taskId: Schema.Number, label: Schema.String },
       messages: [Message.SucceededTask],
       interrupt: {
         keyFields: ['taskId'],
@@ -66,7 +66,7 @@ describe('interruptible Command.define', () => {
 
   it('uses the Command name as the key on the with-args form when toKey is omitted', () => {
     const SaveDraft = Command.define('SaveDraft', {
-      args: { taskId: S.Number },
+      args: { taskId: Schema.Number },
       messages: [Message.SucceededTask],
       interrupt: true,
       execute: ({ taskId }) =>
@@ -90,7 +90,7 @@ describe('interruptible Command.define', () => {
         const registry = __makeRegistry()
 
         const SaveDraft = Command.define('SaveDraft', {
-          args: { taskId: S.Number },
+          args: { taskId: Schema.Number },
           messages: [Message.SucceededTask],
           interrupt: true,
           execute: ({ taskId }) =>
@@ -127,7 +127,7 @@ describe('interruptible Command.define', () => {
         const registry = __makeRegistry()
 
         const SaveDraft = Command.define('SaveDraft', {
-          args: { taskId: S.Number },
+          args: { taskId: Schema.Number },
           messages: [Message.SucceededTask],
           interrupt: true,
           execute: ({ taskId }) =>
@@ -154,7 +154,7 @@ describe('interruptible Command.define', () => {
         const registry = __makeRegistry()
 
         const SaveDraft = Command.define('SaveDraft', {
-          args: { taskId: S.Number },
+          args: { taskId: Schema.Number },
           messages: [Message.SucceededTask],
           interrupt: true,
           execute: ({ taskId }) =>
@@ -239,7 +239,7 @@ describe('interruptible Command.define', () => {
       const registry = __makeRegistry()
 
       const RunTask = Command.define('RunTask', {
-        args: { taskId: S.Number },
+        args: { taskId: Schema.Number },
         messages: [Message.SucceededTask],
         interrupt: {
           keyFields: ['taskId'],
@@ -269,7 +269,7 @@ describe('interruptible Command.define', () => {
       const interruptedTaskIds: Array<number> = []
 
       const RunTask = Command.define('RunTask', {
-        args: { taskId: S.Number },
+        args: { taskId: Schema.Number },
         messages: [Message.SucceededTask],
         interrupt: {
           keyFields: ['taskId'],

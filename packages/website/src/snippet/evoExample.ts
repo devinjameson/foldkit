@@ -1,9 +1,9 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { evo } from 'foldkit/struct'
 
-const Model = S.Struct({
-  count: S.Number,
-  status: S.Literals(['Idle', 'Counting']),
+const Model = Schema.Struct({
+  count: Schema.Number,
+  status: Schema.Literals(['Idle', 'Counting']),
 })
 type Model = typeof Model.Type
 

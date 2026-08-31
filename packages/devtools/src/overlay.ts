@@ -1,20 +1,20 @@
 import { clsx } from 'clsx'
 import {
-  Array as Array_,
+  Array,
   Context,
   Effect,
   Function,
   HashSet,
-  Match as M,
-  Number as Number_,
+  Match,
+  Number,
   Option,
   Order,
   Predicate,
   Queue,
   Record,
-  Schema as S,
+  Schema,
   Stream,
-  String as String_,
+  String,
   SubscriptionRef,
   pipe,
 } from 'effect'
@@ -61,25 +61,25 @@ const SubmodelFilterListbox = Listbox.create<string>()
 
 // MODEL
 
-const DisplayCommand = S.Struct({
-  name: S.String,
-  args: S.Option(S.Record(S.String, S.Unknown)),
+const DisplayCommand = Schema.Struct({
+  name: Schema.String,
+  args: Schema.Option(Schema.Record(Schema.String, Schema.Unknown)),
 })
 
-const DisplayMount = S.Struct({
-  name: S.String,
-  args: S.Option(S.Record(S.String, S.Unknown)),
+const DisplayMount = Schema.Struct({
+  name: Schema.String,
+  args: Schema.Option(Schema.Record(Schema.String, Schema.Unknown)),
 })
 
-const DisplayEntry = S.Struct({
-  tag: S.String,
-  submodelPath: S.Array(S.String),
-  maybeLeafTag: S.Option(S.String),
-  commands: S.Array(DisplayCommand),
-  mountStarts: S.Array(DisplayMount),
-  mountEnds: S.Array(DisplayMount),
-  timestamp: S.Number,
-  isModelChanged: S.Boolean,
+const DisplayEntry = Schema.Struct({
+  tag: Schema.String,
+  submodelPath: Schema.Array(Schema.String),
+  maybeLeafTag: Schema.Option(Schema.String),
+  commands: Schema.Array(DisplayCommand),
+  mountStarts: Schema.Array(DisplayMount),
+  mountEnds: Schema.Array(DisplayMount),
+  timestamp: Schema.Number,
+  isModelChanged: Schema.Boolean,
 })
 
 const INSPECTOR_TABS_ID = 'dt-inspector'
@@ -87,77 +87,77 @@ const SUBMODEL_FILTER_ID = 'dt-submodel-filter'
 const FLATTEN_SWITCH_ID = 'dt-flatten-switch'
 const SCRUBBER_SLIDER_ID = 'dt-scrubber'
 
-const InspectorTab = S.Literals(['Model', 'Message', 'Commands', 'Mounts'])
+const InspectorTab = Schema.Literals(['Model', 'Message', 'Commands', 'Mounts'])
 type InspectorTab = typeof InspectorTab.Type
 const INSPECTOR_TABS: ReadonlyArray<InspectorTab> = InspectorTab.literals
 const InspectorTabs = Tabs.create<InspectorTab>()
 
 /**
- * `S.Unknown` whose equivalence is reference equality. Effect 4's default
- * equivalence for `S.Unknown` is `Equal.equals`, which walks the value
+ * `Schema.Unknown` whose equivalence is reference equality. Effect 4's default
+ * equivalence for `Schema.Unknown` is `Equal.equals`, which walks the value
  * structurally (hash + compareRecords) instead of falling back to `===` like
  * Effect 3. The DevTools overlay holds whole user Model and Message snapshots
- * in fields typed as `S.Unknown`, so the runtime's per-dispatch
+ * in fields typed as `Schema.Unknown`, so the runtime's per-dispatch
  * `modelEquivalence` check would otherwise walk the entire payload three
  * times every time the user dispatches a Message. The snapshots are
  * through-traffic (different reference per frame iff different content),
  * which makes reference equality the correct comparison.
  */
-const UnknownByReference = S.Unknown.pipe(
-  S.overrideToEquivalence(() => (a, b) => a === b),
+const UnknownByReference = Schema.Unknown.pipe(
+  Schema.overrideToEquivalence(() => (a, b) => a === b),
 )
 
-const Screen = S.Literals(['Messages', 'Settings'])
+const Screen = Schema.Literals(['Messages', 'Settings'])
 type Screen = typeof Screen.Type
 
-const Model = S.Struct({
-  isOpen: S.Boolean,
-  isMobile: S.Boolean,
+const Model = Schema.Struct({
+  isOpen: Schema.Boolean,
+  isMobile: Schema.Boolean,
   screen: Screen,
-  entries: S.Array(DisplayEntry),
-  initCommands: S.Array(DisplayCommand),
-  initMountStarts: S.Array(DisplayMount),
-  startIndex: S.Number,
-  isPaused: S.Boolean,
-  pausedAtIndex: S.Number,
-  selectedIndex: S.Number,
-  isFollowingLatest: S.Boolean,
-  isFollowingTop: S.Boolean,
-  maybeInspectedModel: S.Option(UnknownByReference),
-  maybeInspectedMessage: S.Option(UnknownByReference),
-  submodelTags: S.Array(S.String),
-  maybeSubmodelFilter: S.Option(S.String),
-  isFlattened: S.Boolean,
+  entries: Schema.Array(DisplayEntry),
+  initCommands: Schema.Array(DisplayCommand),
+  initMountStarts: Schema.Array(DisplayMount),
+  startIndex: Schema.Number,
+  isPaused: Schema.Boolean,
+  pausedAtIndex: Schema.Number,
+  selectedIndex: Schema.Number,
+  isFollowingLatest: Schema.Boolean,
+  isFollowingTop: Schema.Boolean,
+  maybeInspectedModel: Schema.Option(UnknownByReference),
+  maybeInspectedMessage: Schema.Option(UnknownByReference),
+  submodelTags: Schema.Array(Schema.String),
+  maybeSubmodelFilter: Schema.Option(Schema.String),
+  isFlattened: Schema.Boolean,
   submodelFilterListbox: Listbox.Model,
-  expandedPaths: S.HashSet(S.String),
-  changedPaths: S.HashSet(S.String),
-  affectedPaths: S.HashSet(S.String),
-  maybePendingScrubIndex: S.Option(S.Number),
+  expandedPaths: Schema.HashSet(Schema.String),
+  changedPaths: Schema.HashSet(Schema.String),
+  affectedPaths: Schema.HashSet(Schema.String),
+  maybePendingScrubIndex: Schema.Option(Schema.Number),
   inspectorTabs: Tabs.Model,
   activeInspectorTab: InspectorTab,
   // NOTE: empirically, inlining `Slider.Model` here throws
   // "Cannot read properties of undefined (reading 'ast')" when running slider
   // tests, because slider imports html → runtime → overlay, and overlay
-  // references Slider.Model mid-cycle. S.suspend defers the read until after
+  // references Slider.Model mid-cycle. Schema.suspend defers the read until after
   // the cycle resolves. Inlining Listbox.Model works in practice but goes
   // through the same import chain; the exact cause of the asymmetry isn't
   // pinned down. Suspend is the conservative fix until the runtime ↔ overlay
   // cycle is broken at the source.
-  scrubberSlider: S.suspend((): typeof Slider.Model => Slider.Model),
-  scrubberValue: S.Number,
+  scrubberSlider: Schema.suspend((): typeof Slider.Model => Slider.Model),
+  scrubberValue: Schema.Number,
 })
 type Model = typeof Model.Type
 
-const Flags = S.Struct({
-  isOpen: S.Boolean,
-  isMobile: S.Boolean,
-  isFlattened: S.Boolean,
-  entries: S.Array(DisplayEntry),
-  initCommands: S.Array(DisplayCommand),
-  initMountStarts: S.Array(DisplayMount),
-  startIndex: S.Number,
-  isPaused: S.Boolean,
-  pausedAtIndex: S.Number,
+const Flags = Schema.Struct({
+  isOpen: Schema.Boolean,
+  isMobile: Schema.Boolean,
+  isFlattened: Schema.Boolean,
+  entries: Schema.Array(DisplayEntry),
+  initCommands: Schema.Array(DisplayCommand),
+  initMountStarts: Schema.Array(DisplayMount),
+  startIndex: Schema.Number,
+  isPaused: Schema.Boolean,
+  pausedAtIndex: Schema.Number,
 })
 
 // MESSAGE
@@ -167,40 +167,40 @@ const Flags = S.Struct({
 const Message = defineMessageUnion({
   ClickedToggle: {},
   ClickedSettingsToggle: {},
-  ToggledFlatten: { isFlattened: S.Boolean },
+  ToggledFlatten: { isFlattened: Schema.Boolean },
   CompletedPersistDevToolsState: {},
-  ClickedRow: { index: S.Number },
+  ClickedRow: { index: Schema.Number },
   ClickedResume: {},
   ClickedClear: {},
   ClickedFollowLatest: {},
   ClickedScrollToTopPill: {},
-  ScrolledMessageList: { scrollTop: S.Number },
+  ScrolledMessageList: { scrollTop: Schema.Number },
   CompletedResume: {},
   CompletedClear: {},
   CompletedLockScroll: {},
   CompletedUnlockScroll: {},
   CompletedScrollToTop: {},
-  CrossedMobileBreakpoint: { isMobile: S.Boolean },
+  CrossedMobileBreakpoint: { isMobile: Schema.Boolean },
   ReceivedInspectedState: {
-    model: S.Unknown,
-    maybeMessage: S.Option(S.Unknown),
-    changedPaths: S.HashSet(S.String),
-    affectedPaths: S.HashSet(S.String),
+    model: Schema.Unknown,
+    maybeMessage: Schema.Option(Schema.Unknown),
+    changedPaths: Schema.HashSet(Schema.String),
+    affectedPaths: Schema.HashSet(Schema.String),
   },
-  ToggledTreeNode: { path: S.String },
+  ToggledTreeNode: { path: Schema.String },
   TickedScrubFrame: {},
   GotInspectorTabsMessage: { message: Tabs.Message },
   ReceivedStoreUpdate: {
-    entries: S.Array(DisplayEntry),
-    initCommands: S.Array(DisplayCommand),
-    initMountStarts: S.Array(DisplayMount),
-    startIndex: S.Number,
-    isPaused: S.Boolean,
-    pausedAtIndex: S.Number,
+    entries: Schema.Array(DisplayEntry),
+    initCommands: Schema.Array(DisplayCommand),
+    initMountStarts: Schema.Array(DisplayMount),
+    startIndex: Schema.Number,
+    isPaused: Schema.Boolean,
+    pausedAtIndex: Schema.Number,
   },
   GotSubmodelFilterMessage: { message: Listbox.Message },
   GotScrubberSliderMessage: {
-    message: S.suspend((): typeof Slider.Message => Slider.Message),
+    message: Schema.suspend((): typeof Slider.Message => Slider.Message),
   },
 })
 type Message = typeof Message.Type
@@ -218,10 +218,13 @@ const NO_COMMANDS: ReadonlyArray<typeof DisplayCommand.Type> = []
 const NO_MOUNTS: ReadonlyArray<typeof DisplayMount.Type> = []
 
 const formatTimeDelta = (deltaMs: number): string =>
-  M.value(deltaMs).pipe(
-    M.when(0, () => '0ms'),
-    M.when(Number_.isLessThan(MILLIS_PER_SECOND), ms => `+${Math.round(ms)}ms`),
-    M.orElse(ms => `+${(ms / MILLIS_PER_SECOND).toFixed(1)}s`),
+  Match.value(deltaMs).pipe(
+    Match.when(0, () => '0ms'),
+    Match.when(
+      Number.isLessThan(MILLIS_PER_SECOND),
+      ms => `+${Math.round(ms)}ms`,
+    ),
+    Match.orElse(ms => `+${(ms / MILLIS_PER_SECOND).toFixed(1)}s`),
   )
 
 const MESSAGE_LIST_SELECTOR = '.message-list'
@@ -249,9 +252,9 @@ const computeSubmodelTags = (
 ): ReadonlyArray<string> =>
   pipe(
     entries,
-    Array_.flatMap(({ submodelPath }) => submodelPath),
-    Array_.dedupe,
-    Array_.sort(Order.String),
+    Array.flatMap(({ submodelPath }) => submodelPath),
+    Array.dedupe,
+    Array.sort(Order.String),
   )
 
 const toDisplayCommand = (
@@ -267,7 +270,7 @@ const toDisplayMount = (mount: MountRecord): typeof DisplayMount.Type => ({
 })
 
 const toDisplayEntries = ({ entries }: StoreState) =>
-  Array_.map(entries, entry => {
+  Array.map(entries, entry => {
     const { submodelPath, maybeLeafTag } = extractSubmodelInfo(
       entry.tag,
       entry.message,
@@ -276,9 +279,9 @@ const toDisplayEntries = ({ entries }: StoreState) =>
       tag: entry.tag,
       submodelPath,
       maybeLeafTag,
-      commands: Array_.map(entry.commands, toDisplayCommand),
-      mountStarts: Array_.map(entry.mountStarts, toDisplayMount),
-      mountEnds: Array_.map(entry.mountEnds, toDisplayMount),
+      commands: Array.map(entry.commands, toDisplayCommand),
+      mountStarts: Array.map(entry.mountStarts, toDisplayMount),
+      mountEnds: Array.map(entry.mountEnds, toDisplayMount),
       timestamp: entry.timestamp,
       isModelChanged: entry.isModelChanged,
     }
@@ -286,8 +289,8 @@ const toDisplayEntries = ({ entries }: StoreState) =>
 
 const toDisplayState = (state: StoreState) => ({
   entries: toDisplayEntries(state),
-  initCommands: Array_.map(state.initCommands, toDisplayCommand),
-  initMountStarts: Array_.map(state.initMountStarts, toDisplayMount),
+  initCommands: Array.map(state.initCommands, toDisplayCommand),
+  initMountStarts: Array.map(state.initMountStarts, toDisplayMount),
   startIndex: state.startIndex,
   isPaused: state.isPaused,
   pausedAtIndex: state.pausedAtIndex,
@@ -299,16 +302,16 @@ const objectPreview = (value: Record<string, unknown>): string =>
   pipe(
     value,
     Record.keys,
-    Array_.filter(key => key !== '_tag'),
-    Array_.match({
+    Array.filter(key => key !== '_tag'),
+    Array.match({
       onEmpty: () => '{}',
       onNonEmpty: keys => {
         const preview = pipe(
           keys,
-          Array_.take(MAX_PREVIEW_KEYS),
-          Array_.join(', '),
+          Array.take(MAX_PREVIEW_KEYS),
+          Array.join(', '),
         )
-        return Array_.length(keys) > MAX_PREVIEW_KEYS
+        return Array.length(keys) > MAX_PREVIEW_KEYS
           ? `{ ${preview}, … }`
           : `{ ${preview} }`
       },
@@ -316,21 +319,21 @@ const objectPreview = (value: Record<string, unknown>): string =>
   )
 
 const collapsedPreview = (value: unknown): string =>
-  M.value(value).pipe(
-    M.when(Array.isArray, array => `(${array.length})`),
-    M.when(Predicate.isObject, objectPreview),
-    M.orElse(() => ''),
+  Match.value(value).pipe(
+    Match.when(globalThis.Array.isArray, array => `(${array.length})`),
+    Match.when(Predicate.isObject, objectPreview),
+    Match.orElse(() => ''),
   )
 
 // UPDATE
 
 type UpdateReturn = Update.Return<Model, Message>
 
-const foldInspectorTabsOutMessage = M.type<
+const foldInspectorTabsOutMessage = Match.type<
   Tabs.OutMessage<InspectorTab>
 >().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({
@@ -348,15 +351,17 @@ const foldInspectorTabs = Update.foldChild({
   foldOutMessage: foldInspectorTabsOutMessage,
 })
 
-const foldSubmodelFilterOutMessage = M.type<Listbox.OutMessage<string>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldSubmodelFilterOutMessage = Match.type<
+  Listbox.OutMessage<string>
+>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({
         model: evo(model, {
           maybeSubmodelFilter: () =>
-            Option.liftPredicate(value, String_.isNonEmpty),
+            Option.liftPredicate(value, String.isNonEmpty),
         }),
       }),
   }),
@@ -376,9 +381,9 @@ const foldSubmodelFilter = Update.foldChild({
 // NOTE: Pointer Messages update the thumb immediately, but jumping to and
 // inspecting the corresponding state is expensive. Keep only the latest host
 // index until TickedScrubFrame flushes one navigation on the next frame.
-const foldScrubberSliderOutMessage = M.type<Slider.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldScrubberSliderOutMessage = Match.type<Slider.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     ChangedValue:
       ({ value }) =>
       model => ({
@@ -425,12 +430,16 @@ const maybeToggleScrollLock = (isEnabled: boolean, shouldLock: boolean) =>
 const maybeLockScroll = (isOpen: boolean, isMobile: boolean) =>
   OptionExt.when(isOpen && isMobile, LockScroll())
 
-const DevToolsPersistedState = S.Struct({
-  isOpen: S.Boolean.pipe(S.withDecodingDefault(Effect.succeed(false))),
-  isFlattened: S.Boolean.pipe(S.withDecodingDefault(Effect.succeed(false))),
+const DevToolsPersistedState = Schema.Struct({
+  isOpen: Schema.Boolean.pipe(
+    Schema.withDecodingDefault(Effect.succeed(false)),
+  ),
+  isFlattened: Schema.Boolean.pipe(
+    Schema.withDecodingDefault(Effect.succeed(false)),
+  ),
 })
 type DevToolsPersistedState = typeof DevToolsPersistedState.Type
-const DevToolsPersistedStateJson = S.fromJsonString(DevToolsPersistedState)
+const DevToolsPersistedStateJson = Schema.fromJsonString(DevToolsPersistedState)
 const DEFAULT_PERSISTED_STATE: DevToolsPersistedState = {
   isOpen: false,
   isFlattened: false,
@@ -442,7 +451,7 @@ const readPersistedState: Effect.Effect<DevToolsPersistedState> = Effect.gen(
     const json = yield* Effect.fromOption(
       Option.fromNullishOr(yield* store.get(DEVTOOLS_STORAGE_KEY)),
     )
-    return yield* S.decodeEffect(DevToolsPersistedStateJson)(json)
+    return yield* Schema.decodeEffect(DevToolsPersistedStateJson)(json)
   },
 ).pipe(
   Effect.catch(() => Effect.succeed(DEFAULT_PERSISTED_STATE)),
@@ -450,12 +459,12 @@ const readPersistedState: Effect.Effect<DevToolsPersistedState> = Effect.gen(
 )
 
 export const PersistDevToolsState = Command.define('PersistDevToolsState', {
-  args: { isOpen: S.Boolean, isFlattened: S.Boolean },
+  args: { isOpen: Schema.Boolean, isFlattened: Schema.Boolean },
   messages: [Message.CompletedPersistDevToolsState],
   execute: ({ isOpen, isFlattened }) =>
     Effect.gen(function* () {
       const store = yield* KeyValueStore.KeyValueStore
-      const json = yield* S.encodeEffect(DevToolsPersistedStateJson)({
+      const json = yield* Schema.encodeEffect(DevToolsPersistedStateJson)({
         isOpen,
         isFlattened,
       })
@@ -491,7 +500,7 @@ const buildInspectionEffect = (index: number) =>
 // resolution. Inspect-only navigation (no host pause) still uses
 // `InspectState`, which resolves once on its own.
 export const JumpToAndInspect = Command.define('JumpToAndInspect', {
-  args: { index: S.Number },
+  args: { index: Schema.Number },
   messages: [Message.ReceivedInspectedState],
   execute: ({ index }) =>
     Effect.gen(function* () {
@@ -502,7 +511,7 @@ export const JumpToAndInspect = Command.define('JumpToAndInspect', {
 })
 
 export const InspectState = Command.define('InspectState', {
-  args: { index: S.Number },
+  args: { index: Schema.Number },
   messages: [Message.ReceivedInspectedState],
   execute: ({ index }) => buildInspectionEffect(index),
 })
@@ -589,11 +598,11 @@ const makeUpdate = (
       ClickedSettingsToggle: () => ({
         model: evo(model, {
           screen: currentScreen =>
-            M.value(currentScreen).pipe(
-              M.withReturnType<Screen>(),
-              M.when('Messages', () => 'Settings'),
-              M.when('Settings', () => 'Messages'),
-              M.exhaustive,
+            Match.value(currentScreen).pipe(
+              Match.withReturnType<Screen>(),
+              Match.when('Messages', () => 'Settings'),
+              Match.when('Settings', () => 'Messages'),
+              Match.exhaustive,
             ),
         }),
       }),
@@ -606,20 +615,20 @@ const makeUpdate = (
         commands: Option.toArray(maybeToggleScrollLock(model.isOpen, isMobile)),
       }),
       ClickedRow: ({ index }) =>
-        M.value(mode).pipe(
-          M.withReturnType<UpdateReturn>(),
-          M.when('TimeTravel', () => ({
+        Match.value(mode).pipe(
+          Match.withReturnType<UpdateReturn>(),
+          Match.when('TimeTravel', () => ({
             model,
             commands: [jumpToAndInspect(index)],
           })),
-          M.when('Inspect', () => ({
+          Match.when('Inspect', () => ({
             model: evo(model, {
               selectedIndex: () => index,
               isFollowingLatest: () => false,
             }),
             commands: [inspectState(index)],
           })),
-          M.exhaustive,
+          Match.exhaustive,
         ),
       ClickedResume: () => ({
         model: evo(model, {
@@ -643,7 +652,7 @@ const makeUpdate = (
         commands: [clear, inspectLatest, scrollToTop],
       }),
       ClickedFollowLatest: () => {
-        const latestIndex = Array_.match(model.entries, {
+        const latestIndex = Array.match(model.entries, {
           onEmpty: () => INIT_INDEX,
           onNonEmpty: () => model.startIndex + model.entries.length - 1,
         })
@@ -703,19 +712,19 @@ const makeUpdate = (
         isPaused,
         pausedAtIndex,
       }) => {
-        const shouldFollowSelection = M.value(mode).pipe(
-          M.when('TimeTravel', () => !isPaused),
-          M.when('Inspect', () => model.isFollowingLatest),
-          M.exhaustive,
+        const shouldFollowSelection = Match.value(mode).pipe(
+          Match.when('TimeTravel', () => !isPaused),
+          Match.when('Inspect', () => model.isFollowingLatest),
+          Match.exhaustive,
         )
 
-        const shouldFollowScroll = M.value(mode).pipe(
-          M.when('TimeTravel', () => !isPaused && model.isFollowingTop),
-          M.when('Inspect', () => model.isFollowingTop),
-          M.exhaustive,
+        const shouldFollowScroll = Match.value(mode).pipe(
+          Match.when('TimeTravel', () => !isPaused && model.isFollowingTop),
+          Match.when('Inspect', () => model.isFollowingTop),
+          Match.exhaustive,
         )
 
-        const latestIndex = Array_.match(entries, {
+        const latestIndex = Array.match(entries, {
           onEmpty: () => INIT_INDEX,
           onNonEmpty: () => startIndex + entries.length - 1,
         })
@@ -723,7 +732,7 @@ const makeUpdate = (
         const nextSubmodelTags = computeSubmodelTags(entries)
         const isFilterStale = Option.exists(
           model.maybeSubmodelFilter,
-          filterTag => !Array_.contains(nextSubmodelTags, filterTag),
+          filterTag => !Array.contains(nextSubmodelTags, filterTag),
         )
 
         const sliderMax = entries.length
@@ -747,11 +756,11 @@ const makeUpdate = (
             scrubberSlider: current =>
               Slider.reflectRange(current, { min: 0, max: sliderMax }),
             scrubberValue: current =>
-              M.value(model.scrubberSlider.dragState).pipe(
-                M.tag('Dragging', () =>
+              Match.value(model.scrubberSlider.dragState).pipe(
+                Match.tag('Dragging', () =>
                   Slider.snapAndClamp(current, 0, sliderMax, 1),
                 ),
-                M.orElse(() =>
+                Match.orElse(() =>
                   Slider.snapAndClamp(targetSliderValue, 0, sliderMax, 1),
                 ),
               ),
@@ -914,21 +923,23 @@ const buildOverlayView = (
     h.span([h.Class(className)], [text])
 
   const leafValueView = (value: unknown): Html =>
-    M.value(value).pipe(
-      M.when(Predicate.isNull, () => leafSpan('json-null italic', 'null')),
-      M.when(Predicate.isUndefined, () =>
+    Match.value(value).pipe(
+      Match.when(Predicate.isNull, () => leafSpan('json-null italic', 'null')),
+      Match.when(Predicate.isUndefined, () =>
         leafSpan('json-null italic', 'undefined'),
       ),
-      M.when(Predicate.isString, stringValue =>
+      Match.when(Predicate.isString, stringValue =>
         leafSpan('json-string', `"${stringValue}"`),
       ),
-      M.when(Predicate.isNumber, numberValue =>
-        leafSpan('json-number', String(numberValue)),
+      Match.when(Predicate.isNumber, numberValue =>
+        leafSpan('json-number', globalThis.String(numberValue)),
       ),
-      M.when(Predicate.isBoolean, booleanValue =>
-        leafSpan('json-boolean', String(booleanValue)),
+      Match.when(Predicate.isBoolean, booleanValue =>
+        leafSpan('json-boolean', globalThis.String(booleanValue)),
       ),
-      M.orElse(unknownValue => leafSpan('json-null', String(unknownValue))),
+      Match.orElse(unknownValue =>
+        leafSpan('json-null', globalThis.String(unknownValue)),
+      ),
     )
 
   const keyView = (key: string): Html =>
@@ -967,12 +978,12 @@ const buildOverlayView = (
   const inlineDiffDotView: Html = h.span([h.Class('diff-dot-inline')])
 
   const RowSegment = defineTaggedUnion({
-    ArrowSegment: { isExpanded: S.Boolean },
+    ArrowSegment: { isExpanded: Schema.Boolean },
     DiffDotSegment: {},
-    KeyLabelSegment: { key: S.String },
-    TagLabelSegment: { tag: S.String },
-    PreviewSegment: { preview: S.String },
-    LeafValueSegment: { value: S.Unknown },
+    KeyLabelSegment: { key: Schema.String },
+    TagLabelSegment: { tag: Schema.String },
+    PreviewSegment: { preview: Schema.String },
+    LeafValueSegment: { value: Schema.Unknown },
   })
   type RowSegment = typeof RowSegment.Type
 
@@ -1007,7 +1018,7 @@ const buildOverlayView = (
     affectedPaths: HashSet.HashSet<string>
     depth: number
     key: string
-    accumulator: Array<FlatNode>
+    accumulator: globalThis.Array<FlatNode>
     indentRootChildren: boolean
   }>
 
@@ -1051,22 +1062,22 @@ const buildOverlayView = (
 
     const childDepth = isRoot && !indentRootChildren ? depth : depth + 1
 
-    if (Array.isArray(value)) {
+    if (globalThis.Array.isArray(value)) {
       value.forEach((item, arrayIndex) =>
         flattenTree({
           ...shared,
           value: item,
           treePath: `${treePath}.${arrayIndex}`,
           depth: childDepth,
-          key: String(arrayIndex),
+          key: globalThis.String(arrayIndex),
         }),
       )
     } else if (Predicate.isObject(value)) {
       pipe(
         value,
         Record.toEntries,
-        Array_.filter(([entryKey]) => entryKey !== '_tag'),
-        Array_.forEach(([entryKey, childValue]) =>
+        Array.filter(([entryKey]) => entryKey !== '_tag'),
+        Array.forEach(([entryKey, childValue]) =>
           flattenTree({
             ...shared,
             value: childValue,
@@ -1095,9 +1106,9 @@ const buildOverlayView = (
     const hasDiffDot = isChanged || isAffected
 
     if (!nodeIsExpandable) {
-      const rowSegments: Array<RowSegment> = [
+      const rowSegments: globalThis.Array<RowSegment> = [
         ...(hasDiffDot ? [RowSegment.DiffDotSegment()] : []),
-        ...(String_.isNonEmpty(key)
+        ...(String.isNonEmpty(key)
           ? [RowSegment.KeyLabelSegment({ key })]
           : []),
         RowSegment.LeafValueSegment({ value }),
@@ -1124,16 +1135,16 @@ const buildOverlayView = (
     }
 
     const preview = isExpanded
-      ? Array.isArray(value)
+      ? globalThis.Array.isArray(value)
         ? `(${value.length})`
         : ''
       : collapsedPreview(value)
 
-    const rowSegments: Array<RowSegment> = [
+    const rowSegments: globalThis.Array<RowSegment> = [
       ...(isRoot ? [] : [RowSegment.ArrowSegment({ isExpanded })]),
       ...(!isRoot && hasDiffDot ? [RowSegment.DiffDotSegment()] : []),
-      ...(String_.isNonEmpty(key) ? [RowSegment.KeyLabelSegment({ key })] : []),
-      ...(String_.isNonEmpty(tag) ? [RowSegment.TagLabelSegment({ tag })] : []),
+      ...(String.isNonEmpty(key) ? [RowSegment.KeyLabelSegment({ key })] : []),
+      ...(String.isNonEmpty(tag) ? [RowSegment.TagLabelSegment({ tag })] : []),
       RowSegment.PreviewSegment({ preview }),
     ]
 
@@ -1184,7 +1195,7 @@ const buildOverlayView = (
     maybeRootLabel: Option.Option<string>,
     indentRootChildren: boolean,
   ): Html => {
-    const nodes: Array<FlatNode> = []
+    const nodes: globalThis.Array<FlatNode> = []
     flattenTree({
       value: toInspectableValue(value),
       treePath: rootPath,
@@ -1217,7 +1228,7 @@ const buildOverlayView = (
 
     const baseTimestamp = pipe(
       model.entries,
-      Array_.head,
+      Array.head,
       Option.match({
         onNone: () => 0,
         onSome: ({ timestamp }) => timestamp,
@@ -1225,7 +1236,7 @@ const buildOverlayView = (
     )
 
     return pipe(
-      Array_.get(model.entries, selectedIndex - model.startIndex),
+      Array.get(model.entries, selectedIndex - model.startIndex),
       Option.map(entry => {
         const delta = entry.timestamp - baseTimestamp
         const seconds = Math.floor(delta / MILLIS_PER_SECOND)
@@ -1361,17 +1372,17 @@ const buildOverlayView = (
     })
 
   const selectedHistoryIndex = (model: Model): number => {
-    const lastIndex = Array_.match(model.entries, {
+    const lastIndex = Array.match(model.entries, {
       onEmpty: () => INIT_INDEX,
       onNonEmpty: () => model.startIndex + model.entries.length - 1,
     })
 
-    return M.value(mode).pipe(
-      M.when('TimeTravel', () =>
+    return Match.value(mode).pipe(
+      Match.when('TimeTravel', () =>
         model.isPaused ? model.pausedAtIndex : lastIndex,
       ),
-      M.when('Inspect', () => model.selectedIndex),
-      M.exhaustive,
+      Match.when('Inspect', () => model.selectedIndex),
+      Match.exhaustive,
     )
   }
 
@@ -1385,7 +1396,7 @@ const buildOverlayView = (
     } else {
       return pipe(
         model.entries,
-        Array_.get(selectedIndex - model.startIndex),
+        Array.get(selectedIndex - model.startIndex),
         Option.map(entry => entry.commands),
         Option.getOrElse(() => NO_COMMANDS),
       )
@@ -1402,7 +1413,7 @@ const buildOverlayView = (
       onSome: argsValue => ({ ...argsValue, _tag: command.name }),
     })
     const rootPath = `command-${index}`
-    const nodes: Array<FlatNode> = []
+    const nodes: globalThis.Array<FlatNode> = []
     flattenTree({
       value: toInspectableValue(taggedValue),
       treePath: rootPath,
@@ -1422,7 +1433,7 @@ const buildOverlayView = (
     commands: ReadonlyArray<typeof DisplayCommand.Type>,
     expandedPaths: HashSet.HashSet<string>,
   ): Html =>
-    Array_.match(commands, {
+    Array.match(commands, {
       onEmpty: () =>
         h.div(
           [
@@ -1439,14 +1450,14 @@ const buildOverlayView = (
               'flex flex-col flex-1 min-h-0 min-w-0 overflow-auto overscroll-none',
             ),
           ],
-          Array_.map(commandList, (command, index) =>
+          Array.map(commandList, (command, index) =>
             h.div(
               [h.Class('flex items-start px-2 py-1 border-b gap-1.5')],
               [
-                h.span([h.Class(indexClass)], [String(index + 1)]),
+                h.span([h.Class(indexClass)], [globalThis.String(index + 1)]),
                 h.div(
                   [h.Class('flex flex-col flex-1 min-w-0')],
-                  Array_.map(
+                  Array.map(
                     flattenCommand(command, index, expandedPaths),
                     renderFlatNode,
                   ),
@@ -1470,7 +1481,7 @@ const buildOverlayView = (
     } else {
       return pipe(
         model.entries,
-        Array_.get(selectedIndex - model.startIndex),
+        Array.get(selectedIndex - model.startIndex),
         Option.match({
           onNone: () => ({ starts: NO_MOUNTS, ends: NO_MOUNTS }),
           onSome: entry => ({
@@ -1493,7 +1504,7 @@ const buildOverlayView = (
       onSome: argsValue => ({ ...argsValue, _tag: mount.name }),
     })
     const rootPath = `mount-${sectionLabel}-${index}`
-    const nodes: Array<FlatNode> = []
+    const nodes: globalThis.Array<FlatNode> = []
     flattenTree({
       value: toInspectableValue(taggedValue),
       treePath: rootPath,
@@ -1525,14 +1536,14 @@ const buildOverlayView = (
           ],
           [label],
         ),
-        ...Array_.map(mounts, (mount, index) =>
+        ...Array.map(mounts, (mount, index) =>
           h.div(
             [h.Class('flex items-start px-2 py-1 border-b gap-1.5')],
             [
-              h.span([h.Class(indexClass)], [String(index + 1)]),
+              h.span([h.Class(indexClass)], [globalThis.String(index + 1)]),
               h.div(
                 [h.Class('flex flex-col flex-1 min-w-0')],
-                Array_.map(
+                Array.map(
                   flattenMount(mount, label, index, expandedPaths),
                   renderFlatNode,
                 ),
@@ -1549,8 +1560,8 @@ const buildOverlayView = (
     expandedPaths: HashSet.HashSet<string>,
   ): Html => {
     const hasAny =
-      Array_.isReadonlyArrayNonEmpty(starts) ||
-      Array_.isReadonlyArrayNonEmpty(ends)
+      Array.isReadonlyArrayNonEmpty(starts) ||
+      Array.isReadonlyArrayNonEmpty(ends)
 
     if (!hasAny) {
       return h.div(
@@ -1570,10 +1581,10 @@ const buildOverlayView = (
         ),
       ],
       [
-        ...(Array_.isReadonlyArrayNonEmpty(starts)
+        ...(Array.isReadonlyArrayNonEmpty(starts)
           ? [mountListSection('Started', starts, expandedPaths)]
           : []),
-        ...(Array_.isReadonlyArrayNonEmpty(ends)
+        ...(Array.isReadonlyArrayNonEmpty(ends)
           ? [mountListSection('Ended', ends, expandedPaths)]
           : []),
       ],
@@ -1585,8 +1596,8 @@ const buildOverlayView = (
     tab: InspectorTab,
     inspectedModel: unknown,
   ): Html =>
-    M.value(tab).pipe(
-      M.when('Model', () =>
+    Match.value(tab).pipe(
+      Match.when('Model', () =>
         lazyTabContent('Model', modelTabContent, [
           inspectedModel,
           model.expandedPaths,
@@ -1594,7 +1605,7 @@ const buildOverlayView = (
           model.affectedPaths,
         ]),
       ),
-      M.when('Message', () =>
+      Match.when('Message', () =>
         lazyTabContent('Message', messageTabContent, [
           model.maybeInspectedMessage,
           model.maybeSubmodelFilter,
@@ -1603,13 +1614,13 @@ const buildOverlayView = (
           inspectedTimestamp(model),
         ]),
       ),
-      M.when('Commands', () =>
+      Match.when('Commands', () =>
         lazyTabContent('Commands', commandsTabContent, [
           selectedCommands(model),
           model.expandedPaths,
         ]),
       ),
-      M.when('Mounts', () => {
+      Match.when('Mounts', () => {
         const { starts, ends } = selectedMountActivity(model)
         return lazyTabContent('Mounts', mountsTabContent, [
           starts,
@@ -1617,7 +1628,7 @@ const buildOverlayView = (
           model.expandedPaths,
         ])
       }),
-      M.exhaustive,
+      Match.exhaustive,
     )
 
   const inspectorPaneView = (model: Model): Html =>
@@ -1755,7 +1766,7 @@ const buildOverlayView = (
     )
 
   const submodelLabel = (tag: string): string =>
-    pipe(tag, String_.replace(/^Got/, ''), String_.replace(/Message$/, ''))
+    pipe(tag, String.replace(/^Got/, ''), String.replace(/Message$/, ''))
 
   const CHECK_ICON = 'M4.5 12.75l6 6 9-13.5'
 
@@ -1779,7 +1790,7 @@ const buildOverlayView = (
   )
 
   const filterItemLabel = (item: string): string =>
-    String_.isNonEmpty(item) ? submodelLabel(item) : 'All Messages'
+    String.isNonEmpty(item) ? submodelLabel(item) : 'All Messages'
 
   const ARROW_UP = 'M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18'
 
@@ -1920,11 +1931,11 @@ const buildOverlayView = (
     )
 
   const headerView = (model: Model): Html => {
-    const { status, maybeAction } = M.value(mode).pipe(
-      M.withReturnType<
+    const { status, maybeAction } = Match.value(mode).pipe(
+      Match.withReturnType<
         Readonly<{ status: Html; maybeAction: Option.Option<Html> }>
       >(),
-      M.when('TimeTravel', () =>
+      Match.when('TimeTravel', () =>
         model.isPaused
           ? {
               status: h.span(
@@ -1953,7 +1964,7 @@ const buildOverlayView = (
               maybeAction: Option.none(),
             },
       ),
-      M.when('Inspect', () => ({
+      Match.when('Inspect', () => ({
         status: h.span(
           [h.Class(`${statusClass} text-dt-accent`)],
           [
@@ -1973,7 +1984,7 @@ const buildOverlayView = (
           ),
         ),
       })),
-      M.exhaustive,
+      Match.exhaustive,
     )
 
     const maybeClearHistoryButton = OptionExt.when(
@@ -2040,7 +2051,7 @@ const buildOverlayView = (
     isModelChanged: boolean,
   ): Html =>
     h.keyed('li')(
-      String(absoluteIndex),
+      globalThis.String(absoluteIndex),
       [
         h.Class(clsx(ROW_BASE, { selected: isSelected })),
         h.OnClick(Message.ClickedRow({ index: absoluteIndex })),
@@ -2057,7 +2068,7 @@ const buildOverlayView = (
           [h.Class('dot-column')],
           isModelChanged ? [inlineDiffDotView] : [],
         ),
-        h.span([h.Class(indexClass)], [String(absoluteIndex + 1)]),
+        h.span([h.Class(indexClass)], [globalThis.String(absoluteIndex + 1)]),
         h.span([h.Class('text-base text-dt font-mono flex-1 truncate')], [tag]),
         h.span(
           [
@@ -2081,7 +2092,7 @@ const buildOverlayView = (
   ): Html => {
     const baseTimestamp = pipe(
       entries,
-      Array_.head,
+      Array.head,
       Option.match({
         onNone: () => 0,
         onSome: ({ timestamp }) => timestamp,
@@ -2103,9 +2114,9 @@ const buildOverlayView = (
           onSome: filterTag =>
             pipe(
               entry.submodelPath,
-              Array_.findFirstIndex(pathTag => pathTag === filterTag),
+              Array.findFirstIndex(pathTag => pathTag === filterTag),
               Option.flatMap(filterIndex =>
-                Array_.get(entry.submodelPath, Number_.increment(filterIndex)),
+                Array.get(entry.submodelPath, Number.increment(filterIndex)),
               ),
               Option.orElse(() => entry.maybeLeafTag),
               Option.getOrElse(() => entry.tag),
@@ -2121,34 +2132,38 @@ const buildOverlayView = (
       }>
     > = pipe(
       entries,
-      Array_.map((entry, arrayIndex) => ({
+      Array.map((entry, arrayIndex) => ({
         entry,
         absoluteIndex: startIndex + arrayIndex,
       })),
       isFiltered
-        ? Array_.filter(({ entry }) =>
-            Array_.contains(entry.submodelPath, maybeFilterTag.value),
+        ? Array.filter(({ entry }) =>
+            Array.contains(entry.submodelPath, maybeFilterTag.value),
           )
         : Function.identity,
     )
 
     const messageRows = pipe(
       indexedEntries,
-      Array_.map(({ entry, absoluteIndex }) => {
+      Array.map(({ entry, absoluteIndex }) => {
         const isSelected = selectedIndex === absoluteIndex
         const isPausedHere = isPaused && pausedAtIndex === absoluteIndex
         const displayTag = displayTagFor(entry)
 
-        return lazyMessageRow(String(absoluteIndex), messageRowView, [
-          displayTag,
-          absoluteIndex,
-          isSelected,
-          isPausedHere,
-          entry.timestamp - baseTimestamp,
-          entry.isModelChanged,
-        ])
+        return lazyMessageRow(
+          globalThis.String(absoluteIndex),
+          messageRowView,
+          [
+            displayTag,
+            absoluteIndex,
+            isSelected,
+            isPausedHere,
+            entry.timestamp - baseTimestamp,
+            entry.isModelChanged,
+          ],
+        )
       }),
-      Array_.reverse,
+      Array.reverse,
     )
 
     return h.ul(
@@ -2185,8 +2200,8 @@ const buildOverlayView = (
   // SCRUBBER
 
   const scrubberPositionLabel = (model: Model): string => {
-    const total = String(model.entries.length).padStart(3, '0')
-    const current = String(model.scrubberValue).padStart(3, '0')
+    const total = globalThis.String(model.entries.length).padStart(3, '0')
+    const current = globalThis.String(model.scrubberValue).padStart(3, '0')
     return `${current} / ${total}`
   }
 
@@ -2200,7 +2215,7 @@ const buildOverlayView = (
         ariaLabel: 'Session scrubber',
         getTrackRoot: () => shadow,
         formatValue: value =>
-          value === 0 ? 'init' : `Message ${String(value)}`,
+          value === 0 ? 'init' : `Message ${globalThis.String(value)}`,
         toView: attributes =>
           h.div(
             [h.Class('flex items-center gap-3 flex-1 min-w-0')],
@@ -2304,7 +2319,7 @@ const buildOverlayView = (
           }),
         ),
         h.AriaLabel(isSettingsOpen ? 'Close settings' : 'Settings'),
-        h.AriaPressed(String(isSettingsOpen)),
+        h.AriaPressed(globalThis.String(isSettingsOpen)),
         h.OnClick(Message.ClickedSettingsToggle()),
       ],
       [isSettingsOpen ? closeSettingsIconView : gearIconView],
@@ -2330,7 +2345,7 @@ const buildOverlayView = (
 
   const messagesScreenView = (model: Model): Html => {
     const maybeSubmodelFilterView = OptionExt.when(
-      Array_.isReadonlyArrayNonEmpty(model.submodelTags),
+      Array.isReadonlyArrayNonEmpty(model.submodelTags),
       submodelFilterView(model),
     )
     const maybeScrollToTopPillView = OptionExt.when(
@@ -2355,11 +2370,11 @@ const buildOverlayView = (
   }
 
   const contentView = (model: Model): Html =>
-    M.value(model.screen).pipe(
-      M.withReturnType<Html>(),
-      M.when('Messages', () => messagesScreenView(model)),
-      M.when('Settings', () => settingsScreenView(model)),
-      M.exhaustive,
+    Match.value(model.screen).pipe(
+      Match.withReturnType<Html>(),
+      Match.when('Messages', () => messagesScreenView(model)),
+      Match.when('Settings', () => settingsScreenView(model)),
+      Match.exhaustive,
     )
 
   const panelView = (model: Model): Html =>

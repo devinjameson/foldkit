@@ -1,4 +1,4 @@
-import { Array, Match as M, Option } from 'effect'
+import { Array, Match, Option } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -32,7 +32,7 @@ import {
 
 type UpdateReturn = Update.Return<Model, Message>
 
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+const withUpdateReturn = Match.withReturnType<UpdateReturn>()
 
 const applyEraser = (model: Model, x: number, y: number) => {
   const positions = getMirroredPositions(x, y, model.gridSize, model.mirrorMode)
@@ -51,9 +51,9 @@ const applyFill = (model: Model, x: number, y: number) => {
   )
 }
 
-const foldErrorDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldErrorDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Opened: () => model => ({ model }),
     Closed: () => model => ({
       model: evo(model, { maybeExportError: () => Option.none() }),
@@ -81,9 +81,9 @@ const foldErrorDialogOpen = Update.foldChildStep({
 
 const foldThemeListboxOutMessage: (
   outMessage: Listbox.OutMessage,
-) => Update.Step<Model, Message> = M.type<Listbox.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+) => Update.Step<Model, Message> = Match.type<Listbox.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => {
@@ -110,15 +110,16 @@ const foldThemeListbox = Update.foldChild({
   foldOutMessage: foldThemeListboxOutMessage,
 })
 
-const foldGridSizeConfirmDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({
-      model: evo(model, { maybePendingGridSize: () => Option.none() }),
+const foldGridSizeConfirmDialogOutMessage =
+  Match.type<Dialog.OutMessage>().pipe(
+    Match.withReturnType<Update.Step<Model, Message>>(),
+    Match.tagsExhaustive({
+      Opened: () => model => ({ model }),
+      Closed: () => model => ({
+        model: evo(model, { maybePendingGridSize: () => Option.none() }),
+      }),
     }),
-  }),
-)
+  )
 
 const foldGridSizeConfirmDialog = Update.foldChild({
   update: Dialog.update,
@@ -159,9 +160,11 @@ const selectColor = (model: Model, colorIndex: PaletteIndex): UpdateReturn => {
   return { model: nextModel, commands: [saveCanvas(nextModel)] }
 }
 
-const foldToolRadioGroupOutMessage = M.type<RadioGroup.OutMessage<Tool>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldToolRadioGroupOutMessage = Match.type<
+  RadioGroup.OutMessage<Tool>
+>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model =>
@@ -178,15 +181,16 @@ const foldToolRadioGroup = Update.foldChild({
   foldOutMessage: foldToolRadioGroupOutMessage,
 })
 
-const foldGridSizeRadioGroupOutMessage = M.type<RadioGroup.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model =>
-        requestGridSizeChange(model, Number(value)),
-  }),
-)
+const foldGridSizeRadioGroupOutMessage =
+  Match.type<RadioGroup.OutMessage>().pipe(
+    Match.withReturnType<Update.Step<Model, Message>>(),
+    Match.tagsExhaustive({
+      Selected:
+        ({ value }) =>
+        model =>
+          requestGridSizeChange(model, Number(value)),
+    }),
+  )
 
 const foldGridSizeRadioGroup = Update.foldChild({
   update: GridSizeRadioGroup.update,
@@ -197,18 +201,19 @@ const foldGridSizeRadioGroup = Update.foldChild({
   foldOutMessage: foldGridSizeRadioGroupOutMessage,
 })
 
-const foldPaletteRadioGroupOutMessage = M.type<RadioGroup.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model =>
-        selectColor(
-          model,
-          paletteIndexFromValue(value, model.selectedColorIndex),
-        ),
-  }),
-)
+const foldPaletteRadioGroupOutMessage =
+  Match.type<RadioGroup.OutMessage>().pipe(
+    Match.withReturnType<Update.Step<Model, Message>>(),
+    Match.tagsExhaustive({
+      Selected:
+        ({ value }) =>
+        model =>
+          selectColor(
+            model,
+            paletteIndexFromValue(value, model.selectedColorIndex),
+          ),
+    }),
+  )
 
 const foldPaletteRadioGroup = Update.foldChild({
   update: PaletteRadioGroup.update,
@@ -222,9 +227,9 @@ const foldPaletteRadioGroup = Update.foldChild({
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     PressedCell: ({ x, y }) =>
-      M.value(model.tool).pipe(
+      Match.value(model.tool).pipe(
         withUpdateReturn,
-        M.when('Brush', () => ({
+        Match.when('Brush', () => ({
           model: evo(model, {
             grid: () => applyBrush(model, x, y),
             undoStack: () => pushHistory(model.undoStack, model.grid),
@@ -232,7 +237,7 @@ export const update = (model: Model, message: Message) =>
             isDrawing: () => true,
           }),
         })),
-        M.when('Fill', () => {
+        Match.when('Fill', () => {
           const nextModel = evo(model, {
             grid: () => applyFill(model, x, y),
             undoStack: () => pushHistory(model.undoStack, model.grid),
@@ -240,7 +245,7 @@ export const update = (model: Model, message: Message) =>
           })
           return { model: nextModel, commands: [saveCanvas(nextModel)] }
         }),
-        M.when('Eraser', () => ({
+        Match.when('Eraser', () => ({
           model: evo(model, {
             grid: () => applyEraser(model, x, y),
             undoStack: () => pushHistory(model.undoStack, model.grid),
@@ -248,7 +253,7 @@ export const update = (model: Model, message: Message) =>
             isDrawing: () => true,
           }),
         })),
-        M.exhaustive,
+        Match.exhaustive,
       ),
 
     EnteredCell: ({ x, y }) => {
@@ -299,23 +304,23 @@ export const update = (model: Model, message: Message) =>
       foldPaletteRadioGroup(model, message),
 
     ToggledMirrorHorizontal: () => {
-      const nextMirrorMode = M.value(model.mirrorMode).pipe(
-        M.when('None', () => 'Horizontal' as const),
-        M.when('Horizontal', () => 'None' as const),
-        M.when('Vertical', () => 'Both' as const),
-        M.when('Both', () => 'Vertical' as const),
-        M.exhaustive,
+      const nextMirrorMode = Match.value(model.mirrorMode).pipe(
+        Match.when('None', () => 'Horizontal' as const),
+        Match.when('Horizontal', () => 'None' as const),
+        Match.when('Vertical', () => 'Both' as const),
+        Match.when('Both', () => 'Vertical' as const),
+        Match.exhaustive,
       )
       return { model: evo(model, { mirrorMode: () => nextMirrorMode }) }
     },
 
     ToggledMirrorVertical: () => {
-      const nextMirrorMode = M.value(model.mirrorMode).pipe(
-        M.when('None', () => 'Vertical' as const),
-        M.when('Vertical', () => 'None' as const),
-        M.when('Horizontal', () => 'Both' as const),
-        M.when('Both', () => 'Horizontal' as const),
-        M.exhaustive,
+      const nextMirrorMode = Match.value(model.mirrorMode).pipe(
+        Match.when('None', () => 'Vertical' as const),
+        Match.when('Vertical', () => 'None' as const),
+        Match.when('Horizontal', () => 'Both' as const),
+        Match.when('Both', () => 'Horizontal' as const),
+        Match.exhaustive,
       )
       return { model: evo(model, { mirrorMode: () => nextMirrorMode }) }
     },

@@ -1,4 +1,4 @@
-import { Effect, Number, Predicate, Schema as S } from 'effect'
+import { Effect, Number, Predicate, Schema } from 'effect'
 import { describe, it } from 'vitest'
 
 import { Document, __htmlBuilder, __requireDispatch } from '../html/index.js'
@@ -36,7 +36,7 @@ const readBenchFlag = (): unknown => {
 
 const isBenchEnabled = readBenchFlag() === '1'
 
-const Model = S.Struct({ count: S.Number })
+const Model = Schema.Struct({ count: Schema.Number })
 type Model = typeof Model.Type
 
 const Message = defineMessageUnion({

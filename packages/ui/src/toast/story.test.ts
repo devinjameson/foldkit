@@ -1,4 +1,4 @@
-import { Duration, Option, Schema as S } from 'effect'
+import { Duration, Option, Schema } from 'effect'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
 
@@ -15,7 +15,7 @@ import {
 // Test payload: minimal so fixtures are simple. The library is generic; these
 // tests only need to verify that lifecycle semantics work regardless of
 // payload shape.
-const TestPayload = S.Struct({ body: S.String })
+const TestPayload = Schema.Struct({ body: Schema.String })
 type TestPayload = typeof TestPayload.Type
 
 const Toast = make(TestPayload)

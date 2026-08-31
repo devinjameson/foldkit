@@ -1,10 +1,10 @@
-import { Crypto, Effect, Schema as S } from 'effect'
+import { Crypto, Effect, Schema } from 'effect'
 import { Command } from 'foldkit'
 
 import { BrowserCrypto } from '@effect/platform-browser'
 
 const SaveDraftWithId = Command.define('SaveDraftWithId', {
-  args: { body: S.String, draftId: S.String },
+  args: { body: Schema.String, draftId: Schema.String },
   messages: [Message.CompletedSaveDraftWithId],
   execute: ({ draftId }) =>
     Effect.succeed(Message.CompletedSaveDraftWithId({ draftId })),
@@ -19,7 +19,7 @@ const saveBad = (body: string) => {
 
 // ✅ Good: the runtime obtains the UUID when it executes the Command.
 const SaveDraft = Command.define('SaveDraft', {
-  args: { body: S.String },
+  args: { body: Schema.String },
   messages: [Message.CompletedSaveDraft],
   execute: ({ body: _body }) =>
     Effect.gen(function* () {

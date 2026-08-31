@@ -4,7 +4,7 @@
 
 The `File` module brings browser file APIs into the Foldkit architecture. It opens the native picker through Commands, reads contents through Effects, and exposes synchronous metadata helpers. Inline inputs and drop zones use the typed file handlers in `foldkit/html` or the FileDrop Submodel.
 
-`File.File` is both a direct alias for the browser's native `File` type and a Schema that accepts native File instances. A Model can hold one with `S.Option(File.File)`. The Schema treats the value as an opaque browser object; it validates the instance but does not turn file contents into serializable Model data.
+`File.File` is both a direct alias for the browser's native `File` type and a Schema that accepts native File instances. A Model can hold one with `Schema.Option(File.File)`. The Schema treats the value as an opaque browser object; it validates the instance but does not turn file contents into serializable Model data.
 
 ## Metadata and Reading
 

@@ -1,4 +1,4 @@
-import { Match as M } from 'effect'
+import { Match } from 'effect'
 
 import type { RenderedApplication } from './server.js'
 import {
@@ -98,8 +98,8 @@ export const toResponse = (
   result: EntryResult,
   options?: InjectIntoTemplateOptions,
 ): Response =>
-  M.value(result).pipe(
-    M.tagsExhaustive({
+  Match.value(result).pipe(
+    Match.tagsExhaustive({
       Responded: ({ response }) => response,
       Rendered: rendered => {
         const headers = new Headers(rendered.headers)

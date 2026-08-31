@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Array, Equal, HashSet, Match as M, Option, pipe } from 'effect'
+import { Array, Equal, HashSet, Match, Option, pipe } from 'effect'
 import type { ChildAttribute, Document, Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, Tabs } from '@foldkit/ui'
@@ -23,23 +23,29 @@ const StepTabs = Tabs.create<Step.Step>()
 const stepHasErrors =
   (model: Model) =>
   (step: Step.Step): boolean =>
-    M.value(step).pipe(
-      M.when('PersonalInfo', () => PersonalInfo.hasErrors(model.personalInfo)),
-      M.when('WorkHistory', () => WorkHistory.hasErrors(model.workHistory)),
-      M.when('Education', () => Education.hasErrors(model.education)),
-      M.when('Skills', () => Skills.hasErrors(model.skills)),
-      M.orElse(() => false),
+    Match.value(step).pipe(
+      Match.when('PersonalInfo', () =>
+        PersonalInfo.hasErrors(model.personalInfo),
+      ),
+      Match.when('WorkHistory', () => WorkHistory.hasErrors(model.workHistory)),
+      Match.when('Education', () => Education.hasErrors(model.education)),
+      Match.when('Skills', () => Skills.hasErrors(model.skills)),
+      Match.orElse(() => false),
     )
 
 const stepIsComplete =
   (model: Model) =>
   (step: Step.Step): boolean =>
-    M.value(step).pipe(
-      M.when('PersonalInfo', () => PersonalInfo.isComplete(model.personalInfo)),
-      M.when('WorkHistory', () => WorkHistory.isComplete(model.workHistory)),
-      M.when('Education', () => Education.isComplete(model.education)),
-      M.when('Skills', () => Skills.isComplete(model.skills)),
-      M.orElse(() => true),
+    Match.value(step).pipe(
+      Match.when('PersonalInfo', () =>
+        PersonalInfo.isComplete(model.personalInfo),
+      ),
+      Match.when('WorkHistory', () =>
+        WorkHistory.isComplete(model.workHistory),
+      ),
+      Match.when('Education', () => Education.isComplete(model.education)),
+      Match.when('Skills', () => Skills.isComplete(model.skills)),
+      Match.orElse(() => true),
     )
 
 const stepNeedsAttention =
@@ -56,8 +62,8 @@ const stepContent = (
   attentionSteps: ReadonlyArray<Step.Step>,
   h: HtmlBuilder<Message>,
 ): Html =>
-  M.value(model.currentStep).pipe(
-    M.when('PersonalInfo', () =>
+  Match.value(model.currentStep).pipe(
+    Match.when('PersonalInfo', () =>
       h.submodel({
         slotId: 'personal-info',
         model: model.personalInfo,
@@ -65,7 +71,7 @@ const stepContent = (
         toParentMessage: message => Message.GotPersonalInfoMessage({ message }),
       }),
     ),
-    M.when('WorkHistory', () =>
+    Match.when('WorkHistory', () =>
       h.submodel({
         slotId: 'work-history',
         model: model.workHistory,
@@ -73,7 +79,7 @@ const stepContent = (
         toParentMessage: message => Message.GotWorkHistoryMessage({ message }),
       }),
     ),
-    M.when('Education', () =>
+    Match.when('Education', () =>
       h.submodel({
         slotId: 'education',
         model: model.education,
@@ -81,7 +87,7 @@ const stepContent = (
         toParentMessage: message => Message.GotEducationMessage({ message }),
       }),
     ),
-    M.when('Skills', () =>
+    Match.when('Skills', () =>
       h.submodel({
         slotId: 'skills',
         model: model.skills,
@@ -89,7 +95,7 @@ const stepContent = (
         toParentMessage: message => Message.GotSkillsMessage({ message }),
       }),
     ),
-    M.when('CoverLetter', () =>
+    Match.when('CoverLetter', () =>
       h.submodel({
         slotId: 'cover-letter',
         model: model.coverLetter,
@@ -97,7 +103,7 @@ const stepContent = (
         toParentMessage: message => Message.GotCoverLetterMessage({ message }),
       }),
     ),
-    M.when('Attachments', () =>
+    Match.when('Attachments', () =>
       h.submodel({
         slotId: 'attachments',
         model: model.attachments,
@@ -105,8 +111,8 @@ const stepContent = (
         toParentMessage: message => Message.GotAttachmentsMessage({ message }),
       }),
     ),
-    M.when('Review', () => review(model, attentionSteps, h)),
-    M.exhaustive,
+    Match.when('Review', () => review(model, attentionSteps, h)),
+    Match.exhaustive,
   )
 
 const isFirstStep = (model: Model): boolean =>

@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option, Schema as S } from 'effect'
+import { Match, Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -9,15 +9,15 @@ import { evo } from 'foldkit/struct'
 
 import { RadioGroup } from '@foldkit/ui'
 
-const Plan = S.Literals(['Startup', 'Business', 'Enterprise'])
+const Plan = Schema.Literals(['Startup', 'Business', 'Enterprise'])
 type Plan = typeof Plan.Type
 
 // Add fields to your Model for the RadioGroup Submodel and the selected
 // value. The Submodel keeps private keyboard-focus state; the parent owns
 // the selection and passes it back in as selectedValue.
-const Model = S.Struct({
+const Model = Schema.Struct({
   planRadioGroup: RadioGroup.Model,
-  maybePlan: S.Option(Plan),
+  maybePlan: Schema.Option(Plan),
   // ...your other fields
 })
 type Model = typeof Model.Type
@@ -56,9 +56,11 @@ const descriptions: Record<Plan, string> = {
 // arm carries the chosen value (typed as `Plan`) and its index, and returns
 // an Update.Step. This arm is also where the parent updates its own state or
 // dispatches Commands, for example to persist the choice or price the order.
-const foldPlanRadioGroupOutMessage = M.type<RadioGroup.OutMessage<Plan>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldPlanRadioGroupOutMessage = Match.type<
+  RadioGroup.OutMessage<Plan>
+>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({ model: evo(model, { maybePlan: () => Option.some(value) }) }),

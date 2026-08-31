@@ -1,8 +1,8 @@
-import { Effect, Option, Schema as S, Stream } from 'effect'
+import { Effect, Option, Schema, Stream } from 'effect'
 import { Command, ManagedResource, Subscription } from 'foldkit'
 
 const Save = Command.define('Save', {
-  args: { id: S.String, createdAt: S.Number },
+  args: { id: Schema.String, createdAt: Schema.Number },
   messages: [CompletedSave],
   execute: () => Effect.succeed(CompletedSave()),
 })
@@ -56,7 +56,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => {
 
   return {
     clock: entry(
-      { initializedSubscriptionAt: S.Number },
+      { initializedSubscriptionAt: Schema.Number },
       {
         modelToDependencies: () => ({
           initializedSubscriptionAt: Date.now(),
@@ -69,7 +69,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => {
 
 export const managedResources = ManagedResource.make<Model, Message>()(
   entry => ({
-    connection: entry(Resource, S.Struct({}), {
+    connection: entry(Resource, Schema.Struct({}), {
       modelToMaybeRequirements: () => Option.some({ startedAt: Date.now() }),
       acquire: () => Effect.succeed(ResourceValue),
       release: () => Effect.void,

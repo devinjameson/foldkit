@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import type { EntryHandlers, Variant } from '@foldkit/ui/toast'
@@ -13,28 +13,28 @@ type Model = typeof Toast.Model.Type
 // DEMO CONTENT
 
 const variantClassName = (variant: Variant): string =>
-  M.value(variant).pipe(
-    M.when(
+  Match.value(variant).pipe(
+    Match.when(
       'Info',
       () =>
         'border-gray-300 bg-white text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white',
     ),
-    M.when(
+    Match.when(
       'Success',
       () =>
         'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-100',
     ),
-    M.when(
+    Match.when(
       'Warning',
       () =>
         'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100',
     ),
-    M.when(
+    Match.when(
       'Error',
       () =>
         'border-red-300 bg-red-50 text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-100',
     ),
-    M.exhaustive,
+    Match.exhaustive,
   )
 
 const entryClassName = 'w-80'

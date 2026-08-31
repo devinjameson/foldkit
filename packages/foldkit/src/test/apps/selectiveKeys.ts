@@ -1,4 +1,4 @@
-import { Effect, Number, Option, Schema as S } from 'effect'
+import { Effect, Number, Option, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
@@ -8,8 +8,8 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  commits: S.Number,
+export const Model = Schema.Struct({
+  commits: Schema.Number,
 })
 export type Model = typeof Model.Type
 

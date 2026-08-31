@@ -1,4 +1,4 @@
-import { Effect, Option, Schema as S } from 'effect'
+import { Effect, Option, Schema } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Runtime } from 'foldkit'
 
@@ -14,8 +14,8 @@ import { view } from './view'
 
 // FLAGS
 
-export const Flags = S.Struct({
-  maybeSavedBoard: S.Option(SavedBoard),
+export const Flags = Schema.Struct({
+  maybeSavedBoard: Schema.Option(SavedBoard),
 })
 export type Flags = typeof Flags.Type
 
@@ -24,7 +24,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
   const json = yield* Effect.fromOption(
     Option.fromNullishOr(yield* store.get(STORAGE_KEY)),
   )
-  const decoded = yield* S.decodeEffect(SavedBoardJsonString)(json)
+  const decoded = yield* Schema.decodeEffect(SavedBoardJsonString)(json)
   return Flags.make({ maybeSavedBoard: Option.some(decoded) })
 }).pipe(
   Effect.catch(() =>

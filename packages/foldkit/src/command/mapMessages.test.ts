@@ -1,12 +1,12 @@
-import { Array, Effect, Schema as S } from 'effect'
+import { Array, Effect, Schema } from 'effect'
 import { expect, expectTypeOf } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
 
 import * as Command from './index.js'
 
-const CompletedFetchNotes = S.TaggedStruct('CompletedFetchNotes', {
-  noteCount: S.Number,
+const CompletedFetchNotes = Schema.TaggedStruct('CompletedFetchNotes', {
+  noteCount: Schema.Number,
 })
 
 type ChildMessage = typeof CompletedFetchNotes.Type

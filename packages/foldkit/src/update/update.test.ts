@@ -1,4 +1,4 @@
-import { Array, Effect, HashMap, Match as M, Number, Option } from 'effect'
+import { Array, Effect, HashMap, Match, Number, Option } from 'effect'
 import type { KeyValueStore } from 'effect/unstable/persistence/KeyValueStore'
 import { expect, expectTypeOf } from 'vitest'
 
@@ -340,9 +340,9 @@ const counterUpdate = (
   model: CounterModel,
   message: CounterMessage,
 ): Return<CounterModel, CounterMessage> =>
-  M.value(message).pipe(
-    M.withReturnType<Return<CounterModel, CounterMessage>>(),
-    M.tagsExhaustive({
+  Match.value(message).pipe(
+    Match.withReturnType<Return<CounterModel, CounterMessage>>(),
+    Match.tagsExhaustive({
       BumpedValue: () => ({
         model: evo(model, { value: Number.increment }),
         commands: [saveCount],
@@ -358,11 +358,11 @@ const counterUpdateWithOutMessage = (
   model: CounterModel,
   message: CounterMessage,
 ): ReturnWithOutMessage<CounterModel, CounterMessage, ChangedValue> =>
-  M.value(message).pipe(
-    M.withReturnType<
+  Match.value(message).pipe(
+    Match.withReturnType<
       ReturnWithOutMessage<CounterModel, CounterMessage, ChangedValue>
     >(),
-    M.tagsExhaustive({
+    Match.tagsExhaustive({
       BumpedValue: () => ({
         model: evo(model, { value: Number.increment }),
         commands: [saveCount],
@@ -609,15 +609,15 @@ describe('foldChild', () => {
 
     type DashboardOutMessage = ReportedValue | ReachedThreshold
 
-    const foldThresholdCounterOutMessage = M.type<ChangedValue>().pipe(
-      M.withReturnType<
+    const foldThresholdCounterOutMessage = Match.type<ChangedValue>().pipe(
+      Match.withReturnType<
         StepWithOutMessage<
           DashboardModel,
           DashboardMessage,
           DashboardOutMessage
         >
       >(),
-      M.tagsExhaustive({
+      Match.tagsExhaustive({
         ChangedValue: () => model => ({
           model: {
             ...model,
@@ -663,11 +663,11 @@ describe('foldChild', () => {
     type ReportedValue = Readonly<{ _tag: 'ReportedValue' }>
     const ReportedValue = (): ReportedValue => ({ _tag: 'ReportedValue' })
 
-    const foldDeferringCounterOutMessage = M.type<ChangedValue>().pipe(
-      M.withReturnType<
+    const foldDeferringCounterOutMessage = Match.type<ChangedValue>().pipe(
+      Match.withReturnType<
         StepWithOutMessage<DashboardModel, DashboardMessage, ReportedValue>
       >(),
-      M.tagsExhaustive({
+      Match.tagsExhaustive({
         ChangedValue: () => model => ({
           model: {
             ...model,
@@ -704,11 +704,11 @@ describe('foldChild', () => {
       _tag: 'ReachedThreshold',
     })
 
-    const foldDerivingCounterOutMessage = M.type<ChangedValue>().pipe(
-      M.withReturnType<
+    const foldDerivingCounterOutMessage = Match.type<ChangedValue>().pipe(
+      Match.withReturnType<
         StepWithOutMessage<DashboardModel, DashboardMessage, ReachedThreshold>
       >(),
-      M.tagsExhaustive({
+      Match.tagsExhaustive({
         ChangedValue: () => model => ({
           model: {
             ...model,
@@ -792,9 +792,9 @@ const foldSettlingCounterOutMessage: (
   outMessage: ChangedValue,
   context: FoldContext<CounterMessage, DashboardMessage>,
 ) => Step<DashboardModel, DashboardMessage> = (outMessage, { liftCommand }) =>
-  M.value(outMessage).pipe(
-    M.withReturnType<Step<DashboardModel, DashboardMessage>>(),
-    M.tagsExhaustive({
+  Match.value(outMessage).pipe(
+    Match.withReturnType<Step<DashboardModel, DashboardMessage>>(),
+    Match.tagsExhaustive({
       ChangedValue: () => model => ({
         model,
         commands: [liftCommand(settleCounter)],
@@ -814,9 +814,9 @@ const dashboardUpdate = (
   model: DashboardModel,
   message: DashboardMessage,
 ): Return<DashboardModel, DashboardMessage> =>
-  M.value(message).pipe(
-    M.withReturnType<Return<DashboardModel, DashboardMessage>>(),
-    M.tagsExhaustive({
+  Match.value(message).pipe(
+    Match.withReturnType<Return<DashboardModel, DashboardMessage>>(),
+    Match.tagsExhaustive({
       GotCounterMessage: ({ message: counterMessage }) =>
         foldSettlingCounter(model, counterMessage),
       NotifiedValueChanged: () => ({ model }),
@@ -899,14 +899,15 @@ describe('foldChild fold context', () => {
   it('keeps a one-parameter foldOutMessage assignable', () => {
     const foldReportedValueOutMessage: (
       outMessage: ChangedValue,
-    ) => Step<DashboardModel, DashboardMessage> = M.type<ChangedValue>().pipe(
-      M.withReturnType<Step<DashboardModel, DashboardMessage>>(),
-      M.tagsExhaustive({
-        ChangedValue: () => model => ({
-          model: { ...model, lastReportedValue: model.counter.value },
+    ) => Step<DashboardModel, DashboardMessage> =
+      Match.type<ChangedValue>().pipe(
+        Match.withReturnType<Step<DashboardModel, DashboardMessage>>(),
+        Match.tagsExhaustive({
+          ChangedValue: () => model => ({
+            model: { ...model, lastReportedValue: model.counter.value },
+          }),
         }),
-      }),
-    )
+      )
 
     const foldReportedValue = foldChild({
       update: counterUpdateWithOutMessage,
@@ -999,11 +1000,11 @@ describe('foldChildStep', () => {
 
     type DashboardOutMessage = ReportedReset | ResetDashboard
 
-    const foldCounterResetOutMessage = M.type<ChangedValue>().pipe(
-      M.withReturnType<
+    const foldCounterResetOutMessage = Match.type<ChangedValue>().pipe(
+      Match.withReturnType<
         StepWithOutMessage<DashboardModel, DashboardMessage, ResetDashboard>
       >(),
-      M.tagsExhaustive({
+      Match.tagsExhaustive({
         ChangedValue: () => model => ({
           model,
           outMessage: ResetDashboard(),
@@ -1060,11 +1061,11 @@ describe('foldChildStep', () => {
       _tag: 'ResetDashboard',
     })
 
-    const foldCounterResetOutMessage = M.type<ChangedValue>().pipe(
-      M.withReturnType<
+    const foldCounterResetOutMessage = Match.type<ChangedValue>().pipe(
+      Match.withReturnType<
         StepWithOutMessage<DashboardModel, DashboardMessage, ResetDashboard>
       >(),
-      M.tagsExhaustive({
+      Match.tagsExhaustive({
         ChangedValue: () => model => ({
           model: { ...model, lastReportedValue: model.counter.value },
           commands: [notifyValueChanged],
@@ -1221,11 +1222,11 @@ describe('types', () => {
       Effect.as(Message.CompletedLoad()),
     ),
   }
-  const foldChangedValueWithPersistence = M.type<ChangedValue>().pipe(
-    M.withReturnType<
+  const foldChangedValueWithPersistence = Match.type<ChangedValue>().pipe(
+    Match.withReturnType<
       Step<FoldInferenceModel, TestMessage, PersistenceServices>
     >(),
-    M.tagsExhaustive({
+    Match.tagsExhaustive({
       ChangedValue: () => model => ({
         model: evo(model, { status: () => 'Saved' }),
         commands: [notifyWithPersistence],

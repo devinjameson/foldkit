@@ -1,4 +1,4 @@
-import { Effect, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Match, Option, Schema } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 import { Runtime, type Update } from 'foldkit'
 import { Url } from 'foldkit/url'
@@ -14,8 +14,8 @@ import { RedirectToDashboard, RedirectToLogin } from './update'
 
 // FLAGS
 
-export const Flags = S.Struct({
-  maybeSession: S.Option(Session),
+export const Flags = Schema.Struct({
+  maybeSession: Schema.Option(Session),
 })
 
 export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
@@ -24,7 +24,7 @@ export const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     Option.fromNullishOr(yield* store.get(SESSION_STORAGE_KEY)),
   )
 
-  const decodeSession = S.decodeEffect(SessionJsonString)
+  const decodeSession = Schema.decodeEffect(SessionJsonString)
   const session = yield* decodeSession(sessionJson)
 
   return Flags.make({ maybeSession: Option.some(session) })
@@ -40,7 +40,7 @@ export type Flags = typeof Flags.Type
 // INIT
 
 type InitReturn = Update.Return<Model, Message>
-const withInitReturn = M.withReturnType<InitReturn>()
+const withInitReturn = Match.withReturnType<InitReturn>()
 
 export const init: Runtime.RoutingApplicationInit<Model, Message, Flags> = (
   flags: Flags,
@@ -50,24 +50,24 @@ export const init: Runtime.RoutingApplicationInit<Model, Message, Flags> = (
 
   return Option.match(flags.maybeSession, {
     onNone: () =>
-      M.value(route).pipe(
+      Match.value(route).pipe(
         withInitReturn,
-        M.tag('Home', 'Login', 'NotFound', route => ({
+        Match.tag('Home', 'Login', 'NotFound', route => ({
           model: LoggedOut.init(route),
         })),
-        M.orElse(() => ({
+        Match.orElse(() => ({
           model: LoggedOut.init(AppRoute.Login()),
           commands: [RedirectToLogin()],
         })),
       ),
 
     onSome: session =>
-      M.value(route).pipe(
+      Match.value(route).pipe(
         withInitReturn,
-        M.tag('Dashboard', 'Settings', 'NotFound', route => ({
+        Match.tag('Dashboard', 'Settings', 'NotFound', route => ({
           model: LoggedIn.init(route, session),
         })),
-        M.orElse(() => ({
+        Match.orElse(() => ({
           model: LoggedIn.init(AppRoute.Dashboard(), session),
           commands: [RedirectToDashboard()],
         })),

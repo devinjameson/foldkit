@@ -1,11 +1,11 @@
 import {
-  Array as Array_,
+  Array,
   Function,
-  Match as M,
+  Match,
   Option,
   Predicate,
   Record,
-  Schema as S,
+  Schema,
 } from 'effect'
 
 import { OptionExt } from '../effectExtensions/index.js'
@@ -20,11 +20,11 @@ const ARRAY_SAMPLE = 2
 // PATH
 
 const PathResolution = defineTaggedUnion({
-  Found: { value: S.Unknown, atPath: S.String },
+  Found: { value: Schema.Unknown, atPath: Schema.String },
   NotFound: {
-    failedAt: S.String,
-    reason: S.String,
-    availableKeys: S.Array(S.String),
+    failedAt: Schema.String,
+    reason: Schema.String,
+    availableKeys: Schema.Array(Schema.String),
   },
 })
 
@@ -39,12 +39,12 @@ export type PathResolution = typeof PathResolution.Type
 const isExpandable = Predicate.isObjectOrArray
 
 const keysOf = (value: unknown): ReadonlyArray<string> =>
-  M.value(value).pipe(
-    M.when(Array.isArray, items =>
-      Array_.makeBy(items.length, index => index.toString()),
+  Match.value(value).pipe(
+    Match.when(globalThis.Array.isArray, items =>
+      Array.makeBy(items.length, index => index.toString()),
     ),
-    M.when(Predicate.isObject, Record.keys),
-    M.orElse(() => []),
+    Match.when(Predicate.isObject, Record.keys),
+    Match.orElse(() => []),
   )
 
 const segmentsOf = (path: string): ReadonlyArray<string> =>
@@ -54,14 +54,14 @@ const isRootAnchored = (path: string): boolean =>
   path === ROOT || path.startsWith(`${ROOT}${PATH_SEPARATOR}`)
 
 const descend = (parent: unknown, segment: string): Option.Option<unknown> =>
-  M.value(parent).pipe(
-    M.when(Array.isArray, array =>
+  Match.value(parent).pipe(
+    Match.when(globalThis.Array.isArray, array =>
       Option.liftPredicate(Number(segment), Number.isInteger).pipe(
-        Option.flatMap(index => Array_.get(array, index)),
+        Option.flatMap(index => Array.get(array, index)),
       ),
     ),
-    M.when(Predicate.isObject, record => Record.get(record, segment)),
-    M.orElse(() => Option.none()),
+    Match.when(Predicate.isObject, record => Record.get(record, segment)),
+    Match.orElse(() => Option.none()),
   )
 
 /** Looks up a `root.foo.bar` path in a Model snapshot. On failure, returns the
@@ -80,7 +80,7 @@ export const resolvePath = (root: unknown, path: string): PathResolution => {
     atPath: ROOT,
   })
 
-  return Array_.reduce(
+  return Array.reduce(
     segmentsOf(path),
     initial,
     (resolution, segment): PathResolution => {
@@ -125,10 +125,10 @@ const sampleArray = (
     items.length <= ARRAY_SAMPLE
       ? items
       : [
-          ...Array_.take(items, ARRAY_SAMPLE - 1),
-          ...Option.toArray(Array_.last(items)),
+          ...Array.take(items, ARRAY_SAMPLE - 1),
+          ...Option.toArray(Array.last(items)),
         ]
-  return Array_.map(sample, item => summarizeAt(item, depth + 1))
+  return Array.map(sample, item => summarizeAt(item, depth + 1))
 }
 
 const summarizeArray = (
@@ -154,11 +154,11 @@ const summarizeRecord = (
 }
 
 const summarizeAt = (value: unknown, depth: number): unknown =>
-  M.value(value).pipe(
-    M.when(Predicate.isString, truncateString),
-    M.when(Array.isArray, items => summarizeArray(items, depth)),
-    M.when(Predicate.isObject, record => summarizeRecord(record, depth)),
-    M.orElse(Function.identity),
+  Match.value(value).pipe(
+    Match.when(Predicate.isString, truncateString),
+    Match.when(globalThis.Array.isArray, items => summarizeArray(items, depth)),
+    Match.when(Predicate.isObject, record => summarizeRecord(record, depth)),
+    Match.orElse(Function.identity),
   )
 
 /**
@@ -179,7 +179,7 @@ const formatAvailableKeys = (
   keys: ReadonlyArray<string>,
 ): Option.Option<string> =>
   OptionExt.when(
-    Array_.isReadonlyArrayNonEmpty(keys),
+    Array.isReadonlyArrayNonEmpty(keys),
     `Available keys: ${keys.join(', ')}.`,
   )
 

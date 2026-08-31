@@ -1,4 +1,4 @@
-import { Duration, Option, Schema as S } from 'effect'
+import { Duration, Option, Schema } from 'effect'
 import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 
@@ -7,7 +7,7 @@ import { describe, it } from '@effect/vitest'
 import * as Animation from '../animation/index.js'
 import { type EntryHandlers, type Variant, make } from './index.js'
 
-const TestPayload = S.Struct({ body: S.String })
+const TestPayload = Schema.Struct({ body: Schema.String })
 type TestPayload = typeof TestPayload.Type
 
 const Toast = make(TestPayload)

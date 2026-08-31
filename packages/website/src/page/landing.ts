@@ -1,12 +1,5 @@
 import { clsx } from 'clsx'
-import {
-  Array,
-  Function,
-  Option,
-  Predicate,
-  String as String_,
-  pipe,
-} from 'effect'
+import { Array, Function, Option, Predicate, String, pipe } from 'effect'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { foldkitVersion } from 'virtual:landing-data'
 
@@ -1091,7 +1084,7 @@ const trustSection = (): Html =>
               trustItem('Version', `v${foldkitVersion}`),
               trustItemWithLink(
                 'Example apps',
-                String(exampleAppCount),
+                globalThis.String(exampleAppCount),
                 examplesRouter(),
               ),
               trustItemWithLink(
@@ -1173,7 +1166,7 @@ const solariHeading = (toggleCount: number): Html => {
     ],
     pipe(
       AI_HEADING_A,
-      String_.length,
+      String.length,
       Array.makeBy(Function.identity),
       Array.flatMap((characterIndex): ReadonlyArray<Html | string> => {
         const characterA = AI_HEADING_A[characterIndex]!

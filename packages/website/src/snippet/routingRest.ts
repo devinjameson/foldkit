@@ -1,10 +1,10 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { defineRouteUnion, literal, rest, slash } from 'foldkit/route'
 
 const AppRoute = defineRouteUnion({
   FilesIndex: {},
-  Files: { path: S.NonEmptyArray(S.String) },
+  Files: { path: Schema.NonEmptyArray(Schema.String) },
 })
 
 // Matches: /files

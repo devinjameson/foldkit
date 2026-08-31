@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -12,7 +12,7 @@ import { Message as AnimationMessage } from '@foldkit/ui/animation'
 
 // Add a field to your Model for the Animation Submodel. Animation tracks
 // its own visibility and lifecycle state. No need for a separate flag:
-const Model = S.Struct({
+const Model = Schema.Struct({
   animation: Animation.Model,
   // ...your other fields
 })

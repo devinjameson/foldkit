@@ -1,14 +1,14 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { defineRouteUnion, literal } from 'foldkit/route'
 
 // ROUTE
 
 export const AppRoute = defineRouteUnion({
-  Products: { searchText: S.Option(S.String) },
+  Products: { searchText: Schema.Option(Schema.String) },
   Cart: {},
   Checkout: {},
-  NotFound: { path: S.String },
+  NotFound: { path: Schema.String },
 })
 
 export type AppRoute = typeof AppRoute.Type
@@ -17,7 +17,9 @@ export type AppRoute = typeof AppRoute.Type
 
 export const productsRouter = pipe(
   Route.root,
-  Route.query(S.Struct({ searchText: S.OptionFromOptional(S.String) })),
+  Route.query(
+    Schema.Struct({ searchText: Schema.OptionFromOptional(Schema.String) }),
+  ),
   Route.mapTo(AppRoute.Products),
 )
 export const cartRouter = pipe(literal('cart'), Route.mapTo(AppRoute.Cart))

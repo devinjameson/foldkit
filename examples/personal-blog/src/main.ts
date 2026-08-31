@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { Effect, Option, Schema as S } from 'effect'
+import { Effect, Option, Schema } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -18,7 +18,7 @@ export { AppRoute } from './route'
 
 // MODEL
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   route: Route.AppRoute,
   counter: Counter.Model,
 })
@@ -45,14 +45,14 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 // COMMAND
 
 const NavigateInternal = Command.define('NavigateInternal', {
-  args: { url: S.String },
+  args: { url: Schema.String },
   messages: [Message.CompletedNavigateInternal],
   execute: ({ url }) =>
     pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
 })
 
 const LoadExternal = Command.define('LoadExternal', {
-  args: { href: S.String },
+  args: { href: Schema.String },
   messages: [Message.CompletedLoadExternal],
   execute: ({ href }) =>
     load(href).pipe(Effect.as(Message.CompletedLoadExternal())),

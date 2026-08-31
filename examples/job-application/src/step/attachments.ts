@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, Schema as S, pipe } from 'effect'
+import { Array, Match, Option, Schema, pipe } from 'effect'
 import { File, Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -7,11 +7,11 @@ import { FileDrop } from '@foldkit/ui'
 
 // MODEL
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   resumeDrop: FileDrop.Model,
-  maybeResume: S.Option(File.File),
+  maybeResume: Schema.Option(File.File),
   additionalFilesDrop: FileDrop.Model,
-  additionalFiles: S.Array(File.File),
+  additionalFiles: Schema.Array(File.File),
 })
 export type Model = typeof Model.Type
 
@@ -21,7 +21,7 @@ export const Message = defineMessageUnion({
   GotResumeDropMessage: { message: FileDrop.Message },
   GotAdditionalFilesDropMessage: { message: FileDrop.Message },
   RemovedResume: {},
-  RemovedAdditionalFile: { fileIndex: S.Number },
+  RemovedAdditionalFile: { fileIndex: Schema.Number },
 })
 
 export type Message = typeof Message.Type
@@ -37,9 +37,9 @@ export const init = (): Model => ({
 
 // UPDATE
 
-const foldResumeDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldResumeDropOutMessage = Match.type<FileDrop.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     ReceivedFiles:
       ({ files }) =>
       model => ({
@@ -65,19 +65,20 @@ const foldResumeDrop = Update.foldChild({
   foldOutMessage: foldResumeDropOutMessage,
 })
 
-const foldAdditionalFilesDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    ReceivedFiles:
-      ({ files }) =>
-      model => ({
-        model: evo(model, {
-          additionalFiles: Array.appendAll(files),
+const foldAdditionalFilesDropOutMessage =
+  Match.type<FileDrop.OutMessage>().pipe(
+    Match.withReturnType<Update.Step<Model, Message>>(),
+    Match.tagsExhaustive({
+      ReceivedFiles:
+        ({ files }) =>
+        model => ({
+          model: evo(model, {
+            additionalFiles: Array.appendAll(files),
+          }),
         }),
-      }),
-    RejectedNonFiles: () => model => ({ model }),
-  }),
-)
+      RejectedNonFiles: () => model => ({ model }),
+    }),
+  )
 
 const foldAdditionalFilesDrop = Update.foldChild({
   update: FileDrop.update,

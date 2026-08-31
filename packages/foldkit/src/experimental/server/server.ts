@@ -1,5 +1,5 @@
 import {
-  Array as Array_,
+  Array,
   Context,
   Data,
   Effect,
@@ -93,7 +93,7 @@ const normalizeVnodeChildren = (vnode: VNode): ReadonlyArray<VnodeChild> => {
   if (children === undefined) {
     return []
   }
-  const items: Array<VnodeChild> = []
+  const items: globalThis.Array<VnodeChild> = []
   let text = ''
   const flush = (): void => {
     if (text !== '') {
@@ -124,7 +124,7 @@ const normalizeVnodeChildren = (vnode: VNode): ReadonlyArray<VnodeChild> => {
 const normalizeParsedChildren = (
   node: Readonly<{ childNodes: ReadonlyArray<Parse5ChildNode> }>,
 ): ReadonlyArray<ParsedChild> => {
-  const items: Array<ParsedChild> = []
+  const items: globalThis.Array<ParsedChild> = []
   let text = ''
   const flush = (): void => {
     if (text !== '') {
@@ -238,7 +238,7 @@ const assertStructureMatches = (parsed: Parse5Element, vnode: VNode): void => {
   if (parsedChildren.length !== vnodeChildren.length) {
     throw structureMismatch(parsed)
   }
-  for (const [parsedChild, vnodeChild] of Array_.zip(
+  for (const [parsedChild, vnodeChild] of Array.zip(
     parsedChildren,
     vnodeChildren,
   )) {
@@ -397,7 +397,7 @@ const parsedChildrenAgree = (
   if (scriptedChildren.length !== unscriptedChildren.length) {
     return false
   }
-  for (const [scriptedChild, unscriptedChild] of Array_.zip(
+  for (const [scriptedChild, unscriptedChild] of Array.zip(
     scriptedChildren,
     unscriptedChildren,
   )) {
@@ -845,7 +845,7 @@ const assertViewDoesNotAuthorReservedContent = (node: VNode): void => {
 const elementsAtAndBelow = (
   element: Parse5Element,
 ): ReadonlyArray<Parse5Element> => {
-  const elements: Array<Parse5Element> = [element]
+  const elements: globalThis.Array<Parse5Element> = [element]
   for (const child of traversableContent(element).childNodes) {
     if (isParse5Element(child)) {
       elements.push(...elementsAtAndBelow(child))
@@ -863,8 +863,8 @@ const elementsCarrying = (
   )
 
 const assertNoReservedHandoffMarkers = (root: Parse5Element): void => {
-  const maybeMarker = Array_.findFirst(
-    Array_.fromIterable(RESERVED_HANDOFF_ATTRIBUTES),
+  const maybeMarker = Array.findFirst(
+    Array.fromIterable(RESERVED_HANDOFF_ATTRIBUTES),
     attributeName => elementsCarrying(root, attributeName).length > 0,
   )
   if (Option.isNone(maybeMarker)) {

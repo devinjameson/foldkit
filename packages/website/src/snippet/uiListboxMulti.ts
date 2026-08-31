@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match as M, Option, Schema as S } from 'effect'
+import { Array, Match, Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -9,7 +9,11 @@ import { evo } from 'foldkit/struct'
 
 import { Listbox } from '@foldkit/ui'
 
-const Person = S.Literals(['Michael Bluth', 'Lindsay Funke', 'Tobias Funke'])
+const Person = Schema.Literals([
+  'Michael Bluth',
+  'Lindsay Funke',
+  'Tobias Funke',
+])
 type Person = typeof Person.Type
 
 // Declare a typed multi-select Listbox once at module scope:
@@ -18,8 +22,8 @@ const PeopleListbox = Listbox.Multi.create<Person>()
 // Add a field to your Model for the Listbox.Multi Submodel, plus a field
 // for the selected values your app actually cares about. Using the
 // `Person` Schema keeps the field literal-typed end to end:
-const Model = S.Struct({
-  selectedPeople: S.Array(Person),
+const Model = Schema.Struct({
+  selectedPeople: Schema.Array(Person),
   listboxMulti: Listbox.Multi.Model,
   // ...your other fields
 })
@@ -43,9 +47,11 @@ const Message = defineMessageUnion({
 // means: for multi-select, toggle the value in and out of its array. The arm
 // returns an Update.Step over the parent Model, which already has the next
 // Listbox Model written back:
-const foldListboxMultiOutMessage = M.type<Listbox.OutMessage<Person>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldListboxMultiOutMessage = Match.type<
+  Listbox.OutMessage<Person>
+>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Selected:
       ({ value }) =>
       model => ({

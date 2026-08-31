@@ -1,4 +1,4 @@
-import { Effect, Layer, Match as M, String } from 'effect'
+import { Effect, Layer, Match, String } from 'effect'
 import { HttpClient, HttpClientResponse } from 'effect/unstable/http'
 import { Command, given, message, model, story } from 'foldkit/story'
 import { expect, test } from 'vitest'
@@ -54,10 +54,10 @@ test('failed fetch shows failure state', () => {
 test('fetchWeather returns SucceededFetchWeather with data on success', async () => {
   const mockClient = HttpClient.make(request =>
     Effect.sync(() => {
-      const responseData = M.value(request.url).pipe(
-        M.when(String.includes('geocoding'), () => mockGeocodingResponse),
-        M.when(String.includes('forecast'), () => mockWeatherResponse),
-        M.orElse(url => {
+      const responseData = Match.value(request.url).pipe(
+        Match.when(String.includes('geocoding'), () => mockGeocodingResponse),
+        Match.when(String.includes('forecast'), () => mockWeatherResponse),
+        Match.orElse(url => {
           throw new Error(`Unexpected request URL: ${url}`)
         }),
       )

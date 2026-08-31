@@ -175,4 +175,95 @@ describe('real-oxlint rule fixtures', () => {
       transform(fixedSource, { loader: 'ts' }),
     ).resolves.toBeDefined()
   })
+
+  it('renames an Effect module only when the exported name is unbound', async () => {
+    const rule = 'prefer-effect-module-names'
+    const configPath = join(workDir, `${rule}.fix.oxlintrc.json`)
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        plugins: ['typescript'],
+        jsPlugins: [
+          { name: 'foldkit', specifier: pathToFileURL(bundlePath).href },
+        ],
+        categories: { correctness: 'off' },
+        rules: { [`foldkit/${rule}`]: 'error' },
+      }),
+    )
+
+    const safeSourcePath = join(fixturesRoot, rule, 'invalid', 'imports.ts')
+    const safeTargetPath = join(workDir, `${rule}.safe-fix.ts`)
+    copyFileSync(safeSourcePath, safeTargetPath)
+    const safeDiagnostics = runOxlint({
+      oxlintBin,
+      cwd: workDir,
+      configPath,
+      target: safeTargetPath,
+      fix: true,
+    })
+    const safeSource = readFileSync(safeTargetPath, 'utf8')
+
+    expect(safeDiagnostics).toHaveLength(0)
+    expect(safeSource).not.toContain('Match as M')
+    expect(safeSource).not.toContain('Schema as S')
+    expect(safeSource).not.toContain('String as String_')
+    expect(safeSource).toContain('const Model = Schema.Struct')
+    expect(safeSource).toContain('const render = Match.value')
+    expect(safeSource).toContain('String.isNonEmpty')
+    await expect(transform(safeSource, { loader: 'ts' })).resolves.toBeDefined()
+
+    const collisionSourcePath = join(
+      fixturesRoot,
+      rule,
+      'invalid',
+      'global-collision.ts',
+    )
+    const collisionTargetPath = join(workDir, `${rule}.collision-fix.ts`)
+    copyFileSync(collisionSourcePath, collisionTargetPath)
+    const collisionDiagnostics = runOxlint({
+      oxlintBin,
+      cwd: workDir,
+      configPath,
+      target: collisionTargetPath,
+      fix: true,
+    })
+    const collisionSource = readFileSync(collisionTargetPath, 'utf8')
+
+    expect(collisionDiagnostics).toHaveLength(1)
+    expect(collisionSource).toContain('String as String_')
+    expect(collisionSource).toContain('String(42)')
+
+    for (const unsafeFixFixture of [
+      { name: 'shorthand-property', diagnosticCount: 1 },
+      { name: 'reexport', diagnosticCount: 1 },
+      { name: 'nested-shadow', diagnosticCount: 1 },
+      { name: 'commented-specifier', diagnosticCount: 1 },
+      { name: 'duplicate-target-same-import', diagnosticCount: 1 },
+      { name: 'duplicate-target-across-imports', diagnosticCount: 2 },
+    ]) {
+      const sourcePath = join(
+        fixturesRoot,
+        rule,
+        'invalid',
+        `${unsafeFixFixture.name}.ts`,
+      )
+      const targetPath = join(
+        workDir,
+        `${rule}.${unsafeFixFixture.name}-fix.ts`,
+      )
+      const originalSource = readFileSync(sourcePath, 'utf8')
+      copyFileSync(sourcePath, targetPath)
+      const diagnostics = runOxlint({
+        oxlintBin,
+        cwd: workDir,
+        configPath,
+        target: targetPath,
+        fix: true,
+      })
+      const source = readFileSync(targetPath, 'utf8')
+
+      expect(diagnostics).toHaveLength(unsafeFixFixture.diagnosticCount)
+      expect(source).toBe(originalSource)
+    }
+  })
 })

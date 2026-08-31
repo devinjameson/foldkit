@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import * as Shared from '@typing-game/shared'
@@ -16,17 +16,17 @@ export const Message = defineMessageUnion({
   CompletedClearSession: {},
   FailedJoinRoom: {},
   FailedCopyRoomId: {},
-  PressedKey: { key: S.String },
-  ChangedUserText: { value: S.String },
+  PressedKey: { key: Schema.String },
+  ChangedUserText: { value: Schema.String },
   BlurredRoomPageUsernameInput: {},
-  ChangedRoomPageUsername: { value: S.String },
+  ChangedRoomPageUsername: { value: Schema.String },
   SubmittedJoinRoomFromPage: {},
   UpdatedRoom: {
     room: Shared.Room,
-    maybePlayerProgress: S.Option(Shared.PlayerProgress),
+    maybePlayerProgress: Schema.Option(Shared.PlayerProgress),
   },
-  FailedStreamRoom: { error: S.String },
-  CompletedLoadSession: { maybeSession: S.Option(RoomPlayerSession) },
+  FailedStreamRoom: { error: Schema.String },
+  CompletedLoadSession: { maybeSession: Schema.Option(RoomPlayerSession) },
   SucceededFetchRoom: { room: Shared.Room },
   FailedFetchRoom: {},
   ClickedCopyRoomId: {},

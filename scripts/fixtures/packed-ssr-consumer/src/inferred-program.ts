@@ -1,9 +1,9 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { Runtime, type Update } from 'foldkit'
 import type { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 
-const InferredModel = S.Struct({ count: S.Number })
+const InferredModel = Schema.Struct({ count: Schema.Number })
 type InferredModel = typeof InferredModel.Type
 
 const Message = defineMessageUnion({ Ticked: {} })

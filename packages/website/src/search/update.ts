@@ -1,4 +1,4 @@
-import { Match as M, Number, Option, String } from 'effect'
+import { Match, Number, Option, String } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -17,9 +17,9 @@ import { SearchState, resultsFromState } from './model'
 
 export type UpdateReturn = Update.Return<Model, Message, PagefindService>
 
-const foldSearchDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldSearchDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     Opened: () => model => ({ model }),
     Closed: () => model => ({ model }),
   }),
@@ -140,18 +140,18 @@ export const update = (model: Model, message: Message) =>
       const results = resultsFromState(model.searchState)
       const lastIndex = results.length - 1
 
-      const nextIndex = M.value(direction).pipe(
-        M.when('Up', () =>
+      const nextIndex = Match.value(direction).pipe(
+        Match.when('Up', () =>
           model.activeResultIndex <= 0
             ? lastIndex
             : Number.decrement(model.activeResultIndex),
         ),
-        M.when('Down', () =>
+        Match.when('Down', () =>
           model.activeResultIndex >= lastIndex
             ? 0
             : Number.increment(model.activeResultIndex),
         ),
-        M.exhaustive,
+        Match.exhaustive,
       )
 
       return {

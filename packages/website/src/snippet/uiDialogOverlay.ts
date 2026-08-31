@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 
@@ -9,11 +9,11 @@ import { Combobox, Dialog } from '@foldkit/ui'
 
 // One Model field for the dialog, one for the overlay it contains, plus
 // the parent-owned selection (`City` and `CityCombobox` are the
-// `S.Literals` Schema and typed factory from the Combobox example):
-const Model = S.Struct({
+// `Schema.Literals` Schema and typed factory from the Combobox example):
+const Model = Schema.Struct({
   dialog: Dialog.Model,
   combobox: Combobox.Model,
-  maybeCity: S.Option(City),
+  maybeCity: Schema.Option(City),
   // ...your other fields
 })
 

@@ -1,12 +1,4 @@
-import {
-  Array,
-  Duration,
-  Effect,
-  Option,
-  Schema as S,
-  String,
-  pipe,
-} from 'effect'
+import { Array, Duration, Effect, Option, Schema, String, pipe } from 'effect'
 import { Command, Submodel, type Update } from 'foldkit'
 import { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -25,10 +17,10 @@ import {
 
 // DOMAIN
 
-const Person = S.Struct({
-  id: S.Number,
-  name: S.String,
-  role: S.String,
+const Person = Schema.Struct({
+  id: Schema.Number,
+  name: Schema.String,
+  role: Schema.String,
 })
 type Person = typeof Person.Type
 
@@ -83,13 +75,13 @@ export const findPerson = (id: number) =>
 
 export const SearchResults = defineTaggedUnion({
   Loading: {},
-  Loaded: { query: S.String, people: S.Array(Person) },
+  Loaded: { query: Schema.String, people: Schema.Array(Person) },
 })
 export type SearchResults = typeof SearchResults.Type
 
-export const Model = S.Struct({
-  searchInput: S.String,
-  searchHistory: S.Array(S.String),
+export const Model = Schema.Struct({
+  searchInput: Schema.String,
+  searchHistory: Schema.Array(Schema.String),
   results: SearchResults,
 })
 export type Model = typeof Model.Type
@@ -97,12 +89,12 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  ChangedSearchInput: { value: S.String },
+  ChangedSearchInput: { value: Schema.String },
   SubmittedSearch: {},
   ChangedRoute: { route: AppRoute.People },
   SucceededFetchPeople: {
-    query: S.String,
-    people: S.Array(Person),
+    query: Schema.String,
+    people: Schema.Array(Person),
   },
   CompletedPushSearchUrl: {},
 })
@@ -128,7 +120,7 @@ export const init = (route: PeopleRoute): InitReturn => {
 // COMMAND
 
 export const PushSearchUrl = Command.define('PushSearchUrl', {
-  args: { searchText: S.Option(S.String) },
+  args: { searchText: Schema.Option(Schema.String) },
   messages: [Message.CompletedPushSearchUrl],
   execute: ({ searchText }) =>
     pushUrl(peopleRouter({ searchText })).pipe(
@@ -137,7 +129,7 @@ export const PushSearchUrl = Command.define('PushSearchUrl', {
 })
 
 export const FetchPeople = Command.define('FetchPeople', {
-  args: { searchText: S.String },
+  args: { searchText: Schema.String },
   messages: [Message.SucceededFetchPeople],
   execute: ({ searchText }) =>
     Effect.sleep(SEARCH_LATENCY).pipe(

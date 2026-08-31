@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Effect, Match as M, Option, Schema as S } from 'effect'
+import { Effect, Match, Option, Schema } from 'effect'
 import { Calendar, Update } from 'foldkit'
 import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -12,14 +12,14 @@ import { DatePicker, Calendar as UiCalendar } from '@foldkit/ui'
 // Add a field to your Model for the DatePicker Submodel, plus a field the
 // parent owns for the selected date. The picker no longer stores the
 // selection; the parent holds it and passes it back in as `maybeSelectedDate`.
-const Model = S.Struct({
+const Model = Schema.Struct({
   datePickerDemo: DatePicker.Model,
-  maybeSelectedDate: S.Option(Calendar.CalendarDate),
+  maybeSelectedDate: Schema.Option(Calendar.CalendarDate),
   // ...your other fields
 })
 
 // Fetch `today` once at the app boundary via flags so init stays pure:
-const Flags = S.Struct({
+const Flags = Schema.Struct({
   today: Calendar.CalendarDate,
   // ...your other flags
 })
@@ -57,9 +57,9 @@ const Message = defineMessageUnion({
 // `ChangedViewMonth` fires when calendar navigation shifts the visible month
 // without selecting a date. Each arm returns an Update.Step over the parent
 // Model, which already has the next DatePicker Model written back:
-const foldDatePickerOutMessage = M.type<DatePicker.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldDatePickerOutMessage = Match.type<DatePicker.OutMessage>().pipe(
+  Match.withReturnType<Update.Step<Model, Message>>(),
+  Match.tagsExhaustive({
     // The child has emitted `SelectedDate`. This is where the parent lifts
     // the committed date into its own field, which is then passed back to
     // the picker as `maybeSelectedDate`, so the parent stays the single
@@ -306,8 +306,8 @@ const view = (model: Model, h: HtmlBuilder<Message>) => {
               onSome: date =>
                 h.span([], [`${date.year}-${date.month}-${date.day}`]),
             }),
-          toCalendarView: M.type<UiCalendar.CalendarAttributes>().pipe(
-            M.tagsExhaustive({
+          toCalendarView: Match.type<UiCalendar.CalendarAttributes>().pipe(
+            Match.tagsExhaustive({
               Days: days => daysView(days, h),
               Months: months => monthsView(months, h),
               Years: years => yearsView(years, h),

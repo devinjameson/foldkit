@@ -1,4 +1,4 @@
-import { Array, Option, String as String_, pipe } from 'effect'
+import { Array, Option, String, pipe } from 'effect'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -11,7 +11,7 @@ const readWebsiteFile = (relativePath: string): string =>
 
 const hexFor = (source: string, pattern: RegExp): string =>
   pipe(
-    String_.match(pattern)(source),
+    String.match(pattern)(source),
     Option.flatMap(match => Array.get(match, 1)),
     Option.getOrThrowWith(() => new Error(`No match for ${pattern}`)),
   )

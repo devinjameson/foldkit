@@ -1,4 +1,4 @@
-import { Array, Schema as S } from 'effect'
+import { Array, Schema } from 'effect'
 import type { RenderedApplication } from 'foldkit/experimental/server'
 import { mkdir, writeFile } from 'node:fs/promises'
 import nodePath, { basename, dirname, extname, resolve } from 'node:path'
@@ -65,25 +65,25 @@ export type FoldkitBuildOptions = Readonly<{
  * template. Reading it here is how a deployment target gets that right without
  * asking its user to configure it twice.
  */
-export const FoldkitBuildManifest = S.Struct({
+export const FoldkitBuildManifest = Schema.Struct({
   /**
    * The shape of this document. A consumer decodes before reading and refuses
    * a version it does not know, so a manifest written by a newer Foldkit is a
    * clear refusal rather than a field silently read as undefined.
    */
-  schemaVersion: S.Literals([1]),
+  schemaVersion: Schema.Literals([1]),
   /**
    * Where the browser build was written, as a POSIX path relative to the Vite
    * root. Relative and normalized so a manifest survives being moved with the
    * build it describes.
    */
-  client: S.String,
+  client: Schema.String,
   /** Where the server build was written, on the same terms as {@link client}. */
-  server: S.String,
+  server: Schema.String,
   /** The server build's entry file, relative to `server`. */
-  serverEntry: S.String,
+  serverEntry: Schema.String,
   /** Every path this build generated a page for, in the order it generated. */
-  prerendered: S.Array(S.String),
+  prerendered: Schema.Array(Schema.String),
 })
 
 /**
@@ -413,7 +413,7 @@ export const foldkitBuild = (
     entryFileName: string,
     prerendered: ReadonlyArray<string>,
   ): Promise<void> => {
-    const manifest = S.encodeSync(FoldkitBuildManifest)({
+    const manifest = Schema.encodeSync(FoldkitBuildManifest)({
       schemaVersion: MANIFEST_SCHEMA_VERSION,
       client: manifestPath(builder.config.root, clientOutDir),
       server: manifestPath(builder.config.root, serverOutDir),

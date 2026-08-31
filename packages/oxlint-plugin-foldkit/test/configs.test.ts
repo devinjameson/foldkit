@@ -29,6 +29,7 @@ const entryFilePatterns = [
 
 const serverRuleId = 'foldkit/no-nonportable-server-globals'
 const decisionTimeRuleId = 'foldkit/no-impure-call-at-decision-time'
+const effectModuleNamesRuleId = 'foldkit/prefer-effect-module-names'
 
 const presets = [
   { name: 'recommended', config: plugin.configs.recommended },
@@ -49,6 +50,7 @@ describe('configs', () => {
         )
         expect(config.rules['foldkit/got-submodel-message-name']).toBe('error')
         expect(config.rules[decisionTimeRuleId]).toBe('error')
+        expect(config.rules[effectModuleNamesRuleId]).toBe('error')
       })
 
       it('scopes the server portability rule to recognized server files', () => {
@@ -71,12 +73,14 @@ describe('configs', () => {
         expect(entryOverride?.rules).toEqual({ [decisionTimeRuleId]: 'off' })
       })
 
-      it('turns every foldkit rule off in test files', () => {
+      it('keeps syntax rules enabled in test files', () => {
         const testOverride = config.overrides[2]
 
         expect(testOverride?.files).toEqual(testFilePatterns)
         for (const ruleId of Object.keys(config.rules)) {
-          expect(testOverride?.rules[ruleId]).toBe('off')
+          expect(testOverride?.rules[ruleId]).toBe(
+            ruleId === effectModuleNamesRuleId ? undefined : 'off',
+          )
         }
       })
     })

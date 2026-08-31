@@ -1,4 +1,4 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { Command, Http, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
@@ -7,12 +7,12 @@ import { evo } from 'foldkit/struct'
 const Message = defineMessageUnion({
   SubmittedWeatherForm: {},
   SucceededFetchWeather: { weather: WeatherSchema },
-  FailedFetchWeather: { error: S.String },
+  FailedFetchWeather: { error: Schema.String },
 })
 
 const FetchWeather = Command.define('FetchWeather', {
   // Args schema: the per-dispatch inputs the Command needs.
-  args: { zipCode: S.String },
+  args: { zipCode: Schema.String },
   // Every Message this Command can produce.
   messages: [Message.SucceededFetchWeather, Message.FailedFetchWeather],
   // The Effect receives a typed args record.
@@ -22,7 +22,7 @@ const FetchWeather = Command.define('FetchWeather', {
       const response = yield* client.execute(
         HttpClientRequest.get(`/api/weather?zip=${zipCode}`),
       )
-      const weather = yield* S.decodeUnknownEffect(WeatherSchema)(
+      const weather = yield* Schema.decodeUnknownEffect(WeatherSchema)(
         yield* response.json,
       )
       return Message.SucceededFetchWeather({ weather })

@@ -1,4 +1,4 @@
-import { Match as M } from 'effect'
+import { Match } from 'effect'
 import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
 
 import type { Calendar } from '@foldkit/ui'
@@ -169,8 +169,8 @@ export const calendarView = <Message>(
   rootClassName: string,
   h: HtmlBuilder<Message>,
 ) =>
-  M.type<Calendar.CalendarAttributes>().pipe(
-    M.tagsExhaustive({
+  Match.type<Calendar.CalendarAttributes>().pipe(
+    Match.tagsExhaustive({
       Days: days => daysView(days, rootClassName, h),
       Months: months => monthsView(months, rootClassName, h),
       Years: years => yearsView(years, rootClassName, h),

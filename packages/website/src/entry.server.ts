@@ -1,10 +1,4 @@
-import {
-  DateTime,
-  Effect,
-  Option,
-  Record as Record_,
-  Schema as S,
-} from 'effect'
+import { DateTime, Effect, Option, Record, Schema } from 'effect'
 import { Calendar } from 'foldkit'
 import { Server } from 'foldkit/experimental'
 import { fromString as urlFromString } from 'foldkit/url'
@@ -17,7 +11,7 @@ import { exampleSlugs } from './page/example/meta'
 import { type ExampleSources, loadSourcesForSlug } from './page/example/sources'
 import { urlToAppRoute } from './route'
 
-type SourcesBySlug = Readonly<Record<string, ExampleSources>>
+type SourcesBySlug = Readonly<globalThis.Record<string, ExampleSources>>
 
 const baseFlags: Effect.Effect<typeof Flags.Type> = Effect.gen(function* () {
   const currentYear = yield* DateTime.now.pipe(
@@ -45,7 +39,9 @@ const loadApiData: Effect.Effect<ApiData> = Effect.map(
     ]),
   ),
   ([parsedApiModule, highlightsModule]) => ({
-    parsedApi: S.decodeUnknownSync(ParsedApiReference)(parsedApiModule.default),
+    parsedApi: Schema.decodeUnknownSync(ParsedApiReference)(
+      parsedApiModule.default,
+    ),
     highlights: highlightsModule.default,
   }),
 )
@@ -61,7 +57,7 @@ const loadAllExampleSources: Effect.Effect<SourcesBySlug> = Effect.map(
       ),
     ),
   ),
-  Record_.fromEntries,
+  Record.fromEntries,
 )
 
 const flagsForRequest = (
@@ -92,7 +88,7 @@ const flagsForRequest = (
       candidate => candidate._tag === 'ExampleDetail',
     ).pipe(
       Option.flatMap(({ exampleSlug }) =>
-        Record_.get(sourcesBySlug, exampleSlug),
+        Record.get(sourcesBySlug, exampleSlug),
       ),
     ),
   })
