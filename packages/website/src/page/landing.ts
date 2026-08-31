@@ -111,7 +111,7 @@ export const view = (
       trustSection(),
       glyph('[ ]'),
       includedSection(),
-      glyph('[*]'),
+      glyph('*'),
       examplesSection,
       glyph('::'),
       testingSection(renderCopyButton),
