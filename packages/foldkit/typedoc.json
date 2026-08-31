@@ -33,6 +33,7 @@
     "GatedLiftConfig",
     "GatedLiftedSubscriptions",
     "InferParsed",
+    "KeyedFunction",
     "LiftConfig",
     "LiftedSubscriptions",
     "ManagedResourceTypeId",

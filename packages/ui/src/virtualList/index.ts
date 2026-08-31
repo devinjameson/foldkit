@@ -513,7 +513,7 @@ export type ViewInputs<Item> = Readonly<{
   itemToView: (item: Item, index: number) => Html
   itemToRowHeightPx?: (item: Item, index: number) => number
   overscan?: number
-  rowElement?: TagName
+  rowElement?: Exclude<TagName, 'textarea'>
   containerClassName?: string
   containerAttributes?: ReadonlyArray<ChildAttribute>
 }>

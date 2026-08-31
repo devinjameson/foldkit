@@ -377,7 +377,7 @@ If a path above doesn't resolve, list the package's `dist/` and find the module.
 For each symbol you'll call, write one line:
 
 ```text
-h: HtmlBuilder<Message> (view parameter, supplied by the runtime): { div, input (VOID), textarea, button, Class, Href, For, Id, Role, OnClick(Message), OnInput(value=>Message), OnBlur(Message), OnSubmit(Message), keyed, empty, submodel, ... }
+h: HtmlBuilder<Message> (view parameter, supplied by the runtime): { div, input (VOID), textarea (VALUE-ONLY), button, Class, Href, For, Id, Role, OnClick(Message), OnInput(value=>Message), OnBlur(Message), OnSubmit(Message), keyed, empty, submodel, ... }
 Route.mapTo(schema)(parser): curried
 pushUrl(path): Effect<void>  // NOT fallible, no Effect.ignore needed
 urlToString(url: Url): string
@@ -409,8 +409,8 @@ Field (schema): NotValidated | Validating | Valid | Invalid(errors: NonEmpty<Rul
 
 Record these in the crib and keep them visible while generating:
 
-- **`input` and `br` and other void elements take ONLY attributes**: `input([...])`, never `input([...], [])`. `textarea` and `button` DO take children.
-- **The children argument is optional on every other element.** Omit it when there are none: `div([Class('divider')])`, not `div([Class('divider')], [])`. Attributes stay required, so `div([])` is how an element with neither is written. `keyed` is the same: `h.keyed('li')(key, [attrs])`, not `h.keyed('li')(key, [attrs], [])`.
+- **`input` and `br` and other void elements take ONLY attributes**: `input([...])`, never `input([...], [])`. `textarea` also takes attributes only; set its content with `h.Value(text)`, never children or `h.InnerHTML`. `button` takes children.
+- **The children argument is optional on elements that accept children.** Omit it when there are none: `div([Class('divider')])`, not `div([Class('divider')], [])`. Attributes stay required, so `div([])` is how an element with neither is written. `keyed` follows the element: `h.keyed('li')(key, [attrs])`, not `h.keyed('li')(key, [attrs], [])`; use `h.keyed('textarea')(key, [h.Value(text)])` without children.
 - **`UrlRequest` tags are `Internal` and `External`**, not `InternalUrl` / `ExternalUrl`.
 - **`OnClick` and `OnSubmit` take a Message directly**, not a `() => Message`. Only `OnInput` takes `(value) => Message` because it needs the input value.
 - **`keyed`, `empty` are properties on the builder `h`** the view receives as its last parameter. They are not top-level exports of `foldkit/html`.

@@ -28,6 +28,7 @@ const Message = defineMessageUnion({
 type Message = typeof Message.Type
 
 const h = __htmlBuilder<Message>()
+const unrestrictedTextarea = customElement<Message>()('textarea')
 
 describe('__hydrateVNode', () => {
   let registry: BoundaryRegistry
@@ -2164,12 +2165,11 @@ describe('__hydrateVNode', () => {
     expect(output.querySelector('#released')?.textContent).toBe('released')
   })
 
-  it('restores browser defaults after controlled content releases to InnerHTML', () => {
+  it('restores output and select defaults after controlled content releases to InnerHTML', () => {
     const controlledView = () =>
       h.form(
         [],
         [
-          h.textarea([h.Id('released-textarea'), h.Value('controlled')]),
           h.output([h.Id('released-output'), h.Value('controlled')]),
           h.select(
             [h.Id('released-select'), h.Value('b')],
@@ -2181,10 +2181,6 @@ describe('__hydrateVNode', () => {
       h.form(
         [],
         [
-          h.textarea([
-            h.Id('released-textarea'),
-            h.InnerHTML('textarea default'),
-          ]),
           h.output([
             h.Id('released-output'),
             h.InnerHTML('<span id="output-child">output default</span>'),
@@ -2205,12 +2201,8 @@ describe('__hydrateVNode', () => {
 
     buildView(() => patch(controlled, requireVNode(releasedView())))
 
-    const textarea =
-      document.querySelector<HTMLTextAreaElement>('#released-textarea')
     const output = document.querySelector<HTMLOutputElement>('#released-output')
     const select = document.querySelector<HTMLSelectElement>('#released-select')
-    expect(textarea?.value).toBe('textarea default')
-    expect(textarea?.defaultValue).toBe('textarea default')
     expect(output?.querySelector('#output-child')?.textContent).toBe(
       'output default',
     )
@@ -2599,8 +2591,8 @@ describe('__hydrateVNode', () => {
     expect(root.getAttribute('value')).toBeNull()
   })
 
-  it('hydrates an uncontrolled textarea preserving its server content', () => {
-    const view = () => h.textarea([], ['default text'])
+  it('hydrates an internally built textarea preserving its server content', () => {
+    const view = () => unrestrictedTextarea([], ['default text'])
     const root = mountServerHtml(serializeHydratable(buildView(view)))
     if (!(root instanceof HTMLTextAreaElement)) {
       throw new Error('expected a textarea root')
