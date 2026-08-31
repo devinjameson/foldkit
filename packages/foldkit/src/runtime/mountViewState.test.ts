@@ -15,7 +15,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DevToolsStore } from '../devTools/store.js'
 import { INIT_INDEX, latestEntryIndex } from '../devTools/store.js'
-import { type Html, Prop, __htmlBuilder, createLazy } from '../html/index.js'
+import {
+  type Html,
+  Prop,
+  __htmlBuilder,
+  createLazy,
+  defineView,
+} from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import * as Mount from '../mount/index.js'
 import { evo } from '../struct/index.js'
@@ -30,6 +36,8 @@ import {
 const Message = defineMessageUnion({
   CompletedMountEditor: {},
   EditedFromMount: {},
+  EditedEntityFromMount: { entityId: S.Number },
+  GotChildMountResult: { ownerId: S.Number },
   Ticked: {},
   ShowedEditor: {},
   HidEditor: {},
@@ -37,6 +45,14 @@ const Message = defineMessageUnion({
 type Message = typeof Message.Type
 type EditorMessage =
   typeof Message.CompletedMountEditor.Type | typeof Message.EditedFromMount.Type
+
+const ChildMessage = defineMessageUnion({
+  CompletedChildMount: {},
+})
+type ChildMessage = typeof ChildMessage.Type
+
+const ChildModel = S.Struct({})
+type ChildModel = typeof ChildModel.Type
 
 const Model = S.Struct({
   mountEditCount: S.Number,
@@ -57,6 +73,8 @@ const update = (model: Model, message: Message) =>
     EditedFromMount: () => ({
       model: evo(model, { mountEditCount: count => count + 1 }),
     }),
+    EditedEntityFromMount: () => ({ model }),
+    GotChildMountResult: () => ({ model }),
     Ticked: () => ({
       model: evo(model, { tickCount: count => count + 1 }),
     }),
@@ -140,7 +158,7 @@ afterEach(() => {
 })
 
 describe('Mount view-state awareness', () => {
-  it('keeps a surviving Mount alive, gates its Messages, and leaves Subscriptions live while the view is paused', async () => {
+  it('keeps a surviving Mount alive, lets it become read-only, and leaves Subscriptions live while the view is paused', async () => {
     const subscriptionMessages = await Effect.runPromise(
       PubSub.unbounded<Message>(),
     )
@@ -153,6 +171,7 @@ describe('Mount view-state awareness', () => {
     const processedTags: Array<Message['_tag']> = []
     let acquireCount = 0
     let releaseCount = 0
+    let isEditorEditable = true
     let emitMountMessage: (message: EditorMessage) => void = Function.constVoid
 
     const MountEditor = Mount.defineStream('MountEditor', {
@@ -163,7 +182,11 @@ describe('Mount view-state awareness', () => {
             yield* Effect.acquireRelease(
               Effect.sync(() => {
                 acquireCount += 1
-                emitMountMessage = message => Queue.offerUnsafe(queue, message)
+                emitMountMessage = message => {
+                  if (isEditorEditable) {
+                    Queue.offerUnsafe(queue, message)
+                  }
+                }
                 return element
               }),
               mountedElement =>
@@ -177,6 +200,7 @@ describe('Mount view-state awareness', () => {
               Stream.runForEach(viewState =>
                 Effect.sync(() => {
                   observedViewStates.push(viewState)
+                  isEditorEditable = viewState === 'Live'
                   element.toggleAttribute(
                     'data-readonly',
                     viewState === 'Paused',
@@ -200,7 +224,7 @@ describe('Mount view-state awareness', () => {
     const runtime = makeElement({
       Model,
       init: () => ({ model: initialModel(true) }),
-      update: (model, message) => {
+      update: (model: Model, message: Message) => {
         processedTags.push(message._tag)
         return update(model, message)
       },
@@ -270,6 +294,262 @@ describe('Mount view-state awareness', () => {
     await vi.waitFor(() => {
       expect(releaseCount).toBe(1)
     })
+  })
+
+  it('delivers a live Mount result that completes while a historical view is paused', async () => {
+    const completedMount = await Effect.runPromise(
+      Queue.unbounded<typeof Message.CompletedMountEditor.Type>(),
+    )
+    const observedViewStates: Array<Mount.ViewState> = []
+    const processedTags: Array<Message['_tag']> = []
+
+    const MountEditor = Mount.define('MountEditor', {
+      messages: [Message.CompletedMountEditor],
+      execute: ({ viewStateChanges }) =>
+        Effect.gen(function* () {
+          yield* viewStateChanges.pipe(
+            Stream.runForEach(viewState =>
+              Effect.sync(() => observedViewStates.push(viewState)),
+            ),
+            Effect.forkScoped,
+          )
+          return yield* Queue.take(completedMount)
+        }),
+    })
+
+    let maybeStore: DevToolsStore | null = null
+    __setDevToolsOverlay(store => {
+      maybeStore = store
+      return Effect.void
+    })
+
+    const runtime = makeElement({
+      Model,
+      init: () => ({ model: initialModel(true) }),
+      update: (model: Model, message: Message) => {
+        processedTags.push(message._tag)
+        return update(model, message)
+      },
+      view: model => modelView(model, MountEditor()),
+      container,
+      devTools: { show: 'Always', keyframeInterval: 1 },
+    })
+    const runtimeFiber = Effect.runFork(runtime.start())
+
+    try {
+      await vi.waitFor(() => {
+        expect(maybeStore).not.toBeNull()
+        expect(observedViewStates).toEqual(['Live'])
+      })
+      const store = requireDevToolsStore(maybeStore)
+
+      await Effect.runPromise(store.jumpTo(INIT_INDEX))
+      await vi.waitFor(() => {
+        expect(observedViewStates).toEqual(['Live', 'Paused'])
+      })
+
+      Queue.offerUnsafe(completedMount, Message.CompletedMountEditor())
+
+      await vi.waitFor(() => {
+        expect(processedTags).toContain('CompletedMountEditor')
+      })
+      const state = await Effect.runPromise(SubscriptionRef.get(store.stateRef))
+      expect(state.isPaused).toBe(true)
+      expect(observedViewStates).toEqual(['Live', 'Paused'])
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+    }
+  })
+
+  it('keeps a live Mount bound to the Submodel wrapper from its acquisition render', async () => {
+    const subscriptionMessages = await Effect.runPromise(
+      PubSub.unbounded<Message>(),
+    )
+    const subscriptions = Subscription.make<Model, Message>()(() => ({
+      testMessages: Subscription.persistent(
+        Stream.fromPubSub(subscriptionMessages),
+      ),
+    }))
+    const processedMessages: Array<Message> = []
+    const emitters: Array<() => void> = []
+
+    const MountChildEditor = Mount.defineStream('MountChildEditor', {
+      messages: [ChildMessage.CompletedChildMount],
+      execute: () =>
+        Stream.callback<typeof ChildMessage.CompletedChildMount.Type>(queue =>
+          Effect.sync(() => {
+            emitters.push(() =>
+              Queue.offerUnsafe(queue, ChildMessage.CompletedChildMount()),
+            )
+          }),
+        ),
+    })
+    const childH = __htmlBuilder<ChildMessage>()
+    const lazyChild = createLazy()
+    const renderChildEditor = () =>
+      childH.div([childH.Id('editor'), childH.OnMount(MountChildEditor())])
+    const childView = defineView<ChildModel, ChildMessage>(() =>
+      lazyChild(renderChildEditor, []),
+    )
+
+    let maybeStore: DevToolsStore | null = null
+    __setDevToolsOverlay(store => {
+      maybeStore = store
+      return Effect.void
+    })
+
+    const runtime = makeElement({
+      Model,
+      init: () => ({ model: initialModel(true) }),
+      update: (model, message) => {
+        processedMessages.push(message)
+        return update(model, message)
+      },
+      view: model =>
+        h.div(
+          [],
+          [
+            h.button([h.OnClick(Message.ShowedEditor())], ['show']),
+            h.button([h.OnClick(Message.HidEditor())], ['hide']),
+            ...(model.isEditorShown
+              ? [
+                  h.submodel({
+                    slotId: 'editor',
+                    model: {},
+                    view: childView,
+                    toParentMessage: () =>
+                      Message.GotChildMountResult({
+                        ownerId: model.tickCount,
+                      }),
+                  }),
+                ]
+              : []),
+          ],
+        ),
+      container,
+      subscriptions,
+      devTools: { show: 'Always', keyframeInterval: 1 },
+    })
+    const runtimeFiber = Effect.runFork(runtime.start())
+
+    try {
+      await vi.waitFor(() => {
+        expect(maybeStore).not.toBeNull()
+        expect(emitters).toHaveLength(1)
+      })
+      const store = requireDevToolsStore(maybeStore)
+
+      clickButton('hide')
+      await vi.waitFor(() => {
+        expect(document.querySelector('#editor')).toBeNull()
+      })
+      PubSub.publishUnsafe(subscriptionMessages, Message.Ticked())
+      await vi.waitFor(() => {
+        expect(processedMessages).toContainEqual(Message.Ticked())
+      })
+      clickButton('show')
+      await vi.waitFor(() => {
+        expect(emitters).toHaveLength(2)
+      })
+      const liveEditor = requireElement('#editor')
+      const maybeLiveEmitter = Array_.last(emitters)
+      if (Option.isNone(maybeLiveEmitter)) {
+        throw new Error('Expected the live Mount emitter')
+      }
+
+      await Effect.runPromise(store.jumpTo(INIT_INDEX))
+      expect(requireElement('#editor')).toBe(liveEditor)
+
+      maybeLiveEmitter.value()
+      await vi.waitFor(() => {
+        expect(processedMessages).toContainEqual(
+          Message.GotChildMountResult({ ownerId: 1 }),
+        )
+      })
+      expect(processedMessages).not.toContainEqual(
+        Message.GotChildMountResult({ ownerId: 0 }),
+      )
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+    }
+  })
+
+  it('keeps live Mount dispatch available when resume waits for an animation frame', async () => {
+    const observedViewStates: Array<Mount.ViewState> = []
+    const processedTags: Array<Message['_tag']> = []
+    let emitMountMessage: () => void = Function.constVoid
+
+    const MountEditor = Mount.defineStream('MountEditor', {
+      messages: [Message.EditedFromMount],
+      execute: ({ viewStateChanges }) =>
+        Stream.callback<typeof Message.EditedFromMount.Type>(queue =>
+          Effect.gen(function* () {
+            emitMountMessage = () =>
+              Queue.offerUnsafe(queue, Message.EditedFromMount())
+            yield* viewStateChanges.pipe(
+              Stream.runForEach(viewState =>
+                Effect.sync(() => observedViewStates.push(viewState)),
+              ),
+              Effect.forkScoped,
+            )
+            return yield* Effect.never
+          }),
+        ),
+    })
+
+    let maybeStore: DevToolsStore | null = null
+    __setDevToolsOverlay(store => {
+      maybeStore = store
+      return Effect.void
+    })
+
+    const runtime = makeElement({
+      Model,
+      init: () => ({ model: initialModel(true) }),
+      update: (model: Model, message: Message) => {
+        processedTags.push(message._tag)
+        return update(model, message)
+      },
+      view: model => modelView(model, MountEditor()),
+      container,
+      devTools: { show: 'Always', keyframeInterval: 1 },
+    })
+    const runtimeFiber = Effect.runFork(runtime.start())
+
+    try {
+      await vi.waitFor(() => {
+        expect(maybeStore).not.toBeNull()
+        expect(observedViewStates).toEqual(['Live'])
+      })
+      const store = requireDevToolsStore(maybeStore)
+
+      await Effect.runPromise(store.jumpTo(INIT_INDEX))
+      await vi.waitFor(() => {
+        expect(observedViewStates).toEqual(['Live', 'Paused'])
+      })
+
+      const requestAnimationFrameSpy = vi
+        .spyOn(window, 'requestAnimationFrame')
+        .mockImplementation(() => 1)
+      try {
+        await Effect.runPromise(store.resume)
+        const resumedState = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        expect(resumedState.isPaused).toBe(false)
+        expect(observedViewStates).toEqual(['Live', 'Paused'])
+
+        emitMountMessage()
+        await vi.waitFor(() => {
+          expect(processedTags).toContain('EditedFromMount')
+        })
+        expect(observedViewStates).toEqual(['Live', 'Paused'])
+      } finally {
+        requestAnimationFrameSpy.mockRestore()
+      }
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+    }
   })
 
   it('keeps a replay-inserted Mount paused and suppresses its result', async () => {
@@ -385,6 +665,129 @@ describe('Mount view-state awareness', () => {
     await vi.waitFor(() => {
       expect(releaseCount).toBe(2)
     })
+  })
+
+  it('keeps a replay-created Mount from dispatching stale args after resume reuses its element', async () => {
+    const subscriptionMessages = await Effect.runPromise(
+      PubSub.unbounded<Message>(),
+    )
+    const subscriptions = Subscription.make<Model, Message>()(() => ({
+      testMessages: Subscription.persistent(
+        Stream.fromPubSub(subscriptionMessages),
+      ),
+    }))
+    const processedMessages: Array<Message> = []
+    const acquisitions: Array<
+      Readonly<{
+        entityId: number
+        observedViewStates: Array<Mount.ViewState>
+        emit: () => void
+      }>
+    > = []
+
+    const MountEditor = Mount.defineStream('MountEditor', {
+      args: { entityId: S.Number },
+      messages: [Message.EditedEntityFromMount],
+      execute: ({ entityId, viewStateChanges }) =>
+        Stream.callback<typeof Message.EditedEntityFromMount.Type>(queue =>
+          Effect.gen(function* () {
+            const observedViewStates: Array<Mount.ViewState> = []
+            acquisitions.push({
+              entityId,
+              observedViewStates,
+              emit: () =>
+                Queue.offerUnsafe(
+                  queue,
+                  Message.EditedEntityFromMount({ entityId }),
+                ),
+            })
+            yield* viewStateChanges.pipe(
+              Stream.runForEach(viewState =>
+                Effect.sync(() => observedViewStates.push(viewState)),
+              ),
+              Effect.forkScoped,
+            )
+            return yield* Effect.never
+          }),
+        ),
+    })
+
+    let maybeStore: DevToolsStore | null = null
+    __setDevToolsOverlay(store => {
+      maybeStore = store
+      return Effect.void
+    })
+
+    const runtime = makeElement({
+      Model,
+      init: () => ({ model: initialModel(true) }),
+      update: (model, message) => {
+        processedMessages.push(message)
+        return update(model, message)
+      },
+      view: model =>
+        modelView(
+          model,
+          MountEditor({
+            entityId: model.tickCount,
+          }),
+        ),
+      subscriptions,
+      container,
+      devTools: { show: 'Always', keyframeInterval: 1 },
+    })
+    const runtimeFiber = Effect.runFork(runtime.start())
+
+    try {
+      await vi.waitFor(() => {
+        expect(maybeStore).not.toBeNull()
+        expect(acquisitions).toHaveLength(1)
+      })
+      const store = requireDevToolsStore(maybeStore)
+
+      clickButton('hide')
+      await vi.waitFor(() => {
+        expect(document.querySelector('#editor')).toBeNull()
+      })
+      PubSub.publishUnsafe(subscriptionMessages, Message.Ticked())
+      await vi.waitFor(() => {
+        expect(processedMessages).toContainEqual(Message.Ticked())
+      })
+
+      await Effect.runPromise(store.jumpTo(INIT_INDEX))
+      await vi.waitFor(() => {
+        expect(acquisitions).toHaveLength(2)
+      })
+      const maybeReplayAcquisition = Array_.last(acquisitions)
+      if (Option.isNone(maybeReplayAcquisition)) {
+        throw new Error('Expected the replay to acquire a Mount')
+      }
+      const replayAcquisition = maybeReplayAcquisition.value
+      expect(replayAcquisition.entityId).toBe(0)
+      expect(replayAcquisition.observedViewStates).toEqual(['Paused'])
+      const replayEditor = requireElement('#editor')
+
+      PubSub.publishUnsafe(subscriptionMessages, Message.ShowedEditor())
+      await vi.waitFor(() => {
+        expect(processedMessages).toContainEqual(Message.ShowedEditor())
+      })
+
+      await Effect.runPromise(store.resume)
+      await vi.waitFor(() => {
+        expect(replayAcquisition.observedViewStates).toEqual(['Paused', 'Live'])
+      })
+      expect(requireElement('#editor')).toBe(replayEditor)
+      expect(acquisitions).toHaveLength(2)
+
+      replayAcquisition.emit()
+      await waitForMountEmission()
+
+      expect(processedMessages).not.toContainEqual(
+        Message.EditedEntityFromMount({ entityId: 0 }),
+      )
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+    }
   })
 
   it('delivers a result from a Mount inserted by the live resume patch', async () => {

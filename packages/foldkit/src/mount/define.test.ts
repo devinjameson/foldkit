@@ -27,6 +27,16 @@ const measuredWidth = (element: Element): number =>
 // args field named `element` or `viewStateChanges` ever stops being an error at
 // the definition site.
 if (false) {
+  const wrapWithoutViewState = <Message>(
+    action: Mount.MountAction<Message>,
+  ): Mount.MountAction<Message> => ({
+    ...action,
+    f: element =>
+      // @ts-expect-error MountAction wrappers must forward the required view-state Stream
+      action.f(element),
+  })
+  void wrapWithoutViewState
+
   Mount.define('MeasurePanel', {
     // @ts-expect-error `element` names the live element execute receives, so an arg cannot claim it
     args: {
@@ -80,7 +90,9 @@ describe('Mount.define defers its execute body', () => {
       const action = MeasurePanel({ panelId: 'panel' })
       expect(bodyRunCount).toBe(0)
 
-      const maybeMessage = yield* Stream.runHead(action.f(panelElement()))
+      const maybeMessage = yield* Stream.runHead(
+        action.f(panelElement(), Mount.liveViewStateChanges),
+      )
 
       expect(bodyRunCount).toBe(1)
       expect(maybeMessage).toStrictEqual(
@@ -159,7 +171,9 @@ describe('Mount.defineStream defers its execute body', () => {
       const action = WatchPanelScroll({ initialScroll: 8 })
       expect(bodyRunCount).toBe(0)
 
-      const maybeMessage = yield* Stream.runHead(action.f(panelElement()))
+      const maybeMessage = yield* Stream.runHead(
+        action.f(panelElement(), Mount.liveViewStateChanges),
+      )
 
       expect(bodyRunCount).toBe(1)
       expect(maybeMessage).toStrictEqual(
@@ -186,7 +200,7 @@ describe('Mount.defineStream defers its execute body', () => {
     expect(bodyRunCount).toBe(0)
   })
 
-  it.effect('keeps the fallback view-state Stream open after Live', () =>
+  it.effect('keeps the live-only view-state Stream open after Live', () =>
     Effect.gen(function* () {
       const observedViewStates: Array<Mount.ViewState> = []
 
@@ -202,7 +216,7 @@ describe('Mount.defineStream defers its execute body', () => {
       })
 
       const fiber = yield* WatchViewState()
-        .f(panelElement())
+        .f(panelElement(), Mount.liveViewStateChanges)
         .pipe(Stream.runCollect, Effect.forkChild)
 
       yield* Effect.yieldNow

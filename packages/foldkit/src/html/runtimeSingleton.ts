@@ -1,6 +1,5 @@
-import { Context, Option } from 'effect'
+import { Context } from 'effect'
 
-import { MountRuntime } from '../mount/index.js'
 import {
   type BoundaryId,
   type BoundaryRegistry,
@@ -13,6 +12,11 @@ import {
 
 /** Synchronous message dispatcher provided to view-time element constructors. */
 export type DispatchSync = (message: unknown) => void
+
+/** Resolves a Submodel boundary's current wrapping chain, innermost first. */
+export type BoundaryMapperResolver = () => ReadonlyArray<
+  (message: unknown) => unknown
+>
 
 export type Frame = Readonly<{
   outerDispatch: DispatchSync
@@ -53,14 +57,9 @@ export const setRuntime = (
   runtimeContext: Context.Context<never>,
   boundaryRegistry: BoundaryRegistry = createBoundaryRegistry(),
 ): void => {
-  const maybeMountRuntime = Context.getOption(runtimeContext, MountRuntime)
-  const mountOuterDispatch = Option.match(maybeMountRuntime, {
-    onNone: () => dispatch,
-    onSome: mountRuntime => mountRuntime.dispatch,
-  })
   stack.push({
     outerDispatch: dispatch,
-    mountOuterDispatch,
+    mountOuterDispatch: dispatch,
     runtimeContext,
     boundaryRegistry,
     boundaryId: ROOT_BOUNDARY,
@@ -136,16 +135,13 @@ export const requireDispatch = (): DispatchSync => {
   )
 }
 
-/** Returns the current boundary's dispatcher for Mount results. The runtime
- *  supplies a live root dispatcher that drops results while a historical view
- *  owns the DOM. Renderers without that service use the ordinary dispatcher. */
+/** Returns the render-owned root dispatcher for Mount results. A live render
+ *  supplies live dispatch, while a historical render supplies permanent
+ *  no-op dispatch. `OnMount` combines it with the current boundary mapper
+ *  snapshot when the Mount is acquired, so neither half of its dispatch path
+ *  can change during later renders. */
 export const requireMountDispatch = (): DispatchSync => {
-  const frame = requireFrame()
-  return getOrCreateBoundaryDispatch(
-    frame.boundaryRegistry,
-    frame.mountOuterDispatch,
-    frame.boundaryId,
-  )
+  return requireFrame().mountOuterDispatch
 }
 
 /** A function that, given a message, resolves it through the current
@@ -170,10 +166,10 @@ export const requireUnmountResolver = (): UnmountResolver => {
 
 /** Returns the current frame's Submodel wrapping chain (innermost first), or an
  *  empty array at the root boundary. `OnMount` calls this at build time to
- *  snapshot the lift a Submodel-embedded mount's result travels through in
- *  production (via `ctx.mountDispatch`), so the Scene test harness can replay it
- *  when the mount is resolved. Returns `[]` when there is no active frame,
- *  mirroring the lazy tolerance of handler-free Html built outside a render. */
+ *  snapshot the lift a Submodel-embedded Mount's result travels through in
+ *  production, and the Scene test harness replays the same chain when the Mount
+ *  is resolved. Returns `[]` when there is no active frame, mirroring the lazy
+ *  tolerance of handler-free Html built outside a render. */
 export const requireBoundaryMappers = (): ReadonlyArray<
   (message: unknown) => unknown
 > => {
@@ -182,6 +178,15 @@ export const requireBoundaryMappers = (): ReadonlyArray<
     return []
   }
   return boundaryMappers(frame.boundaryRegistry, frame.boundaryId)
+}
+
+/** Returns a resolver bound to the current frame's Submodel boundary. Mounts
+ *  invoke it from their insert hook so a cached VNode snapshots the mapper
+ *  chain from the render that actually acquires it, rather than the earlier
+ *  render that built the cached VNode. */
+export const requireBoundaryMapperResolver = (): BoundaryMapperResolver => {
+  const frame = requireFrame()
+  return () => boundaryMappers(frame.boundaryRegistry, frame.boundaryId)
 }
 
 /** Returns the current runtime Effect Context, used by Mount integrations

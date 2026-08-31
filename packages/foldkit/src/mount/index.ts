@@ -32,12 +32,11 @@ export const ViewState = Schema.Literals(['Live', 'Paused'])
 export type ViewState = typeof ViewState.Type
 
 /** @internal Runtime state used by `OnMount` to supply
- *  `viewStateChanges` and route Mount Messages through the live-view gate. */
+ *  `viewStateChanges`. */
 export class MountRuntime extends Context.Service<
   MountRuntime,
   {
     readonly viewStateChanges: Stream.Stream<ViewState>
-    readonly dispatch: (message: unknown) => void
   }
 >()('@foldkit/MountRuntime') {}
 
@@ -52,11 +51,12 @@ export type MountDefinitionTypeId = typeof MountDefinitionTypeId
 
 /** A named, type-constrained per-element side effect, optionally carrying the
  *  args used to construct it. The runtime invokes `f` with the live `Element`
- *  and the view-state Stream when the element mounts, and dispatches each
- *  Message emitted by the returned Stream while the rendered view is live.
- *  The Stream's scope is tied to the element's lifetime: when the element
- *  unmounts, the runtime interrupts the fiber, which closes the Stream's scope
- *  and runs any registered `acquireRelease` finalizers.
+ *  and required view-state Stream when the element mounts. A Mount acquired by
+ *  a live render keeps live dispatch, while one acquired by a historical
+ *  render keeps no-op dispatch. The Stream's scope is tied to the element's
+ *  lifetime: when the element unmounts, the runtime interrupts the fiber,
+ *  which closes the Stream's scope and runs any registered `acquireRelease`
+ *  finalizers.
  *
  *  Authors don't construct this shape directly. `Mount.define` builds it from
  *  an `execute` returning `Effect<Message>` for the one-shot case; only
@@ -67,7 +67,7 @@ export type MountAction<Message, E = never> = Readonly<{
   args?: Record<string, unknown>
   f: (
     element: Element,
-    viewStateChanges?: Stream.Stream<ViewState>,
+    viewStateChanges: Stream.Stream<ViewState>,
   ) => Stream.Stream<Message, E>
 }>
 
@@ -79,7 +79,7 @@ export interface MountDefinitionNoArgs<Name extends string, ResultMessage> {
     name: Name
     f: (
       element: Element,
-      viewStateChanges?: Stream.Stream<ViewState>,
+      viewStateChanges: Stream.Stream<ViewState>,
     ) => Stream.Stream<ResultMessage>
   }>
 }
@@ -97,7 +97,7 @@ export interface MountDefinitionWithArgs<
     args: Schema.Schema.Type<Schema.Struct<Fields>>
     f: (
       element: Element,
-      viewStateChanges?: Stream.Stream<ViewState>,
+      viewStateChanges: Stream.Stream<ViewState>,
     ) => Stream.Stream<ResultMessage>
   }>
 }
@@ -160,10 +160,6 @@ export const liveViewStateChanges: Stream.Stream<ViewState> = Stream.concat(
   Stream.never,
 )
 
-const resolveViewStateChanges = (
-  viewStateChanges: Stream.Stream<ViewState> | undefined,
-): Stream.Stream<ViewState> => viewStateChanges ?? liveViewStateChanges
-
 const wrapEffectAsStream =
   <Message>(
     toEffect: (
@@ -173,14 +169,11 @@ const wrapEffectAsStream =
   ) =>
   (
     element: Element,
-    viewStateChanges?: Stream.Stream<ViewState>,
+    viewStateChanges: Stream.Stream<ViewState>,
   ): Stream.Stream<Message> =>
     Stream.callback<Message>(queue =>
       Effect.gen(function* () {
-        const message = yield* toEffect(
-          element,
-          resolveViewStateChanges(viewStateChanges),
-        )
+        const message = yield* toEffect(element, viewStateChanges)
         Queue.offerUnsafe(queue, message)
         return yield* Effect.never
       }),
@@ -209,9 +202,11 @@ const wrapEffectAsStream =
  * each subscriber, followed by changes. Time travel pauses the rendered view,
  * not the live application. Use this Stream to make an imperative integration
  * read-only while historical DOM is installed. A surviving Mount stays
- * acquired throughout pause and resume, and its result Messages are suppressed
- * while paused. The Stream stays open for the Mount's lifetime. When time
- * travel is unavailable, it emits only `Live`.
+ * acquired throughout pause and resume. Its live async work and external
+ * event sources also continue, so the integration must use the Stream to stop
+ * DOM-derived interaction while paused. Mounts acquired by a historical
+ * render cannot dispatch to the live Model. The Stream stays open for the
+ * Mount's lifetime. When time travel is unavailable, it emits only `Live`.
  *
  * Cleanup composes via `Effect.acquireRelease` inside the Effect: registered
  * finalizers run when the element unmounts. The Mount's scope stays open
@@ -398,9 +393,12 @@ export function define(name: string, config: DefineConfig): unknown {
  * `viewStateChanges` has the same semantics as in `Mount.define`: it emits the
  * current `Live | Paused` state immediately, keeps a surviving Mount acquired,
  * and returns to `Live` only after the latest live view has been patched back
- * into the DOM. Messages from the returned Stream are suppressed while the
- * historical view is paused. The state Stream stays open for the Mount's
- * lifetime. When time travel is unavailable, it emits only `Live`.
+ * into the DOM. A live Mount's external sources continue while paused, so use
+ * the state to stop listeners from turning historical DOM interaction into
+ * Messages. A Mount acquired by a historical render cannot dispatch to the
+ * live Model, even if its element survives resume. The state Stream stays open
+ * for the Mount's lifetime. When time travel is unavailable, it emits only
+ * `Live`.
  *
  * At least one result Message schema is required. The Stream's emission
  * type is `Schema.Schema.Type<Messages[number]>`; without a declared
@@ -523,11 +521,11 @@ export function defineStream(name: string, config: DefineConfig): unknown {
     const definition = (args: any) => ({
       name,
       args,
-      f: (element: Element, viewStateChanges?: Stream.Stream<ViewState>) =>
+      f: (element: Element, viewStateChanges: Stream.Stream<ViewState>) =>
         config.execute({
           ...args,
           element,
-          viewStateChanges: resolveViewStateChanges(viewStateChanges),
+          viewStateChanges,
         }),
     })
     brandAsDefinition(definition, name)
@@ -535,10 +533,10 @@ export function defineStream(name: string, config: DefineConfig): unknown {
   } else {
     const definition = () => ({
       name,
-      f: (element: Element, viewStateChanges?: Stream.Stream<ViewState>) =>
+      f: (element: Element, viewStateChanges: Stream.Stream<ViewState>) =>
         config.execute({
           element,
-          viewStateChanges: resolveViewStateChanges(viewStateChanges),
+          viewStateChanges,
         }),
     })
     brandAsDefinition(definition, name)
@@ -562,7 +560,7 @@ export const mapMessage: {
     f: (message: A) => B,
   ): MountAction<B, E> => ({
     ...action,
-    f: (element: Element, viewStateChanges?: Stream.Stream<ViewState>) =>
+    f: (element: Element, viewStateChanges: Stream.Stream<ViewState>) =>
       action.f(element, viewStateChanges).pipe(Stream.map(f)),
   }),
 )

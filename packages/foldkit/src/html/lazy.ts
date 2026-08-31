@@ -52,10 +52,10 @@ const resolveOrCache = <Args extends ReadonlyArray<unknown>>(
   const mountDispatch = requireMountDispatch()
   const { registry } = requireBoundary()
   // NOTE: dispatcher identities belong in the cache key because the cached
-  // VNode closes over both of them. Replay changes the ordinary dispatcher to
-  // `noOpDispatch`, while a renderer or test context can independently change
-  // the Mount dispatcher. A hit across either boundary would retain stale
-  // handler closures.
+  // VNode closes over both of them. Replay changes both dispatchers to
+  // `noOpDispatch`, while an explicit nested frame can still change them
+  // independently. A hit across either boundary would retain stale handler
+  // closures.
   if (
     Predicate.isNotUndefined(previousEntry) &&
     previousEntry.fn === fn &&

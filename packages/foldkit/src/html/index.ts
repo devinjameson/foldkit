@@ -25,7 +25,11 @@ import {
 } from '../domReflection.js'
 import type { File } from '../file/index.js'
 import type { MountAction } from '../mount/index.js'
-import { MountRuntime, MountTracker } from '../mount/index.js'
+import {
+  MountRuntime,
+  MountTracker,
+  liveViewStateChanges,
+} from '../mount/index.js'
 import {
   hasTrustedInnerHtml,
   isClientOnlyProperty,
@@ -51,9 +55,11 @@ import {
   processDragLeave,
 } from './dragZoneTracking.js'
 import {
+  type BoundaryMapperResolver,
   type DispatchSync,
   type UnmountResolver,
   clearRuntime,
+  requireBoundaryMapperResolver,
   requireBoundaryMappers,
   requireDispatch,
   requireMountDispatch,
@@ -498,8 +504,9 @@ export const FOLDKIT_MOUNT_KEY = 'foldkitMount' as const
  *  introspection can identify pending mounts. When the mount lives inside a
  *  Submodel boundary, it also carries that boundary's `toParentMessage` chain
  *  (innermost first), snapshotted at render time, so `Scene.Mount.resolve` can
- *  replay the lift the result travels through in production. The chain is read
- *  only by the Scene harness; production dispatch lifts via `ctx.dispatch`. */
+ *  replay the lift the result travels through in production. Production also
+ *  snapshots this chain when the Mount is acquired, pairing it with the
+ *  dispatcher owned by that render. */
 export type FoldkitMountMarker = Readonly<{
   name: string
   args?: Record<string, unknown>
@@ -1217,6 +1224,7 @@ type BuildContext = Readonly<{
   mountDispatch: DispatchSync
   resolveUnmount: UnmountResolver
   boundaryMappers: ReadonlyArray<(message: unknown) => unknown>
+  resolveBoundaryMappers?: BoundaryMapperResolver
   getCapturedContext: () => Context.Context<never>
 }>
 
@@ -1230,6 +1238,23 @@ const setData = <K extends keyof VNodeData>(
 
 const addVNodeDataMask = (ctx: BuildContext, dataMask: number): void => {
   ctx.data[vnodeDataMaskKey] = (ctx.data[vnodeDataMaskKey] ?? 0) | dataMask
+}
+
+const makeMountDispatch = (
+  mountDispatch: DispatchSync,
+  resolveBoundaryMappers: BoundaryMapperResolver,
+): DispatchSync => {
+  const boundaryMappers = resolveBoundaryMappers()
+  if (Array.isReadonlyArrayEmpty(boundaryMappers)) {
+    return mountDispatch
+  }
+  return message => {
+    let rootMessage = message
+    for (const toParentMessage of boundaryMappers) {
+      rootMessage = toParentMessage(rootMessage)
+    }
+    mountDispatch(rootMessage)
+  }
 }
 
 const setModuleData = <K extends keyof VNodeData>(
@@ -2338,6 +2363,8 @@ const attributeHandlers: AttributeHandlers = {
     const capturedContext = ctx.getCapturedContext()
     const maybeTracker = Context.getOption(capturedContext, MountTracker)
     const maybeMountRuntime = Context.getOption(capturedContext, MountRuntime)
+    const resolveBoundaryMappers =
+      ctx.resolveBoundaryMappers ?? currentBoundaryMapperResolverOrFallback()
     const notifyStarted = Option.isSome(maybeTracker)
       ? () => maybeTracker.value.started(action.name, action.args)
       : Function.constVoid
@@ -2360,6 +2387,10 @@ const attributeHandlers: AttributeHandlers = {
       insert: vnode => {
         if (vnode.elm instanceof Element) {
           const element = vnode.elm
+          const mountDispatch = makeMountDispatch(
+            ctx.mountDispatch,
+            resolveBoundaryMappers,
+          )
           notifyStarted()
           const fiber = Effect.runForkWith(capturedContext)(
             Effect.suspend(() =>
@@ -2367,11 +2398,11 @@ const attributeHandlers: AttributeHandlers = {
                 action.f(
                   element,
                   Option.match(maybeMountRuntime, {
-                    onNone: () => undefined,
+                    onNone: () => liveViewStateChanges,
                     onSome: ({ viewStateChanges }) => viewStateChanges,
                   }),
                 ),
-                message => Effect.sync(() => ctx.mountDispatch(message)),
+                message => Effect.sync(() => mountDispatch(message)),
               ),
             ).pipe(
               Effect.catchCause(cause =>
@@ -2489,6 +2520,14 @@ const currentUnmountResolverOrFallback = (): UnmountResolver => {
   }
 }
 
+const currentBoundaryMapperResolverOrFallback = (): BoundaryMapperResolver => {
+  try {
+    return requireBoundaryMapperResolver()
+  } catch {
+    return () => []
+  }
+}
+
 const capturedContextOrEmpty = (): Context.Context<never> => {
   try {
     return requireRuntimeContext()
@@ -2595,7 +2634,11 @@ const buildVNodeData = <Message>(
     if (isChildAttribute(item)) {
       boundaryCtxByDispatch ??= new Map()
       let ctx = boundaryCtxByDispatch.get(item.dispatch)
-      if (ctx === undefined) {
+      if (
+        ctx === undefined ||
+        (item.resolveBoundaryMappers !== undefined &&
+          ctx.resolveBoundaryMappers !== item.resolveBoundaryMappers)
+      ) {
         ctx = {
           data,
           getPostpatchProps: getSharedPostpatchProps,
@@ -2603,6 +2646,9 @@ const buildVNodeData = <Message>(
           mountDispatch: item.mountDispatch,
           resolveUnmount: item.resolveUnmount,
           boundaryMappers: item.boundaryMappers,
+          ...(item.resolveBoundaryMappers !== undefined && {
+            resolveBoundaryMappers: item.resolveBoundaryMappers,
+          }),
           getCapturedContext: capturedContextOrEmpty,
         }
         boundaryCtxByDispatch.set(item.dispatch, ctx)

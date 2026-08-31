@@ -2612,14 +2612,8 @@ const makeRuntime = <
 
         const dispatch = { dispatchAsync, dispatchSync }
 
-        let isResumePatchActive = false
         const mountRuntime = MountRuntime.of({
           viewStateChanges,
-          dispatch: message => {
-            if (currentViewState === 'Live' || isResumePatchActive) {
-              dispatchSync(message)
-            }
-          },
         })
 
         const isPausedNow = (): boolean =>
@@ -2884,13 +2878,12 @@ const makeRuntime = <
           }
         }
 
-        // NOTE: `dispatchService` defaults to the live dispatch but is
-        // overridable so the time-travel render path can pass `noOpDispatch`
-        // for declarative handlers. Mounts route through `mountRuntime`
-        // instead. Its dispatcher remains attached to the live runtime but
-        // drops Mount Messages while a historical view owns the DOM, so a
-        // surviving Mount keeps its fiber and handle without changing the
-        // live Model from events produced by the paused DOM.
+        // NOTE: `dispatchService` defaults to live dispatch but is overridable
+        // so a time-travel render can bind both declarative handlers and newly
+        // acquired Mounts to `noOpDispatch`. A Mount keeps the dispatcher from
+        // the render that acquired it for its lifetime. This preserves valid
+        // async results from live Mounts while preventing replay-created Mounts
+        // from reaching the live Model after their elements survive resume.
         const render = (
           model: Model,
           message: Option.Option<Message>,
@@ -3042,21 +3035,21 @@ const makeRuntime = <
                 return maybeFreezeModel(replayUpdate.model)
               },
               /* eslint-enable @typescript-eslint/consistent-type-assertions */
-              // NOTE: passes `noOpDispatch` so declarative handlers built by
-              // the replay cannot reach the live Model. Mounts route through
-              // `mountRuntime`, whose view-state gate suppresses their
-              // Messages while leaving their fibers alive. Also discards
-              // mount events fired during the render so they don't get
-              // attributed to the next user-initiated dispatch.
+              // NOTE: passes `noOpDispatch` so declarative handlers and Mounts
+              // acquired by the replay cannot reach the live Model. Their
+              // fibers stay alive and can observe view-state changes, but keep
+              // this dispatcher even if the resume patch reuses their element.
+              // Also discards mount events fired during the render so they
+              // don't get attributed to the next user-initiated dispatch.
               render: model =>
                 Effect.gen(function* () {
                   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
                   const replayedModel = model as Model
                   const previousRenderedModel = lastRenderedModel
-                  // NOTE: a Mount surviving from the live view must stop emitting
-                  // before the historical patch can expose different DOM.
-                  // Mounts inserted by that patch subscribe after this write,
-                  // so the replaying PubSub gives them `Paused` immediately.
+                  // NOTE: a Mount surviving from the live view must observe
+                  // Paused before the historical patch can expose different
+                  // DOM. Mounts inserted by that patch subscribe after this
+                  // write, so the replaying PubSub gives them Paused immediately.
                   setViewState('Paused')
                   // NOTE: a transition still animating belongs to the live
                   // state this replay is about to paint over. Left running it
@@ -3229,21 +3222,15 @@ const makeRuntime = <
             // did not cause this repaint. A Message arriving during the patch
             // can repopulate this field when the buffered queue drains.
             maybeLastDirtyMessage = Option.none()
-            // NOTE: Mounts inserted by the live resume patch belong to the live
-            // DOM, but `currentViewState` stays `Paused` until the patch commits.
-            // The stable Mount dispatcher admits their synchronous results into
-            // the frame's existing Message buffer only for that patch.
-            isResumePatchActive = true
           }
           try {
-            renderSyncPlain(liveModel, maybeLastDirtyMessage, liveRenderContext)
+            renderSyncPlain(liveModel, maybeLastDirtyMessage)
             // NOTE: after the patch, so a render that threw leaves this on the
             // Model still on screen, and before `drainPendingMessages` below,
             // whose handlers can advance `liveModel` again.
             lastRenderedModel = renderedModel
-            // NOTE: resume clears the store's pause flag before this frame. Keep
-            // Mounts paused through the patch itself, then reopen their
-            // dispatch and publish `Live` only once the live DOM is installed.
+            // NOTE: resume clears the store's pause flag before this frame.
+            // Publish Live only after the live DOM has been installed.
             setViewState('Live')
             if (devToolsStore !== null) {
               const mountEvents = drainMountEvents()
@@ -3257,7 +3244,6 @@ const makeRuntime = <
           } catch (error) {
             Effect.runFork(crashWith(Cause.die(error), maybeLastDirtyMessage))
           } finally {
-            isResumePatchActive = false
             isRenderingFrame = false
           }
           // NOTE: Messages dispatched by patch-time hooks (for example,
@@ -3373,7 +3359,6 @@ const makeRuntime = <
         const renderSyncPlain = (
           model: Model,
           maybeMessage: Option.Option<Message>,
-          runtimeContext: Context.Context<never>,
         ): void => {
           const [nextDocument, maybeViewDuration] = measureSlowPhase(
             resolvedSlowView,
@@ -3381,7 +3366,7 @@ const makeRuntime = <
               beginHtmlRender(boundaryRegistry)
               setHtmlRuntime(
                 dispatch.dispatchSync,
-                runtimeContext,
+                liveRenderContext,
                 boundaryRegistry,
               )
               try {

@@ -88,7 +88,9 @@ Use the Stream to update state owned by the imperative integration itself. For e
 
 ::Snippet{name="mountViewStateChanges" label="Making an editor read-only during time travel"}
 
-Mount Messages emitted while the view is paused are suppressed. They do not reach update, change the live Model, or enter history. A suppressed result from a Mount inserted by a historical render is not delivered later merely because that element survives the live patch. The Mount fiber remains alive, so the integration keeps its handle and can still observe `viewStateChanges`. Do not translate this signal into an application Message. It describes which Model the DOM currently represents, not a change to application state.
+A Mount acquired by the live view keeps participating in the live application while a historical view is displayed. Its asynchronous setup can complete, and its external streams can keep producing Messages. Foldkit cannot tell whether an arbitrary Stream emission came from historical DOM interaction, a timer, an observer, or a network source, so the integration must use `viewStateChanges` to stop its own DOM-derived interaction while paused. Do not translate this signal into an application Message. It describes which Model the DOM currently represents, not a change to application state.
+
+A Mount acquired by a historical render is different: its Messages can never reach update, change the live Model, or enter history. That dispatch authority belongs to the render that acquired the Mount and does not change merely because the element survives the live resume patch. Its fiber remains alive, so the integration keeps its handle and can still observe `viewStateChanges`.
 
 ## Third-Party Libraries
 
