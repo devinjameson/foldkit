@@ -1,7 +1,8 @@
-export type { OutlineRect } from './types.js'
+export { collectOutlineRects } from './collect.js'
 export {
+  OUTLINE_CUSTOM_EVENT,
+  OUTLINE_ENABLED_KEY,
   setOutlineRecordingEnabled,
-  shouldRecordOutline as isOutlineRecordingEnabled,
-} from '../html/boundary.js'
-
-export const OUTLINE_CUSTOM_EVENT = 'foldkit:outline'
+  shouldRecordOutline,
+} from './recording.js'
+export * from './schema.js'
