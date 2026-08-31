@@ -4,7 +4,7 @@ import { expect } from 'vitest'
 import { describe, it } from '@effect/vitest'
 
 import { defineMessageUnion } from '../message/index.js'
-import * as Mount from './index.js'
+import * as Mount from './public.js'
 
 const Message = defineMessageUnion({
   CompletedMeasurePanel: { panelId: Schema.String, width: Schema.Number },

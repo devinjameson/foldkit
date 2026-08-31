@@ -82,15 +82,23 @@ When a later Message changes the Model and should trigger new DOM work, return a
 
 Time travel pauses the rendered view, not the application. The live Model, history, Commands, Subscriptions, and ManagedResources continue normally behind the historical DOM. A Mount owns imperative behavior attached to an element in that rendered view, so its `execute` input includes `viewStateChanges`, a `Stream<'Live' | 'Paused'>`.
 
-Each subscriber immediately receives the current state, followed by changes. The Stream stays open for the Mount's lifetime. It reports only `Live` when time travel is unavailable. A surviving Mount is not restarted, interrupted, or reacquired when the view pauses. A Mount inserted by a historical render receives `Paused` as its first state. On resume, Mounts receive `Live` only after Foldkit has patched the latest live view back into the DOM.
+### Observing the View State
+
+The Stream begins with the rendered view state at the moment the Mount is acquired, followed by changes. That initial state is retained while `execute` performs asynchronous setup, so a Mount inserted by a historical render receives `Paused` first even if it consumes the Stream only after setup finishes. The Stream stays open for the Mount's lifetime and reports only `Live` when time travel is unavailable. A surviving live Mount is not restarted, interrupted, or reacquired when the view pauses. On resume, Mounts receive `Live` only after Foldkit has patched the latest live view back into the DOM.
+
+Custom renderers without time travel can pass `Mount.liveViewStateChanges` as the required second argument to a low-level `MountAction.f` call. It emits `Live` immediately and stays open.
+
+### Keeping Imperative UI Read-only
 
 Use the Stream to update state owned by the imperative integration itself. For example, a rich-text editor can call its read-only API while the historical view is installed, then restore editing when the live view returns:
 
 ::Snippet{name="mountViewStateChanges" label="Making an editor read-only during time travel"}
 
+### Live and Historical Mounts
+
 A Mount acquired by the live view keeps participating in the live application while a historical view is displayed. Its asynchronous setup can complete, and its external streams can keep producing Messages. Foldkit cannot tell whether an arbitrary Stream emission came from historical DOM interaction, a timer, an observer, or a network source, so the integration must use `viewStateChanges` to stop its own DOM-derived interaction while paused. Do not translate this signal into an application Message. It describes which Model the DOM currently represents, not a change to application state.
 
-A Mount acquired by a historical render is different: its Messages can never reach update, change the live Model, or enter history. That dispatch authority belongs to the render that acquired the Mount and does not change merely because the element survives the live resume patch. Its fiber remains alive, so the integration keeps its handle and can still observe `viewStateChanges`.
+A Mount acquired by a historical render is different: its Messages cannot reach update, change the live Model, or enter history. If the resumed live view reuses that element and declares a Mount there, Foldkit releases the replay acquisition before starting the live action with the live render's args and dispatch. Cleanup finishes before the replacement setup begins, so the old integration cannot tear down the new handle. Within the live render owner, a surviving Mount follows the latest live Submodel `toParentMessage` wiring, matching event handlers without ever borrowing a historical render's wiring.
 
 ## Third-Party Libraries
 

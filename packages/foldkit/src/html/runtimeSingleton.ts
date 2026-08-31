@@ -1,4 +1,4 @@
-import { Context } from 'effect'
+import type { Context } from 'effect'
 
 import {
   type BoundaryId,
@@ -8,19 +8,25 @@ import {
   createBoundaryRegistry,
   getOrCreateBoundaryDispatch,
   resolveBoundaryDispatchThunk,
+  resolveMountBoundaryDispatch,
 } from './boundary.js'
 
 /** Synchronous message dispatcher provided to view-time element constructors. */
 export type DispatchSync = (message: unknown) => void
 
-/** Resolves a Submodel boundary's current wrapping chain, innermost first. */
-export type BoundaryMapperResolver = () => ReadonlyArray<
-  (message: unknown) => unknown
->
+/** Identifies which kind of render acquired a Mount. */
+export type MountRenderOwner = 'Live' | 'Replay'
+
+/** Resolves the render-owned dispatcher for a Mount at insertion time. */
+export type MountDispatchResolver = Readonly<{
+  owner: MountRenderOwner
+  resolve: () => DispatchSync
+}>
 
 export type Frame = Readonly<{
   outerDispatch: DispatchSync
   mountOuterDispatch: DispatchSync
+  mountRenderOwner: MountRenderOwner
   runtimeContext: Context.Context<never>
   boundaryRegistry: BoundaryRegistry
   boundaryId: BoundaryId
@@ -56,10 +62,12 @@ export const setRuntime = (
   dispatch: DispatchSync,
   runtimeContext: Context.Context<never>,
   boundaryRegistry: BoundaryRegistry = createBoundaryRegistry(),
+  mountRenderOwner: MountRenderOwner = 'Live',
 ): void => {
   stack.push({
     outerDispatch: dispatch,
     mountOuterDispatch: dispatch,
+    mountRenderOwner,
     runtimeContext,
     boundaryRegistry,
     boundaryId: ROOT_BOUNDARY,
@@ -80,6 +88,7 @@ export const pushBoundary = (boundaryId: BoundaryId): void => {
   stack.push({
     outerDispatch: parent.outerDispatch,
     mountOuterDispatch: parent.mountOuterDispatch,
+    mountRenderOwner: parent.mountRenderOwner,
     runtimeContext: parent.runtimeContext,
     boundaryRegistry: parent.boundaryRegistry,
     boundaryId,
@@ -136,12 +145,15 @@ export const requireDispatch = (): DispatchSync => {
 }
 
 /** Returns the render-owned root dispatcher for Mount results. A live render
- *  supplies live dispatch, while a historical render supplies permanent
- *  no-op dispatch. `OnMount` combines it with the current boundary mapper
- *  snapshot when the Mount is acquired, so neither half of its dispatch path
- *  can change during later renders. */
+ *  supplies live dispatch, while a historical render supplies no-op dispatch
+ *  for acquisitions owned by that replay. */
 export const requireMountDispatch = (): DispatchSync => {
   return requireFrame().mountOuterDispatch
+}
+
+/** Returns whether the current frame is rendering the live or replayed view. */
+export const requireMountRenderOwner = (): MountRenderOwner => {
+  return requireFrame().mountRenderOwner
 }
 
 /** A function that, given a message, resolves it through the current
@@ -165,11 +177,11 @@ export const requireUnmountResolver = (): UnmountResolver => {
 }
 
 /** Returns the current frame's Submodel wrapping chain (innermost first), or an
- *  empty array at the root boundary. `OnMount` calls this at build time to
- *  snapshot the lift a Submodel-embedded Mount's result travels through in
- *  production, and the Scene test harness replays the same chain when the Mount
- *  is resolved. Returns `[]` when there is no active frame, mirroring the lazy
- *  tolerance of handler-free Html built outside a render. */
+ *  empty array at the root boundary. `OnMount` records this build-time snapshot
+ *  for the Scene test harness, which replays the chain when the Mount is
+ *  resolved. Production Mount dispatch uses the ownership-aware resolver below.
+ *  Returns `[]` when there is no active frame, mirroring the lazy tolerance of
+ *  handler-free Html built outside a render. */
 export const requireBoundaryMappers = (): ReadonlyArray<
   (message: unknown) => unknown
 > => {
@@ -180,13 +192,22 @@ export const requireBoundaryMappers = (): ReadonlyArray<
   return boundaryMappers(frame.boundaryRegistry, frame.boundaryId)
 }
 
-/** Returns a resolver bound to the current frame's Submodel boundary. Mounts
- *  invoke it from their insert hook so a cached VNode snapshots the mapper
- *  chain from the render that actually acquires it, rather than the earlier
- *  render that built the cached VNode. */
-export const requireBoundaryMapperResolver = (): BoundaryMapperResolver => {
+/** Returns a resolver bound to the current frame's render owner and Submodel
+ *  boundary. Mounts invoke it from their insert hook, so a cached VNode uses
+ *  the dispatcher for the render that acquires it. That dispatcher follows
+ *  later wrapper registrations from the same owner without crossing between
+ *  live and replay renders. */
+export const requireMountDispatchResolver = (): MountDispatchResolver => {
   const frame = requireFrame()
-  return () => boundaryMappers(frame.boundaryRegistry, frame.boundaryId)
+  return {
+    owner: frame.mountRenderOwner,
+    resolve: () =>
+      resolveMountBoundaryDispatch(
+        frame.boundaryRegistry,
+        frame.mountOuterDispatch,
+        frame.boundaryId,
+      ),
+  }
 }
 
 /** Returns the current runtime Effect Context, used by Mount integrations

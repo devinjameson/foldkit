@@ -1,20 +1,18 @@
+import { Predicate } from 'effect'
+
 import {
-  type BoundaryMapperResolver,
   type DispatchSync,
-  requireBoundaryMapperResolver,
+  type MountDispatchResolver,
   requireBoundaryMappers,
   requireDispatch,
-  requireMountDispatch,
+  requireMountDispatchResolver,
   requireUnmountResolver,
 } from './runtimeSingleton.js'
 
 const BRAND = '__childAttribute'
 
 const isOnMountAttribute = (attribute: unknown): boolean =>
-  typeof attribute === 'object' &&
-  attribute !== null &&
-  '_tag' in attribute &&
-  attribute._tag === 'OnMount'
+  Predicate.isTagged(attribute, 'OnMount')
 
 /** An attribute carrying a handler that dispatches through a Submodel
  *  boundary's wrapping chain. Published by Submodels (typically Foldkit's
@@ -26,12 +24,10 @@ const isOnMountAttribute = (attribute: unknown): boolean =>
  *  `resolveUnmount` snapshots the boundary's wrapping chain at the time the
  *  group was published (child boundary alive) so `OnUnmount` can dispatch a
  *  root message from a destroy hook that fires after the boundary has been
- *  torn down. `mountDispatch` captures the root dispatcher owned by the render,
- *  while `boundaryMappers` snapshots the `toParentMessage` lifts (innermost
- *  first) for the Scene test harness. Groups containing `OnMount` also carry
- *  `resolveBoundaryMappers`, which lets the Mount capture the corresponding
- *  production chain when it is acquired, including when a cached VNode is
- *  inserted by a later render.
+ *  torn down. `boundaryMappers` snapshots the `toParentMessage` lifts
+ *  (innermost first) for the Scene test harness. Groups containing `OnMount`
+ *  also carry `resolveMountDispatch`, which binds the Mount to the acquiring
+ *  render's dispatch owner while following that owner's current live wrappers.
  *
  *  Created via {@link childAttributes}. Element constructors accept
  *  `ChildAttribute` alongside `Attribute<Message>` in their attribute
@@ -40,10 +36,9 @@ export type ChildAttribute = Readonly<{
   readonly [BRAND]: true
   readonly attribute: unknown
   readonly dispatch: DispatchSync
-  readonly mountDispatch: DispatchSync
   readonly resolveUnmount: (message: unknown) => () => void
   readonly boundaryMappers: ReadonlyArray<(message: unknown) => unknown>
-  readonly resolveBoundaryMappers?: BoundaryMapperResolver
+  readonly resolveMountDispatch?: MountDispatchResolver
 }>
 
 export const isChildAttribute = (value: unknown): value is ChildAttribute =>
@@ -76,19 +71,17 @@ export const childAttributes = <Attribute>(
   attributes: ReadonlyArray<Attribute>,
 ): ReadonlyArray<ChildAttribute> => {
   const dispatch = requireDispatch()
-  const mountDispatch = requireMountDispatch()
   const resolveUnmount = requireUnmountResolver()
   const boundaryMappers = requireBoundaryMappers()
-  const resolveBoundaryMappers = attributes.some(isOnMountAttribute)
-    ? requireBoundaryMapperResolver()
+  const resolveMountDispatch = attributes.some(isOnMountAttribute)
+    ? requireMountDispatchResolver()
     : undefined
   return attributes.map(attribute => ({
     [BRAND]: true,
     attribute,
     dispatch,
-    mountDispatch,
     resolveUnmount,
     boundaryMappers,
-    ...(resolveBoundaryMappers !== undefined && { resolveBoundaryMappers }),
+    ...(resolveMountDispatch !== undefined && { resolveMountDispatch }),
   }))
 }

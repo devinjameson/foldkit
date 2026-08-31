@@ -41,7 +41,7 @@ Controls where the badge and panel appear on screen. One of `'BottomRight'` (def
 
 ### mode
 
-`'TimeTravel'` (the default) renders the state at an earlier Message and pauses that historical view. The live Model, history, Commands, Subscriptions, ManagedResources, and live-acquired Mounts continue normally. Their Messages and state changes keep appearing in the panel even though the historical DOM stays in place. Foldkit event handlers and Mounts created by the historical render cannot dispatch, and the overlay blocks pointer interaction. A surviving live Mount observes its `viewStateChanges` Stream and must make its imperative integration read-only while paused so keyboard or programmatic DOM interaction cannot produce Messages. Select `Resume` to patch the latest live view back into the DOM.
+`'TimeTravel'` (the default) renders the state at an earlier Message and pauses that historical view. The live Model, history, Commands, Subscriptions, ManagedResources, and live-acquired Mounts continue normally. Their Messages and state changes keep appearing in the panel even though the historical DOM stays in place. Foldkit event handlers and Mounts created by the historical render cannot dispatch, and the overlay blocks pointer interaction. A surviving live Mount observes its `viewStateChanges` Stream and must make its imperative integration read-only while paused so keyboard or programmatic DOM interaction cannot produce Messages. Select `Resume` to patch the latest live view back into the DOM; a replay-created Mount whose element is reused is released before the live action starts.
 
 `'Inspect'` lets you browse recorded states without pausing the app. Use it when visitors can open DevTools in production or staging.
 

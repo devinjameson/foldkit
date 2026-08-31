@@ -10,5 +10,6 @@ export {
   ViewState,
   define,
   defineStream,
+  liveViewStateChanges,
   mapMessage,
 } from './index.js'

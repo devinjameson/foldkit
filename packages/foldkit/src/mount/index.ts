@@ -36,7 +36,7 @@ export type ViewState = typeof ViewState.Type
 export class MountRuntime extends Context.Service<
   MountRuntime,
   {
-    readonly viewStateChanges: Stream.Stream<ViewState>
+    readonly captureViewStateChanges: () => Stream.Stream<ViewState>
   }
 >()('@foldkit/MountRuntime') {}
 
@@ -53,10 +53,11 @@ export type MountDefinitionTypeId = typeof MountDefinitionTypeId
  *  args used to construct it. The runtime invokes `f` with the live `Element`
  *  and required view-state Stream when the element mounts. A Mount acquired by
  *  a live render keeps live dispatch, while one acquired by a historical
- *  render keeps no-op dispatch. The Stream's scope is tied to the element's
- *  lifetime: when the element unmounts, the runtime interrupts the fiber,
- *  which closes the Stream's scope and runs any registered `acquireRelease`
- *  finalizers.
+ *  render uses no-op dispatch. When resume reuses a replay-created element,
+ *  the runtime releases its historical Mount before starting the live action.
+ *  Otherwise the Stream's scope is tied to the element's lifetime: when the
+ *  element unmounts, the runtime interrupts the fiber, which closes the
+ *  Stream's scope and runs any registered `acquireRelease` finalizers.
  *
  *  Authors don't construct this shape directly. `Mount.define` builds it from
  *  an `execute` returning `Effect<Message>` for the one-shot case; only
@@ -154,7 +155,10 @@ const brandAsDefinition = (definition: unknown, name: string): void => {
   })
 }
 
-/** @internal A never-ending view-state Stream for renderers without time travel. */
+/** A never-ending view-state Stream for renderers without time travel.
+ *  It emits `Live` immediately and never completes. Custom renderers and
+ *  low-level MountAction wrappers can pass it as the required second argument
+ *  to `MountAction.f` when the rendered view is always live. */
 export const liveViewStateChanges: Stream.Stream<ViewState> = Stream.concat(
   Stream.make(ViewState.make('Live')),
   Stream.never,
@@ -198,15 +202,20 @@ const wrapEffectAsStream =
  * the element enters the DOM, so nothing the body does happens inside the pure
  * view that built the action.
  *
- * `viewStateChanges` emits the current `Live | Paused` state immediately to
- * each subscriber, followed by changes. Time travel pauses the rendered view,
- * not the live application. Use this Stream to make an imperative integration
- * read-only while historical DOM is installed. A surviving Mount stays
- * acquired throughout pause and resume. Its live async work and external
- * event sources also continue, so the integration must use the Stream to stop
- * DOM-derived interaction while paused. Mounts acquired by a historical
- * render cannot dispatch to the live Model. The Stream stays open for the
- * Mount's lifetime. When time travel is unavailable, it emits only `Live`.
+ * `viewStateChanges` begins with the rendered view's `Live | Paused` state at
+ * the moment the Mount is acquired, followed by changes. This acquisition
+ * state stays available when `execute` performs asynchronous setup before
+ * consuming the Stream, so a Mount inserted by a historical render always
+ * observes `Paused` first. Time travel pauses the rendered view, not the live
+ * application. Use this Stream to make an imperative integration read-only
+ * while historical DOM is installed. A surviving live Mount stays acquired
+ * throughout pause and resume. Its live async work and external event sources
+ * also continue, so the integration must use the Stream to stop DOM-derived
+ * interaction while paused. Mounts acquired by a historical render cannot
+ * dispatch to the live Model. If the resumed live view owns the same element,
+ * Foldkit releases the replay acquisition before starting the live action. The
+ * Stream stays open for the Mount's lifetime. When time travel is unavailable,
+ * it emits only `Live`.
  *
  * Cleanup composes via `Effect.acquireRelease` inside the Effect: registered
  * finalizers run when the element unmounts. The Mount's scope stays open
@@ -390,13 +399,15 @@ export function define(name: string, config: DefineConfig): unknown {
  * the element enters the DOM, so nothing the body does happens inside the pure
  * view that built the action.
  *
- * `viewStateChanges` has the same semantics as in `Mount.define`: it emits the
- * current `Live | Paused` state immediately, keeps a surviving Mount acquired,
- * and returns to `Live` only after the latest live view has been patched back
- * into the DOM. A live Mount's external sources continue while paused, so use
- * the state to stop listeners from turning historical DOM interaction into
- * Messages. A Mount acquired by a historical render cannot dispatch to the
- * live Model, even if its element survives resume. The state Stream stays open
+ * `viewStateChanges` has the same semantics as in `Mount.define`: it begins
+ * with the rendered view's state at acquisition even after asynchronous
+ * setup, keeps a surviving live Mount acquired, and returns to `Live` only
+ * after the latest live view has been patched back into the DOM. A live
+ * Mount's external sources continue while paused, so use the state to stop
+ * listeners from turning historical DOM interaction into Messages. A Mount
+ * acquired by a historical render cannot dispatch to the live Model. If the
+ * resumed live view owns the same element, Foldkit releases the replay
+ * acquisition before starting the live action. The state Stream stays open
  * for the Mount's lifetime. When time travel is unavailable, it emits only
  * `Live`.
  *

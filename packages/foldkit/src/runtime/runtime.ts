@@ -45,6 +45,7 @@ import {
   __clearRuntime as clearHtmlRuntime,
   __createBoundaryRegistry as createHtmlBoundaryRegistry,
   __endReplayRender as endReplayHtmlRender,
+  __flushReplayUnmountsAfterPatchFailure as flushReplayUnmountsAfterPatchFailure,
   __htmlBuilder as htmlBuilderFor,
   __setRuntime as setHtmlRuntime,
   textDirectionToAttribute,
@@ -1848,6 +1849,11 @@ const makeRuntime = <
     // the same signal. A commit in one embedded application must never wake a
     // `Render.afterCommit` awaiting inside another.
     const commitNotifier = createCommitNotifier()
+    const settlePendingCommit = (): void => {
+      if (commitNotifier.service.isCommitPending()) {
+        commitNotifier.notifyCommitted()
+      }
+    }
 
     return Effect.scoped(
       Effect.gen(function* () {
@@ -2332,6 +2338,11 @@ const makeRuntime = <
         // `commitNotifier` tracks the patch itself, so `Render.afterCommit`
         // waits for the commit rather than for the frame that scheduled it.
         let isRenderFrameScheduled = false
+        // NOTE: resume clears the DevTools store's pause flag before its frame
+        // patches the live view. This distinguishes that intentional repaint
+        // from an ordinary frame that was already queued when jumpTo installed
+        // the historical view.
+        let isLiveViewRestorePending = false
         // NOTE: mirrors the old queue's boot behavior: a Message arriving
         // before boot completes (for example, a navigation event during an
         // async dev-mode boot step, or a boot-forked fiber emitting early)
@@ -2463,7 +2474,14 @@ const makeRuntime = <
         // runtime crashes, and at teardown, where the browser would otherwise
         // animate over a released container. Declared above `crashWith`, which
         // calls the skip and can run as early as the init render.
-        let maybePendingViewTransition = Option.none<ViewTransitionHandle>()
+        type PendingViewTransition = Readonly<{
+          handle: ViewTransitionHandle
+          update: {
+            isInvalidated: boolean
+            didRun: boolean
+          }
+        }>
+        let maybePendingViewTransition = Option.none<PendingViewTransition>()
 
         const skipPendingViewTransition = (): void => {
           if (Option.isSome(maybePendingViewTransition)) {
@@ -2471,8 +2489,9 @@ const makeRuntime = <
             // NOTE: cleared first. An implementation that runs the update
             // callback synchronously would otherwise re-enter this.
             maybePendingViewTransition = Option.none()
+            pendingViewTransition.update.isInvalidated = true
             try {
-              pendingViewTransition.skipTransition()
+              pendingViewTransition.handle.skipTransition()
             } catch {
               // NOTE: skipping runs on teardown and crash paths, so a refusal
               // must not propagate into them.
@@ -2498,11 +2517,15 @@ const makeRuntime = <
               },
             )
           } catch (error) {
-            const maybeRecoveryVNode = vnodeSlot.maybeCurrentVNode
-            if (Option.isSome(maybeRecoveryVNode)) {
-              vnodeSlot.maybeCurrentVNode = Option.some(
-                __recoverVNodeAfterPatchFailure(maybeRecoveryVNode.value),
-              )
+            try {
+              const maybeRecoveryVNode = vnodeSlot.maybeCurrentVNode
+              if (Option.isSome(maybeRecoveryVNode)) {
+                vnodeSlot.maybeCurrentVNode = Option.some(
+                  __recoverVNodeAfterPatchFailure(maybeRecoveryVNode.value),
+                )
+              }
+            } finally {
+              flushReplayUnmountsAfterPatchFailure()
             }
             throw error
           }
@@ -2584,6 +2607,7 @@ const makeRuntime = <
               vnodeSlot,
               manageDocument,
             )
+            settlePendingCommit()
           })
 
         // NOTE: drain-local state. Kept as plain closure variables instead
@@ -2613,7 +2637,10 @@ const makeRuntime = <
         const dispatch = { dispatchAsync, dispatchSync }
 
         const mountRuntime = MountRuntime.of({
-          viewStateChanges,
+          captureViewStateChanges: () =>
+            Stream.concat(Stream.make(currentViewState), viewStateChanges).pipe(
+              Stream.changes,
+            ),
         })
 
         const isPausedNow = (): boolean =>
@@ -2880,10 +2907,11 @@ const makeRuntime = <
 
         // NOTE: `dispatchService` defaults to live dispatch but is overridable
         // so a time-travel render can bind both declarative handlers and newly
-        // acquired Mounts to `noOpDispatch`. A Mount keeps the dispatcher from
-        // the render that acquired it for its lifetime. This preserves valid
-        // async results from live Mounts while preventing replay-created Mounts
-        // from reaching the live Model after their elements survive resume.
+        // acquired Mounts to `noOpDispatch`. A live Mount keeps its dispatcher
+        // across replay, while a replay-created Mount stays muted until a live
+        // resume patch releases it and starts the live action. This preserves
+        // valid async results from live Mounts without granting a historical
+        // acquisition access to the live Model.
         const render = (
           model: Model,
           message: Option.Option<Message>,
@@ -2916,6 +2944,7 @@ const makeRuntime = <
                   dispatchService.dispatchSync,
                   runtimeContext,
                   boundaryRegistry,
+                  renderMode,
                 )
 
                 try {
@@ -3037,10 +3066,11 @@ const makeRuntime = <
               /* eslint-enable @typescript-eslint/consistent-type-assertions */
               // NOTE: passes `noOpDispatch` so declarative handlers and Mounts
               // acquired by the replay cannot reach the live Model. Their
-              // fibers stay alive and can observe view-state changes, but keep
-              // this dispatcher even if the resume patch reuses their element.
-              // Also discards mount events fired during the render so they
-              // don't get attributed to the next user-initiated dispatch.
+              // fibers stay alive and can observe view-state changes while the
+              // historical view owns them. If resume reuses such an element,
+              // OnMount releases the replay acquisition before starting the
+              // live action. Also discards mount events fired during the render
+              // so they don't get attributed to the next user-initiated dispatch.
               render: model =>
                 Effect.gen(function* () {
                   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
@@ -3048,8 +3078,9 @@ const makeRuntime = <
                   const previousRenderedModel = lastRenderedModel
                   // NOTE: a Mount surviving from the live view must observe
                   // Paused before the historical patch can expose different
-                  // DOM. Mounts inserted by that patch subscribe after this
-                  // write, so the replaying PubSub gives them Paused immediately.
+                  // DOM. Mounts inserted by that patch capture this state when
+                  // acquired, so asynchronous setup cannot skip Paused even if
+                  // it consumes the Stream only after the live view returns.
                   setViewState('Paused')
                   // NOTE: a transition still animating belongs to the live
                   // state this replay is about to paint over. Left running it
@@ -3090,7 +3121,7 @@ const makeRuntime = <
                       // NOTE: a failed first jump leaves the store live. Keep
                       // Mounts Paused through the recovery patch, which
                       // publishes Live only after the live DOM is restored.
-                      yield* Effect.sync(() => scheduleRenderFrame())
+                      yield* Effect.sync(() => scheduleRenderFrame(true))
                     }
                     return yield* Effect.failCause(replayRenderExit.cause)
                   }
@@ -3112,7 +3143,7 @@ const makeRuntime = <
               // NOTE: `resume` calls this after a jumpTo render attached DOM
               // listeners to `noOpDispatch`. Scheduling a frame renders the
               // live model with live dispatch and rebinds listeners.
-              markRenderPending: Effect.sync(() => scheduleRenderFrame()),
+              markRenderPending: Effect.sync(() => scheduleRenderFrame(true)),
             },
             {
               ...(devToolsKeyframeInterval !== undefined && {
@@ -3254,7 +3285,7 @@ const makeRuntime = <
           // NOTE: last, so a waiter resumed by the commit observes the same
           // DOM and the same processed-Message ordering it saw when
           // `afterCommit` counted frames.
-          commitNotifier.notifyCommitted()
+          settlePendingCommit()
         }
 
         // NOTE: starts a View Transition around this frame's render when the
@@ -3287,23 +3318,38 @@ const makeRuntime = <
           if (Option.isNone(maybeDecision)) {
             return false
           }
-          // NOTE: the superseded transition's update callback still runs, so
-          // the patch it was holding is not lost. Skipping explicitly makes
-          // the hand-off deterministic rather than implementation-defined.
+          // NOTE: invalidate an older transition before this one takes
+          // ownership of the latest live repaint. The browser may still call
+          // the older update callback, but its invalidation guard leaves the
+          // DOM and commit notifier to this transition.
           skipPendingViewTransition()
           try {
+            const update = {
+              isInvalidated: false,
+              didRun: false,
+            }
             const handle = resolved.startViewTransition(() => {
-              // NOTE: `isPausedNow` as well as the disposal and crash guards.
-              // A DevTools jumpTo landing while this callback is outstanding
-              // has already painted a past Model, and patching `liveModel`
-              // over it would replace the replayed DOM the user is inspecting.
-              if (isRuntimeDisposed || isCrashed || isPausedNow()) {
-                commitNotifier.notifyCommitted()
+              if (update.isInvalidated || update.didRun) {
+                return
+              }
+              update.didRun = true
+              // NOTE: `currentViewState` closes the resume window after the
+              // store is live but before its plain frame has restored the live
+              // DOM. A transition invalidated by jumpTo stays invalid forever,
+              // so its callback cannot repaint inside the stale transition
+              // even if it arrives after resume has published `Live`.
+              if (
+                isRuntimeDisposed ||
+                isCrashed ||
+                isPausedNow() ||
+                currentViewState === 'Paused'
+              ) {
+                settlePendingCommit()
                 return
               }
               runRenderFrameBody()
             }, maybeDecision.value.maybeTypes)
-            maybePendingViewTransition = Option.some(handle)
+            maybePendingViewTransition = Option.some({ handle, update })
             __silenceViewTransitionRejections(handle)
             return true
           } catch {
@@ -3320,10 +3366,12 @@ const makeRuntime = <
         // the Dom helpers that gate on it would never run their DOM work.
         const renderFramePlain = (): void => {
           isRenderFrameScheduled = false
+          const isRestoringLiveView = isLiveViewRestorePending
+          isLiveViewRestorePending = false
           // NOTE: a frame scheduled before disposal fires after it; a
           // disposed runtime must not repaint the released container.
           if (isRuntimeDisposed) {
-            commitNotifier.notifyCommitted()
+            settlePendingCommit()
             return
           }
           // NOTE: a frame is running, so the browser got control back; the
@@ -3334,11 +3382,15 @@ const makeRuntime = <
           // next animation frame would render the live view over the
           // crash view.
           if (isCrashed) {
-            commitNotifier.notifyCommitted()
+            settlePendingCommit()
             return
           }
           if (isPausedNow()) {
-            commitNotifier.notifyCommitted()
+            settlePendingCommit()
+            return
+          }
+          if (currentViewState === 'Paused' && !isRestoringLiveView) {
+            settlePendingCommit()
             return
           }
           // NOTE: the unconfigured path pays one `Option.isNone` check and
@@ -3420,7 +3472,12 @@ const makeRuntime = <
           }
         }
 
-        const scheduleRenderFrame = (): void => {
+        const scheduleRenderFrame = (
+          isRestoringLiveView: boolean = false,
+        ): void => {
+          if (isRestoringLiveView) {
+            isLiveViewRestorePending = true
+          }
           if (isRenderFrameScheduled) {
             return
           }

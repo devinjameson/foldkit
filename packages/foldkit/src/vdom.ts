@@ -1,5 +1,6 @@
 import { Option } from 'effect'
 
+import { onUnmountModule } from './onUnmountModule.js'
 import { propsModule } from './propsModule.js'
 import {
   type VNode,
@@ -28,6 +29,7 @@ export const patch = init([
   classModule,
   datasetModule,
   eventListenersModule,
+  onUnmountModule,
   propsModule,
   styleModule,
 ])

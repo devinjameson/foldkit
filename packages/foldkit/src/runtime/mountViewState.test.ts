@@ -1,5 +1,5 @@
 import {
-  Array as Array_,
+  Array,
   Effect,
   Exit,
   Fiber,
@@ -7,7 +7,7 @@ import {
   Option,
   PubSub,
   Queue,
-  Schema as S,
+  Schema,
   Stream,
   SubscriptionRef,
 } from 'effect'
@@ -36,8 +36,8 @@ import {
 const Message = defineMessageUnion({
   CompletedMountEditor: {},
   EditedFromMount: {},
-  EditedEntityFromMount: { entityId: S.Number },
-  GotChildMountResult: { ownerId: S.Number },
+  EditedEntityFromMount: { entityId: Schema.Number },
+  GotChildMountResult: { ownerId: Schema.Number },
   Ticked: {},
   ShowedEditor: {},
   HidEditor: {},
@@ -51,13 +51,13 @@ const ChildMessage = defineMessageUnion({
 })
 type ChildMessage = typeof ChildMessage.Type
 
-const ChildModel = S.Struct({})
+const ChildModel = Schema.Struct({})
 type ChildModel = typeof ChildModel.Type
 
-const Model = S.Struct({
-  mountEditCount: S.Number,
-  tickCount: S.Number,
-  isEditorShown: S.Boolean,
+const Model = Schema.Struct({
+  mountEditCount: Schema.Number,
+  tickCount: Schema.Number,
+  isEditorShown: Schema.Boolean,
 })
 type Model = typeof Model.Type
 
@@ -121,7 +121,7 @@ const requireDevToolsStore = (
 }
 
 const clickButton = (label: string): void => {
-  const button = Array_.findFirst(
+  const button = Array.findFirst(
     document.querySelectorAll('button'),
     element => element.textContent === label,
   )
@@ -167,8 +167,8 @@ describe('Mount view-state awareness', () => {
         Stream.fromPubSub(subscriptionMessages),
       ),
     }))
-    const observedViewStates: Array<Mount.ViewState> = []
-    const processedTags: Array<Message['_tag']> = []
+    const observedViewStates: globalThis.Array<Mount.ViewState> = []
+    const processedTags: globalThis.Array<Message['_tag']> = []
     let acquireCount = 0
     let releaseCount = 0
     let isEditorEditable = true
@@ -265,9 +265,9 @@ describe('Mount view-state awareness', () => {
         const state = await Effect.runPromise(
           SubscriptionRef.get(store.stateRef),
         )
-        expect(
-          Array_.some(state.entries, entry => entry.tag === 'Ticked'),
-        ).toBe(true)
+        expect(Array.some(state.entries, entry => entry.tag === 'Ticked')).toBe(
+          true,
+        )
       })
       expect(document.body.textContent).toContain('ticks:0')
 
@@ -300,8 +300,8 @@ describe('Mount view-state awareness', () => {
     const completedMount = await Effect.runPromise(
       Queue.unbounded<typeof Message.CompletedMountEditor.Type>(),
     )
-    const observedViewStates: Array<Mount.ViewState> = []
-    const processedTags: Array<Message['_tag']> = []
+    const observedViewStates: globalThis.Array<Mount.ViewState> = []
+    const processedTags: globalThis.Array<Message['_tag']> = []
 
     const MountEditor = Mount.define('MountEditor', {
       messages: [Message.CompletedMountEditor],
@@ -370,8 +370,8 @@ describe('Mount view-state awareness', () => {
         Stream.fromPubSub(subscriptionMessages),
       ),
     }))
-    const processedMessages: Array<Message> = []
-    const emitters: Array<() => void> = []
+    const processedMessages: globalThis.Array<Message> = []
+    const emitters: globalThis.Array<() => void> = []
 
     const MountChildEditor = Mount.defineStream('MountChildEditor', {
       messages: [ChildMessage.CompletedChildMount],
@@ -452,7 +452,7 @@ describe('Mount view-state awareness', () => {
         expect(emitters).toHaveLength(2)
       })
       const liveEditor = requireElement('#editor')
-      const maybeLiveEmitter = Array_.last(emitters)
+      const maybeLiveEmitter = Array.last(emitters)
       if (Option.isNone(maybeLiveEmitter)) {
         throw new Error('Expected the live Mount emitter')
       }
@@ -474,9 +474,107 @@ describe('Mount view-state awareness', () => {
     }
   })
 
+  it('uses the latest live Submodel wrapper when a surviving Mount emits', async () => {
+    const subscriptionMessages = await Effect.runPromise(
+      PubSub.unbounded<Message>(),
+    )
+    const subscriptions = Subscription.make<Model, Message>()(() => ({
+      testMessages: Subscription.persistent(
+        Stream.fromPubSub(subscriptionMessages),
+      ),
+    }))
+    const processedMessages: globalThis.Array<Message> = []
+    const emitters: globalThis.Array<() => void> = []
+
+    const MountChildEditor = Mount.defineStream('MountChildEditor', {
+      messages: [ChildMessage.CompletedChildMount],
+      execute: () =>
+        Stream.callback<typeof ChildMessage.CompletedChildMount.Type>(queue =>
+          Effect.sync(() => {
+            emitters.push(() =>
+              Queue.offerUnsafe(queue, ChildMessage.CompletedChildMount()),
+            )
+          }),
+        ),
+    })
+    const childH = __htmlBuilder<ChildMessage>()
+    const childView = defineView<ChildModel, ChildMessage>(() =>
+      childH.button([
+        childH.Id('editor'),
+        childH.OnClick(ChildMessage.CompletedChildMount()),
+        childH.OnMount(MountChildEditor()),
+      ]),
+    )
+
+    const runtime = makeElement({
+      Model,
+      init: () => ({ model: initialModel(true) }),
+      update: (model, message) => {
+        processedMessages.push(message)
+        return update(model, message)
+      },
+      view: model =>
+        h.div(
+          [],
+          [
+            h.span([], [`ticks:${model.tickCount}`]),
+            h.submodel({
+              slotId: 'editor',
+              model: {},
+              view: childView,
+              toParentMessage: () =>
+                Message.GotChildMountResult({ ownerId: model.tickCount }),
+            }),
+          ],
+        ),
+      container,
+      subscriptions,
+      devTools: false,
+    })
+    const runtimeFiber = Effect.runFork(runtime.start())
+
+    try {
+      await vi.waitFor(() => {
+        expect(emitters).toHaveLength(1)
+      })
+      const maybeEmit = Array.head(emitters)
+      if (Option.isNone(maybeEmit)) {
+        throw new Error('Expected the live Mount emitter')
+      }
+
+      maybeEmit.value()
+      await vi.waitFor(() => {
+        expect(processedMessages).toContainEqual(
+          Message.GotChildMountResult({ ownerId: 0 }),
+        )
+      })
+
+      PubSub.publishUnsafe(subscriptionMessages, Message.Ticked())
+      await waitForBodyText('ticks:1')
+      expect(emitters).toHaveLength(1)
+
+      requireElement('#editor').dispatchEvent(
+        new MouseEvent('click', { bubbles: true }),
+      )
+      maybeEmit.value()
+
+      await vi.waitFor(() => {
+        expect(
+          Array.filter(
+            processedMessages,
+            message =>
+              message._tag === 'GotChildMountResult' && message.ownerId === 1,
+          ),
+        ).toHaveLength(2)
+      })
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+    }
+  })
+
   it('keeps live Mount dispatch available when resume waits for an animation frame', async () => {
-    const observedViewStates: Array<Mount.ViewState> = []
-    const processedTags: Array<Message['_tag']> = []
+    const observedViewStates: globalThis.Array<Mount.ViewState> = []
+    const processedTags: globalThis.Array<Message['_tag']> = []
     let emitMountMessage: () => void = Function.constVoid
 
     const MountEditor = Mount.defineStream('MountEditor', {
@@ -552,7 +650,7 @@ describe('Mount view-state awareness', () => {
     }
   })
 
-  it('keeps a replay-inserted Mount paused and suppresses its result', async () => {
+  it('reacquires a replay-inserted one-shot Mount from the live render', async () => {
     const subscriptionMessages = await Effect.runPromise(
       PubSub.unbounded<Message>({ replay: 1 }),
     )
@@ -561,15 +659,17 @@ describe('Mount view-state awareness', () => {
         Stream.fromPubSub(subscriptionMessages),
       ),
     }))
-    const statesByAcquisition: Array<Array<Mount.ViewState>> = []
-    const processedTags: Array<Message['_tag']> = []
+    const statesByAcquisition: globalThis.Array<
+      globalThis.Array<Mount.ViewState>
+    > = []
+    const processedTags: globalThis.Array<Message['_tag']> = []
     let releaseCount = 0
 
     const MountEditor = Mount.define('MountEditor', {
       messages: [Message.CompletedMountEditor],
       execute: ({ element, viewStateChanges }) =>
         Effect.gen(function* () {
-          const observedViewStates: Array<Mount.ViewState> = []
+          const observedViewStates: globalThis.Array<Mount.ViewState> = []
           statesByAcquisition.push(observedViewStates)
           yield* Effect.acquireRelease(
             Effect.sync(() => element.setAttribute('data-editor', 'mounted')),
@@ -618,7 +718,7 @@ describe('Mount view-state awareness', () => {
       await vi.waitFor(() => {
         expect(statesByAcquisition).toEqual([['Live']])
         expect(
-          Array_.filter(processedTags, tag => tag === 'CompletedMountEditor'),
+          Array.filter(processedTags, tag => tag === 'CompletedMountEditor'),
         ).toHaveLength(1)
       })
       const shownState = await Effect.runPromise(
@@ -645,29 +745,140 @@ describe('Mount view-state awareness', () => {
       PubSub.publishUnsafe(subscriptionMessages, Message.ShowedEditor())
       await vi.waitFor(() => {
         expect(
-          Array_.filter(processedTags, tag => tag === 'ShowedEditor'),
+          Array.filter(processedTags, tag => tag === 'ShowedEditor'),
         ).toHaveLength(2)
       })
 
       await Effect.runPromise(store.resume)
       await vi.waitFor(() => {
-        expect(statesByAcquisition).toEqual([['Live'], ['Paused', 'Live']])
+        expect(statesByAcquisition).toEqual([
+          ['Live'],
+          ['Paused'],
+          ['Paused', 'Live'],
+        ])
       })
       expect(requireElement('#editor')).toBe(replayEditor)
-      expect(releaseCount).toBe(1)
+      expect(releaseCount).toBe(2)
       expect(
-        Array_.filter(processedTags, tag => tag === 'CompletedMountEditor'),
-      ).toHaveLength(1)
+        Array.filter(processedTags, tag => tag === 'CompletedMountEditor'),
+      ).toHaveLength(2)
     } finally {
       await Effect.runPromise(Fiber.interrupt(runtimeFiber))
     }
 
     await vi.waitFor(() => {
-      expect(releaseCount).toBe(2)
+      expect(releaseCount).toBe(3)
     })
   })
 
-  it('keeps a replay-created Mount from dispatching stale args after resume reuses its element', async () => {
+  it('retains Paused for a replay Mount that consumes view state after resume', async () => {
+    const subscriptionMessages = await Effect.runPromise(
+      PubSub.unbounded<Message>(),
+    )
+    const replaySetup = await Effect.runPromise(Queue.unbounded<void>())
+    const subscriptions = Subscription.make<Model, Message>()(() => ({
+      testMessages: Subscription.persistent(
+        Stream.fromPubSub(subscriptionMessages),
+      ),
+    }))
+    const statesByAcquisition: globalThis.Array<
+      globalThis.Array<Mount.ViewState>
+    > = []
+    let acquisitionCount = 0
+
+    const MountEditor = Mount.define('MountEditor', {
+      messages: [Message.CompletedMountEditor],
+      execute: ({ viewStateChanges }) => {
+        const acquisitionId = acquisitionCount
+        acquisitionCount += 1
+        const observedViewStates: globalThis.Array<Mount.ViewState> = []
+        statesByAcquisition.push(observedViewStates)
+
+        return Effect.uninterruptible(
+          Effect.gen(function* () {
+            if (acquisitionId === 1) {
+              yield* Queue.take(replaySetup)
+            }
+            yield* viewStateChanges.pipe(
+              Stream.take(acquisitionId === 2 ? 2 : 1),
+              Stream.runForEach(viewState =>
+                Effect.sync(() => observedViewStates.push(viewState)),
+              ),
+            )
+            return Message.CompletedMountEditor()
+          }),
+        )
+      },
+    })
+
+    let maybeStore: DevToolsStore | null = null
+    __setDevToolsOverlay(store => {
+      maybeStore = store
+      return Effect.void
+    })
+
+    const runtime = makeElement({
+      Model,
+      init: () => ({ model: initialModel(false) }),
+      update,
+      view: model => modelView(model, MountEditor()),
+      subscriptions,
+      container,
+      devTools: { show: 'Always', keyframeInterval: 1 },
+    })
+    const runtimeFiber = Effect.runFork(runtime.start())
+
+    try {
+      await vi.waitFor(() => {
+        expect(maybeStore).not.toBeNull()
+      })
+      const store = requireDevToolsStore(maybeStore)
+
+      clickButton('show')
+      await vi.waitFor(() => {
+        expect(statesByAcquisition).toEqual([['Live']])
+      })
+      const shownState = await Effect.runPromise(
+        SubscriptionRef.get(store.stateRef),
+      )
+      const shownIndex = latestEntryIndex(shownState)
+
+      clickButton('hide')
+      await vi.waitFor(() => {
+        expect(document.querySelector('#editor')).toBeNull()
+      })
+
+      await Effect.runPromise(store.jumpTo(shownIndex))
+      await vi.waitFor(() => {
+        expect(statesByAcquisition).toHaveLength(2)
+      })
+      expect(statesByAcquisition).toEqual([['Live'], []])
+
+      PubSub.publishUnsafe(subscriptionMessages, Message.ShowedEditor())
+      await vi.waitFor(async () => {
+        const state = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        expect(state.maybeLatestModel).toEqual(Option.some(initialModel(true)))
+      })
+
+      await Effect.runPromise(store.resume)
+      await waitForTwoAnimationFrames()
+      Queue.offerUnsafe(replaySetup, undefined)
+
+      await vi.waitFor(() => {
+        expect(statesByAcquisition).toEqual([
+          ['Live'],
+          ['Paused'],
+          ['Paused', 'Live'],
+        ])
+      })
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+    }
+  })
+
+  it('reacquires a replay-created Mount from the live render when resume reuses its element', async () => {
     const subscriptionMessages = await Effect.runPromise(
       PubSub.unbounded<Message>(),
     )
@@ -676,31 +887,41 @@ describe('Mount view-state awareness', () => {
         Stream.fromPubSub(subscriptionMessages),
       ),
     }))
-    const processedMessages: Array<Message> = []
-    const acquisitions: Array<
+    const processedMessages: globalThis.Array<Message> = []
+    const releasedAcquisitionIds: globalThis.Array<number> = []
+    const acquisitions: globalThis.Array<
       Readonly<{
+        acquisitionId: number
         entityId: number
-        observedViewStates: Array<Mount.ViewState>
+        observedViewStates: globalThis.Array<Mount.ViewState>
         emit: () => void
       }>
     > = []
 
     const MountEditor = Mount.defineStream('MountEditor', {
-      args: { entityId: S.Number },
+      args: { entityId: Schema.Number },
       messages: [Message.EditedEntityFromMount],
       execute: ({ entityId, viewStateChanges }) =>
         Stream.callback<typeof Message.EditedEntityFromMount.Type>(queue =>
           Effect.gen(function* () {
-            const observedViewStates: Array<Mount.ViewState> = []
-            acquisitions.push({
-              entityId,
-              observedViewStates,
-              emit: () =>
-                Queue.offerUnsafe(
-                  queue,
-                  Message.EditedEntityFromMount({ entityId }),
-                ),
-            })
+            const acquisitionId = acquisitions.length
+            const observedViewStates: globalThis.Array<Mount.ViewState> = []
+            yield* Effect.acquireRelease(
+              Effect.sync(() =>
+                acquisitions.push({
+                  acquisitionId,
+                  entityId,
+                  observedViewStates,
+                  emit: () =>
+                    Queue.offerUnsafe(
+                      queue,
+                      Message.EditedEntityFromMount({ entityId }),
+                    ),
+                }),
+              ),
+              () =>
+                Effect.sync(() => releasedAcquisitionIds.push(acquisitionId)),
+            )
             yield* viewStateChanges.pipe(
               Stream.runForEach(viewState =>
                 Effect.sync(() => observedViewStates.push(viewState)),
@@ -748,6 +969,7 @@ describe('Mount view-state awareness', () => {
       clickButton('hide')
       await vi.waitFor(() => {
         expect(document.querySelector('#editor')).toBeNull()
+        expect(releasedAcquisitionIds).toEqual([0])
       })
       PubSub.publishUnsafe(subscriptionMessages, Message.Ticked())
       await vi.waitFor(() => {
@@ -758,7 +980,7 @@ describe('Mount view-state awareness', () => {
       await vi.waitFor(() => {
         expect(acquisitions).toHaveLength(2)
       })
-      const maybeReplayAcquisition = Array_.last(acquisitions)
+      const maybeReplayAcquisition = Array.last(acquisitions)
       if (Option.isNone(maybeReplayAcquisition)) {
         throw new Error('Expected the replay to acquire a Mount')
       }
@@ -774,10 +996,19 @@ describe('Mount view-state awareness', () => {
 
       await Effect.runPromise(store.resume)
       await vi.waitFor(() => {
-        expect(replayAcquisition.observedViewStates).toEqual(['Paused', 'Live'])
+        expect(acquisitions).toHaveLength(3)
+        expect(releasedAcquisitionIds).toEqual([0, 1])
       })
       expect(requireElement('#editor')).toBe(replayEditor)
-      expect(acquisitions).toHaveLength(2)
+      expect(replayAcquisition.observedViewStates).toEqual(['Paused'])
+
+      const maybeLiveAcquisition = Array.last(acquisitions)
+      if (Option.isNone(maybeLiveAcquisition)) {
+        throw new Error('Expected resume to acquire the live Mount')
+      }
+      const liveAcquisition = maybeLiveAcquisition.value
+      expect(liveAcquisition.entityId).toBe(1)
+      expect(liveAcquisition.observedViewStates).toEqual(['Paused', 'Live'])
 
       replayAcquisition.emit()
       await waitForMountEmission()
@@ -785,9 +1016,20 @@ describe('Mount view-state awareness', () => {
       expect(processedMessages).not.toContainEqual(
         Message.EditedEntityFromMount({ entityId: 0 }),
       )
+
+      liveAcquisition.emit()
+      await vi.waitFor(() => {
+        expect(processedMessages).toContainEqual(
+          Message.EditedEntityFromMount({ entityId: 1 }),
+        )
+      })
     } finally {
       await Effect.runPromise(Fiber.interrupt(runtimeFiber))
     }
+
+    await vi.waitFor(() => {
+      expect(releasedAcquisitionIds).toEqual([0, 1, 2])
+    })
   })
 
   it('delivers a result from a Mount inserted by the live resume patch', async () => {
@@ -799,7 +1041,7 @@ describe('Mount view-state awareness', () => {
         Stream.fromPubSub(subscriptionMessages),
       ),
     }))
-    const processedTags: Array<Message['_tag']> = []
+    const processedTags: globalThis.Array<Message['_tag']> = []
 
     const mountEditor: Mount.MountAction<Message> = {
       name: 'MountEditor',
@@ -853,7 +1095,7 @@ describe('Mount view-state awareness', () => {
   })
 
   it('delivers a result when resume inserts a cached lazy Mount', async () => {
-    const processedTags: Array<Message['_tag']> = []
+    const processedTags: globalThis.Array<Message['_tag']> = []
     let renderEditorCount = 0
     const mountEditor: Mount.MountAction<Message> = {
       name: 'MountEditor',
@@ -908,7 +1150,7 @@ describe('Mount view-state awareness', () => {
       await vi.waitFor(() => {
         expect(document.querySelector('#editor')).not.toBeNull()
         expect(
-          Array_.filter(processedTags, tag => tag === 'CompletedMountEditor'),
+          Array.filter(processedTags, tag => tag === 'CompletedMountEditor'),
         ).toHaveLength(1)
         expect(renderEditorCount).toBe(1)
       })
@@ -920,7 +1162,7 @@ describe('Mount view-state awareness', () => {
       await vi.waitFor(() => {
         expect(document.querySelector('#editor')).not.toBeNull()
         expect(
-          Array_.filter(processedTags, tag => tag === 'CompletedMountEditor'),
+          Array.filter(processedTags, tag => tag === 'CompletedMountEditor'),
         ).toHaveLength(2)
         expect(renderEditorCount).toBe(1)
       })
@@ -930,8 +1172,8 @@ describe('Mount view-state awareness', () => {
   })
 
   it('restores the live view when rendering a historical view fails', async () => {
-    const observedViewStates: Array<Mount.ViewState> = []
-    const processedTags: Array<Message['_tag']> = []
+    const observedViewStates: globalThis.Array<Mount.ViewState> = []
+    const processedTags: globalThis.Array<Message['_tag']> = []
     let isHistoricalViewBroken = false
 
     const ObserveViewState = Mount.define('ObserveViewState', {
@@ -1020,7 +1262,7 @@ describe('Mount view-state awareness', () => {
       await vi.waitFor(() => {
         expect(document.querySelector('#editor')).not.toBeNull()
         expect(
-          Array_.filter(processedTags, tag => tag === 'ShowedEditor'),
+          Array.filter(processedTags, tag => tag === 'ShowedEditor'),
         ).toHaveLength(2)
       })
     } finally {
@@ -1104,7 +1346,7 @@ describe('Mount view-state awareness', () => {
   })
 
   it('repaints the previous historical view when a later jump fails after patching', async () => {
-    const observedViewStates: Array<Mount.ViewState> = []
+    const observedViewStates: globalThis.Array<Mount.ViewState> = []
 
     const ObserveViewState = Mount.define('ObserveViewState', {
       messages: [Message.CompletedMountEditor],
@@ -1206,6 +1448,119 @@ describe('Mount view-state awareness', () => {
       await vi.waitFor(() => {
         expect(observedViewStates).toEqual(['Live', 'Paused', 'Live'])
         expect(document.querySelector('#editor')).toBeNull()
+      })
+    } finally {
+      await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+    }
+  })
+
+  it('restores a cached lazy Submodel when resume reinserts its subtree', async () => {
+    const processedMessages: globalThis.Array<Message> = []
+    let renderCount = 0
+    const MountChildEditor = Mount.define('MountChildEditor', {
+      messages: [ChildMessage.CompletedChildMount],
+      execute: () => Effect.succeed(ChildMessage.CompletedChildMount()),
+    })
+    const childView = defineView<ChildModel, ChildMessage>((_model, childH) =>
+      childH.div(
+        [childH.Id('child-editor'), childH.OnMount(MountChildEditor())],
+        [
+          childH.button(
+            [childH.OnClick(ChildMessage.CompletedChildMount())],
+            ['child action'],
+          ),
+        ],
+      ),
+    )
+    const lazyChild = createLazy()
+    const renderChild = (): Html => {
+      renderCount += 1
+      const child = h.submodel({
+        slotId: 'lazy-child',
+        model: {},
+        view: childView,
+        toParentMessage: () => Message.GotChildMountResult({ ownerId: 1 }),
+      })
+      if (child === null) {
+        throw new Error('Expected the child view to return an element')
+      }
+      return child
+    }
+    const renderLazyChild = (): Html => {
+      const child = lazyChild(renderChild, [])
+      if (child === null) {
+        throw new Error('Expected the lazy child view to return an element')
+      }
+      return child
+    }
+
+    let maybeStore: DevToolsStore | null = null
+    __setDevToolsOverlay(store => {
+      maybeStore = store
+      return Effect.void
+    })
+
+    const runtime = makeElement({
+      Model,
+      init: () => ({ model: initialModel(false) }),
+      update: (model: Model, message: Message) => {
+        processedMessages.push(message)
+        return update(model, message)
+      },
+      view: model =>
+        h.div(
+          [],
+          [
+            h.button([h.OnClick(Message.ShowedEditor())], ['show']),
+            ...(model.isEditorShown ? [renderLazyChild()] : []),
+          ],
+        ),
+      container,
+      devTools: { show: 'Always', keyframeInterval: 1 },
+    })
+    const runtimeFiber = Effect.runFork(runtime.start())
+
+    try {
+      await vi.waitFor(() => {
+        expect(maybeStore).not.toBeNull()
+      })
+      const store = requireDevToolsStore(maybeStore)
+
+      clickButton('show')
+      await vi.waitFor(() => {
+        expect(document.querySelector('#child-editor')).not.toBeNull()
+        expect(
+          Array.filter(
+            processedMessages,
+            message => message._tag === 'GotChildMountResult',
+          ),
+        ).toHaveLength(1)
+        expect(renderCount).toBe(1)
+      })
+
+      await Effect.runPromise(store.jumpTo(INIT_INDEX))
+      expect(document.querySelector('#child-editor')).toBeNull()
+
+      await Effect.runPromise(store.resume)
+      await vi.waitFor(() => {
+        expect(document.querySelector('#child-editor')).not.toBeNull()
+        expect(
+          Array.filter(
+            processedMessages,
+            message => message._tag === 'GotChildMountResult',
+          ),
+        ).toHaveLength(2)
+        expect(renderCount).toBe(1)
+      })
+
+      clickButton('child action')
+      await vi.waitFor(() => {
+        expect(
+          Array.filter(
+            processedMessages,
+            message => message._tag === 'GotChildMountResult',
+          ),
+        ).toHaveLength(3)
       })
     } finally {
       await Effect.runPromise(Fiber.interrupt(runtimeFiber))
@@ -1339,6 +1694,207 @@ describe('Mount view-state awareness', () => {
         })
       } finally {
         Reflect.deleteProperty(HTMLElement.prototype, 'foldkitPatchFailure')
+        await Effect.runPromise(Fiber.interrupt(runtimeFiber))
+      }
+    },
+  )
+
+  it.each([
+    {
+      failureTiming: 'before the replay root finishes patching',
+      isFailureAfterRootPatched: false,
+    },
+    {
+      failureTiming: 'in an insert hook after the replay root is patched',
+      isFailureAfterRootPatched: true,
+    },
+  ])(
+    'balances live Mount and OnUnmount Messages when recovery fails $failureTiming',
+    async ({ isFailureAfterRootPatched }) => {
+      const LifecycleMessage = defineMessageUnion({
+        CompletedMountPanel: {},
+        DisabledFailureProperty: {},
+        EnabledFailureProperty: {},
+        UnmountedPanel: {},
+      })
+      type LifecycleMessage = typeof LifecycleMessage.Type
+      const LifecycleModel = Schema.Struct({
+        isFailurePropertyEnabled: Schema.Boolean,
+        mountCount: Schema.Number,
+        unmountCount: Schema.Number,
+      })
+      type LifecycleModel = typeof LifecycleModel.Type
+      const initialLifecycleModel: LifecycleModel = {
+        isFailurePropertyEnabled: false,
+        mountCount: 0,
+        unmountCount: 0,
+      }
+      const updateLifecycle = (
+        model: LifecycleModel,
+        message: LifecycleMessage,
+      ) =>
+        LifecycleMessage.match<Update.Return<LifecycleModel, LifecycleMessage>>(
+          message,
+          {
+            CompletedMountPanel: () => ({
+              model: evo(model, { mountCount: count => count + 1 }),
+            }),
+            DisabledFailureProperty: () => ({
+              model: evo(model, {
+                isFailurePropertyEnabled: () => false,
+              }),
+            }),
+            EnabledFailureProperty: () => ({
+              model: evo(model, {
+                isFailurePropertyEnabled: () => true,
+              }),
+            }),
+            UnmountedPanel: () => ({
+              model: evo(model, { unmountCount: count => count + 1 }),
+            }),
+          },
+        )
+      const lifecycleHtml = __htmlBuilder<LifecycleMessage>()
+      const mountPanel: Mount.MountAction<LifecycleMessage> = {
+        name: 'MountPanel',
+        f: () => Stream.make(LifecycleMessage.CompletedMountPanel()),
+      }
+      const valueDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype,
+        'value',
+      )
+      if (
+        valueDescriptor?.get === undefined ||
+        valueDescriptor.set === undefined
+      ) {
+        throw new Error('Expected HTMLSelectElement.value accessors')
+      }
+      const getValue = valueDescriptor.get
+      const setValue = valueDescriptor.set
+      let isPatchFailureEnabled = false
+      Object.defineProperty(HTMLElement.prototype, 'foldkitLifecycleFailure', {
+        configurable: true,
+        set: value => {
+          if (
+            isPatchFailureEnabled &&
+            !isFailureAfterRootPatched &&
+            value === 'fail'
+          ) {
+            throw new Error('Historical lifecycle property patch failed')
+          }
+        },
+      })
+      Object.defineProperty(HTMLSelectElement.prototype, 'value', {
+        ...valueDescriptor,
+        get: getValue,
+        set(value: string) {
+          setValue.call(this, value)
+          if (
+            isPatchFailureEnabled &&
+            isFailureAfterRootPatched &&
+            this.isConnected
+          ) {
+            throw new Error('Historical lifecycle insert hook failed')
+          }
+        },
+      })
+      let maybeStore: DevToolsStore | null = null
+      __setDevToolsOverlay(store => {
+        maybeStore = store
+        return Effect.void
+      })
+
+      const runtime = makeElement({
+        Model: LifecycleModel,
+        init: () => ({ model: initialLifecycleModel }),
+        update: updateLifecycle,
+        view: (model: LifecycleModel) =>
+          lifecycleHtml.div(
+            [],
+            [
+              lifecycleHtml.button(
+                [
+                  lifecycleHtml.OnClick(
+                    LifecycleMessage.EnabledFailureProperty(),
+                  ),
+                ],
+                ['enable failure'],
+              ),
+              lifecycleHtml.button(
+                [
+                  lifecycleHtml.OnClick(
+                    LifecycleMessage.DisabledFailureProperty(),
+                  ),
+                ],
+                ['disable failure'],
+              ),
+              lifecycleHtml.div(
+                [
+                  lifecycleHtml.OnMount(mountPanel),
+                  lifecycleHtml.OnUnmount(LifecycleMessage.UnmountedPanel()),
+                  Prop({
+                    key: 'foldkitLifecycleFailure',
+                    value: model.isFailurePropertyEnabled ? 'fail' : 'safe',
+                  }),
+                ],
+                [
+                  `failure:${model.isFailurePropertyEnabled} ` +
+                    `mounts:${model.mountCount} ` +
+                    `unmounts:${model.unmountCount}`,
+                ],
+              ),
+              ...(model.isFailurePropertyEnabled && isFailureAfterRootPatched
+                ? [
+                    lifecycleHtml.select(
+                      [lifecycleHtml.Value('b')],
+                      [
+                        lifecycleHtml.option([lifecycleHtml.Value('a')], ['A']),
+                        lifecycleHtml.option([lifecycleHtml.Value('b')], ['B']),
+                      ],
+                    ),
+                  ]
+                : []),
+            ],
+          ),
+        crash: { view: () => lifecycleHtml.div([], ['Crashed']) },
+        container,
+        devTools: { show: 'Always', keyframeInterval: 1 },
+      })
+      const runtimeFiber = Effect.runFork(runtime.start())
+
+      try {
+        await vi.waitFor(() => {
+          expect(maybeStore).not.toBeNull()
+          expect(document.body.textContent).toContain('mounts:1 unmounts:0')
+        })
+        const store = requireDevToolsStore(maybeStore)
+
+        clickButton('enable failure')
+        await waitForBodyText('failure:true')
+        const failureState = await Effect.runPromise(
+          SubscriptionRef.get(store.stateRef),
+        )
+        const failureIndex = latestEntryIndex(failureState)
+
+        clickButton('disable failure')
+        await waitForBodyText('failure:false')
+
+        isPatchFailureEnabled = true
+        const jumpExit = await Effect.runPromise(
+          Effect.exit(store.jumpTo(failureIndex)),
+        )
+
+        expect(Exit.isFailure(jumpExit)).toBe(true)
+        await vi.waitFor(() => {
+          expect(document.body.textContent).toContain('mounts:2 unmounts:1')
+        })
+      } finally {
+        Reflect.deleteProperty(HTMLElement.prototype, 'foldkitLifecycleFailure')
+        Object.defineProperty(
+          HTMLSelectElement.prototype,
+          'value',
+          valueDescriptor,
+        )
         await Effect.runPromise(Fiber.interrupt(runtimeFiber))
       }
     },
@@ -1535,8 +2091,8 @@ describe('Mount view-state awareness', () => {
         Stream.fromPubSub(subscriptionMessages),
       ),
     }))
-    const observedViewStates: Array<Mount.ViewState> = []
-    const processedTags: Array<Message['_tag']> = []
+    const observedViewStates: globalThis.Array<Mount.ViewState> = []
+    const processedTags: globalThis.Array<Message['_tag']> = []
 
     const ObserveViewState = Mount.define('ObserveViewState', {
       messages: [Message.CompletedMountEditor],
@@ -1596,7 +2152,7 @@ describe('Mount view-state awareness', () => {
       PubSub.publishUnsafe(subscriptionMessages, Message.Ticked())
       await vi.waitFor(async () => {
         expect(
-          Array_.filter(processedTags, tag => tag === 'Ticked'),
+          Array.filter(processedTags, tag => tag === 'Ticked'),
         ).toHaveLength(2)
         const state = await Effect.runPromise(
           SubscriptionRef.get(store.stateRef),
@@ -1629,7 +2185,7 @@ describe('Mount view-state awareness', () => {
   })
 
   it('reports only Live when time travel is unavailable', async () => {
-    const observedViewStates: Array<Mount.ViewState> = []
+    const observedViewStates: globalThis.Array<Mount.ViewState> = []
 
     const MountEditor = Mount.define('MountEditor', {
       messages: [Message.CompletedMountEditor],

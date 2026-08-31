@@ -77,7 +77,7 @@ describe('childAttributes', () => {
     clearRuntime()
   })
 
-  it('captures a boundary mapper resolver only for groups containing OnMount', () => {
+  it('captures a Mount dispatch resolver only for groups containing OnMount', () => {
     const h = __htmlBuilder<ChildClicked>()
     const clickAttributes = childAttributes([
       h.OnClick({ _tag: 'ChildClicked' }),
@@ -91,12 +91,12 @@ describe('childAttributes', () => {
 
     expect(
       clickAttributes.every(
-        attribute => attribute.resolveBoundaryMappers === undefined,
+        attribute => attribute.resolveMountDispatch === undefined,
       ),
     ).toBe(true)
     expect(
       mountAttributes.every(
-        attribute => attribute.resolveBoundaryMappers !== undefined,
+        attribute => attribute.resolveMountDispatch !== undefined,
       ),
     ).toBe(true)
   })

@@ -25,6 +25,7 @@ import {
   __clearRuntime as clearHtmlRuntime,
   __setRuntime as setHtmlRuntime,
 } from './index.js'
+import type { MountRenderOwner } from './runtimeSingleton.js'
 
 const patch = init([
   attributesModule,
@@ -81,6 +82,7 @@ const createCapturingDispatch = () => {
 const renderView = (
   buildView: () => VNode | null,
   dispatch: typeof Dispatch.Service,
+  mountRenderOwner: MountRenderOwner = 'Live',
 ): VNode => {
   const testContext = Context.make(Dispatch, dispatch).pipe(
     Context.add(MountTracker, {
@@ -89,7 +91,12 @@ const renderView = (
     }),
   )
 
-  setHtmlRuntime(dispatch.dispatchSync, testContext)
+  setHtmlRuntime(
+    dispatch.dispatchSync,
+    testContext,
+    undefined,
+    mountRenderOwner,
+  )
   let vnode: VNode | null
   try {
     vnode = buildView()
@@ -459,6 +466,127 @@ describe('OnMount', () => {
     })
     expect(dispatched).toStrictEqual([Message.MountedRoot()])
     expect(cleanupRunCount).toBe(0)
+  })
+
+  it('releases a replay Mount before acquiring its live replacement through a controlled-property postpatch', async () => {
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
+    const { dispatch, dispatched } = createCapturingDispatch()
+    const lifecycle: Array<string> = []
+
+    const makeOwnedMount = (
+      owner: MountRenderOwner,
+    ): MountAction<typeof Message.MountedRoot.Type> =>
+      makeMounted(() =>
+        Stream.callback<typeof Message.MountedRoot.Type>(queue =>
+          Effect.gen(function* () {
+            yield* Effect.acquireRelease(
+              Effect.sync(() => lifecycle.push(`${owner} acquired`)),
+              () =>
+                Effect.sync(() => {
+                  lifecycle.push(`${owner} released`)
+                }),
+            )
+            if (owner === 'Live') {
+              Queue.offerUnsafe(queue, Message.MountedRoot())
+            }
+            return yield* Effect.never
+          }),
+        ),
+      )
+
+    const replayVNode = renderView(
+      () => h.input([h.Value('replay'), h.OnMount(makeOwnedMount('Replay'))]),
+      Dispatch.of(noOpDispatch),
+      'Replay',
+    )
+    const mounted = patch(toVNode(makeRootContainer()), replayVNode)
+
+    await vi.waitFor(() => {
+      expect(lifecycle).toEqual(['Replay acquired'])
+    })
+    const replayElement = mounted.elm
+
+    const liveVNode = renderView(
+      () => h.input([h.Value('live'), h.OnMount(makeOwnedMount('Live'))]),
+      dispatch,
+    )
+    const live = patch(mounted, liveVNode)
+
+    await vi.waitFor(() => {
+      expect(lifecycle).toEqual([
+        'Replay acquired',
+        'Replay released',
+        'Live acquired',
+      ])
+      expect(dispatched).toEqual([Message.MountedRoot()])
+    })
+    expect(live.elm).toBe(replayElement)
+    if (!(live.elm instanceof HTMLInputElement)) {
+      throw new Error('Expected the live Mount host to be an input')
+    }
+    expect(live.elm.value).toBe('live')
+  })
+
+  it('does not acquire the live replacement when the element unmounts during replay cleanup', async () => {
+    const h = __htmlBuilder<typeof Message.MountedRoot.Type>()
+    const { dispatch } = createCapturingDispatch()
+    const cleanupGate = await Effect.runPromise(Queue.unbounded<void>())
+    let isReplayAcquired = false
+    let isCleanupStarted = false
+    let isLiveAcquired = false
+
+    const replayMount = makeMounted(() =>
+      Stream.callback<typeof Message.MountedRoot.Type>(() =>
+        Effect.acquireRelease(
+          Effect.sync(() => {
+            isReplayAcquired = true
+          }),
+          () =>
+            Effect.sync(() => {
+              isCleanupStarted = true
+            }).pipe(Effect.andThen(Queue.take(cleanupGate))),
+        ).pipe(Effect.andThen(Effect.never)),
+      ),
+    )
+    const liveMount = makeMounted(() =>
+      Stream.callback<typeof Message.MountedRoot.Type>(() =>
+        Effect.sync(() => {
+          isLiveAcquired = true
+        }).pipe(Effect.andThen(Effect.never)),
+      ),
+    )
+    const withMount = (mount: MountAction<typeof Message.MountedRoot.Type>) =>
+      h.div([], [h.span([h.OnMount(mount)])])
+
+    const replayVNode = renderView(
+      () => withMount(replayMount),
+      Dispatch.of(noOpDispatch),
+      'Replay',
+    )
+    const mounted = patch(toVNode(makeRootContainer()), replayVNode)
+    await vi.waitFor(() => {
+      expect(isReplayAcquired).toBe(true)
+    })
+
+    const awaitingCleanup = patch(
+      mounted,
+      renderView(() => withMount(liveMount), dispatch),
+    )
+    await vi.waitFor(() => {
+      expect(isCleanupStarted).toBe(true)
+    })
+    expect(isLiveAcquired).toBe(false)
+
+    patch(
+      awaitingCleanup,
+      renderView(() => h.div([]), dispatch),
+    )
+    Queue.offerUnsafe(cleanupGate, undefined)
+    await new Promise(resolve =>
+      setTimeout(resolve, WAIT_FOR_INTERRUPT_PROPAGATION_MS),
+    )
+
+    expect(isLiveAcquired).toBe(false)
   })
 
   it('skips release and dispatches nothing when destroy interrupts an in-flight acquire', async () => {
