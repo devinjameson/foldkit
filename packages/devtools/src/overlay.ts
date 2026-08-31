@@ -329,18 +329,16 @@ const collapsedPreview = (value: unknown): string =>
 
 type UpdateReturn = Update.Return<Model, Message>
 
-const foldInspectorTabsOutMessage = Match.type<
+const foldInspectorTabsOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>,
   Tabs.OutMessage<InspectorTab>
->().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, { activeInspectorTab: () => value }),
-      }),
-  }),
-)
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, { activeInspectorTab: () => value }),
+    }),
+})
 
 const foldInspectorTabs = Update.foldChild({
   update: InspectorTabs.update,
@@ -351,21 +349,19 @@ const foldInspectorTabs = Update.foldChild({
   foldOutMessage: foldInspectorTabsOutMessage,
 })
 
-const foldSubmodelFilterOutMessage = Match.type<
+const foldSubmodelFilterOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>,
   Listbox.OutMessage<string>
->().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeSubmodelFilter: () =>
-            Option.liftPredicate(value, String.isNonEmpty),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeSubmodelFilter: () =>
+          Option.liftPredicate(value, String.isNonEmpty),
       }),
-  }),
-)
+    }),
+})
 
 const foldSubmodelFilter = Update.foldChild({
   update: SubmodelFilterListbox.update,
@@ -381,20 +377,19 @@ const foldSubmodelFilter = Update.foldChild({
 // NOTE: Pointer Messages update the thumb immediately, but jumping to and
 // inspecting the corresponding state is expensive. Keep only the latest host
 // index until TickedScrubFrame flushes one navigation on the next frame.
-const foldScrubberSliderOutMessage = Match.type<Slider.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    ChangedValue:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          scrubberValue: () => value,
-          maybePendingScrubIndex: () =>
-            Option.some(sliderValueToHostIndex(value, model.startIndex)),
-        }),
+const foldScrubberSliderOutMessage = Slider.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedValue:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        scrubberValue: () => value,
+        maybePendingScrubIndex: () =>
+          Option.some(sliderValueToHostIndex(value, model.startIndex)),
       }),
-  }),
-)
+    }),
+})
 
 const foldScrubberSlider = Update.foldChild({
   update: Slider.update,

@@ -1,13 +1,4 @@
-import {
-  Array,
-  Duration,
-  Effect,
-  Match,
-  Number,
-  Option,
-  Schema,
-  pipe,
-} from 'effect'
+import { Array, Duration, Effect, Number, Option, Schema, pipe } from 'effect'
 import * as Command from 'foldkit/command'
 import { evo } from 'foldkit/struct'
 import * as Update from 'foldkit/update'
@@ -155,13 +146,10 @@ export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
   const toDismissedToastOutMessage: (
     payload: A,
   ) => (outMessage: AnimationOutMessage) => OutMessage | undefined = payload =>
-    Match.type<AnimationOutMessage>().pipe(
-      Match.withReturnType<OutMessage | undefined>(),
-      Match.tagsExhaustive({
-        StartedLeaveAnimating: () => undefined,
-        TransitionedOut: () => OutMessageSchema.DismissedToast({ payload }),
-      }),
-    )
+    AnimationOutMessage.match<OutMessage | undefined>({
+      StartedLeaveAnimating: () => undefined,
+      TransitionedOut: () => OutMessageSchema.DismissedToast({ payload }),
+    })
 
   const foldEntryAnimationOutMessage: (
     entryId: string,

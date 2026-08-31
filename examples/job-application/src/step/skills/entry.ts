@@ -1,4 +1,4 @@
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import {
   Field,
@@ -73,16 +73,14 @@ export const init = (entryId: string): Model => ({
 
 // UPDATE
 
-const foldProficiencyRadioGroupOutMessage = Match.type<
+const foldProficiencyRadioGroupOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<ProficiencyLevel.ProficiencyLevel>
->().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { proficiency: () => value }) }),
-  }),
-)
+>({
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { proficiency: () => value }) }),
+})
 
 const foldProficiencyRadioGroup = Update.foldChild({
   update: ProficiencyRadioGroup.update,

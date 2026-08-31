@@ -1,4 +1,4 @@
-import { Match, Option } from 'effect'
+import { Option } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -12,11 +12,9 @@ const foldLogin = Update.foldChild({
   write: (model, nextLoginModel) =>
     evo(model, { loginModel: () => nextLoginModel }),
   toParentMessage: message => Message.GotLoginMessage({ message }),
-  toParentOutMessage: Match.type<Login.OutMessage>().pipe(
-    Match.tagsExhaustive({
-      SucceededLogin: ({ session }) => OutMessage.SucceededLogin({ session }),
-    }),
-  ),
+  toParentOutMessage: Login.OutMessage.match<OutMessage>({
+    SucceededLogin: ({ session }) => OutMessage.SucceededLogin({ session }),
+  }),
 })
 
 export const update = (model: Model, message: Message) =>

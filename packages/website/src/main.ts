@@ -450,13 +450,12 @@ type UpdateStep = Update.Step<
 
 const isPathnameEqual = (a: Url, b: Url): boolean => a.pathname === b.pathname
 
-const foldMobileMenuDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldMobileMenuDialogOutMessage = Dialog.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
 const readMobileMenuDialog = (model: Model): Option.Option<Dialog.Model> =>
   Option.some(model.mobileMenuDialog)
@@ -493,24 +492,24 @@ const foldMobileMenuDialogOpen = Update.foldChildStep({
   foldOutMessage: foldMobileMenuDialogOutMessage,
 })
 
-const foldDemoTabsOutMessage = Match.type<Tabs.OutMessage<DemoTab.Tab>>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          activeDemoTab: () => value,
-          asyncCounterDemo: reflectAsyncCounterDemoPresence(
-            isAsyncCounterDemoVisible(model.route, value),
-          ),
-          notePlayerDemo: reflectNotePlayerDemoPresence(
-            isNotePlayerDemoVisible(model.route, value),
-          ),
-        }),
+const foldDemoTabsOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>,
+  Tabs.OutMessage<DemoTab.Tab>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        activeDemoTab: () => value,
+        asyncCounterDemo: reflectAsyncCounterDemoPresence(
+          isAsyncCounterDemoVisible(model.route, value),
+        ),
+        notePlayerDemo: reflectNotePlayerDemoPresence(
+          isNotePlayerDemoVisible(model.route, value),
+        ),
       }),
-  }),
-)
+    }),
+})
 
 const foldDemoTabs = Update.foldChild({
   update: DemoTab.DemoTabs.update,
@@ -520,29 +519,25 @@ const foldDemoTabs = Update.foldChild({
   foldOutMessage: foldDemoTabsOutMessage,
 })
 
-const foldPlaygroundMenuOutMessage: (
-  outMessage: Menu.OutMessage<ExampleSlug>,
-) => Update.Step<Model, Message> = Match.type<
+const foldPlaygroundMenuOutMessage = Menu.OutMessage.match<
+  Update.Step<Model, Message>,
   Menu.OutMessage<ExampleSlug>
->().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    // NOTE: `LoadExternal` (not `NavigateInternal`).
-    // WebContainer requires `window.crossOriginIsolated`,
-    // which is only true when the document is loaded with
-    // COEP/COOP headers. SPA navigation reuses the previous
-    // page's document (no headers), so playground URLs need
-    // a fresh document load.
-    Selected:
-      ({ value }) =>
-      model => ({
-        model,
-        commands: [
-          LoadExternal({ href: playgroundRouter({ exampleSlug: value }) }),
-        ],
-      }),
-  }),
-)
+>({
+  // NOTE: `LoadExternal` (not `NavigateInternal`).
+  // WebContainer requires `window.crossOriginIsolated`,
+  // which is only true when the document is loaded with
+  // COEP/COOP headers. SPA navigation reuses the previous
+  // page's document (no headers), so playground URLs need
+  // a fresh document load.
+  Selected:
+    ({ value }) =>
+    model => ({
+      model,
+      commands: [
+        LoadExternal({ href: playgroundRouter({ exampleSlug: value }) }),
+      ],
+    }),
+})
 
 const foldPlaygroundMenu = Update.foldChild({
   update: PlaygroundMenu.update,

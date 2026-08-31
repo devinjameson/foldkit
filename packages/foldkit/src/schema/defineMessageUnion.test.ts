@@ -1,5 +1,5 @@
 import { Match, Schema } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { defineMessageUnion } from './index.js'
 
@@ -9,6 +9,15 @@ const Message = defineMessageUnion({
   SelectedItem: { id: Schema.String, label: Schema.String },
 })
 type Message = typeof Message.Type
+
+type RefinedMessage =
+  | typeof Message.ClickedReset.Type
+  | Readonly<{ _tag: 'ChangedCount'; count: 1 }>
+  | Readonly<{
+      _tag: 'SelectedItem'
+      id: 'first' | 'second'
+      label: string
+    }>
 
 describe('defineMessageUnion', () => {
   it('builds a callable constructor for a variant with no fields', () => {
@@ -82,6 +91,51 @@ describe('defineMessageUnion', () => {
 
     expect(describeMessage(Message.ClickedReset())).toBe('reset')
     expect(describeMessage(Message.ChangedCount({ count: 4 }))).toBe('count 4')
+  })
+
+  it('preserves refined input types in exhaustive tag matching', () => {
+    expectTypeOf<
+      Parameters<typeof Message.match>['length']
+    >().toEqualTypeOf<2>()
+    expectTypeOf<
+      Extract<Message, { readonly _tag: 'ChangedCount' }>['count']
+    >().toEqualTypeOf<number>()
+
+    const describeMessage = Message.match<string, RefinedMessage>({
+      ClickedReset: () => 'reset',
+      ChangedCount: ({ count }) => {
+        expectTypeOf(count).toEqualTypeOf<1>()
+        return `count ${count}`
+      },
+      SelectedItem: ({ id, label }) => {
+        expectTypeOf(id).toEqualTypeOf<'first' | 'second'>()
+        return `selected ${id}: ${label}`
+      },
+    })
+
+    expectTypeOf(describeMessage).toEqualTypeOf<
+      (message: RefinedMessage) => string
+    >()
+    expect(describeMessage({ _tag: 'ChangedCount', count: 1 })).toBe('count 1')
+  })
+
+  it('preserves refined input types in data-first matching', () => {
+    const message: RefinedMessage = {
+      _tag: 'SelectedItem',
+      id: 'second',
+      label: 'Second',
+    }
+
+    const description = Message.match<string, RefinedMessage>(message, {
+      ClickedReset: () => 'reset',
+      ChangedCount: ({ count }) => `count ${count}`,
+      SelectedItem: ({ id, label }) => {
+        expectTypeOf(id).toEqualTypeOf<'first' | 'second'>()
+        return `selected ${id}: ${label}`
+      },
+    })
+
+    expect(description).toBe('selected second: Second')
   })
 
   it('rejects names that conflict with the tagged union surface', () => {

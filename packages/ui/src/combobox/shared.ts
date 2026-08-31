@@ -19,7 +19,7 @@ import {
 import {
   Message as AnimationMessage,
   Model as AnimationModel,
-  type OutMessage as AnimationOutMessage,
+  OutMessage as AnimationOutMessage,
   init as animationInit,
 } from '../animation/schema.js'
 import { update as animationUpdate } from '../animation/update.js'
@@ -333,16 +333,15 @@ export const makeUpdate = <Model extends BaseModel>(
   type PlainUpdateReturn = Update.Return<Model, Message>
   type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
-  const foldAnimationOutMessage = Match.type<AnimationOutMessage>().pipe(
-    Match.withReturnType<Update.Step<Model, Message>>(),
-    Match.tagsExhaustive({
-      StartedLeaveAnimating: () => model => ({
-        model,
-        commands: [DetectMovementOrAnimationEnd({ id: model.id })],
-      }),
-      TransitionedOut: () => model => ({ model }),
+  const foldAnimationOutMessage = AnimationOutMessage.match<
+    Update.Step<Model, Message>
+  >({
+    StartedLeaveAnimating: () => model => ({
+      model,
+      commands: [DetectMovementOrAnimationEnd({ id: model.id })],
     }),
-  )
+    TransitionedOut: () => model => ({ model }),
+  })
 
   const foldAnimation = Update.foldChild({
     update: animationUpdate,

@@ -1,4 +1,4 @@
-import { Array, Match, Option, Schema, pipe } from 'effect'
+import { Array, Option, Schema, pipe } from 'effect'
 import { File, Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -37,24 +37,23 @@ export const init = (): Model => ({
 
 // UPDATE
 
-const foldResumeDropOutMessage = Match.type<FileDrop.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    ReceivedFiles:
-      ({ files }) =>
-      model => ({
-        model: evo(model, {
-          maybeResume: () =>
-            pipe(
-              files,
-              Array.head,
-              Option.orElse(() => model.maybeResume),
-            ),
-        }),
+const foldResumeDropOutMessage = FileDrop.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ReceivedFiles:
+    ({ files }) =>
+    model => ({
+      model: evo(model, {
+        maybeResume: () =>
+          pipe(
+            files,
+            Array.head,
+            Option.orElse(() => model.maybeResume),
+          ),
       }),
-    RejectedNonFiles: () => model => ({ model }),
-  }),
-)
+    }),
+  RejectedNonFiles: () => model => ({ model }),
+})
 
 const foldResumeDrop = Update.foldChild({
   update: FileDrop.update,
@@ -65,20 +64,18 @@ const foldResumeDrop = Update.foldChild({
   foldOutMessage: foldResumeDropOutMessage,
 })
 
-const foldAdditionalFilesDropOutMessage =
-  Match.type<FileDrop.OutMessage>().pipe(
-    Match.withReturnType<Update.Step<Model, Message>>(),
-    Match.tagsExhaustive({
-      ReceivedFiles:
-        ({ files }) =>
-        model => ({
-          model: evo(model, {
-            additionalFiles: Array.appendAll(files),
-          }),
-        }),
-      RejectedNonFiles: () => model => ({ model }),
+const foldAdditionalFilesDropOutMessage = FileDrop.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ReceivedFiles:
+    ({ files }) =>
+    model => ({
+      model: evo(model, {
+        additionalFiles: Array.appendAll(files),
+      }),
     }),
-  )
+  RejectedNonFiles: () => model => ({ model }),
+})
 
 const foldAdditionalFilesDrop = Update.foldChild({
   update: FileDrop.update,

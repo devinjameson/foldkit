@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match, Option, Schema } from 'effect'
+import { Array, Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -47,23 +47,21 @@ const Message = defineMessageUnion({
 // means: for multi-select, toggle the value in and out of its array. The arm
 // returns an Update.Step over the parent Model, which already has the next
 // Listbox Model written back:
-const foldListboxMultiOutMessage = Match.type<
+const foldListboxMultiOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>,
   Listbox.OutMessage<Person>
->().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          selectedPeople: () =>
-            Array.contains(model.selectedPeople, value)
-              ? Array.filter(model.selectedPeople, person => person !== value)
-              : Array.append(model.selectedPeople, value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        selectedPeople: () =>
+          Array.contains(model.selectedPeople, value)
+            ? Array.filter(model.selectedPeople, person => person !== value)
+            : Array.append(model.selectedPeople, value),
       }),
-  }),
-)
+    }),
+})
 
 // Update.foldChild wires the child into the parent: it delegates keyboard
 // navigation, typeahead, and open/close to PeopleListbox.update, writes the

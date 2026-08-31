@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match, Option, Schema } from 'effect'
+import { Array, Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -44,24 +44,22 @@ const Message = defineMessageUnion({
 // comboboxes, so this combobox keeps its selection there and the fold stays
 // exhaustive. Each arm returns an Update.Step over the parent Model, which
 // already has the next Combobox Model written back:
-const foldComboboxMultiOutMessage = Match.type<
+const foldComboboxMultiOutMessage = Combobox.OutMessage.match<
+  Update.Step<Model, Message>,
   Combobox.OutMessage<City>
->().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          selectedCities: () =>
-            Array.contains(model.selectedCities, value)
-              ? Array.filter(model.selectedCities, city => city !== value)
-              : Array.append(model.selectedCities, value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        selectedCities: () =>
+          Array.contains(model.selectedCities, value)
+            ? Array.filter(model.selectedCities, city => city !== value)
+            : Array.append(model.selectedCities, value),
       }),
-    ClearedSelection: () => model => ({ model }),
-  }),
-)
+    }),
+  ClearedSelection: () => model => ({ model }),
+})
 
 // Update.foldChild wires the child into the parent: it delegates keyboard
 // navigation, typeahead, and open/close to CitiesCombobox.update, writes the

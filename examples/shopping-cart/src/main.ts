@@ -82,24 +82,23 @@ const LoadExternal = Command.define('LoadExternal', {
 
 type UpdateReturn = Update.Return<Model, Message>
 
-const foldProductsOutMessage = Match.type<Products.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    AddedToCart:
-      ({ item }) =>
-      model => ({ model: evo(model, { cart: Cart.addItem(item) }) }),
-    IncrementedQuantity:
-      ({ itemId }) =>
-      model => ({
-        model: evo(model, { cart: Cart.incrementQuantity(itemId) }),
-      }),
-    DecrementedQuantity:
-      ({ itemId }) =>
-      model => ({
-        model: evo(model, { cart: Cart.decrementQuantity(itemId) }),
-      }),
-  }),
-)
+const foldProductsOutMessage = Products.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  AddedToCart:
+    ({ item }) =>
+    model => ({ model: evo(model, { cart: Cart.addItem(item) }) }),
+  IncrementedQuantity:
+    ({ itemId }) =>
+    model => ({
+      model: evo(model, { cart: Cart.incrementQuantity(itemId) }),
+    }),
+  DecrementedQuantity:
+    ({ itemId }) =>
+    model => ({
+      model: evo(model, { cart: Cart.decrementQuantity(itemId) }),
+    }),
+})
 
 const foldProducts = Update.foldChild({
   update: Products.update,

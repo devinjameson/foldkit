@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -56,16 +56,14 @@ const descriptions: Record<Plan, string> = {
 // arm carries the chosen value (typed as `Plan`) and its index, and returns
 // an Update.Step. This arm is also where the parent updates its own state or
 // dispatches Commands, for example to persist the choice or price the order.
-const foldPlanRadioGroupOutMessage = Match.type<
+const foldPlanRadioGroupOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<Plan>
->().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { maybePlan: () => Option.some(value) }) }),
-  }),
-)
+>({
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { maybePlan: () => Option.some(value) }) }),
+})
 
 // Update.foldChild wires the child into the parent: it runs the child update,
 // writes the child Model back, maps the child's Commands into your Message

@@ -17,13 +17,12 @@ import { SearchState, resultsFromState } from './model'
 
 export type UpdateReturn = Update.Return<Model, Message, PagefindService>
 
-const foldSearchDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldSearchDialogOutMessage = Dialog.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
 const foldSearchDialog = Update.foldChild({
   update: Dialog.update,

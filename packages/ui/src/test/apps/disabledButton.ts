@@ -1,4 +1,4 @@
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -32,13 +32,12 @@ export const initialModel: Model = {
 
 // UPDATE
 
-const foldDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldDialogOutMessage = Dialog.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
 const foldDialog = Update.foldChild({
   update: Dialog.update,

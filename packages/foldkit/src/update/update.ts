@@ -256,29 +256,26 @@ export type ChildFold<
  *  no second copy of the wrapper, and the mapping stays recorded on the
  *  Command for `Story.Command.resolve` and `Scene.Command.resolve`.
  *
- *  The annotated standalone const takes both parameters, so match the
- *  OutMessage value directly:
+ *  The annotated standalone const takes both parameters, so pass the
+ *  OutMessage value to its union matcher:
  *
  *  ```ts
  *  const foldLoginOutMessage = (
  *    outMessage: Login.OutMessage,
  *    { liftCommand }: Update.FoldContext<Login.Message, Message>,
  *  ) =>
- *    Match.value(outMessage).pipe(
- *      Match.withReturnType<Update.Step<Model, Message>>(),
- *      Match.tagsExhaustive({
- *        RequestedMagicLink:
- *          ({ email }) =>
- *          model => ({
- *            model,
- *            commands: [
- *              liftCommand(
- *                Login.SendMagicLink({ email, redirectRoute: model.route }),
- *              ),
- *            ],
- *          }),
- *      }),
- *    )
+ *    Login.OutMessage.match<Update.Step<Model, Message>>(outMessage, {
+ *      RequestedMagicLink:
+ *        ({ email }) =>
+ *        model => ({
+ *          model,
+ *          commands: [
+ *            liftCommand(
+ *              Login.SendMagicLink({ email, redirectRoute: model.route }),
+ *            ),
+ *          ],
+ *        }),
+ *    })
  *  ``` */
 export type FoldContext<ChildMessage, ParentMessage> = Readonly<{
   liftCommand: <E = never, R = never>(
@@ -295,9 +292,9 @@ export type FoldContext<ChildMessage, ParentMessage> = Readonly<{
  *  - `foldOutMessage`: folds the child's OutMessage into the parent as a
  *    {@link Step}. The Step receives the parent Model with the child
  *    already written back, and its Commands follow the child's in the
- *    returned batch. Match on the OutMessage tag inside
- *    (`Match.tagsExhaustive`), and build a multi-step fold with
- *    {@link combine}. Takes an optional second parameter, a
+ *    returned batch. Match on the OutMessage tag through its union matcher,
+ *    and build a multi-step fold with {@link combine}. Takes an optional
+ *    second parameter, a
  *    {@link FoldContext} of lifters bound to `toParentMessage`, for a
  *    Command the Step returns whose result is the child's Message. Parent Model
  *    inference comes from `read` and `write`; the child wrapper and OutMessage

@@ -226,13 +226,12 @@ const foldUi = Update.foldChild({
   toParentMessage: toUiMessage,
 })
 
-const foldMobileMenuDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldMobileMenuDialogOutMessage = Dialog.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
 const foldMobileMenuDialogClose = Update.foldChildStep({
   update: Dialog.close,

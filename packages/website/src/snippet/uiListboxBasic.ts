@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -44,14 +44,14 @@ const Message = defineMessageUnion({
 // commits a selection it carries `Selected({ value })` where `value: Plan`.
 // The arm returns an Update.Step over the parent Model, which already has the
 // next Listbox Model written back:
-const foldListboxOutMessage = Match.type<Listbox.OutMessage<Plan>>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { maybePlan: () => Option.some(value) }) }),
-  }),
-)
+const foldListboxOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>,
+  Listbox.OutMessage<Plan>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { maybePlan: () => Option.some(value) }) }),
+})
 
 // Update.foldChild wires the child into the parent: it delegates keyboard
 // navigation, typeahead, and open/close to PlanListbox.update, writes the next
