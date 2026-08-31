@@ -1,3 +1,7 @@
+import {
+  setOutlineRecordingEnabled,
+  shouldRecordOutline,
+} from '../outline/recording.js'
 import type { VNode } from '../snabbdom/vnode.js'
 import type { DispatchSync } from './runtimeSingleton.js'
 
@@ -816,15 +820,7 @@ export const resolveMountBoundaryDispatch = (
  *  same parent boundary can be re-validated. Does not touch the wrap
  *  or dispatcher tables. Those persist across renders and are evicted
  *  by VNode destroy hooks instead. */
-export const shouldRecordOutline = (): boolean =>
-  typeof window !== 'undefined' &&
-  Reflect.get(window, '__foldkitOutlinesEnabled') === true
-
-export const setOutlineRecordingEnabled = (enabled: boolean): void => {
-  if (typeof window !== 'undefined') {
-    Reflect.set(window, '__foldkitOutlinesEnabled', enabled)
-  }
-}
+export { setOutlineRecordingEnabled, shouldRecordOutline }
 
 export const trackOutline = (
   registry: BoundaryRegistry,

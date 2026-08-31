@@ -1,25 +1,50 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
+import { Schema } from 'effect'
+import { OutlineRectBatch } from 'foldkit/outline'
+
 import type { OutlineRect } from './types.js'
 
-export type WorkerWireMessage =
-  | Readonly<{
-      type: 'init'
-      canvas: OffscreenCanvas
-      width: number
-      height: number
-      dpr: number
-    }>
-  | Readonly<{
-      type: 'draw-outlines'
-      rects: ReadonlyArray<OutlineRect>
-    }>
-  | Readonly<{ type: 'scroll'; deltaX: number; deltaY: number }>
-  | Readonly<{
-      type: 'resize'
-      width: number
-      height: number
-      dpr: number
-    }>
-  | Readonly<{ type: 'clear' }>
+export const WorkerWireInit = Schema.Struct({
+  type: Schema.Literal('init'),
+  canvas: Schema.Unknown,
+  width: Schema.Number,
+  height: Schema.Number,
+  dpr: Schema.Number,
+})
+
+export const WorkerWireDrawOutlines = Schema.Struct({
+  type: Schema.Literal('draw-outlines'),
+  rects: OutlineRectBatch,
+})
+
+export const WorkerWireScroll = Schema.Struct({
+  type: Schema.Literal('scroll'),
+  deltaX: Schema.Number,
+  deltaY: Schema.Number,
+})
+
+export const WorkerWireResize = Schema.Struct({
+  type: Schema.Literal('resize'),
+  width: Schema.Number,
+  height: Schema.Number,
+  dpr: Schema.Number,
+})
+
+export const WorkerWireClear = Schema.Struct({
+  type: Schema.Literal('clear'),
+})
+
+export const WorkerWireMessage = Schema.Union([
+  WorkerWireInit,
+  WorkerWireDrawOutlines,
+  WorkerWireScroll,
+  WorkerWireResize,
+  WorkerWireClear,
+])
+export type WorkerWireMessage = typeof WorkerWireMessage.Type
+
+export const decodeWorkerWireMessage =
+  Schema.decodeUnknownOption(WorkerWireMessage)
 
 export type WorkerWireEnvelope = Readonly<{
   message: WorkerWireMessage
@@ -34,13 +59,13 @@ export const workerWireInit = (
 ): WorkerWireEnvelope => {
   const transfer: ReadonlyArray<Transferable> = [canvas]
   return {
-    message: {
+    message: WorkerWireInit.make({
       type: 'init',
       canvas,
       width,
       height,
       dpr,
-    },
+    }),
     transfer,
   }
 }
@@ -48,21 +73,21 @@ export const workerWireInit = (
 export const workerWireDrawOutlines = (
   rects: ReadonlyArray<OutlineRect>,
 ): WorkerWireEnvelope => ({
-  message: {
+  message: WorkerWireDrawOutlines.make({
     type: 'draw-outlines',
     rects,
-  },
+  }),
 })
 
 export const workerWireScroll = (
   deltaX: number,
   deltaY: number,
 ): WorkerWireEnvelope => ({
-  message: {
+  message: WorkerWireScroll.make({
     type: 'scroll',
     deltaX,
     deltaY,
-  },
+  }),
 })
 
 export const workerWireResize = (
@@ -70,14 +95,14 @@ export const workerWireResize = (
   height: number,
   dpr: number,
 ): WorkerWireEnvelope => ({
-  message: {
+  message: WorkerWireResize.make({
     type: 'resize',
     width,
     height,
     dpr,
-  },
+  }),
 })
 
 export const workerWireClear = (): WorkerWireEnvelope => ({
-  message: { type: 'clear' },
+  message: WorkerWireClear.make({ type: 'clear' }),
 })

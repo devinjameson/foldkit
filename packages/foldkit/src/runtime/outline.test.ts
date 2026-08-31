@@ -1,15 +1,20 @@
-import { Effect, Fiber } from 'effect'
+import { Effect, Fiber, Option } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DEVTOOLS_OVERLAY_RUNTIME_ID } from '../html/index.js'
-import { OUTLINE_CUSTOM_EVENT, type OutlineRect } from '../outline/public.js'
+import {
+  OUTLINE_CUSTOM_EVENT,
+  OUTLINE_ENABLED_KEY,
+  type OutlineRect,
+  decodeOutlineRectBatch,
+} from '../outline/public.js'
 import * as App from '../test/apps/outline.js'
 import * as LazyListApp from '../test/apps/outlineLazyList.js'
 import { makeApplication } from './makeApplication.js'
 
 declare global {
   interface Window {
-    __foldkitOutlinesEnabled?: boolean
+    [OUTLINE_ENABLED_KEY]?: boolean
   }
 }
 
@@ -76,27 +81,15 @@ const clickButton = (text: string): void => {
   button.click()
 }
 
-const isOutlineBatch = (
-  detail: unknown,
-): detail is ReadonlyArray<OutlineRect> =>
-  Array.isArray(detail) &&
-  detail.every(
-    item =>
-      typeof item === 'object' &&
-      item !== null &&
-      'id' in item &&
-      'label' in item &&
-      'x' in item &&
-      'y' in item &&
-      'width' in item &&
-      'height' in item,
-  )
-
 const collectOutlineEvents = (): Array<ReadonlyArray<OutlineRect>> => {
   const batches: Array<ReadonlyArray<OutlineRect>> = []
   window.addEventListener(OUTLINE_CUSTOM_EVENT, event => {
-    if (event instanceof CustomEvent && isOutlineBatch(event.detail)) {
-      batches.push(event.detail)
+    if (!(event instanceof CustomEvent)) {
+      return
+    }
+    const maybeBatch = decodeOutlineRectBatch(event.detail)
+    if (Option.isSome(maybeBatch)) {
+      batches.push(maybeBatch.value)
     }
   })
   return batches
@@ -109,7 +102,7 @@ describe('re-render outlines', () => {
 
   afterEach(async () => {
     Element.prototype.getBoundingClientRect = previousGetBoundingClientRect
-    window.__foldkitOutlinesEnabled = false
+    window[OUTLINE_ENABLED_KEY] = false
     if (runningFiber !== null) {
       await Effect.runPromise(Fiber.interrupt(runningFiber))
       runningFiber = null
@@ -118,7 +111,7 @@ describe('re-render outlines', () => {
   })
 
   it('emits an outline for a Submodel whose child model changed', async () => {
-    window.__foldkitOutlinesEnabled = true
+    window[OUTLINE_ENABLED_KEY] = true
     const batches = collectOutlineEvents()
 
     const container = document.createElement('div')
@@ -147,7 +140,7 @@ describe('re-render outlines', () => {
   })
 
   it('does not emit outlines from the DevTools overlay runtime', async () => {
-    window.__foldkitOutlinesEnabled = true
+    window[OUTLINE_ENABLED_KEY] = true
     const batches = collectOutlineEvents()
 
     const container = document.createElement('div')
@@ -165,7 +158,7 @@ describe('re-render outlines', () => {
   })
 
   it('emits only the keyed lazy row outline when one list item changes', async () => {
-    window.__foldkitOutlinesEnabled = true
+    window[OUTLINE_ENABLED_KEY] = true
     const batches = collectOutlineEvents()
 
     const container = document.createElement('div')

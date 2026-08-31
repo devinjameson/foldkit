@@ -1,25 +1,13 @@
-import { Effect, Queue, Stream } from 'effect'
-import { OUTLINE_CUSTOM_EVENT, type OutlineRect } from 'foldkit/outline'
+import { Effect, Option, Queue, Stream } from 'effect'
+import {
+  OUTLINE_CUSTOM_EVENT,
+  type OutlineRect,
+  decodeOutlineRectBatch,
+} from 'foldkit/outline'
 
 import { OutlineCommand } from './commands.js'
 import { SCROLL_THROTTLE_MS } from './constants.js'
 import { getDpr } from './geometry.js'
-
-const isOutlineRectBatch = (
-  detail: unknown,
-): detail is ReadonlyArray<OutlineRect> =>
-  Array.isArray(detail) &&
-  detail.every(
-    item =>
-      typeof item === 'object' &&
-      item !== null &&
-      typeof Reflect.get(item, 'id') === 'string' &&
-      typeof Reflect.get(item, 'label') === 'string' &&
-      typeof Reflect.get(item, 'x') === 'number' &&
-      typeof Reflect.get(item, 'y') === 'number' &&
-      typeof Reflect.get(item, 'width') === 'number' &&
-      typeof Reflect.get(item, 'height') === 'number',
-  )
 
 export const outlineBatchStream = Stream.callback<ReadonlyArray<OutlineRect>>(
   queue =>
@@ -29,11 +17,11 @@ export const outlineBatchStream = Stream.callback<ReadonlyArray<OutlineRect>>(
           if (!(event instanceof CustomEvent)) {
             return
           }
-          const detail = event.detail
-          if (!isOutlineRectBatch(detail) || detail.length === 0) {
+          const maybeBatch = decodeOutlineRectBatch(event.detail)
+          if (Option.isNone(maybeBatch) || maybeBatch.value.length === 0) {
             return
           }
-          Queue.offerUnsafe(queue, detail)
+          Queue.offerUnsafe(queue, maybeBatch.value)
         }
         window.addEventListener(OUTLINE_CUSTOM_EVENT, onOutline)
         return onOutline

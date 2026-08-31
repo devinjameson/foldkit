@@ -3,7 +3,7 @@ import {
   SNAP_THRESHOLD,
   TOTAL_FRAMES,
 } from './constants.js'
-import type { ActiveOutline, OutlineRect } from './types.js'
+import { ActiveOutline, type OutlineRect } from './types.js'
 
 export const lerp = (start: number, end: number): number => {
   const delta = end - start
@@ -33,35 +33,39 @@ export const updateOutlines = (
   for (const rect of rects) {
     const existing = activeOutlines.get(rect.id)
     if (existing) {
-      const next: ActiveOutline = {
-        ...existing,
-        count: existing.count + 1,
-        frame: 0,
-        targetX: rect.x,
-        targetY: rect.y,
-        targetWidth: rect.width,
-        targetHeight: rect.height,
-        label: rect.label,
-        ...nextCause(rect, existing),
-      }
-      activeOutlines.set(rect.id, next)
+      activeOutlines.set(
+        rect.id,
+        ActiveOutline.make({
+          ...existing,
+          count: existing.count + 1,
+          frame: 0,
+          targetX: rect.x,
+          targetY: rect.y,
+          targetWidth: rect.width,
+          targetHeight: rect.height,
+          label: rect.label,
+          ...nextCause(rect, existing),
+        }),
+      )
     } else {
-      const outline: ActiveOutline = {
-        id: rect.id,
-        label: rect.label,
-        ...(rect.cause !== undefined ? { cause: rect.cause } : {}),
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
-        targetX: rect.x,
-        targetY: rect.y,
-        targetWidth: rect.width,
-        targetHeight: rect.height,
-        frame: 0,
-        count: 1,
-      }
-      activeOutlines.set(rect.id, outline)
+      activeOutlines.set(
+        rect.id,
+        ActiveOutline.make({
+          id: rect.id,
+          label: rect.label,
+          cause: rect.cause,
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+          targetX: rect.x,
+          targetY: rect.y,
+          targetWidth: rect.width,
+          targetHeight: rect.height,
+          frame: 0,
+          count: 1,
+        }),
+      )
     }
   }
 }
@@ -72,11 +76,14 @@ export const updateScroll = (
   deltaY: number,
 ): void => {
   for (const [id, outline] of activeOutlines) {
-    activeOutlines.set(id, {
-      ...outline,
-      targetX: outline.targetX - deltaX,
-      targetY: outline.targetY - deltaY,
-    })
+    activeOutlines.set(
+      id,
+      ActiveOutline.make({
+        ...outline,
+        targetX: outline.targetX - deltaX,
+        targetY: outline.targetY - deltaY,
+      }),
+    )
   }
 }
 
@@ -107,16 +114,17 @@ export const advanceOutlines = (
     if (targetHeight !== height) {
       height = lerp(height, targetHeight)
     }
-    const nextFrame = frame + 1
-    const nextOutline: ActiveOutline = {
-      ...outline,
-      x,
-      y,
-      width,
-      height,
-      frame: nextFrame,
-    }
-    activeOutlines.set(id, nextOutline)
+    activeOutlines.set(
+      id,
+      ActiveOutline.make({
+        ...outline,
+        x,
+        y,
+        width,
+        height,
+        frame: frame + 1,
+      }),
+    )
   }
 }
 

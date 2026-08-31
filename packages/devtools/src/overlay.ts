@@ -1860,7 +1860,7 @@ const buildOverlayView = (
                       letterSpacing: '0',
                     }),
                   ],
-                  [`${model.fps}`],
+                  [globalThis.String(model.fps)],
                 ),
               ],
             ),

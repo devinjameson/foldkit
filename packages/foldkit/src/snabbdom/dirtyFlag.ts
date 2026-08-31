@@ -1,8 +1,8 @@
-import { isOutlineRecordingEnabled } from '../outline/public.js'
-
-export { isOutlineRecordingEnabled }
+import { shouldRecordOutline } from '../outline/recording.js'
 
 const stack: Array<boolean> = []
+
+export const isOutlineRecordingEnabled = shouldRecordOutline
 
 export const beginDirty = (): void => {
   if (!isOutlineRecordingEnabled()) {

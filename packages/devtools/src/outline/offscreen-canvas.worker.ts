@@ -1,10 +1,13 @@
 // oxlint-disable foldkit/no-module-level-mutable-state
-import { Match } from 'effect'
+import { Match, Option } from 'effect'
 
 import { makeWorkerDrawLoop } from './drawLoop.js'
 import { clampedCanvasSize } from './geometry.js'
 import { updateOutlines, updateScroll } from './model.js'
-import type { WorkerWireMessage } from './protocol.js'
+import {
+  decodeWorkerWireMessage,
+  type WorkerWireMessage,
+} from './protocol.js'
 import { drawFrame, initCanvas } from './render.js'
 import type { ActiveOutline } from './types.js'
 
@@ -30,7 +33,7 @@ const handleWireMessage = (data: WorkerWireMessage): void => {
   Match.value(data).pipe(
     Match.discriminatorsExhaustive('type')({
       init: message => {
-        canvas = message.canvas
+        canvas = message.canvas as OffscreenCanvas
         dpr = message.dpr
         canvas.width = clampedCanvasSize(message.width, dpr)
         canvas.height = clampedCanvasSize(message.height, dpr)
@@ -70,6 +73,9 @@ const handleWireMessage = (data: WorkerWireMessage): void => {
   )
 }
 
-self.onmessage = (event: MessageEvent<WorkerWireMessage>): void => {
-  handleWireMessage(event.data)
+self.onmessage = (event: MessageEvent<unknown>): void => {
+  const maybeMessage = decodeWorkerWireMessage(event.data)
+  if (Option.isSome(maybeMessage)) {
+    handleWireMessage(maybeMessage.value)
+  }
 }
