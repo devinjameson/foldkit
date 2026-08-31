@@ -96,7 +96,10 @@ export const comboboxViewInputs = ({
     attributes: childAttributes([ih.Class(wrapperClass)]),
     inputWrapperAttributes: childAttributes([ih.Class('relative')]),
     buttonContent: Icon.chevronDown('w-4 h-4'),
-    buttonAttributes: childAttributes([ih.Class(buttonClassName)]),
+    buttonAttributes: childAttributes([
+      ih.AriaLabel('Show suggestions'),
+      ih.Class(buttonClassName),
+    ]),
     anchor,
   }
 }
