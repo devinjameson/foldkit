@@ -4,10 +4,7 @@ import { Match, Option } from 'effect'
 import { makeWorkerDrawLoop } from './drawLoop.js'
 import { clampedCanvasSize } from './geometry.js'
 import { updateOutlines, updateScroll } from './model.js'
-import {
-  decodeWorkerWireMessage,
-  type WorkerWireMessage,
-} from './protocol.js'
+import { type WorkerWireMessage, decodeWorkerWireMessage } from './protocol.js'
 import { drawFrame, initCanvas } from './render.js'
 import type { ActiveOutline } from './types.js'
 
@@ -33,7 +30,10 @@ const handleWireMessage = (data: WorkerWireMessage): void => {
   Match.value(data).pipe(
     Match.discriminatorsExhaustive('type')({
       init: message => {
-        canvas = message.canvas as OffscreenCanvas
+        if (!(message.canvas instanceof OffscreenCanvas)) {
+          return
+        }
+        canvas = message.canvas
         dpr = message.dpr
         canvas.width = clampedCanvasSize(message.width, dpr)
         canvas.height = clampedCanvasSize(message.height, dpr)
