@@ -225,6 +225,9 @@ export const isBlogRoute = AppRoute.isAnyOf(['Blog', 'BlogPost'])
 
 const isDocsUnionRoute = Schema.is(DocsRoute)
 
+export const isSearchRoute = (route: AppRoute): boolean =>
+  isDocsUnionRoute(route) || isBlogRoute(route)
+
 /**
  * Whether a route belongs to the documentation section, which is what the
  * header's `Docs` link highlights on. Derived from `DocsRoute` so a new

@@ -14,7 +14,6 @@ type Message = typeof Message.Type
 const Model = Schema.Struct({
   isListening: Schema.Boolean,
 })
-
 type Model = typeof Model.Type
 
 // SUBSCRIPTION

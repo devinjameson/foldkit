@@ -3,8 +3,8 @@ import { Html, inertHtml as ih } from 'foldkit/html'
 
 import * as Markdown from '@foldkit/markdown'
 
+import { highlightedCodeBlock } from '../component/codeBlock'
 import { ctaLinks, infoCalloutBlocks, warningCalloutBlocks } from '../prose'
-import { highlightedCodeBlock } from '../view/codeBlock'
 import type { DemoLabels } from './demoLabel'
 import { islandAttributes } from './islandAttributes'
 import { type Slots, renderFaqSection, resolveDemo } from './slots'

@@ -10,55 +10,30 @@ import {
 } from 'effect'
 import { AsyncData, Command, Mount, Submodel, Update } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
-import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Disclosure, Tabs } from '@foldkit/ui'
 
-import { Icon } from '../../icon'
-import { exampleSourceHref } from '../../link'
-import type { TableOfContentsEntry } from '../../main'
-import { pageTitle, para } from '../../prose'
-import { examplesRouter, playgroundRouter } from '../../route'
 import {
   type RenderCopyButton,
   highlightedCodeBlockFor,
-} from '../../view/codeBlock'
+} from '../../component/codeBlock'
+import { Icon } from '../../icon'
+import { exampleSourceHref } from '../../link'
+import { pageTitle, para } from '../../prose'
+import { examplesRouter, playgroundRouter } from '../../route'
+import type { TableOfContentsEntry } from '../../tableOfContentsEntry'
+import { Message } from './message'
 import { type ExampleMeta, findBySlug } from './meta'
+import { CurrentSourcesAsyncData, type Model } from './model'
 import {
   type ExampleSourceFile,
   ExampleSources,
   loadSourcesForSlug,
 } from './sources'
 
-// MODEL
-
-export const CurrentSourcesAsyncData = AsyncData.Schema(
-  ExampleSources,
-  Schema.String,
-)
-
-export const Model = Schema.Struct({
-  sourceFileTabs: Tabs.Model,
-  maybeActiveSourceFilePath: Schema.Option(Schema.String),
-  maybeExampleUrl: Schema.Option(Schema.String),
-  isLivePreviewOpen: Schema.Boolean,
-  currentSources: CurrentSourcesAsyncData.schema,
-})
-export type Model = typeof Model.Type
-
-// MESSAGE
-
-export const Message = defineMessageUnion({
-  GotSourceFileTabsMessage: { message: Tabs.Message },
-  ChangedExampleUrl: { url: Schema.String },
-  ToggledLivePreview: { isOpen: Schema.Boolean },
-  RequestedExampleSources: { slug: Schema.String },
-  SucceededLoadExampleSources: { sources: ExampleSources },
-  FailedLoadExampleSources: { error: Schema.String },
-})
-
-export type Message = typeof Message.Type
+export { Message } from './message'
+export { CurrentSourcesAsyncData, Model } from './model'
 
 // COMMAND
 

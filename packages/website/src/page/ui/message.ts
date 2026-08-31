@@ -20,7 +20,7 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
-import { Toast } from './toastModule'
+import { Toast } from './demo/toastModule'
 
 export const Message = defineMessageUnion({
   ClickedButtonDemo: {},
@@ -89,5 +89,4 @@ export const Message = defineMessageUnion({
   GotVirtualListVariableDemoMessage: { message: VirtualList.Message },
   ClickedVirtualListVariableScrollToMiddle: {},
 })
-
 export type Message = typeof Message.Type

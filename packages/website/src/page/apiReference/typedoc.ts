@@ -17,7 +17,6 @@ export const TypeDocFlags = Schema.Struct({
     Schema.withDecodingDefaultKey(Effect.succeed(false)),
   ),
 })
-
 export type TypeDocFlags = typeof TypeDocFlags.Type
 
 const defaultFlags: TypeDocFlags = {
@@ -32,21 +31,18 @@ export const TypeDocCommentPart = Schema.Struct({
   kind: Schema.String,
   text: Schema.String,
 })
-
 export type TypeDocCommentPart = typeof TypeDocCommentPart.Type
 
 export const TypeDocBlockTag = Schema.Struct({
   tag: Schema.String,
   content: Schema.Array(TypeDocCommentPart),
 })
-
 export type TypeDocBlockTag = typeof TypeDocBlockTag.Type
 
 export const TypeDocComment = Schema.Struct({
   summary: Schema.OptionFromOptional(Schema.Array(TypeDocCommentPart)),
   blockTags: Schema.OptionFromOptional(Schema.Array(TypeDocBlockTag)),
 })
-
 export type TypeDocComment = typeof TypeDocComment.Type
 
 export const TypeDocSource = Schema.Struct({
@@ -55,7 +51,6 @@ export const TypeDocSource = Schema.Struct({
   character: Schema.Number,
   url: Schema.OptionFromOptional(Schema.String),
 })
-
 export type TypeDocSource = typeof TypeDocSource.Type
 
 type TypeDocIntrinsicType = Readonly<{
@@ -300,7 +295,6 @@ export const TypeDocTypeParam = Schema.Struct({
   type: Schema.OptionFromOptional(TypeDocTypeSchema),
   default: Schema.OptionFromOptional(TypeDocTypeSchema),
 })
-
 export type TypeDocTypeParam = typeof TypeDocTypeParam.Type
 
 export const TypeDocParam = Schema.Struct({
@@ -315,7 +309,6 @@ export const TypeDocParam = Schema.Struct({
   defaultValue: Schema.OptionFromOptional(Schema.String),
   comment: Schema.OptionFromOptional(TypeDocComment),
 })
-
 export type TypeDocParam = typeof TypeDocParam.Type
 
 export const TypeDocSignature = Schema.Struct({
@@ -328,7 +321,6 @@ export const TypeDocSignature = Schema.Struct({
   type: Schema.OptionFromOptional(TypeDocTypeSchema),
   typeParameters: Schema.OptionFromOptional(Schema.Array(TypeDocTypeParam)),
 })
-
 export type TypeDocSignature = typeof TypeDocSignature.Type
 
 const typeDocItemFields = {
@@ -387,7 +379,6 @@ export const TypeDocModule = Schema.Struct({
     Schema.withDecodingDefaultKey(Effect.succeed([])),
   ),
 })
-
 export type TypeDocModule = typeof TypeDocModule.Type
 
 export const TypeDocJson = Schema.Struct({
@@ -398,7 +389,6 @@ export const TypeDocJson = Schema.Struct({
   kind: Schema.Number,
   children: Schema.Array(TypeDocModule),
 })
-
 export type TypeDocJson = typeof TypeDocJson.Type
 
 export const Kind = {

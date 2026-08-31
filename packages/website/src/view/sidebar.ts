@@ -15,8 +15,8 @@ import {
 } from '../docsNav'
 import { Icon } from '../icon'
 import { Link } from '../link'
-import { type Model } from '../main'
 import { Message } from '../message'
+import { type Model } from '../model'
 import {
   AppRoute,
   apiModuleRouter,
@@ -25,7 +25,7 @@ import {
   isBlogRoute,
 } from '../route'
 import { type GroupKey, type SidebarGroups } from '../sidebarStorage'
-import { betaTag, iconLink } from './shared'
+import * as Shared from './shared'
 
 const GROUP_ID: Record<GroupKey, string> = {
   getStarted: 'get-started-group',
@@ -266,7 +266,7 @@ const MOBILE_ID_PREFIX = 'mobile'
 
 const lazyNavLinks = createKeyedLazy()
 
-export const sidebarView = (model: Model, h: HtmlBuilder<Message>): Html => {
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   const desktopNavLinks = lazyNavLinks(DESKTOP_ID_PREFIX, computeNavLinks, [
     DESKTOP_ID_PREFIX,
     model.route,
@@ -326,7 +326,7 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
                   h.Decoding('sync'),
                   h.Class('h-6 w-auto dark:invert'),
                 ]),
-                betaTag,
+                Shared.betaTag,
               ],
             ),
             h.button(
@@ -361,10 +361,14 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
             h.div(
               [h.Class('flex items-center justify-center gap-8')],
               [
-                iconLink(Link.github, 'GitHub', Icon.github('w-6 h-6')),
-                iconLink(Link.discord, 'Discord', Icon.discord('w-6 h-6')),
-                iconLink(Link.xSocial, 'X', Icon.xSocial('w-6 h-6')),
-                iconLink(Link.npm, 'npm', Icon.npm('w-8 h-8')),
+                Shared.iconLink(Link.github, 'GitHub', Icon.github('w-6 h-6')),
+                Shared.iconLink(
+                  Link.discord,
+                  'Discord',
+                  Icon.discord('w-6 h-6'),
+                ),
+                Shared.iconLink(Link.xSocial, 'X', Icon.xSocial('w-6 h-6')),
+                Shared.iconLink(Link.npm, 'npm', Icon.npm('w-8 h-8')),
               ],
             ),
           ],

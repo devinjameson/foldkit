@@ -6,11 +6,11 @@ import {
   inertHtml as ih,
 } from 'foldkit/html'
 
+import { type CopiedSnippets } from '../../component/codeBlock'
 import { docPage } from '../../markdown'
 import { type Message } from '../../message'
 import { pageTitle } from '../../prose'
 import { blogRouter } from '../../route'
-import { type CopiedSnippets } from '../../view/codeBlock'
 import { type PostCover, maybePostCover } from './frontmatter'
 import { BLOG_AUTHOR } from './meta'
 import { type BlogPost, formatPostDate } from './posts'

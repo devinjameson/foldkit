@@ -3,10 +3,13 @@ import { Html, type HtmlBuilder } from 'foldkit/html'
 
 import * as Markdown from '@foldkit/markdown'
 
-import { type TableOfContentsEntry } from '../main'
+import {
+  type CopiedSnippets,
+  defaultRenderCopyButton,
+} from '../component/codeBlock'
 import { type Message } from '../message'
 import { defaultRenderHeadingLink } from '../prose'
-import { type CopiedSnippets, defaultRenderCopyButton } from '../view/codeBlock'
+import { type TableOfContentsEntry } from '../tableOfContentsEntry'
 import { type DemoLabels, collectDemoLabels } from './demoLabel'
 import { docIslands } from './islands'
 import { type Slots } from './slots'

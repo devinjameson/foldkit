@@ -41,7 +41,6 @@ export const ApiParameter = Schema.Struct({
   defaultValue: NullableString,
   description: NullableString,
 })
-
 export type ApiParameter = typeof ApiParameter.Type
 
 export const ApiFunctionSignature = Schema.Struct({
@@ -49,7 +48,6 @@ export const ApiFunctionSignature = Schema.Struct({
   returnType: Schema.String,
   typeParameters: Schema.Array(Schema.String),
 })
-
 export type ApiFunctionSignature = typeof ApiFunctionSignature.Type
 
 export const ApiFunction = Schema.Struct({
@@ -58,7 +56,6 @@ export const ApiFunction = Schema.Struct({
   signatures: Schema.Array(ApiFunctionSignature),
   sourceUrl: NullableString,
 })
-
 export type ApiFunction = typeof ApiFunction.Type
 
 export const ApiType = Schema.Struct({
@@ -67,7 +64,6 @@ export const ApiType = Schema.Struct({
   typeDefinition: Schema.String,
   sourceUrl: NullableString,
 })
-
 export type ApiType = typeof ApiType.Type
 
 export const ApiVariable = Schema.Struct({
@@ -76,7 +72,6 @@ export const ApiVariable = Schema.Struct({
   type: Schema.String,
   sourceUrl: NullableString,
 })
-
 export type ApiVariable = typeof ApiVariable.Type
 
 export const ApiInterface = Schema.Struct({
@@ -85,7 +80,6 @@ export const ApiInterface = Schema.Struct({
   typeDefinition: Schema.String,
   sourceUrl: NullableString,
 })
-
 export type ApiInterface = typeof ApiInterface.Type
 
 export const ApiModule = Schema.Struct({
@@ -95,13 +89,11 @@ export const ApiModule = Schema.Struct({
   interfaces: Schema.Array(ApiInterface),
   variables: Schema.Array(ApiVariable),
 })
-
 export type ApiModule = typeof ApiModule.Type
 
 export const ParsedApiReference = Schema.Struct({
   modules: Schema.Array(ApiModule),
 })
-
 export type ParsedApiReference = typeof ParsedApiReference.Type
 
 // SHARED

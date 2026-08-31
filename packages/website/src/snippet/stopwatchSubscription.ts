@@ -15,7 +15,6 @@ const Model = Schema.Struct({
   isRunning: Schema.Boolean,
   elapsed: Schema.Number,
 })
-
 type Model = typeof Model.Type
 
 // SUBSCRIPTION

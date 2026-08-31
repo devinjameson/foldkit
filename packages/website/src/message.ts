@@ -4,10 +4,15 @@ import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
 
-import { Dialog, Menu, Tabs } from '@foldkit/ui'
+import { Dialog } from '@foldkit/ui'
 
-import * as Page from './page'
-import * as Search from './search'
+import * as ApiReference from './page/apiReference/message'
+import * as ComingFromReact from './page/comingFromReact/message'
+import * as ExampleDetail from './page/example/message'
+import * as Home from './page/home/message'
+import * as Playground from './page/playground'
+import * as Ui from './page/ui/message'
+import * as Search from './search/message'
 import { GroupKey, SidebarState } from './sidebarStorage'
 
 // THEME
@@ -23,6 +28,7 @@ export type ResolvedTheme = typeof ResolvedTheme.Type
 export const Message = defineMessageUnion({
   CompletedNavigateInternal: {},
   CompletedLoadExternal: {},
+  CompletedLoadPlayground: {},
   CompletedInjectAnalytics: {},
   CompletedInjectSpeedInsights: {},
   CompletedScrollToTop: {},
@@ -52,23 +58,21 @@ export const Message = defineMessageUnion({
   CompletedWaitBeforeHidingCopiedIndicator: { text: Schema.String },
   GotMobileMenuDialogMessage: { message: Dialog.Message },
   ClickedOpenMobileMenu: {},
+  ClickedOpenSearch: {},
+  PressedSearchShortcut: {},
   ToggledMobileTableOfContents: { isOpen: Schema.Boolean },
   ClickedMobileTableOfContentsLink: { sectionId: Schema.String },
   ChangedActiveSection: { sectionId: Schema.String },
   SelectedThemePreference: { preference: ThemePreference },
   ChangedSystemTheme: { theme: ResolvedTheme },
   ChangedViewportWidth: { isNarrow: Schema.Boolean },
-  ToggledAiHeading: {},
-  GotDemoTabsMessage: { message: Tabs.Message },
-  GotPlaygroundMenuMessage: { message: Menu.Message },
-  GotPlaygroundMessage: { message: Page.Playground.Message },
-  GotAsyncCounterDemoMessage: { message: Page.AsyncCounterDemo.Message },
-  GotNotePlayerDemoMessage: { message: Page.NotePlayerDemo.Message },
-  GotComingFromReactMessage: { message: Page.ComingFromReact.Message },
-  GotApiReferenceMessage: { message: Page.ApiReference.Message },
-  GotUiPageMessage: { message: Page.UiPages.Message },
+  GotHomeMessage: { message: Home.Message },
+  GotPlaygroundMessage: { message: Playground.Message },
+  GotComingFromReactMessage: { message: ComingFromReact.Message },
+  GotApiReferenceMessage: { message: ApiReference.Message },
+  GotUiPageMessage: { message: Ui.Message },
   ToggledSidebarGroup: { key: GroupKey, isOpen: Schema.Boolean },
-  GotExampleDetailMessage: { message: Page.Example.ExampleDetail.Message },
+  GotExampleDetailMessage: { message: ExampleDetail.Message },
   GotSearchMessage: { message: Search.Message },
   ToggledMapMessagesUnderHood: { isOpen: Schema.Boolean },
 })

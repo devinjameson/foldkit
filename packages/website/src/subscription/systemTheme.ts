@@ -1,8 +1,8 @@
 import { Effect, Option, Queue, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 
-import { type Model } from '../main'
 import { Message } from '../message'
+import { type Model } from '../model'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   systemTheme: entry(

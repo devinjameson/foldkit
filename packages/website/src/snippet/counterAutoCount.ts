@@ -17,7 +17,6 @@ const Model = Schema.Struct({
   count: Schema.Number,
   isAutoCounting: Schema.Boolean,
 })
-
 type Model = typeof Model.Type
 
 // SUBSCRIPTION

@@ -42,7 +42,7 @@ const linkClassName =
  * anywhere inside the documentation and `Blog` across the index and posts.
  * `className` lays the `nav` element out in its host header.
  */
-export const headerNavView = (
+export const view = (
   route: AppRoute,
   className: string,
   h: HtmlBuilder<Message>,

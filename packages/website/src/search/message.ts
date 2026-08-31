@@ -19,13 +19,10 @@ export const Message = defineMessageUnion({
   },
   SelectedSearchResult: { url: Schema.String },
   GotSearchDialogMessage: { message: Dialog.Message },
-  ClickedOpenSearch: {},
-  PressedSearchShortcut: {},
   ClearedSearchQuery: {},
   CompletedNavigateToResult: {},
   CompletedScrollToResult: {},
   CompletedFocusSearchInput: {},
   PressedArrowKey: { direction: Schema.Literals(['Up', 'Down']) },
 })
-
 export type Message = typeof Message.Type

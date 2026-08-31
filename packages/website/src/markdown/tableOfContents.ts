@@ -2,7 +2,7 @@ import { Array, Match, Option, Result, pipe } from 'effect'
 
 import type { Heading, MarkdownDocument } from '@foldkit/markdown'
 
-import type { TableOfContentsEntry } from '../main'
+import type { TableOfContentsEntry } from '../tableOfContentsEntry'
 import { parseHeadingId, slugify } from './slug'
 
 // TABLE OF CONTENTS

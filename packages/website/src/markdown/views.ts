@@ -4,6 +4,7 @@ import { type Attribute, Html, inertHtml as ih } from 'foldkit/html'
 import type { Alignment } from '@foldkit/markdown'
 import type * as Markdown from '@foldkit/markdown'
 
+import { type RenderCopyButton, codeBlock } from '../component/codeBlock'
 import {
   type RenderHeadingLink,
   diagram,
@@ -11,7 +12,6 @@ import {
   inlineCode,
   pageTitle,
 } from '../prose'
-import { type RenderCopyButton, codeBlock } from '../view/codeBlock'
 import { parseHeadingId, stripHeadingIdMarker } from './slug'
 import { type HeadingIds, headingId } from './tableOfContents'
 

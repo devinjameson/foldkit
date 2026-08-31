@@ -1,11 +1,11 @@
 import { Submodel } from 'foldkit'
 import type { Html } from 'foldkit/html'
 
+import type { RenderCopyButton } from '../../component/codeBlock'
 import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink, demoContainer } from '../../prose'
-import type { RenderCopyButton } from '../../view/codeBlock'
-import * as DatePicker from './datePicker'
 import raw from './datePickerPage.md'
+import * as DatePicker from './demo/datePicker'
 import type { Message } from './message'
 import type { Model } from './model'
 
