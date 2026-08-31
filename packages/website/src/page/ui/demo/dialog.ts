@@ -190,10 +190,7 @@ const deleteProjectContent = (
 
 // VIEW
 
-export const dialogDemo = (
-  dialogModel: Dialog.Model,
-  h: HtmlBuilder<Message>,
-) => {
+export const view = (dialogModel: Dialog.Model, h: HtmlBuilder<Message>) => {
   return [
     trigger('Open Dialog', Message.ClickedOpenDialog(), h),
     h.submodel({

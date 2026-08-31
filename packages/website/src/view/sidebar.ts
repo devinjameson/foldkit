@@ -5,6 +5,7 @@ import apiModuleIndex from 'virtual:api-module-index'
 
 import { Dialog, Disclosure } from '@foldkit/ui'
 
+import { Shared } from '../component'
 import {
   DOCS_SIDEBAR_NAV_ID,
   MOBILE_MENU_NAV_ID,
@@ -25,7 +26,6 @@ import {
   isBlogRoute,
 } from '../route'
 import { type GroupKey, type SidebarGroups } from '../sidebarStorage'
-import * as Shared from './shared'
 
 const GROUP_ID: Record<GroupKey, string> = {
   getStarted: 'get-started-group',
@@ -294,7 +294,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   )
 }
 
-export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
+export const mobileView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const mobileNavLinks = lazyNavLinks(MOBILE_ID_PREFIX, computeNavLinks, [
     MOBILE_ID_PREFIX,
     model.route,

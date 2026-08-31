@@ -41,7 +41,7 @@ type SliderDemoInputs = Readonly<{
   volumeValue: number
 }>
 
-export const sliderDemo = (
+export const view = (
   { ratingModel, ratingValue, volumeModel, volumeValue }: SliderDemoInputs,
   h: HtmlBuilder<Message>,
 ) => {

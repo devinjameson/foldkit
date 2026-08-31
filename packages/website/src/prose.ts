@@ -3,22 +3,21 @@ import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { twMerge } from 'tailwind-merge'
 
 import { Icon } from './icon'
-import { Message } from './message'
 import { type TableOfContentsEntry } from './tableOfContentsEntry'
 
 /**
  * Builds the copy-link control beside a section heading.
  *
- * A page rendered through `h.submodel` must supply one of these from its
- * parent, for the same reason {@link RenderCopyButton} exists: a handler's
- * dispatcher comes from the frame it is built in, so an app-level Message
- * built inside a Submodel's view is rejected by that Submodel's boundary.
+ * A page rendered through `h.submodel` receives one of these from the boundary
+ * that owns the heading-link Message. An element dispatches through the frame
+ * where it is built, so the renderer keeps that ownership explicit.
  */
 export type RenderHeadingLink = (id: string, text: string) => Html
 
-const headingLinkButton = (
+const headingLinkButton = <Message>(
   id: string,
   text: string,
+  toMessage: (id: string) => Message,
   h: HtmlBuilder<Message>,
 ): Html =>
   h.a(
@@ -28,23 +27,21 @@ const headingLinkButton = (
         'px-0.5 py-1 rounded transition-opacity text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 focus-visible:text-gray-800 dark:focus-visible:text-gray-200 focus-visible:opacity-100 cursor-pointer hover-capable:opacity-0 hover-capable:group-hover:opacity-100',
       ),
       h.AriaLabel(`Copy link to ${text}`),
-      h.OnClick(Message.ClickedCopyLink({ hash: id })),
+      h.OnClick(toMessage(id)),
     ],
     [Icon.link('w-5 h-5')],
   )
 
 /**
- * Builds a copy-link control bound to the root frame's builder.
- *
- * This is the only way to construct a {@link RenderHeadingLink}, and it demands
- * a builder typed to the app's Message. A Submodel's own builder cannot satisfy
- * it, which is what forces the control to be created by an ancestor and passed
- * down rather than built in place.
+ * Builds a copy-link renderer for the supplied Message boundary.
  */
-export const defaultRenderHeadingLink =
-  (h: HtmlBuilder<Message>): RenderHeadingLink =>
+export const renderHeadingLink =
+  <Message>(
+    toMessage: (id: string) => Message,
+    h: HtmlBuilder<Message>,
+  ): RenderHeadingLink =>
   (id, text) =>
-    headingLinkButton(id, text, h)
+    headingLinkButton(id, text, toMessage, h)
 
 export const link = (href: string, text: string): Html =>
   ih.a([ih.Href(href), ih.Class('link-accent font-normal')], [text])

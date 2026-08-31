@@ -65,9 +65,13 @@ Markdown.view(about, {
       h.p([h.Class('leading-relaxed text-stone-700')], content),
     Link: ({ url }, content) =>
       h.a([h.Href(url), h.Class('underline underline-offset-2')], content),
+    CodeBlock: ({ value }, occurrenceIndex) =>
+      h.pre([h.Id(`code-${occurrenceIndex}`)], [h.code([], [value])]),
   },
 })
 ```
+
+The `CodeBlock` view's second argument is its zero-based occurrence index in document order, for deriving stable per-instance identifiers.
 
 `Markdown.viewBlocks` returns one `Html` per top-level block instead, for when the blocks should land directly inside your own container element.
 

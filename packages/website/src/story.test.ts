@@ -1,4 +1,4 @@
-import { Option, Record, pipe } from 'effect'
+import { HashSet, Option, Record, pipe } from 'effect'
 import { Calendar } from 'foldkit'
 import { Command, given, message, model, story } from 'foldkit/story'
 import * as Url from 'foldkit/url'
@@ -20,6 +20,7 @@ import { Message } from './message'
 import { type Model } from './model'
 import { Home } from './page'
 import * as Search from './search'
+import * as SnippetCopy from './snippetCopy'
 
 const parseUrl = (value: string): Url.Url =>
   pipe(Url.fromString(value), Option.getOrThrow)
@@ -195,6 +196,38 @@ describe('application', () => {
       Command.resolve(
         Search.FocusSearchInput,
         Search.Message.CompletedFocusSearchInput(),
+      ),
+    )
+  })
+
+  test('the parent delegates snippet copying to the child Submodel', () => {
+    const snippetId = 'root-story-snippet'
+
+    story(
+      update,
+      given(initAt(homeUrl)),
+      message(
+        Message.GotSnippetCopyMessage({
+          message: SnippetCopy.Message.ClickedCopySnippet({
+            snippetId,
+            text: 'const count = 0',
+          }),
+        }),
+      ),
+      Command.resolve(
+        SnippetCopy.CopySnippet,
+        SnippetCopy.Message.SucceededCopySnippet({ snippetId }),
+      ),
+      model(model => {
+        expect(HashSet.has(model.snippetCopy.copiedSnippetIds, snippetId)).toBe(
+          true,
+        )
+      }),
+      Command.resolve(
+        SnippetCopy.WaitBeforeHidingCopiedIndicator,
+        SnippetCopy.Message.CompletedWaitBeforeHidingCopiedIndicator({
+          snippetId,
+        }),
       ),
     )
   })

@@ -92,3 +92,9 @@ Consumers can then import the feature as a namespace.
 ::Snippet{name="indexUsage" label="namespace usage"}
 
 `Home.` exposes the feature's public surface without revealing its internal file layout.
+
+### Keep Barrel Dependencies Pointing Inward
+
+A parent barrel may re-export each immediate child namespace, and application code may import those namespaces from the barrel. The exported child modules must not import the application root in return. If `message.ts` imports `Home` from `page/index.ts` while a module re-exported by `page/index.ts` imports that root Message, the barrel closes a circular dependency.
+
+Keep shared leaf modules independent of the root. Pass parent-owned rendering capabilities through function arguments or Submodel `viewInputs`, and make stateful shared behavior its own Submodel. The parent then provides the capability at the view boundary while each Page remains importable through the one-level barrel.

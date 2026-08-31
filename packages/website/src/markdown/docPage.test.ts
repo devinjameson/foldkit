@@ -2,16 +2,20 @@ import { Array, Match, Option, Result, String } from 'effect'
 import { inertHtml as ih } from 'foldkit/html'
 import { describe, expect, test } from 'vitest'
 
+import * as Markdown from '@foldkit/markdown'
 import { parseMarkdown } from '@foldkit/markdown/vite'
 
+import { type CodeBlock } from '../component'
 import { PostFrontmatter } from '../page/blog/frontmatter'
 import comingFromReactSource from '../page/comingFromReact/comingFromReact.md?raw'
 import { FAQ_IDS } from '../page/comingFromReact/faq'
 import comboboxPageSource from '../page/ui/comboboxPage.md?raw'
 import { collectDemoLabels } from './demoLabel'
 import { islandAttributes } from './islandAttributes'
+import { docIslands } from './islands'
 import { parseHeadingId, slugify, stripHeadingIdMarker } from './slug'
 import { collectHeadings } from './tableOfContents'
+import { docViews } from './views'
 
 // NOTE: mirrors the options the website's markdown plugin runs with, so a check
 // over every page's source reads the same documents the site builds.
@@ -137,6 +141,44 @@ describe('Demo island', () => {
     expect(() =>
       parseMarkdown('::Demo', { islands: islandAttributes }),
     ).toThrow()
+  })
+})
+
+describe('copy control identity', () => {
+  test('uses structural occurrence indices for code blocks and snippets', () => {
+    const document = parseMarkdown(
+      '```ts\nconst first = 1\n```\n\n::Snippet{name="sceneLocators"}\n\n```ts\nconst second = 2\n```\n\n::Snippet{name="sceneLocators"}',
+      { islands: islandAttributes },
+    )
+    const { idByHeading } = collectHeadings(document)
+    const demoLabels = collectDemoLabels(document, idByHeading)
+    const ids: Array<string> = []
+    const renderCopyButton: CodeBlock.RenderCopyButton = config => {
+      ids.push(config.id)
+      return ih.empty
+    }
+    const renderHeadingLink = () => ih.empty
+
+    Markdown.view(document, {
+      views: docViews({
+        pageId: 'copy-identities',
+        idByHeading,
+        renderCopyButton,
+        renderHeadingLink,
+      }),
+      islands: docIslands(
+        { demos: {}, renderCopyButton, renderHeadingLink },
+        demoLabels,
+        'copy-identities',
+      ),
+    })
+
+    expect(ids).toEqual([
+      'copy-identities-code-0',
+      'copy-identities-snippet-sceneLocators-0',
+      'copy-identities-code-1',
+      'copy-identities-snippet-sceneLocators-1',
+    ])
   })
 })
 

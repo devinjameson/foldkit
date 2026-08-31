@@ -5,10 +5,7 @@ import { evo } from 'foldkit/struct'
 
 import { Disclosure, Tabs } from '@foldkit/ui'
 
-import {
-  type RenderCopyButton,
-  highlightedCodeBlockFor,
-} from '../../component/codeBlock'
+import { CodeBlock } from '../../component'
 import { Icon } from '../../icon'
 import { exampleSourceHref } from '../../link'
 import { pageTitle, para } from '../../prose'
@@ -414,14 +411,15 @@ const TAB_BUTTON_INACTIVE =
   ' text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
 
 const sourceCodeView = (
+  exampleSlug: string,
   files: ReadonlyArray<ExampleSourceFile>,
   tabsModel: Tabs.Model,
   activeSourceFilePath: string,
   isNarrowViewport: boolean,
-  renderCopyButton: RenderCopyButton,
+  renderCopyButton: CodeBlock.RenderCopyButton,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const highlightedCodeBlock = highlightedCodeBlockFor(renderCopyButton)
+  const highlightedView = CodeBlock.highlightedViewFor(renderCopyButton)
 
   const filePaths = Array.map(files, file => file.path)
 
@@ -477,7 +475,8 @@ const sourceCodeView = (
                         h.div(
                           [h.Class('code-embed-scroll')],
                           [
-                            highlightedCodeBlock(
+                            highlightedView(
+                              `example-${exampleSlug}-source-${file.path}`,
                               h.div([
                                 h.Class('code-embed'),
                                 h.InnerHTML(file.highlightedHtml),
@@ -572,7 +571,7 @@ type ViewInputs = Readonly<{
   slug: string
   isNarrowViewport: boolean
   isShowingChromeHint: boolean
-  renderCopyButton: RenderCopyButton
+  renderCopyButton: CodeBlock.RenderCopyButton
 }>
 
 /**
@@ -580,10 +579,10 @@ type ViewInputs = Readonly<{
  * behind a Tabs Submodel.
  *
  * The page is dispatched through `h.submodel`, so it takes `renderCopyButton`
- * from its parent rather than building the copy control itself. The control
- * carries an app-level Message, and a handler's dispatcher comes from the frame
- * the element is built in, so one built here would be rejected by this
- * Submodel's `toParentMessage`.
+ * from its parent rather than building the SnippetCopy boundary itself. The
+ * renderer runs in the parent's boundary, so the nested Submodel's Message is
+ * wrapped for the parent instead of being rejected by this page's
+ * `toParentMessage`.
  */
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
   (
@@ -621,6 +620,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
                         onEmpty: () => [],
                         onNonEmpty: files => [
                           sourceCodeView(
+                            slug,
                             files,
                             model.sourceFileTabs,
                             Option.getOrElse(

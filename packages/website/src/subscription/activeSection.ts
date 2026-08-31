@@ -121,7 +121,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
             CoreFreezeModel: () => Core.FreezeModel.tableOfContents,
             CorePreserveScroll: () => Core.PreserveScroll.tableOfContents,
             CoreDevTools: () => Core.DevTools.tableOfContents,
-            CoreSubmodel: () => Core.Submodel.tableOfContents,
+            CoreSubmodel: () => Core.SubmodelPage.tableOfContents,
             AsyncData: () => AsyncDataPage.tableOfContents,
             PatternsInformingSubmodels: () =>
               Patterns.InformingSubmodels.tableOfContents,

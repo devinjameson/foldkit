@@ -1,7 +1,7 @@
 import { Submodel } from 'foldkit'
 import type { Html } from 'foldkit/html'
 
-import type { RenderCopyButton } from '../../component/codeBlock'
+import { type CodeBlock } from '../../component'
 import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink, demoContainer } from '../../prose'
 import * as Slider from './demo/slider'
@@ -17,7 +17,7 @@ const { tableOfContents, view: renderPage } = slotDocPage<'slider'>(
 export { tableOfContents }
 
 type ViewInputs = Readonly<{
-  renderCopyButton: RenderCopyButton
+  renderCopyButton: CodeBlock.RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
@@ -26,7 +26,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
     renderPage({
       demos: {
         slider: demoContainer(
-          ...Slider.sliderDemo(
+          ...Slider.view(
             {
               ratingModel: model.sliderRatingDemo,
               ratingValue: model.sliderRatingValue,

@@ -322,8 +322,8 @@ const phaseColorClass = (phase: AnimationPhase): string =>
   )
 
 export const view = Submodel.defineView<Model, Message>((model, h): Html =>
-  DemoView.demoViewShell(
-    DemoView.codePanelView(
+  DemoView.shell(
+    DemoView.codePanel(
       'demo-code-panel',
       'demo-phase',
       model.phase,
@@ -341,7 +341,7 @@ const appPanel = (model: Model, h: HtmlBuilder<Message>): Html =>
         [h.Class('lg:absolute lg:inset-0 flex flex-col gap-4 overflow-hidden')],
         [
           viewAndControlsView(model, h),
-          DemoView.modelStateView([
+          DemoView.modelState([
             DemoView.modelStateField('count', String(model.count)),
             DemoView.modelStateField('isResetting', String(model.isResetting)),
             DemoView.modelStateField(
@@ -350,7 +350,7 @@ const appPanel = (model: Model, h: HtmlBuilder<Message>): Html =>
             ),
           ]),
           phaseIndicatorView(model),
-          DemoView.eventLogView(model.messageLog),
+          DemoView.eventLog(model.messageLog),
         ],
       ),
     ],
@@ -509,7 +509,7 @@ const viewAndControlsView = (model: Model, h: HtmlBuilder<Message>): Html =>
 const phaseIndicatorView = (model: Model): Html => {
   const isCommand = model.phase === 'ResetCommand'
 
-  return DemoView.phaseIndicatorView(
+  return DemoView.phaseIndicator(
     phaseLabel(model.phase),
     phaseColorClass(model.phase),
     [progressBarView(model, isCommand)],

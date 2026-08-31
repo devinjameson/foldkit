@@ -1,7 +1,7 @@
 import { Submodel } from 'foldkit'
 import type { Html } from 'foldkit/html'
 
-import type { RenderCopyButton } from '../../component/codeBlock'
+import { type CodeBlock } from '../../component'
 import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink, demoContainer } from '../../prose'
 import raw from './calendarPage.md'
@@ -17,7 +17,7 @@ const { tableOfContents, view: renderPage } = slotDocPage<'basic'>(
 export { tableOfContents }
 
 type ViewInputs = Readonly<{
-  renderCopyButton: RenderCopyButton
+  renderCopyButton: CodeBlock.RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 

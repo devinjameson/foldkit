@@ -106,7 +106,7 @@ export const comboboxViewInputs = ({
 
 // VIEW
 
-export const comboboxDemo = (
+export const view = (
   comboboxModel: Combobox.Model,
   maybeSelectedCity: Option.Option<City>,
   h: HtmlBuilder<Message>,

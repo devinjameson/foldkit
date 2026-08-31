@@ -4,7 +4,7 @@ import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { Disclosure } from '@foldkit/ui'
 
-import { type RenderCopyButton } from '../../component/codeBlock'
+import { type CodeBlock } from '../../component'
 import { Icon } from '../../icon'
 import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink } from '../../prose'
@@ -86,12 +86,11 @@ const { tableOfContents, view: renderPage } = slotDocPage(
 export { tableOfContents }
 
 // NOTE: `renderCopyButton` and `renderHeadingLink` arrive as slot callbacks
-// rather than being built here. Both dispatch app-level Messages, and a handler
-// built inside this Submodel's view would be lifted by its `toParentMessage`
-// and rejected. As top-level `viewInputs` functions they run in the parent's
-// boundary instead.
+// rather than being built here. The first establishes a SnippetCopy child and
+// the second dispatches the parent's heading-link Message. As top-level
+// `viewInputs` functions they both run in the parent's boundary.
 type ViewInputs = Readonly<{
-  renderCopyButton: RenderCopyButton
+  renderCopyButton: CodeBlock.RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 

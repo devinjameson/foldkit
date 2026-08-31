@@ -8,7 +8,7 @@ import {
   inertHtml as ih,
 } from 'foldkit/html'
 
-import { defaultRenderCopyButton } from '../component/codeBlock'
+import { type CodeBlock, Shared } from '../component'
 import { pageNeighbors } from '../docsNav'
 import { Icon } from '../icon'
 import { Link } from '../link'
@@ -50,17 +50,12 @@ import {
   Ui,
   WhyNoJsx,
 } from '../page'
-import { defaultRenderHeadingLink } from '../prose'
+import * as Prose from '../prose'
 import { type DocsRoute, homeRouter } from '../route'
 import * as Search from '../search'
+import * as SnippetCopy from '../snippetCopy'
 import { type TableOfContentsEntry } from '../tableOfContentsEntry'
-import {
-  HeaderNav,
-  Shared,
-  Sidebar,
-  TableOfContents,
-  ThemeSelector,
-} from '../view'
+import { HeaderNav, Sidebar, TableOfContents, ThemeSelector } from '../view'
 
 const PagefindBody = ih.DataAttribute('pagefind-body', '')
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
@@ -214,7 +209,7 @@ export const docsFooterView = (
         [h.Class('text-sm text-gray-600 dark:text-gray-300 mb-4')],
         ['New releases, patterns, and the occasional deep dive.'],
       ),
-      Shared.emailFormView,
+      Shared.emailForm,
       h.hr([
         h.Class(
           'my-6 -mx-4 md:-mx-6 border-t border-gray-300 dark:border-gray-800',
@@ -238,7 +233,7 @@ export const docsFooterView = (
             ],
           ),
           h.p([h.Class('mt-1')], [`© ${currentYear} Devin Jameson`]),
-          Shared.siteLinksView,
+          Shared.siteLinks,
         ],
       ),
     ],
@@ -392,12 +387,54 @@ const renderApiReference = (
     viewInputs: {
       module,
       highlights,
-      renderHeadingLink: defaultRenderHeadingLink(h),
+      renderHeadingLink: Prose.renderHeadingLink(
+        hash => Message.ClickedCopyLink({ hash }),
+        h,
+      ),
     },
     toParentMessage: toApiReferenceMessage,
   })
 
-const lazyDocsContent = createLazy()
+type DocPageView = (
+  renderCopyButton: CodeBlock.RenderCopyButton,
+  renderHeadingLink: Prose.RenderHeadingLink,
+) => Html
+
+type ProseDocPageView = (renderHeadingLink: Prose.RenderHeadingLink) => Html
+
+const renderDocContent = (
+  view: DocPageView,
+  snippetCopy: SnippetCopy.Model,
+  h: HtmlBuilder<Message>,
+): Html =>
+  view(
+    SnippetCopy.renderer(
+      snippetCopy,
+      message => Message.GotSnippetCopyMessage({ message }),
+      h,
+    ),
+    Prose.renderHeadingLink(hash => Message.ClickedCopyLink({ hash }), h),
+  )
+
+const renderProseContent = (
+  view: ProseDocPageView,
+  h: HtmlBuilder<Message>,
+): Html =>
+  view(Prose.renderHeadingLink(hash => Message.ClickedCopyLink({ hash }), h))
+
+const memoizedDocContent = createLazy()
+const memoizedProseContent = createLazy()
+
+const lazyDocsContent = (
+  view: DocPageView,
+  args: readonly [SnippetCopy.Model, HtmlBuilder<Message>],
+): Html => memoizedDocContent(renderDocContent, [view, ...args])
+
+const lazyProseContent = (
+  view: ProseDocPageView,
+  args: readonly [HtmlBuilder<Message>],
+): Html => memoizedProseContent(renderProseContent, [view, ...args])
+
 const lazyApiReference = createLazy()
 const lazyApiReferenceSkeleton = createLazy()
 
@@ -408,8 +445,15 @@ export const docsView = (
   docsRoute: DocsRoute,
   h: HtmlBuilder<Message>,
 ) => {
-  const renderCopyButton = defaultRenderCopyButton(model.copiedSnippets, h)
-  const renderHeadingLink = defaultRenderHeadingLink(h)
+  const renderCopyButton = SnippetCopy.renderer(
+    model.snippetCopy,
+    message => Message.GotSnippetCopyMessage({ message }),
+    h,
+  )
+  const renderHeadingLink = Prose.renderHeadingLink(
+    hash => Message.ClickedCopyLink({ hash }),
+    h,
+  )
 
   const { content, tableOfContents: currentPageTableOfContents } = Match.value(
     docsRoute,
@@ -417,16 +461,25 @@ export const docsView = (
     Match.withReturnType<DocsPageView>(),
     Match.tagsExhaustive({
       Manifesto: () =>
-        withTableOfContents(Manifesto.view(h), Manifesto.tableOfContents),
+        withTableOfContents(
+          Manifesto.view(renderHeadingLink),
+          Manifesto.tableOfContents,
+        ),
       WhyNoJsx: () =>
         withTableOfContents(
-          lazyDocsContent(WhyNoJsx.view, [model.copiedSnippets, h]),
+          lazyDocsContent(WhyNoJsx.view, [model.snippetCopy, h]),
           WhyNoJsx.tableOfContents,
         ),
       Roadmap: () =>
-        withTableOfContents(Roadmap.view(h), Roadmap.tableOfContents),
+        withTableOfContents(
+          Roadmap.view(renderHeadingLink),
+          Roadmap.tableOfContents,
+        ),
       Performance: () =>
-        withTableOfContents(Performance.view(h), Performance.tableOfContents),
+        withTableOfContents(
+          Performance.view(renderHeadingLink),
+          Performance.tableOfContents,
+        ),
       ComingFromReact: () =>
         withTableOfContents(
           h.submodel({
@@ -441,61 +494,58 @@ export const docsView = (
         ),
       ComingFromTanStackQuery: () =>
         withTableOfContents(
-          lazyDocsContent(ComingFromTanStackQuery.view, [
-            model.copiedSnippets,
-            h,
-          ]),
+          lazyDocsContent(ComingFromTanStackQuery.view, [model.snippetCopy, h]),
           ComingFromTanStackQuery.tableOfContents,
         ),
       ReactComparison: () =>
         withTableOfContents(
-          lazyDocsContent(ReactComparison.view, [model.copiedSnippets, h]),
+          lazyDocsContent(ReactComparison.view, [model.snippetCopy, h]),
           ReactComparison.tableOfContents,
         ),
       EffectAtomComparison: () =>
         withTableOfContents(
-          lazyDocsContent(EffectAtomComparison.view, [model.copiedSnippets, h]),
+          lazyDocsContent(EffectAtomComparison.view, [model.snippetCopy, h]),
           EffectAtomComparison.tableOfContents,
         ),
       ElmComparison: () =>
         withTableOfContents(
-          lazyDocsContent(ElmComparison.view, [model.copiedSnippets, h]),
+          lazyDocsContent(ElmComparison.view, [model.snippetCopy, h]),
           ElmComparison.tableOfContents,
         ),
       GettingStarted: () =>
         withTableOfContents(
-          lazyDocsContent(GettingStarted.view, [model.copiedSnippets, h]),
+          lazyDocsContent(GettingStarted.view, [model.snippetCopy, h]),
           GettingStarted.tableOfContents,
         ),
       RoutingAndNavigation: () =>
         withTableOfContents(
-          lazyDocsContent(Routing.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Routing.view, [model.snippetCopy, h]),
           Routing.tableOfContents,
         ),
       FieldValidation: () =>
         withTableOfContents(
-          lazyDocsContent(FieldValidation.view, [model.copiedSnippets, h]),
+          lazyDocsContent(FieldValidation.view, [model.snippetCopy, h]),
           FieldValidation.tableOfContents,
         ),
       Testing: () =>
         withTableOfContents(
-          lazyDocsContent(Testing.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Testing.view, [model.snippetCopy, h]),
           Testing.tableOfContents,
         ),
       TestingStory: () =>
         withTableOfContents(
-          lazyDocsContent(TestingStory.view, [model.copiedSnippets, h]),
+          lazyDocsContent(TestingStory.view, [model.snippetCopy, h]),
           TestingStory.tableOfContents,
         ),
       TestingScene: () =>
         withTableOfContents(
-          lazyDocsContent(TestingScene.view, [model.copiedSnippets, h]),
+          lazyDocsContent(TestingScene.view, [model.snippetCopy, h]),
           TestingScene.tableOfContents,
         ),
       Examples: () => withoutTableOfContents(Examples.view()),
       TypingTerminal: () =>
         withTableOfContents(
-          TypingTerminal.view(h),
+          TypingTerminal.view(renderHeadingLink),
           TypingTerminal.tableOfContents,
         ),
       ExampleDetail: ({ exampleSlug }) =>
@@ -520,37 +570,37 @@ export const docsView = (
       BestPracticesSideEffects: () =>
         withTableOfContents(
           lazyDocsContent(BestPractices.SideEffectsAndPurity.view, [
-            model.copiedSnippets,
+            model.snippetCopy,
             h,
           ]),
           BestPractices.SideEffectsAndPurity.tableOfContents,
         ),
       BestPracticesMessages: () =>
         withTableOfContents(
-          BestPractices.Messages.view(h),
+          BestPractices.Messages.view(renderHeadingLink),
           BestPractices.Messages.tableOfContents,
         ),
       BestPracticesKeying: () =>
         withTableOfContents(
-          lazyDocsContent(BestPractices.Keying.view, [model.copiedSnippets, h]),
+          lazyDocsContent(BestPractices.Keying.view, [model.snippetCopy, h]),
           BestPractices.Keying.tableOfContents,
         ),
       BestPracticesImmutability: () =>
         withTableOfContents(
           lazyDocsContent(BestPractices.Immutability.view, [
-            model.copiedSnippets,
+            model.snippetCopy,
             h,
           ]),
           BestPractices.Immutability.tableOfContents,
         ),
       ProjectOrganization: () =>
         withTableOfContents(
-          lazyDocsContent(ProjectOrganization.view, [model.copiedSnippets, h]),
+          lazyDocsContent(ProjectOrganization.view, [model.snippetCopy, h]),
           ProjectOrganization.tableOfContents,
         ),
       ToolingLinting: () =>
         withTableOfContents(
-          lazyDocsContent(ToolingLinting.view, [model.copiedSnippets, h]),
+          lazyDocsContent(ToolingLinting.view, [model.snippetCopy, h]),
           ToolingLinting.tableOfContents,
         ),
       ApiModule: ({ moduleSlug }) =>
@@ -585,158 +635,158 @@ export const docsView = (
         }),
       CoreArchitecture: () =>
         withTableOfContents(
-          Core.Architecture.view(h),
+          Core.Architecture.view(renderHeadingLink),
           Core.Architecture.tableOfContents,
         ),
       CoreCounterExample: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CounterExample.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CounterExample.view, [model.snippetCopy, h]),
           Core.CounterExample.tableOfContents,
         ),
       CoreModel: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CoreModel.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CoreModel.view, [model.snippetCopy, h]),
           Core.CoreModel.tableOfContents,
         ),
       CoreMessages: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Messages.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.Messages.view, [model.snippetCopy, h]),
           Core.Messages.tableOfContents,
         ),
       CoreUpdate: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CoreUpdate.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CoreUpdate.view, [model.snippetCopy, h]),
           Core.CoreUpdate.tableOfContents,
         ),
       CoreView: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CoreView.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CoreView.view, [model.snippetCopy, h]),
           Core.CoreView.tableOfContents,
         ),
       CoreCommands: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Commands.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.Commands.view, [model.snippetCopy, h]),
           Core.Commands.tableOfContents,
         ),
       CoreMount: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Mount.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.Mount.view, [model.snippetCopy, h]),
           Core.Mount.tableOfContents,
         ),
       CoreCustomElement: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CustomElement.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CustomElement.view, [model.snippetCopy, h]),
           Core.CustomElement.tableOfContents,
         ),
       CoreSubscriptions: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Subscriptions.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.Subscriptions.view, [model.snippetCopy, h]),
           Core.Subscriptions.tableOfContents,
         ),
       CoreInitAndFlags: () =>
         withTableOfContents(
-          lazyDocsContent(Core.InitAndFlags.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.InitAndFlags.view, [model.snippetCopy, h]),
           Core.InitAndFlags.tableOfContents,
         ),
       CoreDom: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CoreDom.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CoreDom.view, [model.snippetCopy, h]),
           Core.CoreDom.tableOfContents,
         ),
       CoreRender: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CoreRender.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CoreRender.view, [model.snippetCopy, h]),
           Core.CoreRender.tableOfContents,
         ),
       CoreFile: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CoreFile.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CoreFile.view, [model.snippetCopy, h]),
           Core.CoreFile.tableOfContents,
         ),
       CoreHttp: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CoreHttp.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CoreHttp.view, [model.snippetCopy, h]),
           Core.CoreHttp.tableOfContents,
         ),
       CoreCanvas: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CoreCanvas.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CoreCanvas.view, [model.snippetCopy, h]),
           Core.CoreCanvas.tableOfContents,
         ),
       CoreRuntime: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Runtime.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.Runtime.view, [model.snippetCopy, h]),
           Core.Runtime.tableOfContents,
         ),
       CoreServerRendering: () =>
         withTableOfContents(
           lazyDocsContent(Core.CoreServerRendering.view, [
-            model.copiedSnippets,
+            model.snippetCopy,
             h,
           ]),
           Core.CoreServerRendering.tableOfContents,
         ),
       CoreResources: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Resources.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.Resources.view, [model.snippetCopy, h]),
           Core.Resources.tableOfContents,
         ),
       CoreManagedResources: () =>
         withTableOfContents(
-          lazyDocsContent(Core.ManagedResources.view, [
-            model.copiedSnippets,
-            h,
-          ]),
+          lazyDocsContent(Core.ManagedResources.view, [model.snippetCopy, h]),
           Core.ManagedResources.tableOfContents,
         ),
       CoreDevTools: () =>
         withTableOfContents(
-          lazyDocsContent(Core.DevTools.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.DevTools.view, [model.snippetCopy, h]),
           Core.DevTools.tableOfContents,
         ),
       CoreCrashView: () =>
         withTableOfContents(
-          lazyDocsContent(Core.CrashView.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.CrashView.view, [model.snippetCopy, h]),
           Core.CrashView.tableOfContents,
         ),
       CoreViewTransitions: () =>
         withTableOfContents(
-          lazyDocsContent(Core.ViewTransitions.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.ViewTransitions.view, [model.snippetCopy, h]),
           Core.ViewTransitions.tableOfContents,
         ),
       CoreSlowWarnings: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Slow.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.Slow.view, [model.snippetCopy, h]),
           Core.Slow.tableOfContents,
         ),
       CoreFreezeModel: () =>
         withTableOfContents(
-          lazyDocsContent(Core.FreezeModel.view, [h]),
+          lazyProseContent(Core.FreezeModel.view, [h]),
           Core.FreezeModel.tableOfContents,
         ),
       CorePreserveScroll: () =>
         withTableOfContents(
-          lazyDocsContent(Core.PreserveScroll.view, [h]),
+          lazyProseContent(Core.PreserveScroll.view, [h]),
           Core.PreserveScroll.tableOfContents,
         ),
       CoreSubmodel: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Submodel.view, [
-            model.copiedSnippets,
-            model.isMapMessagesUnderHoodOpen,
-            h,
-          ]),
-          Core.Submodel.tableOfContents,
+          h.submodel({
+            slotId: 'core-submodel-page',
+            model: model.coreSubmodelPage,
+            view: Core.SubmodelPage.view,
+            viewInputs: { renderCopyButton, renderHeadingLink },
+            toParentMessage: message =>
+              Message.GotCoreSubmodelPageMessage({ message }),
+          }),
+          Core.SubmodelPage.tableOfContents,
         ),
       AsyncData: () =>
         withTableOfContents(
-          lazyDocsContent(AsyncDataPage.view, [model.copiedSnippets, h]),
+          lazyDocsContent(AsyncDataPage.view, [model.snippetCopy, h]),
           AsyncDataPage.tableOfContents,
         ),
       PatternsInformingSubmodels: () =>
         withTableOfContents(
           lazyDocsContent(Patterns.InformingSubmodels.view, [
-            model.copiedSnippets,
+            model.snippetCopy,
             h,
           ]),
           Patterns.InformingSubmodels.tableOfContents,
@@ -744,37 +794,37 @@ export const docsView = (
       PatternsSubscriptionOrganization: () =>
         withTableOfContents(
           lazyDocsContent(Patterns.SubscriptionOrganization.view, [
-            model.copiedSnippets,
+            model.snippetCopy,
             h,
           ]),
           Patterns.SubscriptionOrganization.tableOfContents,
         ),
       CoreViewMemoization: () =>
         withTableOfContents(
-          lazyDocsContent(Core.ViewMemoization.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.ViewMemoization.view, [model.snippetCopy, h]),
           Core.ViewMemoization.tableOfContents,
         ),
       CoreEmbedding: () =>
         withTableOfContents(
-          lazyDocsContent(Core.Embedding.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Core.Embedding.view, [model.snippetCopy, h]),
           Core.Embedding.tableOfContents,
         ),
       UiOverview: () =>
         withTableOfContents(
-          lazyDocsContent(Ui.OverviewPage.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Ui.OverviewPage.view, [model.snippetCopy, h]),
           Ui.OverviewPage.tableOfContents,
         ),
       UiSelectionSubmodels: () =>
         withTableOfContents(
           lazyDocsContent(Ui.SelectionSubmodelsPage.view, [
-            model.copiedSnippets,
+            model.snippetCopy,
             h,
           ]),
           Ui.SelectionSubmodelsPage.tableOfContents,
         ),
       UiAnchor: () =>
         withTableOfContents(
-          lazyDocsContent(Ui.AnchorPage.view, [model.copiedSnippets, h]),
+          lazyDocsContent(Ui.AnchorPage.view, [model.snippetCopy, h]),
           Ui.AnchorPage.tableOfContents,
         ),
       UiHoverIntent: () =>
@@ -1069,29 +1119,39 @@ export const docsView = (
         ),
       AiOverview: () =>
         withTableOfContents(
-          lazyDocsContent(AiOverview.view, [model.copiedSnippets, h]),
+          lazyDocsContent(AiOverview.view, [model.snippetCopy, h]),
           AiOverview.tableOfContents,
         ),
       AiSkills: () =>
         withTableOfContents(
-          lazyDocsContent(AiSkills.view, [model.copiedSnippets, h]),
+          lazyDocsContent(AiSkills.view, [model.snippetCopy, h]),
           AiSkills.tableOfContents,
         ),
       AiMcp: () =>
         withTableOfContents(
-          lazyDocsContent(AiMcp.view, [model.copiedSnippets, h]),
+          lazyDocsContent(AiMcp.view, [model.snippetCopy, h]),
           AiMcp.tableOfContents,
         ),
       ContentApi: () =>
         withTableOfContents(
-          lazyDocsContent(ContentApi.view, [model.copiedSnippets, h]),
+          lazyDocsContent(ContentApi.view, [model.snippetCopy, h]),
           ContentApi.tableOfContents,
         ),
-      About: () => withTableOfContents(About.view(h), About.tableOfContents),
+      About: () =>
+        withTableOfContents(
+          About.view(renderHeadingLink),
+          About.tableOfContents,
+        ),
       Contact: () =>
-        withTableOfContents(Contact.view(h), Contact.tableOfContents),
+        withTableOfContents(
+          Contact.view(renderHeadingLink),
+          Contact.tableOfContents,
+        ),
       Privacy: () =>
-        withTableOfContents(Privacy.view(h), Privacy.tableOfContents),
+        withTableOfContents(
+          Privacy.view(renderHeadingLink),
+          Privacy.tableOfContents,
+        ),
       NotFound: ({ path }) =>
         withoutTableOfContents(NotFound.view(path, homeRouter())),
     }),
@@ -1107,7 +1167,7 @@ export const docsView = (
         [h.Class('flex flex-1 pt-[var(--header-height)] md:pl-64')],
         [
           Sidebar.view(model, h),
-          Sidebar.mobileMenuView(model, h),
+          Sidebar.mobileView(model, h),
           h.main(
             [
               h.Id('main-content'),

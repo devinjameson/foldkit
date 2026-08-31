@@ -3,11 +3,7 @@ import { Array, Function, Option, Predicate, String, pipe } from 'effect'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { foldkitVersion } from 'virtual:landing-data'
 
-import {
-  type RenderCopyButton,
-  codeBlock,
-  highlightedCodeBlock,
-} from '../../component/codeBlock'
+import { CodeBlock, Shared } from '../../component'
 import { Icon } from '../../icon'
 import { Link } from '../../link'
 import {
@@ -29,7 +25,6 @@ import {
   uiOverviewRouter,
 } from '../../route'
 import * as Snippet from '../../snippet'
-import { Shared } from '../../view'
 import {
   type ExampleMeta,
   type ExampleSlug,
@@ -71,7 +66,7 @@ const glyph = (symbol: string, offsetY?: string): Html =>
 // VIEW
 
 export const contentView = (
-  renderCopyButton: RenderCopyButton,
+  renderCopyButton: CodeBlock.RenderCopyButton,
   demoTabsView: Html,
   emailSignupView: Html,
   playgroundMenuView: Html,
@@ -163,7 +158,7 @@ const heroProjectLinks = (maybeGitHubStarCount: Option.Option<number>): Html =>
   )
 
 const heroSection = (
-  renderCopyButton: RenderCopyButton,
+  renderCopyButton: CodeBlock.RenderCopyButton,
   playgroundMenuView: Html,
   maybeGitHubStarCount: Option.Option<number>,
   h: HtmlBuilder<Message>,
@@ -226,7 +221,8 @@ const heroSection = (
           h.div(
             [h.Class('mt-8')],
             [
-              codeBlock(
+              CodeBlock.view(
+                'home-install-command',
                 INSTALL_COMMAND,
                 'Copy install command',
                 renderCopyButton,
@@ -707,7 +703,7 @@ const examplesSection: Html = ih.section(
 
 // TESTING
 
-const testingSection = (renderCopyButton: RenderCopyButton): Html =>
+const testingSection = (renderCopyButton: CodeBlock.RenderCopyButton): Html =>
   ih.section(
     [ih.Id('testing'), ih.Class('landing-section')],
     [
@@ -742,7 +738,8 @@ const testingSection = (renderCopyButton: RenderCopyButton): Html =>
             [ih.Href(testingRouter()), ih.Class('cta-secondary mb-8')],
             ['Learn about testing', Icon.arrowRight('w-5 h-5')],
           ),
-          highlightedCodeBlock(
+          CodeBlock.highlightedView(
+            'home-story-test',
             ih.div([
               ih.Class('text-sm'),
               ih.InnerHTML(Snippet.landingStoryTestHighlighted),
@@ -752,7 +749,8 @@ const testingSection = (renderCopyButton: RenderCopyButton): Html =>
             renderCopyButton,
             '',
           ),
-          highlightedCodeBlock(
+          CodeBlock.highlightedView(
+            'home-scene-test',
             ih.div([
               ih.Class('text-sm'),
               ih.InnerHTML(Snippet.landingSceneTestHighlighted),

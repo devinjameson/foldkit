@@ -20,7 +20,7 @@ export const modelStateField = (name: string, value: string): Html =>
     ],
   )
 
-export const modelStateView = (fields: ReadonlyArray<Html>): Html =>
+export const modelState = (fields: ReadonlyArray<Html>): Html =>
   ih.div(
     [ih.Class('pt-3 border-t border-gray-300 dark:border-gray-800')],
     [
@@ -43,7 +43,7 @@ const messageLogEntryView = (entry: string, index: number): Html =>
     [ih.span([], [entry])],
   )
 
-export const eventLogView = (messageLog: ReadonlyArray<string>): Html =>
+export const eventLog = (messageLog: ReadonlyArray<string>): Html =>
   ih.div(
     [ih.Class('flex-1 flex flex-col min-h-0')],
     [
@@ -59,7 +59,7 @@ export const eventLogView = (messageLog: ReadonlyArray<string>): Html =>
     ],
   )
 
-export const phaseIndicatorView = (
+export const phaseIndicator = (
   label: string,
   colorClass: string,
   extraChildren: ReadonlyArray<Html>,
@@ -83,7 +83,7 @@ export const phaseIndicatorView = (
     ],
   )
 
-export const codePanelView = (
+export const codePanel = (
   panelClassName: string,
   dataAttributeName: string,
   phase: string,
@@ -105,7 +105,7 @@ export const codePanelView = (
     ],
   )
 
-export const demoViewShell = (codePanel: Html, appPanel: Html): Html =>
+export const shell = (codePanel: Html, appPanel: Html): Html =>
   ih.div(
     [
       ih.Class(
