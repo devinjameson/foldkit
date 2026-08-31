@@ -24,9 +24,11 @@ For every discriminated-union state: can the code transition INTO every state? O
 
 When the answer takes real tracing, that is the signal to reach for `Machine` (`foldkit/experimental`, with `to` / `when` / `otherwise` from `foldkit/experimental/machine`). Writing the transitions as a table makes the edge set enumerable data instead of control flow spread across update handlers, and the Machine then answers this blind spot by computation rather than by reading:
 
-- `unreachableStates()` returns the states nothing transitions into.
-- `deadTransitions()` returns edges that can never fire, tagged `UnreachableSource` or `ShadowedByOtherwise`.
+- `unreachableStates(extraRoots?)` returns the state tags the declared Edge set does not reach from `initial` plus any extra roots.
+- `deadTransitions(extraRoots?)` reports Edges whose source that same walk does not reach, tagged `UnreachableSource`, plus Edges shadowed by an earlier `otherwise`, tagged `ShadowedByOtherwise`.
 - `reachableFrom(tag)` gives the closure from any state, and `toMermaid()` renders the diagram for review.
+
+The walk cannot see state changes made outside `transition` and `step`. Pass every restored, deep-linked, hydrated, or otherwise externally entered state as an extra root before treating `UnreachableSource` findings as application defects.
 
 Recommend it when a flow has several states, guarded transitions, or edges that are easy to get wrong (checkout, onboarding, multi-step approval, connection lifecycles). `repos/foldkit/examples/state-machine/` is the reference. Don't push it on a three-state union that one exhaustive `match` already handles legibly; the table costs more than it saves there. The module is under `experimental/`, so say so when recommending it.
 
