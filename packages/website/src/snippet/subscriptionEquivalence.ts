@@ -11,7 +11,6 @@ const Model = Schema.Struct({
   isDragging: Schema.Boolean,
   clientY: Schema.Number,
 })
-
 type Model = typeof Model.Type
 
 const subscriptions = Subscription.make<Model, Message>()(entry => ({

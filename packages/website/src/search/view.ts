@@ -6,10 +6,10 @@ import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { Dialog } from '@foldkit/ui'
 
 import { Icon } from '../icon'
-import { KEYBOARD_WARMUP_INPUT_ID, SEARCH_INPUT_ID } from './command'
 import { Message, type SearchResult } from './message'
 import type { Model } from './model'
 import { SearchState, resultsFromState } from './model'
+import { KEYBOARD_WARMUP_INPUT_ID, SEARCH_INPUT_ID } from './update'
 
 const RESULTS_LIST_ID = 'search-results'
 const resultItemId = (index: number): string => `search-result-${index}`

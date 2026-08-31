@@ -17,7 +17,6 @@ export const Model = Schema.Struct({
   fontSize: FontSize,
   notificationsEnabled: Schema.Boolean,
 })
-
 export type Model = typeof Model.Type
 
 // MESSAGE
@@ -27,7 +26,6 @@ export const Message = defineMessageUnion({
   ChangedFontSize: { fontSize: FontSize },
   ToggledNotifications: {},
 })
-
 export type Message = typeof Message.Type
 
 // UPDATE

@@ -76,6 +76,17 @@
     },
     {
       "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx"
+      ],
+      "rules": {
+        "foldkit/no-child-message-construction-in-root": "off"
+      }
+    },
+    {
+      "files": [
         "**/entry.ts",
         "**/entry.tsx",
         "**/entry.client.ts",

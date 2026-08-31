@@ -21,9 +21,17 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
-import { CityCombobox, CityMultiCombobox } from './combobox'
-import { CharacterListbox, ItemListbox, ItemMultiListbox } from './listbox'
-import { DemoMenu, type MenuItem } from './menu'
+import { CityCombobox, CityMultiCombobox } from './demo/combobox'
+import { CharacterListbox, ItemListbox, ItemMultiListbox } from './demo/listbox'
+import { DemoMenu, type MenuItem } from './demo/menu'
+import { PlanRadioGroup } from './demo/radioGroup'
+import { DemoTabs } from './demo/tabs'
+import { Toast } from './demo/toastModule'
+import {
+  ROW_COUNT as VIRTUAL_LIST_ROW_COUNT,
+  variableActivities,
+  variableRowHeightPx,
+} from './demo/virtualList'
 import { Message } from './message'
 import type { Model } from './model'
 import type {
@@ -34,14 +42,6 @@ import type {
   ListboxItem,
   Plan,
 } from './model'
-import { PlanRadioGroup } from './radioGroup'
-import { DemoTabs } from './tabs'
-import { Toast } from './toastModule'
-import {
-  ROW_COUNT as VIRTUAL_LIST_ROW_COUNT,
-  variableActivities,
-  variableRowHeightPx,
-} from './virtualList'
 
 // REORDER
 

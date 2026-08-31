@@ -16,7 +16,6 @@ const TodosJsonString = Schema.fromJsonString(Schema.toCodecJson(Todos))
 const Flags = Schema.Struct({
   todos: Schema.Option(Todos),
 })
-
 type Flags = typeof Flags.Type
 
 const flags: Effect.Effect<Flags> = Effect.gen(function* () {

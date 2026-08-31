@@ -2,11 +2,15 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { evo } from 'foldkit/struct'
 import { describe, expect, test } from 'vitest'
 
-import { FetchSearchResults, NavigateToResult, ScrollToResult } from './command'
 import { init } from './init'
 import { Message } from './message'
 import { SearchState } from './model'
-import { update } from './update'
+import {
+  FetchSearchResults,
+  NavigateToResult,
+  ScrollToResult,
+  update,
+} from './update'
 
 const init_ = init()
 

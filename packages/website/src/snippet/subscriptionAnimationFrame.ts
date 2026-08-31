@@ -16,7 +16,6 @@ const Model = Schema.Struct({
   isPlaying: Schema.Boolean,
   angle: Schema.Number,
 })
-
 type Model = typeof Model.Type
 
 // SUBSCRIPTION

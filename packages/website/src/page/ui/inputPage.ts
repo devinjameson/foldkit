@@ -1,10 +1,10 @@
 import { Submodel } from 'foldkit'
 import type { Html } from 'foldkit/html'
 
+import type { RenderCopyButton } from '../../component/codeBlock'
 import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink, demoContainer } from '../../prose'
-import type { RenderCopyButton } from '../../view/codeBlock'
-import * as Input from './input'
+import * as Input from './demo/input'
 import raw from './inputPage.md'
 import type { Message } from './message'
 import type { Model } from './model'

@@ -1,8 +1,8 @@
 import { Option, Record } from 'effect'
 import { Html, inertHtml as ih } from 'foldkit/html'
 
+import type { RenderCopyButton } from '../component/codeBlock'
 import type { RenderHeadingLink } from '../prose'
-import type { RenderCopyButton } from '../view/codeBlock'
 
 // SLOTS
 

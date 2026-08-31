@@ -119,7 +119,6 @@ export const PostFrontmatter = Schema.Struct({
     },
   ),
 )
-
 export type PostFrontmatter = typeof PostFrontmatter.Type
 
 // POST COVER

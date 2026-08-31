@@ -7,5 +7,4 @@ const AppRoute = defineRouteUnion({
   Person: { personId: Schema.Number },
   NotFound: { path: Schema.String },
 })
-
 type AppRoute = typeof AppRoute.Type

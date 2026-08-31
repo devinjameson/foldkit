@@ -2,18 +2,17 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Disclosure } from '@foldkit/ui'
 
-import { Icon } from '../../icon'
-import { type Message } from '../../main'
-import { slotDocPage } from '../../markdown'
-import { Message as Message2 } from '../../message'
-import { defaultRenderHeadingLink, inlineCode } from '../../prose'
-import * as Snippet from '../../snippet'
 import {
   type CopiedSnippets,
   type RenderCopyButton,
   defaultRenderCopyButton,
   highlightedCodeBlock,
-} from '../../view/codeBlock'
+} from '../../component/codeBlock'
+import { Icon } from '../../icon'
+import { slotDocPage } from '../../markdown'
+import { Message } from '../../message'
+import { defaultRenderHeadingLink, inlineCode } from '../../prose'
+import * as Snippet from '../../snippet'
 import raw from './submodel.md'
 
 // DEMO
@@ -35,7 +34,7 @@ const mapMessagesUnderHoodDemo = (
     {
       id: MAP_MESSAGES_DISCLOSURE_ID,
       isOpen: isMapMessagesUnderHoodOpen,
-      onToggle: isOpen => Message2.ToggledMapMessagesUnderHood({ isOpen }),
+      onToggle: isOpen => Message.ToggledMapMessagesUnderHood({ isOpen }),
       toView: attributes =>
         h.div(
           [h.Class('mb-8')],

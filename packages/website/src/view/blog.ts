@@ -1,25 +1,25 @@
 import { Match, Option } from 'effect'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
-import { type Model } from '../main'
-import { type Message } from '../message'
-import * as Page from '../page'
-import { type BlogPostRoute, type BlogRoute, homeRouter } from '../route'
 import {
   docsFooterView,
   docsHeaderView,
   searchSubmodelView,
   searchWeight,
-} from './docs'
-import { skipNavLink } from './shared'
-import { mobileMenuView } from './sidebar'
+} from '../layout/docs'
+import { type Message } from '../message'
+import { type Model } from '../model'
+import { Blog, NotFound } from '../page'
+import { type BlogPostRoute, type BlogRoute, homeRouter } from '../route'
+import * as Shared from './shared'
+import * as Sidebar from './sidebar'
 
 const PagefindBody = ih.DataAttribute('pagefind-body', '')
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 
 // VIEW
 
-export const blogView = (
+export const view = (
   model: Model,
   blogRoute: BlogRoute | BlogPostRoute,
   h: HtmlBuilder<Message>,
@@ -27,12 +27,11 @@ export const blogView = (
   const content = Match.value(blogRoute).pipe(
     Match.withReturnType<Html>(),
     Match.tagsExhaustive({
-      Blog: () => Page.Blog.BlogIndex.view(),
+      Blog: () => Blog.BlogIndex.view(),
       BlogPost: ({ postSlug }) =>
-        Option.match(Page.Blog.findPostBySlug(postSlug), {
-          onNone: () => Page.NotFound.view(postSlug, homeRouter()),
-          onSome: post =>
-            Page.Blog.BlogPostPage.view(post, model.copiedSnippets, h),
+        Option.match(Blog.findPostBySlug(postSlug), {
+          onNone: () => NotFound.view(postSlug, homeRouter()),
+          onSome: post => Blog.BlogPostPage.view(post, model.copiedSnippets, h),
         }),
     }),
   )
@@ -45,10 +44,10 @@ export const blogView = (
   return h.div(
     [h.Class('flex flex-col min-h-screen')],
     [
-      skipNavLink,
+      Shared.skipNavLink,
       docsHeaderView(model, h),
       searchSubmodelView(model, h),
-      mobileMenuView(model, h),
+      Sidebar.mobileMenuView(model, h),
       h.main(
         [
           h.Id('main-content'),

@@ -3,8 +3,8 @@ import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { twMerge } from 'tailwind-merge'
 
 import { Icon } from './icon'
-import { type TableOfContentsEntry } from './main'
 import { Message } from './message'
+import { type TableOfContentsEntry } from './tableOfContentsEntry'
 
 /**
  * Builds the copy-link control beside a section heading.

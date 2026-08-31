@@ -36,7 +36,6 @@ const init = () => ({
 const Message = defineMessageUnion({
   GotPlanRadioGroupMessage: { message: RadioGroup.Message },
 })
-
 type Message = typeof Message.Type // ...united with your others
 
 // Declare a typed RadioGroup factory once at module scope. The Value

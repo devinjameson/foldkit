@@ -6,5 +6,4 @@ import * as Settings from './page/settings'
 export const Message = defineMessageUnion({
   GotSettingsMessage: { message: Settings.Message },
 })
-
 export type Message = typeof Message.Type

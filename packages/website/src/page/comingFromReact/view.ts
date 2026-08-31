@@ -4,10 +4,10 @@ import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 
 import { Disclosure } from '@foldkit/ui'
 
+import { type RenderCopyButton } from '../../component/codeBlock'
 import { Icon } from '../../icon'
 import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink } from '../../prose'
-import { type RenderCopyButton } from '../../view/codeBlock'
 import raw from './comingFromReact.md'
 import { Message } from './message'
 import type { Model } from './model'

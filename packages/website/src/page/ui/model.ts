@@ -20,7 +20,7 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
-import { Toast } from './toastModule'
+import { Toast } from './demo/toastModule'
 
 export const Plan = Schema.Literals(['Startup', 'Business', 'Enterprise'])
 export type Plan = typeof Plan.Type

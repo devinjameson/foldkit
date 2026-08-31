@@ -1,12 +1,12 @@
 import { Submodel } from 'foldkit'
 import type { Html } from 'foldkit/html'
 
+import type { RenderCopyButton } from '../../component/codeBlock'
 import { slotDocPage } from '../../markdown'
 import type { RenderHeadingLink } from '../../prose'
-import type { RenderCopyButton } from '../../view/codeBlock'
+import * as VirtualList from './demo/virtualList'
 import type { Message } from './message'
 import type { Model } from './model'
-import * as VirtualList from './virtualList'
 import raw from './virtualListPage.md'
 
 const { tableOfContents, view: renderPage } = slotDocPage<'fixed' | 'variable'>(

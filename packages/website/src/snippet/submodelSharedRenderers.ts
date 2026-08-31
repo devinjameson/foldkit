@@ -2,7 +2,7 @@
 h.submodel({
   slotId: 'coming-from-react',
   model: model.comingFromReact,
-  view: Page.ComingFromReact.view,
+  view: ComingFromReact.view,
   viewInputs: {
     // Both close over the parent's builder, so the app-level Messages they
     // dispatch reach update unwrapped however deep the child renders them.

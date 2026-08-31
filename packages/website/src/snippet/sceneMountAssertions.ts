@@ -1,23 +1,21 @@
 import { Mount, click, role } from 'foldkit/scene'
 
 import { Listbox, Popover } from '@foldkit/ui'
-import { Message as ListboxMessage } from '@foldkit/ui/listbox'
-import { Message as PopoverMessage } from '@foldkit/ui/popover'
 
 // Single Mount. Open a popover, acknowledge its anchor mount.
 click(role('button', { name: 'Open' }))
 Mount.expectExact(Popover.AnchorPopover)
-Mount.resolve(Popover.AnchorPopover, PopoverMessage.CompletedAnchorPopover())
+Mount.resolve(Popover.AnchorPopover, Popover.Message.CompletedAnchorPopover())
 
 // Multiple Mounts. Opening a modal Listbox renders both the items container
 // (positioning) and a backdrop (portaled to body), so two Mounts fire.
 click(role('button', { name: 'Pick a fruit' }))
 Mount.expectExact(Listbox.AnchorListbox, Listbox.PortalListboxBackdrop)
 Mount.resolveAll(
-  [Listbox.AnchorListbox, ListboxMessage.CompletedAnchorListbox()],
+  [Listbox.AnchorListbox, Listbox.Message.CompletedAnchorListbox()],
   [
     Listbox.PortalListboxBackdrop,
-    ListboxMessage.CompletedPortalListboxBackdrop(),
+    Listbox.Message.CompletedPortalListboxBackdrop(),
   ],
 )
 
@@ -34,4 +32,4 @@ Mount.expectEnded(Popover.AnchorPopover)
 
 // When the mount lives inside a child Submodel, resolve replays the
 // Submodel boundary's own lift, so you pass the child's raw result Message.
-Mount.resolve(Popover.AnchorPopover, PopoverMessage.CompletedAnchorPopover())
+Mount.resolve(Popover.AnchorPopover, Popover.Message.CompletedAnchorPopover())
