@@ -12,3 +12,6 @@ export const FetchWeather = Command.define('FetchWeather', {
   messages: [Message.CompletedFetchWeather],
   execute: fetchWeatherEffect,
 })
+
+export const defineLocal = (Command: { define: (name: string) => string }) =>
+  Command.define('not-pascal-case')

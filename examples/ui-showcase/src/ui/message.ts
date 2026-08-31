@@ -22,9 +22,8 @@ import {
 
 import { Toast } from './toast'
 
-export const UiMessage = defineMessageUnion({
+export const Message = defineMessageUnion({
   GotMobileMenuDialogMessage: { message: Dialog.Message },
-  ClickedOpenMobileMenu: {},
   ClickedButtonDemo: {},
   GotAnimationDemoMessage: { message: Animation.Message },
   ToggledAnimationDemo: {},
@@ -93,4 +92,4 @@ export const UiMessage = defineMessageUnion({
   ClickedVirtualListVariableScrollToMiddle: {},
 })
 
-export type UiMessage = typeof UiMessage.Type
+export type Message = typeof Message.Type

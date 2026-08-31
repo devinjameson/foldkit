@@ -1,8 +1,8 @@
 import { defineMessageUnion } from 'foldkit/message'
 
-import * as Child from './child'
+import { Message as ChildMessage } from './child'
 
 const Message = defineMessageUnion({
   OpenedChild: {},
-  ChildChanged: { message: Child.Message, },
+  ChildChanged: { message: ChildMessage, },
 })

@@ -1,9 +1,9 @@
 import { Effect } from 'effect'
 import { Diagnostic, type ESTree, Rule, RuleContext } from 'effect-oxlint'
 
-import { isCallExpression } from '../guards.ts'
+import { indexReferences, isCallExpression } from '../guards.ts'
 import {
-  hasMessagePayloadProperty,
+  hasSubmodelMessagePayload,
   messageCases,
   recordFoldkitMessageUnionBindings,
 } from '../message.ts'
@@ -21,6 +21,9 @@ export const gotPrefixRequiresSubmodelPayload = Rule.define({
   }),
   create: function* () {
     const ctx = yield* RuleContext
+    const scopes = ctx.sourceCode.scopeManager?.scopes
+    const references =
+      scopes === undefined ? undefined : indexReferences(scopes)
     const messageUnionBindings = new Set<string>()
     return {
       Program: (node: ESTree.Node) => {
@@ -31,10 +34,10 @@ export const gotPrefixRequiresSubmodelPayload = Rule.define({
         if (!isCallExpression(node)) return Effect.void
 
         return Effect.forEach(
-          messageCases(node, messageUnionBindings),
+          messageCases(node, messageUnionBindings, references),
           messageCase =>
             /^Got[A-Z]/.test(messageCase.name) &&
-            !hasMessagePayloadProperty(messageCase.fields)
+            !hasSubmodelMessagePayload(messageCase.fields, references)
               ? ctx.report(
                   Diagnostic.make({
                     node: messageCase.nameNode,
