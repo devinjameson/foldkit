@@ -10,7 +10,7 @@ The entire test is one `story` call. Start from a Model, send a Message, resolve
 
 Import the steps you need from `foldkit/story`.
 
-- Top-level steps start the test, send Messages, and inspect results: `story`, `given`, `message`, `model`, `expectOutMessage`, and `expectNoOutMessage`.
+- Top-level steps start the test, group reusable setup, send Messages, and inspect results: `story`, `steps`, `given`, `message`, `model`, `expectOutMessage`, and `expectNoOutMessage`.
 - The `Command` namespace handles pending Commands: `resolve`, `resolveAll`, `resolveAllExact`, `expectHas`, `expectExact`, and `expectNone`.
 
 Use named imports when the file contains only Story tests. If a file contains both Story and Scene tests, import the namespaces from `foldkit` so `Story.given` and `Scene.given` stay distinct.
@@ -54,6 +54,16 @@ Use `resolveAllExact` when the resolver list is also a claim about which Command
 :::Info{label="Unresolved Commands"}
 `message` throws if there are pending Commands from a previous step. Resolve all Commands before sending the next Message. `story` throws at the end if any Commands remain unresolved. Every Command your update function produces must be accounted for.
 :::
+
+## Reusable Step Groups
+
+Use `steps` when several stories share the same setup or Message sequence. The group preserves the Model, Message, and OutMessage constraints of every step inside it, so the update passed to `story` still rejects a group built for a different program.
+
+::Snippet{name="testingReusableSteps" label="reusable Story steps"}
+
+A group can contain any step accepted by `story`, including `given`, `message`, Model assertions, Command steps, OutMessage assertions, and another `steps` group. `story` runs the group in declaration order at the position where it appears.
+
+Do not use Effect's `flow` to group Story steps. Message and OutMessage steps are typed data, not functions, and `steps` is the boundary that preserves their types. This does not replace `flow` for ordinary function composition elsewhere in an application.
 
 ## Testing Side Effects
 

@@ -1,4 +1,4 @@
-import { Option, flow } from 'effect'
+import { Option } from 'effect'
 import * as Calendar from 'foldkit/calendar'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
@@ -27,7 +27,7 @@ const today = Calendar.make(2026, 4, 13)
 
 const givenClosed = Story.given(init({ id: 'picker', today }))
 
-const givenOpen = flow(givenClosed, Story.message(Message.Opened()))
+const givenOpen = Story.steps(givenClosed, Story.message(Message.Opened()))
 
 describe('DatePicker', () => {
   describe('init', () => {
@@ -277,7 +277,7 @@ describe('DatePicker', () => {
         })
         Story.story(
           update,
-          flow(Story.given(seeded), Story.message(Message.Opened())),
+          Story.steps(Story.given(seeded), Story.message(Message.Opened())),
           Story.message(Message.Cleared()),
           Story.Command.expectNone(),
           Story.model(model => {

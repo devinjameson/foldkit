@@ -5,6 +5,7 @@ import {
   given,
   message,
   model,
+  steps,
   story,
 } from 'foldkit/story'
 
@@ -13,6 +14,9 @@ given(model)
 
 // Send a Message. Commands stay pending.
 message(ClickedSubmit())
+
+// Group a reusable sequence without erasing its step types.
+steps(given(initialModel), message(ClickedSubmit()))
 
 // Resolve one Command with its result. Pass a Definition to match by name,
 // or a Command instance to match by name AND args.

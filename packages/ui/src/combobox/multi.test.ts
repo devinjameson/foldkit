@@ -1,4 +1,4 @@
-import { Option, flow } from 'effect'
+import { Option } from 'effect'
 import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
@@ -42,7 +42,7 @@ const acknowledgePreventBlur = Scene.Mount.resolve(
 
 const givenClosed = Story.given(init({ id: 'test' }))
 
-const givenOpenMulti = flow(
+const givenOpenMulti = Story.steps(
   givenClosed,
   Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
 )
@@ -278,7 +278,7 @@ describe('Combobox.Multi', () => {
   })
 
   describe('modal commands', () => {
-    const givenOpenModal = flow(
+    const givenOpenModal = Story.steps(
       Story.given(init({ id: 'test', isModal: true })),
       Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
       Story.Command.resolveAllExact(

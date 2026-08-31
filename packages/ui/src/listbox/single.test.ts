@@ -1,4 +1,4 @@
-import { Option, flow } from 'effect'
+import { Option } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
@@ -47,7 +47,7 @@ const STALE_CLEAR_SEARCH_VERSION = 9999
 
 const givenClosed = Story.given(init({ id: 'test' }))
 
-const givenOpen = flow(
+const givenOpen = Story.steps(
   givenClosed,
   Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolve(FocusItems, Message.CompletedFocusItems()),
@@ -55,7 +55,7 @@ const givenOpen = flow(
 
 const givenClosedAnimated = Story.given(init({ id: 'test', isAnimated: true }))
 
-const givenOpenAnimated = flow(
+const givenOpenAnimated = Story.steps(
   givenClosedAnimated,
   Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolveAll(
@@ -1200,7 +1200,7 @@ describe('Listbox', () => {
   describe('modal commands', () => {
     const givenClosedModal = Story.given(init({ id: 'test', isModal: true }))
 
-    const givenOpenModal = flow(
+    const givenOpenModal = Story.steps(
       givenClosedModal,
       Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
       Story.Command.resolveAll(

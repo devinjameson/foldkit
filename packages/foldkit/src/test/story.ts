@@ -47,12 +47,50 @@ export type ModelStep<Model> = Readonly<{
   readonly assert: (model: Model) => void
 }>
 
-/** A single step in a story: a {@link GivenStep}, a {@link ModelStep},
- *  or a simulation transform. */
-export type StoryStep<Model> =
+/** A typed Message-dispatch step produced by {@link message}. */
+export type MessageStep<Message> = Readonly<{
+  _tag: 'MessageStep'
+  message: Message
+}>
+
+/** A typed OutMessage assertion step produced by {@link expectOutMessage}. */
+export type OutMessageStep<OutMessage> = Readonly<{
+  _tag: 'OutMessageStep'
+  expected: OutMessage
+}>
+
+/** A grouped sequence of Story steps produced by {@link steps}. */
+export type StoryStepsStep<GivenModel, ModelAssertion, Message, OutMessage> =
+  Readonly<{
+    _tag: 'StoryStepsStep'
+    /** @internal Carries the produced Model type through a reusable step group. */
+    _phantomGivenModel?: GivenModel
+    /** @internal Carries Model assertion types through a reusable step group. */
+    _phantomModelAssertion?: ModelAssertion
+    /** @internal Carries the Message type through a reusable step group. */
+    _phantomMessage?: Message
+    /** @internal Carries the OutMessage type through a reusable step group. */
+    _phantomOutMessage?: OutMessage
+    steps: ReadonlyArray<StoryStep<any, any, any>>
+  }>
+
+/** A single step in a story: a {@link GivenStep}, {@link ModelStep},
+ *  {@link MessageStep}, {@link OutMessageStep}, {@link StoryStepsStep}, or
+ *  simulation transform. */
+export type StoryStep<Model, Message = unknown, OutMessage = unknown> =
   | GivenStep<NoInfer<Model>>
   | ModelStep<NoInfer<Model>>
-  | ((sim: StorySimulation<any, any, any>) => StorySimulation<any, any, any>)
+  | MessageStep<NoInfer<Message>>
+  | OutMessageStep<NoInfer<OutMessage>>
+  | StoryStepsStep<
+      NoInfer<Model>,
+      (model: NoInfer<Model>) => void,
+      NoInfer<Message>,
+      NoInfer<OutMessage>
+    >
+  | ((
+      simulation: StorySimulation<any, any, any>,
+    ) => StorySimulation<any, any, any>)
 
 // INTERNAL
 
@@ -98,32 +136,32 @@ export const given = <Model>(model: Model): GivenStep<Model> => {
   /* eslint-enable @typescript-eslint/consistent-type-assertions */
 }
 
+const applyMessage = <Model, Message, OutMessage>(
+  simulation: StorySimulation<Model, Message, OutMessage>,
+  message_: Message,
+): StorySimulation<Model, Message, OutMessage> => {
+  const internal = toInternal(simulation)
+
+  assertNoUnresolvedCommands(internal.commands, 'when you sent a new Message')
+
+  const messageUpdate = internal.updateFn(internal.model, message_)
+
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  return {
+    ...internal,
+    model: messageUpdate.model,
+    message: message_,
+    commands: Array.appendAll(internal.commands, messageUpdate.commands ?? []),
+    outMessage: messageUpdate.outMessage,
+  } as StorySimulation<Model, Message, OutMessage>
+}
+
 /** Sends a Message through update. Commands stay pending until resolve or
  *  resolveAll. */
-export const message =
-  <MessageInput>(message_: MessageInput) =>
-  <Model, Message, OutMessage>(
-    simulation: StorySimulation<Model, Message, OutMessage>,
-  ): StorySimulation<Model, Message, OutMessage> => {
-    const internal = toInternal(simulation)
-
-    assertNoUnresolvedCommands(internal.commands, 'when you sent a new Message')
-
-    /* eslint-disable @typescript-eslint/consistent-type-assertions */
-    const messageAsParent = message_ as unknown as Message
-    const messageUpdate = internal.updateFn(internal.model, messageAsParent)
-    return {
-      ...internal,
-      model: messageUpdate.model,
-      message: messageAsParent,
-      commands: Array.appendAll(
-        internal.commands,
-        messageUpdate.commands ?? [],
-      ),
-      outMessage: messageUpdate.outMessage,
-    } as StorySimulation<Model, Message, OutMessage>
-    /* eslint-enable @typescript-eslint/consistent-type-assertions */
-  }
+export const message = <Message>(message_: Message): MessageStep<Message> => ({
+  _tag: 'MessageStep',
+  message: message_,
+})
 
 /** Resolves a pending Command with the given result Message. Accepts either
  *  a Command Definition (matches by name; any pending Command of that name)
@@ -212,6 +250,44 @@ export const model = <Model>(f: (model: Model) => void): ModelStep<Model> => ({
   assert: f,
 })
 
+/** Groups Story steps so a reusable setup can remain type-safe without
+ *  erasing its Message or OutMessage types through function composition. */
+export const steps = <Steps extends ReadonlyArray<StoryStep<any, any, any>>>(
+  ...storySteps: Steps
+): StoryStepsStep<
+  Steps[number] extends infer Step
+    ? Step extends GivenStep<infer Model>
+      ? Model
+      : Step extends StoryStepsStep<infer Model, any, any, any>
+        ? Model
+        : never
+    : never,
+  Steps[number] extends infer Step
+    ? Step extends ModelStep<infer Model>
+      ? (model: Model) => void
+      : Step extends StoryStepsStep<any, infer ModelAssertion, any, any>
+        ? ModelAssertion
+        : never
+    : never,
+  Steps[number] extends infer Step
+    ? Step extends MessageStep<infer Message>
+      ? Message
+      : Step extends StoryStepsStep<any, any, infer Message, any>
+        ? Message
+        : never
+    : never,
+  Steps[number] extends infer Step
+    ? Step extends OutMessageStep<infer OutMessage>
+      ? OutMessage
+      : Step extends StoryStepsStep<any, any, any, infer OutMessage>
+        ? OutMessage
+        : never
+    : never
+> => ({
+  _tag: 'StoryStepsStep',
+  steps: storySteps,
+})
+
 /** Asserts that every given matcher matches a pending Command. Definition
  *  matchers match by name only; Instance matchers match by name + args. */
 const expectHasCommandsStep =
@@ -270,24 +346,28 @@ export const Command = {
   expectNone: expectNoCommandsStep,
 } as const
 
+const assertOutMessage = <Model, Message, OutMessage>(
+  simulation: StorySimulation<Model, Message, OutMessage>,
+  expected: unknown,
+): void => {
+  const internal = toInternal(simulation)
+  const outMessage = internal.outMessage
+
+  if (outMessage === undefined || !Equal.equals(outMessage, expected)) {
+    throw new Error(
+      `Expected OutMessage:\n\n    ${JSON.stringify(expected)}\n\nBut got:\n\n    ${JSON.stringify(outMessage)}`,
+    )
+  }
+}
+
 /** Asserts by structural equality that update emitted the expected OutMessage,
  *  so callers can pass a freshly constructed expected value. */
-export const expectOutMessage =
-  <Expected>(expected: Expected) =>
-  <Model, Message, OutMessage>(
-    simulation: StorySimulation<Model, Message, OutMessage>,
-  ): StorySimulation<Model, Message, OutMessage> => {
-    const internal = toInternal(simulation)
-    const outMessage = internal.outMessage
-
-    if (outMessage === undefined || !Equal.equals(outMessage, expected)) {
-      throw new Error(
-        `Expected OutMessage:\n\n    ${JSON.stringify(expected)}\n\nBut got:\n\n    ${JSON.stringify(outMessage)}`,
-      )
-    }
-
-    return simulation
-  }
+export const expectOutMessage = <OutMessage>(
+  expected: OutMessage,
+): OutMessageStep<OutMessage> => ({
+  _tag: 'OutMessageStep',
+  expected,
+})
 
 /** Asserts that update emitted no OutMessage. */
 export const expectNoOutMessage =
@@ -309,9 +389,38 @@ export const expectNoOutMessage =
 
 // STORY
 
+const applyStoryStep = <Model, Message, OutMessage>(
+  current: StorySimulation<Model, Message, OutMessage>,
+  step: StoryStep<Model, Message, OutMessage>,
+): StorySimulation<Model, Message, OutMessage> => {
+  if (Predicate.isTagged(step, 'ModelStep')) {
+    step.assert(toInternal(current).model)
+    return current
+  }
+
+  if (Predicate.isTagged(step, 'MessageStep')) {
+    return applyMessage(current, step.message)
+  }
+
+  if (Predicate.isTagged(step, 'OutMessageStep')) {
+    assertOutMessage(current, step.expected)
+    return current
+  }
+
+  if (Predicate.isTagged(step, 'StoryStepsStep')) {
+    return Array.reduce(step.steps, current, applyStoryStep)
+  }
+
+  if (Predicate.isFunction(step)) {
+    return step(current)
+  }
+
+  return current
+}
+
 /** Executes a test story. Throws if any Commands remain unresolved. */
 export const story: {
-  <Model, Message, OutMessage>(
+  <Model, Message, OutMessage = never>(
     updateFn: (
       model: Model,
       message: Message,
@@ -320,7 +429,9 @@ export const story: {
       commands?: ReadonlyArray<AnyCommand>
       outMessage?: OutMessage
     }>,
-    ...steps: ReadonlyArray<StoryStep<NoInfer<Model>>>
+    ...steps: ReadonlyArray<
+      StoryStep<NoInfer<Model>, NoInfer<Message>, NoInfer<OutMessage>>
+    >
   ): void
   <Model, Message>(
     updateFn: (
@@ -331,14 +442,16 @@ export const story: {
       commands?: ReadonlyArray<AnyCommand>
       outMessage?: never
     }>,
-    ...steps: ReadonlyArray<StoryStep<NoInfer<Model>>>
+    ...steps: ReadonlyArray<
+      StoryStep<NoInfer<Model>, NoInfer<Message>, undefined>
+    >
   ): void
 } = <Model, Message, OutMessage = undefined>(
   updateFn: (
     model: Model,
     message: Message,
   ) => SimulationUpdateReturn<Model, OutMessage>,
-  ...steps: ReadonlyArray<StoryStep<Model>>
+  ...steps: ReadonlyArray<StoryStep<Model, Message, OutMessage>>
 ): void => {
   /* eslint-disable @typescript-eslint/consistent-type-assertions */
   const seed = {
@@ -350,23 +463,7 @@ export const story: {
     resolvers: [],
   } as unknown as StorySimulation<Model, Message, OutMessage>
 
-  const result = steps.reduce<StorySimulation<Model, Message, OutMessage>>(
-    (current, step) => {
-      if (typeof step === 'function') {
-        return (
-          step as (
-            simulation: StorySimulation<Model, Message, OutMessage>,
-          ) => StorySimulation<Model, Message, OutMessage>
-        )(current)
-      }
-      if ('_tag' in step && step._tag === 'ModelStep') {
-        step.assert(toInternal(current).model)
-        return current
-      }
-      return current
-    },
-    seed,
-  )
+  const result = Array.reduce(steps, seed, applyStoryStep)
   /* eslint-enable @typescript-eslint/consistent-type-assertions */
 
   const internal = toInternal(result)
