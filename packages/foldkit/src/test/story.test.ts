@@ -4,6 +4,7 @@ import { describe, expect, expectTypeOf, test } from 'vitest'
 import * as Interruptible from '../command/interruptible/index.js'
 import {
   Message as CounterMessage,
+  type Model as CounterModel,
   FetchCount,
   FetchCountById,
   update,
@@ -61,6 +62,68 @@ describe('message', () => {
         CounterMessage.SucceededFetchCount({ count: 42 }),
       ]),
     )
+  })
+
+  test('requires the Message to belong to the tested update', () => {
+    expectTypeOf(() =>
+      Story.story(
+        update,
+        Story.given({ count: 0, log: [] }),
+        // @ts-expect-error SubmittedForm is not a Counter Message
+        Story.message(FormChildJsChildMessage.SubmittedForm()),
+      ),
+    ).toBeFunction()
+  })
+})
+
+describe('steps', () => {
+  test('runs a reusable group in order', () => {
+    const givenIncremented = Story.steps(
+      Story.given({ count: 0, log: [] }),
+      Story.message(CounterMessage.ClickedIncrement()),
+      Story.message(CounterMessage.ClickedDecrement()),
+      Story.message(CounterMessage.ClickedIncrement()),
+    )
+
+    Story.story(
+      update,
+      givenIncremented,
+      Story.model(model => {
+        expect(model.count).toBe(1)
+      }),
+    )
+  })
+
+  test('preserves grouped Message types at the story boundary', () => {
+    const givenSubmittedForm = Story.steps(
+      Story.given({ count: 0, log: [] }),
+      Story.message(FormChildJsChildMessage.SubmittedForm()),
+    )
+
+    expectTypeOf(() =>
+      Story.story(
+        update,
+        // @ts-expect-error SubmittedForm is not a Counter Message
+        givenSubmittedForm,
+      ),
+    ).toBeFunction()
+  })
+
+  test('preserves grouped Model assertion types at the story boundary', () => {
+    const assertExtendedModel = Story.steps(
+      Story.model((model: CounterModel & { note: string }) => {
+        expect(model.note).toBe('ready')
+      }),
+    )
+
+    expectTypeOf(() =>
+      Story.story(
+        update,
+        Story.given({ count: 0, log: [] }),
+        // @ts-expect-error Counter Model does not have a note field
+        assertExtendedModel,
+      ),
+    ).toBeFunction()
   })
 })
 
@@ -823,6 +886,29 @@ describe('outMessage', () => {
       Story.message(FormChildJsChildMessage.CancelledForm()),
       Story.expectOutMessage(FormChildJsChildOutMessage.RequestedCancel()),
     )
+  })
+
+  test('requires the expected OutMessage to belong to the tested update', () => {
+    expectTypeOf(() =>
+      Story.story(
+        // @ts-expect-error ClickedIncrement is not a child OutMessage
+        childUpdate,
+        Story.given({ status: 'Idle' }),
+        Story.message(FormChildJsChildMessage.CancelledForm()),
+        Story.expectOutMessage(CounterMessage.ClickedIncrement()),
+      ),
+    ).toBeFunction()
+  })
+
+  test('rejects an OutMessage assertion when update cannot emit one', () => {
+    expectTypeOf(() =>
+      Story.story(
+        update,
+        Story.given({ count: 0, log: [] }),
+        // @ts-expect-error counter update cannot emit an OutMessage
+        Story.expectOutMessage(FormChildJsChildOutMessage.RequestedCancel()),
+      ),
+    ).toBeFunction()
   })
 })
 
