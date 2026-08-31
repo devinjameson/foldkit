@@ -5,7 +5,7 @@ import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { Menu } from '@foldkit/ui'
 
 import * as Icon from '../../icon'
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const triggerClassName =

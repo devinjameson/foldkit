@@ -20,7 +20,7 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
-import type { UiMessage } from './message'
+import type { Message as UiMessage } from './message'
 import type { UiModel } from './model'
 import { Toast } from './toast'
 

@@ -5,7 +5,7 @@ import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { Listbox } from '@foldkit/ui'
 
 import * as Icon from '../../icon'
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { ListboxItem, UiModel } from '../model'
 
 const LISTBOX_ITEMS: ReadonlyArray<ListboxItem> = [

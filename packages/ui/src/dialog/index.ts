@@ -13,6 +13,8 @@ import * as Update from 'foldkit/update'
 import * as Animation from '../animation/schema.js'
 import {
   defaultLeaveCommand as animationDefaultLeaveCommand,
+  hide as animationHide,
+  show as animationShow,
   update as animationUpdate,
 } from '../animation/update.js'
 import { idSelector } from '../internal/selectors.js'
@@ -216,6 +218,22 @@ const foldAnimation = Update.foldChild({
   foldOutMessage: foldAnimationOutMessage,
 })
 
+const foldAnimationShow = Update.foldChildStep({
+  update: animationShow,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: wrapAnimationMessage,
+})
+
+const foldAnimationHide = Update.foldChildStep({
+  update: animationHide,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: wrapAnimationMessage,
+})
+
 /** Processes a Dialog Message and returns the next Model and optional Commands. */
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
@@ -235,7 +253,7 @@ export const update = (model: Model, message: Message) =>
       const dialogOpen: Update.Return<Model, Message> = model.isAnimated
         ? Update.combine(model, [
             stepModel => ({ model: stepModel, commands }),
-            foldAnimation(Animation.Message.Showed()),
+            foldAnimationShow,
             stepModel => ({
               model: evo(stepModel, { isOpen: () => true }),
             }),
@@ -258,7 +276,7 @@ export const update = (model: Model, message: Message) =>
           stepModel => ({
             model: evo(stepModel, { isOpen: () => false }),
           }),
-          foldAnimation(Animation.Message.Hid()),
+          foldAnimationHide,
         ])
 
         return wasOpen

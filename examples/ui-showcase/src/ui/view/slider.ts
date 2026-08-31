@@ -3,7 +3,7 @@ import type { Html } from 'foldkit/html'
 
 import { Slider } from '@foldkit/ui'
 
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const rowClassName = 'flex flex-col gap-2 w-full max-w-sm'

@@ -7,7 +7,12 @@ import {
   RuleContext,
 } from 'effect-oxlint'
 
-import { isCallExpression, isIdentifier, isStringLiteral } from '../guards.ts'
+import {
+  indexReferences,
+  isCallExpression,
+  isIdentifier,
+  isStringLiteral,
+} from '../guards.ts'
 import { messageCases, recordFoldkitMessageUnionBindings } from '../message.ts'
 
 const gotWrapperTagPattern = /^Got[A-Z]/
@@ -55,6 +60,9 @@ export const gotWrapperCarriesOnlyRouting = Rule.define({
   }),
   create: function* () {
     const ctx = yield* RuleContext
+    const scopes = ctx.sourceCode.scopeManager?.scopes
+    const references =
+      scopes === undefined ? undefined : indexReferences(scopes)
     const messageUnionBindings = new Set<string>()
     return {
       Program: (node: ESTree.Node) => {
@@ -67,7 +75,7 @@ export const gotWrapperCarriesOnlyRouting = Rule.define({
         }
 
         return Effect.forEach(
-          messageCases(node, messageUnionBindings),
+          messageCases(node, messageUnionBindings, references),
           messageCase =>
             gotWrapperTagPattern.test(messageCase.name)
               ? Effect.forEach(

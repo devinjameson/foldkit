@@ -3,7 +3,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Checkbox, Fieldset, Input, Textarea } from '@foldkit/ui'
 
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const FIELDSET_CHECKBOX_DEMO_ID = 'fieldset-checkbox-demo'

@@ -14,6 +14,7 @@ import {
   isObjectExpression,
   isObjectProperty,
   isUnshadowedReference,
+  resolveImportedPath,
   staticMemberName,
   staticPropertyName,
 } from '../guards.ts'
@@ -167,52 +168,19 @@ const globalPathKey = (
     return Option.some(members.join('.'))
   })
 
-const importedName = (node: ESTree.ImportSpecifier): Option.Option<string> =>
-  node.imported.type === 'Identifier'
-    ? Option.some(node.imported.name)
-    : Option.some(node.imported.value)
-
 const importedPath = (
   references: WeakMap<ESTree.Node, Reference> | undefined,
   node: unknown,
 ): Option.Option<ImportedPath> =>
-  Option.flatMap(staticPath(node), path => {
-    if (references === undefined) {
-      return Option.some({
+  references === undefined
+    ? Option.map(staticPath(node), path => ({
         source: '',
         members: [path.root.name, ...path.members],
-      })
-    }
-
-    const reference = references.get(path.root)
-    const maybeDefinition = Option.flatMap(
-      Option.fromNullishOr(reference?.resolved),
-      variable =>
-        Array.findFirst(
-          variable.defs,
-          definition => definition.type === 'ImportBinding',
-        ),
-    )
-
-    return Option.flatMap(maybeDefinition, definition => {
-      if (definition.parent?.type !== 'ImportDeclaration') {
-        return Option.none()
-      }
-
-      const source = definition.parent.source.value
-      if (definition.node.type === 'ImportNamespaceSpecifier') {
-        return Option.some({ source, members: path.members })
-      }
-      if (definition.node.type !== 'ImportSpecifier') {
-        return Option.none()
-      }
-
-      return Option.map(importedName(definition.node), name => ({
-        source,
-        members: [name, ...path.members],
       }))
-    })
-  })
+    : Option.map(resolveImportedPath(references, node), path => ({
+        source: path.source,
+        members: path.members,
+      }))
 
 const normalizedApiPath = (
   path: ImportedPath,

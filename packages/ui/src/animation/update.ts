@@ -113,12 +113,20 @@ export function update(model: Model, message: Message): UpdateReturn {
   })
 }
 
+/** Programmatically starts the enter lifecycle. */
+export const show = (model: Model): Update.Return<Model, Message> =>
+  update(model, Message.Showed())
+
+/** Programmatically starts the leave lifecycle. */
+export const hide = (model: Model): Update.Return<Model, Message> =>
+  update(model, Message.Hid())
+
 /** Toggles the animation between its shown and hidden states. */
 export const toggle = (model: Model): Update.Return<Model, Message> => {
   if (model.isShowing) {
-    return update(model, Message.Hid())
+    return hide(model)
   } else {
-    return update(model, Message.Showed())
+    return show(model)
   }
 }
 

@@ -1,10 +1,12 @@
 import { Option } from 'effect'
-import { type ESTree } from 'effect-oxlint'
+import { type ESTree, type Reference } from 'effect-oxlint'
 
 import {
   isIdentifier,
   isObjectExpression,
   isStringLiteral,
+  resolveFoldkitApiPath,
+  resolveImportedPath,
   staticPropertyName,
 } from './guards.ts'
 
@@ -47,11 +49,32 @@ export const recordFoldkitMessageUnionBindings = (
   }
 }
 
+export const isFoldkitMessageUnionCall = (
+  node: ESTree.CallExpression,
+  bindings: ReadonlySet<string>,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
+): boolean => {
+  if (references === undefined) {
+    return isIdentifier(node.callee) && bindings.has(node.callee.name)
+  }
+
+  return Option.exists(resolveFoldkitApiPath(references, node.callee), path => {
+    const [namespace, helperName, extraMember] = path
+
+    return (
+      namespace === 'Message' &&
+      helperName === 'defineMessageUnion' &&
+      extraMember === undefined
+    )
+  })
+}
+
 export const messageCases = (
   node: ESTree.CallExpression,
   bindings: ReadonlySet<string>,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
 ): ReadonlyArray<MessageCase> => {
-  if (!isIdentifier(node.callee) || !bindings.has(node.callee.name)) {
+  if (!isFoldkitMessageUnionCall(node, bindings, references)) {
     return []
   }
 
@@ -89,3 +112,61 @@ export const hasMessagePayloadProperty = (
       (isIdentifier(property.key, 'message') ||
         (isStringLiteral(property.key) && property.key.value === 'message')),
   )
+
+const containsImportedMessageReference = (
+  node: unknown,
+  references: WeakMap<ESTree.Node, Reference>,
+  visited: WeakSet<object>,
+): boolean => {
+  if (typeof node !== 'object' || node === null || visited.has(node)) {
+    return false
+  }
+
+  visited.add(node)
+  if (
+    Option.exists(resolveImportedPath(references, node), path => {
+      const [messageName] = path.members.slice(-1)
+
+      return messageName === 'Message'
+    })
+  ) {
+    return true
+  }
+
+  return Object.entries(node).some(
+    ([key, value]) =>
+      key !== 'parent' &&
+      (Array.isArray(value)
+        ? value.some(element =>
+            containsImportedMessageReference(element, references, visited),
+          )
+        : containsImportedMessageReference(value, references, visited)),
+  )
+}
+
+export const hasSubmodelMessagePayload = (
+  fields: ESTree.ObjectExpression,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
+): boolean => {
+  if (references === undefined) {
+    return hasMessagePayloadProperty(fields)
+  }
+
+  return fields.properties.some(property => {
+    if (
+      property.type !== 'Property' ||
+      !(
+        isIdentifier(property.key, 'message') ||
+        (isStringLiteral(property.key) && property.key.value === 'message')
+      )
+    ) {
+      return false
+    }
+
+    return containsImportedMessageReference(
+      property.value,
+      references,
+      new WeakSet(),
+    )
+  })
+}

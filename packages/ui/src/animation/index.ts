@@ -7,6 +7,8 @@ import {
   WaitForAnimationSettled,
   WaitForPaint,
   defaultLeaveCommand,
+  hide,
+  show,
   toggle,
   update,
 } from './update.js'
@@ -18,6 +20,8 @@ export {
   WaitForAnimationSettled,
   WaitForPaint,
   defaultLeaveCommand,
+  hide,
+  show,
   toggle,
   update,
 }

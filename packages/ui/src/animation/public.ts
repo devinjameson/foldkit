@@ -1,5 +1,7 @@
 export {
   init,
+  show,
+  hide,
   update,
   toggle,
   view,

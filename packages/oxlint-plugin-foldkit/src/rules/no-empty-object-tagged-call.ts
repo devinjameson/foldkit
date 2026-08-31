@@ -1,13 +1,24 @@
-import { Effect } from 'effect'
-import { Diagnostic, type ESTree, Rule, RuleContext } from 'effect-oxlint'
+import { Effect, Option } from 'effect'
+import {
+  Diagnostic,
+  type ESTree,
+  type Reference,
+  Rule,
+  RuleContext,
+  type Variable,
+} from 'effect-oxlint'
 
 import {
+  indexReferences,
   isCallExpression,
   isIdentifier,
+  isIdentifierReference,
   isMemberExpression,
   isObjectExpression,
   isStringLiteral,
   isVariableDeclarator,
+  resolveFoldkitApiPath,
+  resolvedVariable,
 } from '../guards.ts'
 
 const PASCAL_CASE = /^[A-Z][A-Za-z0-9]*$/
@@ -56,9 +67,36 @@ const recordUnionHelperBindings = (
 const isConventionalUnionNamespace = (name: string): boolean =>
   PASCAL_CASE.test(name) && /(?:Message|Route|State)$/.test(name)
 
+const isUnionHelperCall = (
+  node: ESTree.CallExpression,
+  bindings: ReadonlySet<string>,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
+): boolean => {
+  if (references === undefined) {
+    return isIdentifier(node.callee) && bindings.has(node.callee.name)
+  }
+
+  return Option.exists(resolveFoldkitApiPath(references, node.callee), path => {
+    const [namespace, helperName, extraMember] = path
+    const expectedHelperByNamespace: Readonly<Record<string, string>> = {
+      Message: 'defineMessageUnion',
+      Route: 'defineRouteUnion',
+      Schema: 'defineTaggedUnion',
+    }
+
+    return (
+      namespace !== undefined &&
+      expectedHelperByNamespace[namespace] === helperName &&
+      extraMember === undefined
+    )
+  })
+}
+
 const constructorName = (
   callee: unknown,
-  unionNamespaces: ReadonlySet<string>,
+  unionNamespaceNames: ReadonlySet<string>,
+  unionNamespaceVariables: ReadonlySet<Variable>,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
 ): string | undefined => {
   if (isIdentifier(callee) && PASCAL_CASE.test(callee.name)) {
     return callee.name
@@ -66,13 +104,28 @@ const constructorName = (
   if (
     isMemberExpression(callee) &&
     callee.computed !== true &&
-    isIdentifier(callee.object) &&
-    (unionNamespaces.has(callee.object.name) ||
-      isConventionalUnionNamespace(callee.object.name)) &&
+    isIdentifierReference(callee.object) &&
     isIdentifier(callee.property) &&
     PASCAL_CASE.test(callee.property.name)
   ) {
-    return `${callee.object.name}.${callee.property.name}`
+    const namespace = callee.object
+    const isUnionNamespace =
+      references === undefined
+        ? unionNamespaceNames.has(namespace.name) ||
+          isConventionalUnionNamespace(namespace.name)
+        : Option.exists(resolvedVariable(references, namespace), variable => {
+            return (
+              unionNamespaceVariables.has(variable) ||
+              (isConventionalUnionNamespace(namespace.name) &&
+                variable.defs.some(
+                  definition => definition.type === 'ImportBinding',
+                ))
+            )
+          })
+
+    return isUnionNamespace
+      ? `${namespace.name}.${callee.property.name}`
+      : undefined
   }
   return undefined
 }
@@ -86,8 +139,12 @@ export const noEmptyObjectTaggedCall = Rule.define({
   }),
   create: function* () {
     const ctx = yield* RuleContext
+    const scopes = ctx.sourceCode.scopeManager?.scopes
+    const references =
+      scopes === undefined ? undefined : indexReferences(scopes)
     const unionHelperBindings = new Set<string>()
-    const unionNamespaces = new Set<string>()
+    const unionNamespaceNames = new Set<string>()
+    const unionNamespaceVariables = new Set<Variable>()
 
     return {
       Program: (node: ESTree.Node) => {
@@ -97,12 +154,18 @@ export const noEmptyObjectTaggedCall = Rule.define({
       VariableDeclarator: (node: ESTree.Node) => {
         if (
           isVariableDeclarator(node) &&
-          isIdentifier(node.id) &&
+          node.id.type === 'Identifier' &&
           isCallExpression(node.init) &&
-          isIdentifier(node.init.callee) &&
-          unionHelperBindings.has(node.init.callee.name)
+          isUnionHelperCall(node.init, unionHelperBindings, references)
         ) {
-          unionNamespaces.add(node.id.name)
+          const unionName = node.id.name
+          unionNamespaceNames.add(unionName)
+          const unionVariable = ctx.sourceCode.scopeManager
+            ?.getDeclaredVariables(node)
+            .find(variable => variable.name === unionName)
+          if (unionVariable !== undefined) {
+            unionNamespaceVariables.add(unionVariable)
+          }
         }
 
         return Effect.void
@@ -111,7 +174,12 @@ export const noEmptyObjectTaggedCall = Rule.define({
         if (!isCallExpression(node)) {
           return Effect.void
         }
-        const name = constructorName(node.callee, unionNamespaces)
+        const name = constructorName(
+          node.callee,
+          unionNamespaceNames,
+          unionNamespaceVariables,
+          references,
+        )
         if (name === undefined || node.arguments.length !== 1) {
           return Effect.void
         }

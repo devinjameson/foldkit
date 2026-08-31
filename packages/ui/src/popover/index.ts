@@ -26,7 +26,11 @@ import {
 // dependency: animation → html → runtime → devtools → popover → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
 import * as Animation from '../animation/schema.js'
-import { update as animationUpdate } from '../animation/update.js'
+import {
+  hide as animationHide,
+  show as animationShow,
+  update as animationUpdate,
+} from '../animation/update.js'
 import * as OptionExt from '../internal/optionExtensions.js'
 import { idSelector } from '../internal/selectors.js'
 
@@ -231,6 +235,22 @@ const foldAnimation = Update.foldChild({
   foldOutMessage: foldAnimationOutMessage,
 })
 
+const foldAnimationShow = Update.foldChildStep({
+  update: animationShow,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
+})
+
+const foldAnimationHide = Update.foldChildStep({
+  update: animationHide,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
+})
+
 /** Processes a Popover Message and returns the next Model, optional Commands,
  *  and an optional OutMessage. */
 export const update = (model: Model, message: Message) => {
@@ -264,7 +284,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       const popoverOpen = Update.combine(baseModel, [
         stepModel => ({ model: stepModel, commands: openCommands }),
-        foldAnimation(Animation.Message.Showed()),
+        foldAnimationShow,
         stepModel => ({
           model: evo(stepModel, { isOpen: () => true }),
         }),
@@ -292,7 +312,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       return Update.combine(closed, [
         stepModel => ({ model: stepModel, commands }),
-        foldAnimation(Animation.Message.Hid()),
+        foldAnimationHide,
       ])
     }
 

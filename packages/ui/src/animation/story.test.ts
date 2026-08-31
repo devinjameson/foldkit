@@ -8,7 +8,9 @@ import {
   OutMessage,
   WaitForAnimationSettled,
   WaitForPaint,
+  hide,
   init,
+  show,
   toggle,
   update,
 } from './index.js'
@@ -178,6 +180,24 @@ describe('Animation', () => {
       expect(animationToggle.model.isShowing).toBe(false)
       expect(animationToggle.model.transitionState).toBe('LeaveStart')
       expect(animationToggle.commands).toHaveLength(1)
+    })
+  })
+
+  describe('programmatic capabilities', () => {
+    it('shows a hidden Animation', () => {
+      const animationShow = show(init({ id: 'test' }))
+
+      expect(animationShow.model.isShowing).toBe(true)
+      expect(animationShow.model.transitionState).toBe('EnterStart')
+      expect(animationShow.commands).toHaveLength(1)
+    })
+
+    it('hides a showing Animation', () => {
+      const animationHide = hide(init({ id: 'test', isShowing: true }))
+
+      expect(animationHide.model.isShowing).toBe(false)
+      expect(animationHide.model.transitionState).toBe('LeaveStart')
+      expect(animationHide.commands).toHaveLength(1)
     })
   })
 })
