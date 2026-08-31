@@ -1,4 +1,4 @@
-import { Array, Crypto, Effect, Match, Schema } from 'effect'
+import { Array, Crypto, Effect, Schema } from 'effect'
 import { Command, Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -54,16 +54,13 @@ export const GenerateEntryId = Command.define('GenerateEntryId', {
 const foldEntryOutMessage: (
   entryId: string,
 ) => (outMessage: Entry.OutMessage) => Update.Step<Model, Message> = entryId =>
-  Match.type<Entry.OutMessage>().pipe(
-    Match.withReturnType<Update.Step<Model, Message>>(),
-    Match.tagsExhaustive({
-      Removed: () => model => ({
-        model: evo(model, {
-          entries: Array.filter(entry => entry.id !== entryId),
-        }),
+  Entry.OutMessage.match<Update.Step<Model, Message>>({
+    Removed: () => model => ({
+      model: evo(model, {
+        entries: Array.filter(entry => entry.id !== entryId),
       }),
     }),
-  )
+  })
 
 const foldEntry = (entryId: string) =>
   Update.foldChild({

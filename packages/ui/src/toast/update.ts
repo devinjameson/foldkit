@@ -1,23 +1,9 @@
-import {
-  Array,
-  Duration,
-  Effect,
-  Match,
-  Number,
-  Option,
-  Schema,
-  pipe,
-} from 'effect'
+import { Array, Duration, Effect, Number, Option, Schema, pipe } from 'effect'
 import * as Command from 'foldkit/command'
 import { evo } from 'foldkit/struct'
 import * as Update from 'foldkit/update'
 
-import {
-  Message as AnimationMessage,
-  type Model as AnimationModel,
-  OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
+import * as Animation from '../animation/schema.js'
 import {
   defaultLeaveCommand as animationDefaultLeaveCommand,
   update as animationUpdate,
@@ -149,29 +135,26 @@ export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
 
   const toGotAnimationMessage =
     (entryId: string) =>
-    (message: AnimationMessage): Message =>
+    (message: Animation.Message): Message =>
       MessageSchema.GotAnimationMessage({ entryId, message })
 
   const toDismissedToastOutMessage: (
     payload: A,
-  ) => (outMessage: AnimationOutMessage) => OutMessage | undefined = payload =>
-    Match.type<AnimationOutMessage>().pipe(
-      Match.withReturnType<OutMessage | undefined>(),
-      Match.tagsExhaustive({
-        StartedLeaveAnimating: () => undefined,
-        TransitionedOut: () => OutMessageSchema.DismissedToast({ payload }),
-      }),
-    )
+  ) => (outMessage: Animation.OutMessage) => OutMessage | undefined = payload =>
+    Animation.OutMessage.match<OutMessage | undefined>({
+      StartedLeaveAnimating: () => undefined,
+      TransitionedOut: () => OutMessageSchema.DismissedToast({ payload }),
+    })
 
   const foldEntryAnimationOutMessage: (
     entryId: string,
   ) => (
-    outMessage: AnimationOutMessage,
-    context: Update.FoldContext<AnimationMessage, Message>,
+    outMessage: Animation.OutMessage,
+    context: Update.FoldContext<Animation.Message, Message>,
   ) => Update.Step<Model, Message> =
     entryId =>
     (outMessage, { liftCommand }) =>
-      AnimationOutMessage.match<Update.Step<Model, Message>>(outMessage, {
+      Animation.OutMessage.match<Update.Step<Model, Message>>(outMessage, {
         StartedLeaveAnimating: () => model =>
           Option.match(readEntryAnimation(entryId)(model), {
             onNone: () => ({ model }),
@@ -197,8 +180,8 @@ export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
 
   const foldEntryAnimationShow = (entry: Entry) =>
     Update.foldChildStep({
-      update: (animation: AnimationModel) =>
-        animationUpdate(animation, AnimationMessage.Showed()),
+      update: (animation: Animation.Model) =>
+        animationUpdate(animation, Animation.Message.Showed()),
       read: readEntryAnimation(entry.id),
       write: writeEntryAnimation(entry.id),
       toParentMessage: toGotAnimationMessage(entry.id),
@@ -206,8 +189,8 @@ export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
 
   const foldEntryAnimationHide = (entry: Entry) =>
     Update.foldChildStep({
-      update: (animation: AnimationModel) =>
-        animationUpdate(animation, AnimationMessage.Hid()),
+      update: (animation: Animation.Model) =>
+        animationUpdate(animation, Animation.Message.Hid()),
       read: readEntryAnimation(entry.id),
       write: writeEntryAnimation(entry.id),
       toParentMessage: toGotAnimationMessage(entry.id),
@@ -216,7 +199,7 @@ export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
   const delegateToEntryAnimation = (
     model: Model,
     entryId: string,
-    animationMessage: AnimationMessage,
+    animationMessage: Animation.Message,
   ): UpdateReturn =>
     Option.match(
       Array.findFirst(model.entries, ({ id }) => id === entryId),
@@ -239,7 +222,7 @@ export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
     return {
       id: entryId,
       variant: input.variant ?? DEFAULT_VARIANT,
-      animation: animationInit({ id: entryId, isShowing: false }),
+      animation: Animation.init({ id: entryId, isShowing: false }),
       maybeDuration,
       pendingDismissVersion: 0,
       isHovered: false,

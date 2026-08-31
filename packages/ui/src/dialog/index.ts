@@ -10,12 +10,7 @@ import * as Update from 'foldkit/update'
 // NOTE: Animation imports are split across schema + update to avoid a circular
 // dependency: animation → html → runtime → devtools → dialog → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
-import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-  OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
+import * as Animation from '../animation/schema.js'
 import {
   defaultLeaveCommand as animationDefaultLeaveCommand,
   update as animationUpdate,
@@ -29,7 +24,7 @@ export const Model = Schema.Struct({
   id: Schema.String,
   isOpen: Schema.Boolean,
   isAnimated: Schema.Boolean,
-  animation: AnimationModel,
+  animation: Animation.Model,
   maybeFocusSelector: Schema.Option(Schema.String),
 })
 
@@ -46,7 +41,7 @@ export const Message = defineMessageUnion({
   CompletedCloseDialog: {},
   Unmounted: {},
   CompletedReleaseDialogResources: {},
-  GotAnimationMessage: { message: AnimationMessage },
+  GotAnimationMessage: { message: Animation.Message },
 })
 
 export type RequestedOpen = typeof Message.RequestedOpen.Type
@@ -100,7 +95,7 @@ export const init = (config: InitConfig): Model => ({
   id: config.id,
   isOpen: config.isOpen ?? false,
   isAnimated: config.isAnimated ?? false,
-  animation: animationInit({
+  animation: Animation.init({
     id: `${config.id}-panel`,
     ...(config.isOpen !== undefined ? { isShowing: config.isOpen } : {}),
   }),
@@ -191,17 +186,17 @@ const isOpenOrAnimating = (model: Model): boolean =>
 const resetToClosed = (model: Model): Model =>
   evo(model, {
     isOpen: () => false,
-    animation: () => animationInit({ id: `${model.id}-panel` }),
+    animation: () => Animation.init({ id: `${model.id}-panel` }),
   })
 
-const wrapAnimationMessage = (message: AnimationMessage): Message =>
+const wrapAnimationMessage = (message: Animation.Message): Message =>
   Message.GotAnimationMessage({ message })
 
 const foldAnimationOutMessage: (
-  outMessage: AnimationOutMessage,
-  context: Update.FoldContext<AnimationMessage, Message>,
+  outMessage: Animation.OutMessage,
+  context: Update.FoldContext<Animation.Message, Message>,
 ) => Update.Step<Model, Message> = (outMessage, { liftCommand }) =>
-  AnimationOutMessage.match<Update.Step<Model, Message>>(outMessage, {
+  Animation.OutMessage.match<Update.Step<Model, Message>>(outMessage, {
     StartedLeaveAnimating: () => model => ({
       model,
       commands: [liftCommand(animationDefaultLeaveCommand(model.animation))],
@@ -240,7 +235,7 @@ export const update = (model: Model, message: Message) =>
       const dialogOpen: Update.Return<Model, Message> = model.isAnimated
         ? Update.combine(model, [
             stepModel => ({ model: stepModel, commands }),
-            foldAnimation(AnimationMessage.Showed()),
+            foldAnimation(Animation.Message.Showed()),
             stepModel => ({
               model: evo(stepModel, { isOpen: () => true }),
             }),
@@ -263,7 +258,7 @@ export const update = (model: Model, message: Message) =>
           stepModel => ({
             model: evo(stepModel, { isOpen: () => false }),
           }),
-          foldAnimation(AnimationMessage.Hid()),
+          foldAnimation(Animation.Message.Hid()),
         ])
 
         return wasOpen

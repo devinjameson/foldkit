@@ -8,7 +8,6 @@ import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Animation } from '@foldkit/ui'
-import { Message as AnimationMessage } from '@foldkit/ui/animation'
 
 // Add a field to your Model for the Animation Submodel. Animation tracks
 // its own visibility and lifecycle state. No need for a separate flag:
@@ -28,6 +27,7 @@ const init = () => ({
 // Embed the Animation Message in your parent Message:
 const Message = defineMessageUnion({
   GotAnimationMessage: { message: Animation.Message },
+  ToggledAnimation: {},
 })
 type Message = typeof Message.Type
 
@@ -77,29 +77,32 @@ const foldAnimation = Update.foldChild({
   foldOutMessage: foldAnimationOutMessage,
 })
 
-// In the corresponding Message.match handler, call the fold:
-GotAnimationMessage: ({ message }) => foldAnimation(model, message)
+// Animation.toggle is the child-owned entry point for changing visibility.
+// Update.foldChildStep applies it without constructing a child Message in the
+// parent:
+const foldAnimationToggle = Update.foldChildStep({
+  update: Animation.toggle,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
+})
 
-// Inside your view function, toggle visibility by dispatching
-// AnimationMessage.Showed() or AnimationMessage.Hid() wrapped in your parent
-// Message. model.animation.isShowing is your
-// source of truth for whether content is currently visible. The Animation
-// view wraps your content. Data attributes drive the CSS transitions or
-// keyframe animations defined in className:
+// In the corresponding Message.match handlers, call the folds:
+GotAnimationMessage: ({ message }) => foldAnimation(model, message)
+ToggledAnimation: () => foldAnimationToggle(model)
+
+// Inside your view function, toggle visibility by dispatching your parent
+// Message. model.animation.isShowing is your source of truth for whether
+// content is currently visible. The Animation view wraps your content. Data
+// attributes drive the CSS transitions or keyframe animations defined in
+// className:
 const view = (h: HtmlBuilder<Message>) =>
   h.div(
     [],
     [
       h.button(
-        [
-          h.OnClick(
-            Message.GotAnimationMessage({
-              message: model.animation.isShowing
-                ? AnimationMessage.Hid()
-                : AnimationMessage.Showed(),
-            }),
-          ),
-        ],
+        [h.OnClick(Message.ToggledAnimation())],
         [model.animation.isShowing ? 'Hide' : 'Show'],
       ),
       h.submodel({

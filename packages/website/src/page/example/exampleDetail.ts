@@ -1,13 +1,4 @@
-import {
-  Array,
-  Effect,
-  Match,
-  Option,
-  Queue,
-  Schema,
-  Stream,
-  pipe,
-} from 'effect'
+import { Array, Effect, Option, Queue, Schema, Stream, pipe } from 'effect'
 import { AsyncData, Command, Mount, Submodel, Update } from 'foldkit'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import { evo } from 'foldkit/struct'
@@ -390,18 +381,17 @@ const livePreviewDisclosureView = (
 
 const SourceFileTabs = Tabs.create()
 
-const foldSourceFileTabsOutMessage = Match.type<Tabs.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeActiveSourceFilePath: () => Option.some(value),
-        }),
+const foldSourceFileTabsOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeActiveSourceFilePath: () => Option.some(value),
       }),
-  }),
-)
+    }),
+})
 
 const foldSourceFileTabs = Update.foldChild({
   update: SourceFileTabs.update,

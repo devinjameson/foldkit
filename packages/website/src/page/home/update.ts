@@ -31,10 +31,15 @@ const selectPlaygroundExample = (
   outMessage: OutMessage.SelectedPlaygroundExample({ exampleSlug }),
 })
 
-const foldDemoTabsOutMessage = (outMessage: Tabs.OutMessage<DemoTab.Tab>) =>
-  Tabs.OutMessage.match<Update.Step<Model, Message>>(outMessage, {
-    Selected: () => model => selectDemoTab(model, outMessage.value),
-  })
+const foldDemoTabsOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>,
+  Tabs.OutMessage<DemoTab.Tab>
+>({
+  Selected:
+    ({ value }) =>
+    model =>
+      selectDemoTab(model, value),
+})
 
 const foldDemoTabs = Update.foldChild({
   update: DemoTab.DemoTabs.update,
@@ -44,17 +49,17 @@ const foldDemoTabs = Update.foldChild({
   foldOutMessage: foldDemoTabsOutMessage,
 })
 
-const foldPlaygroundMenuOutMessage = (
-  outMessage: Menu.OutMessage<ExampleSlug>,
-) =>
-  Menu.OutMessage.match<Update.StepWithOutMessage<Model, Message, OutMessage>>(
-    outMessage,
-    {
-      // NOTE: A fresh document load preserves the COEP/COOP headers required by
-      // WebContainer. SPA navigation would reuse the current document.
-      Selected: () => model => selectPlaygroundExample(model, outMessage.value),
-    },
-  )
+const foldPlaygroundMenuOutMessage = Menu.OutMessage.match<
+  Update.StepWithOutMessage<Model, Message, OutMessage>,
+  Menu.OutMessage<ExampleSlug>
+>({
+  // NOTE: A fresh document load preserves the COEP/COOP headers required by
+  // WebContainer. SPA navigation would reuse the current document.
+  Selected:
+    ({ value }) =>
+    model =>
+      selectPlaygroundExample(model, value),
+})
 
 const foldPlaygroundMenu = Update.foldChild({
   update: PlaygroundMenu.update,

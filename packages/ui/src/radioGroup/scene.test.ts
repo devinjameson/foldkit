@@ -1,4 +1,4 @@
-import { Match, Option } from 'effect'
+import { Option } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import * as Scene from 'foldkit/scene'
@@ -7,14 +7,11 @@ import * as Update from 'foldkit/update'
 
 import { describe, it } from '@effect/vitest'
 
-import type {
-  Model as RadioGroupModel,
-  OutMessage as RadioGroupOutMessage,
-  ViewInputs,
-} from './index.js'
+import type { Model as RadioGroupModel, ViewInputs } from './index.js'
 import {
   FocusOption,
   Message as RadioGroupMessage,
+  OutMessage as RadioGroupOutMessage,
   create,
   init,
 } from './index.js'
@@ -41,16 +38,15 @@ const modelWith = (maybeSelectedValue: Option.Option<string>): Model => ({
 
 const nothingSelected = modelWith(Option.none())
 
-const foldRadioGroupOutMessage = Match.type<RadioGroupOutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, { maybeSelectedValue: () => Option.some(value) }),
-      }),
-  }),
-)
+const foldRadioGroupOutMessage = RadioGroupOutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, { maybeSelectedValue: () => Option.some(value) }),
+    }),
+})
 
 const foldRadioGroup = Update.foldChild({
   update: TestRadioGroup.update,

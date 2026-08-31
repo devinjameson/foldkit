@@ -1,4 +1,4 @@
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import {
   Field,
@@ -87,17 +87,15 @@ export const init = (entryId: string): Model => ({
 
 // UPDATE
 
-const foldGraduationYearListboxOutMessage =
-  Match.type<Listbox.OutMessage>().pipe(
-    Match.withReturnType<Update.Step<Model, Message>>(),
-    Match.tagsExhaustive({
-      Selected:
-        ({ value }) =>
-        model => ({
-          model: evo(model, { maybeGraduationYear: () => Option.some(value) }),
-        }),
+const foldGraduationYearListboxOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, { maybeGraduationYear: () => Option.some(value) }),
     }),
-  )
+})
 
 const foldGraduationYearListbox = Update.foldChild({
   update: GraduationYearListbox.update,

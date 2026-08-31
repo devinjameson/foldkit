@@ -215,21 +215,19 @@ const enterNoteCommandPhase = (
   ],
 })
 
-const foldNoteDurationRadioGroupOutMessage = Match.type<
+const foldNoteDurationRadioGroupOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<NoteDuration>
->().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          noteDuration: () => value,
-          messageLog: prependToLog(`Selected(${value})`),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        noteDuration: () => value,
+        messageLog: prependToLog(`Selected(${value})`),
       }),
-  }),
-)
+    }),
+})
 
 const foldNoteDurationRadioGroup = Update.foldChild({
   update: NoteDurationRadioGroup.update,

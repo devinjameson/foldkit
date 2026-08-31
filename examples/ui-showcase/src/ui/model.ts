@@ -137,7 +137,6 @@ export const UiModel = Schema.Struct({
   tooltipBasicDemo: Tooltip.Model,
   tooltipNoDelayDemo: Tooltip.Model,
   animationDemo: Animation.Model,
-  isAnimationDemoShowing: Schema.Boolean,
   virtualListDemo: VirtualList.Model,
   virtualListVariableDemo: VirtualList.Model,
 })

@@ -156,16 +156,15 @@ export const ValidateEmailAsync = Command.define('ValidateEmailAsync', {
 
 type UpdateReturn = Update.Return<Model, Message>
 
-const foldPronounsOutMessage = Match.type<Listbox.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, { maybeSelectedPronoun: () => Option.some(value) }),
-      }),
-  }),
-)
+const foldPronounsOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, { maybeSelectedPronoun: () => Option.some(value) }),
+    }),
+})
 
 const foldPronouns = Update.foldChild({
   update: PronounsListbox.update,
@@ -175,20 +174,19 @@ const foldPronouns = Update.foldChild({
   foldOutMessage: foldPronounsOutMessage,
 })
 
-const foldAvailableDateOutMessage = Match.type<DatePicker.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, { maybeAvailableDate: () => Option.some(date) }),
-      }),
-    ClearedDate: () => model => ({
-      model: evo(model, { maybeAvailableDate: () => Option.none() }),
+const foldAvailableDateOutMessage = DatePicker.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  SelectedDate:
+    ({ date }) =>
+    model => ({
+      model: evo(model, { maybeAvailableDate: () => Option.some(date) }),
     }),
-    ChangedViewMonth: () => model => ({ model }),
+  ClearedDate: () => model => ({
+    model: evo(model, { maybeAvailableDate: () => Option.none() }),
   }),
-)
+  ChangedViewMonth: () => model => ({ model }),
+})
 
 const foldAvailableDate = Update.foldChild({
   update: DatePicker.update,

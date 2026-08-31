@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -54,18 +54,18 @@ const descriptions: Record<Framework, string> = {
 // value into your own Model so it flows back in as selectedValue. The arm
 // returns an Update.Step over the parent Model, which already has the next
 // Tabs Model written back:
-const foldTabsOutMessage = Match.type<Tabs.OutMessage<Framework>>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    // The child has emitted `Selected`. Store the selected value as the new
-    // active tab. In this arm the parent can also update its own state or
-    // dispatch Commands, for example route to a new URL, persist the
-    // selection, or trigger a panel content fetch.
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { activeFramework: () => value }) }),
-  }),
-)
+const foldTabsOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>,
+  Tabs.OutMessage<Framework>
+>({
+  // The child has emitted `Selected`. Store the selected value as the new
+  // active tab. In this arm the parent can also update its own state or
+  // dispatch Commands, for example route to a new URL, persist the
+  // selection, or trigger a panel content fetch.
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { activeFramework: () => value }) }),
+})
 
 // Update.foldChild wires the child into the parent: it runs
 // FrameworkTabs.update, writes the next Tabs Model back, maps the Submodel's

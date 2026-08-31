@@ -933,16 +933,15 @@ const responsiveEditorView = (model: Model, h: HtmlBuilder<Message>): Html =>
 
 const PlaygroundFileTabs = Tabs.create<string>()
 
-const foldPlaygroundFileTabsOutMessage = Match.type<Tabs.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, { activeFilePath: () => value }),
-      }),
-  }),
-)
+const foldPlaygroundFileTabsOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, { activeFilePath: () => value }),
+    }),
+})
 
 const foldPlaygroundFileTabs = Update.foldChild({
   update: PlaygroundFileTabs.update,

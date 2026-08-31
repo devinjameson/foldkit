@@ -284,17 +284,16 @@ const update = (model: Model, message: Message) =>
   })
 
 // Parent folds the child update and handles its OutMessage
-const foldChildOutMessage = Match.type<Child.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<ParentModel, ParentMessage>>(),
-  Match.tagsExhaustive({
-    SucceededCreateRoom:
-      ({ roomId }) =>
-      model => ({
-        model,
-        commands: [navigateToRoom(roomId)],
-      }),
-  }),
-)
+const foldChildOutMessage = Child.OutMessage.match<
+  Update.Step<ParentModel, ParentMessage>
+>({
+  SucceededCreateRoom:
+    ({ roomId }) =>
+    model => ({
+      model,
+      commands: [navigateToRoom(roomId)],
+    }),
+})
 
 const foldChild = Update.foldChild({
   update: Child.update,

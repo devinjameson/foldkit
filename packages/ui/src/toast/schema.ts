@@ -1,10 +1,7 @@
 import { Duration, Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
-import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-} from '../animation/schema.js'
+import * as Animation from '../animation/schema.js'
 
 // VARIANT
 
@@ -41,7 +38,7 @@ export const makeEntry = <A, I>(payloadSchema: Schema.Codec<A, I>) =>
   Schema.Struct({
     id: Schema.String,
     variant: Variant,
-    animation: AnimationModel,
+    animation: Animation.Model,
     maybeDuration: Schema.Option(Schema.DurationFromMillis),
     pendingDismissVersion: Schema.Number,
     isHovered: Schema.Boolean,
@@ -77,7 +74,7 @@ export const Message = defineMessageUnion({
   LeftEntry: { entryId: Schema.String },
   GotAnimationMessage: {
     entryId: Schema.String,
-    message: AnimationMessage,
+    message: Animation.Message,
   },
 })
 
@@ -103,7 +100,7 @@ export const makeMessage = <A, I>(payloadSchema: Schema.Codec<A, I>) =>
     LeftEntry: { entryId: Schema.String },
     GotAnimationMessage: {
       entryId: Schema.String,
-      message: AnimationMessage,
+      message: Animation.Message,
     },
   })
 

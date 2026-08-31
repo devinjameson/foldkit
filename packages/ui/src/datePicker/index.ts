@@ -1,4 +1,4 @@
-import { Function, Match, Option, Predicate, Schema } from 'effect'
+import { Function, Option, Predicate, Schema } from 'effect'
 import * as Calendar from 'foldkit/calendar'
 import type { CalendarDate } from 'foldkit/calendar'
 import type { ChildAttribute, Html } from 'foldkit/html'
@@ -119,13 +119,12 @@ const writePopover = (model: Model, nextPopover: Popover.Model): Model =>
 const toGotPopoverMessage = (message: Popover.Message): Message =>
   Message.GotPopoverMessage({ message })
 
-const foldPopoverOutMessage = Match.type<Popover.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Opened: () => dropCalendarToDays,
-    Closed: () => dropCalendarToDays,
-  }),
-)
+const foldPopoverOutMessage = Popover.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => dropCalendarToDays,
+  Closed: () => dropCalendarToDays,
+})
 
 const foldPopover = Update.foldChild({
   update: Popover.update,
@@ -151,24 +150,18 @@ const foldPopoverClose = Update.foldChildStep({
   foldOutMessage: foldPopoverOutMessage,
 })
 
-const foldCalendarOutMessage = Match.type<UiCalendar.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    ChangedViewMonth: () => model => ({ model }),
-    SelectedDate: () => foldPopoverClose,
-  }),
-)
+const foldCalendarOutMessage = UiCalendar.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedViewMonth: () => model => ({ model }),
+  SelectedDate: () => foldPopoverClose,
+})
 
-const toDatePickerOutMessage: (
-  outMessage: UiCalendar.OutMessage,
-) => OutMessage = Match.type<UiCalendar.OutMessage>().pipe(
-  Match.withReturnType<OutMessage>(),
-  Match.tagsExhaustive({
-    ChangedViewMonth: ({ year, month }) =>
-      OutMessage.ChangedViewMonth({ year, month }),
-    SelectedDate: ({ date }) => OutMessage.SelectedDate({ date }),
-  }),
-)
+const toDatePickerOutMessage = UiCalendar.OutMessage.match<OutMessage>({
+  ChangedViewMonth: ({ year, month }) =>
+    OutMessage.ChangedViewMonth({ year, month }),
+  SelectedDate: ({ date }) => OutMessage.SelectedDate({ date }),
+})
 
 const foldCalendar = Update.foldChild({
   update: UiCalendar.update,

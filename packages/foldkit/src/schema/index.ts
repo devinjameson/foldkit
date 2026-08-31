@@ -207,6 +207,36 @@ type BaseTaggedUnion<CasesByTag extends Record<string, Schema.Struct.Fields>> =
     >
   }>
 
+type TaggedUnionType<CasesByTag extends Record<string, Schema.Struct.Fields>> =
+  BaseTaggedUnion<CasesByTag>['Type']
+
+type TaggedUnionMatchCases<
+  CasesByTag extends Record<string, Schema.Struct.Fields>,
+  Input extends TaggedUnionType<CasesByTag>,
+  Output,
+> = {
+  readonly [Tag in keyof CasesByTag & string]: (
+    value: Extract<Input, { readonly _tag: Tag }>,
+  ) => Output
+}
+
+type TaggedUnionMatch<CasesByTag extends Record<string, Schema.Struct.Fields>> =
+  {
+    <
+      Output,
+      Input extends TaggedUnionType<CasesByTag> = TaggedUnionType<CasesByTag>,
+    >(
+      cases: TaggedUnionMatchCases<CasesByTag, Input, Output>,
+    ): (value: Input) => Output
+    <
+      Output,
+      Input extends TaggedUnionType<CasesByTag> = TaggedUnionType<CasesByTag>,
+    >(
+      value: Input,
+      cases: TaggedUnionMatchCases<CasesByTag, Input, Output>,
+    ): Output
+  }
+
 interface UnionSchema<
   CasesByTag extends Record<string, Schema.Struct.Fields>,
 > extends Schema.BottomLazy<
@@ -220,7 +250,7 @@ interface UnionSchema<
   readonly '~type.make.in': BaseTaggedUnion<CasesByTag>['~type.make.in']
   readonly '~type.make': BaseTaggedUnion<CasesByTag>['~type.make']
   readonly Iso: BaseTaggedUnion<CasesByTag>['Iso']
-  readonly match: BaseTaggedUnion<CasesByTag>['match']
+  readonly match: TaggedUnionMatch<CasesByTag>
 }
 
 type TaggedUnionMemberFor<
@@ -273,7 +303,9 @@ export type TaggedUnion<
 }
 
 /** The Schema returned by `defineMessageUnion`. Each variant is a callable
- * property on the union, and `match` handles the union exhaustively. */
+ * property on the union, and `match` handles the union exhaustively. Pass a
+ * structurally refined union as `match`'s optional second type argument to
+ * preserve narrower payload fields in each handler. */
 export type MessageUnion<
   CasesByTag extends Record<string, Schema.Struct.Fields>,
 > = UnionSchema<CasesByTag> & {

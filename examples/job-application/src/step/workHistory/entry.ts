@@ -1,4 +1,4 @@
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import { CalendarDate } from 'foldkit/calendar'
 import {
@@ -84,26 +84,25 @@ export const init = (entryId: string, today: CalendarDate): Model => ({
 
 // UPDATE
 
-const foldStartDateOutMessage = Match.type<DatePicker.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    ChangedViewMonth: () => model => ({ model }),
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, {
-          maybeStartDate: () => Option.some(date),
-          endDate: DatePicker.reflectMinDate(Option.some(date)),
-        }),
-      }),
-    ClearedDate: () => model => ({
+const foldStartDateOutMessage = DatePicker.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedViewMonth: () => model => ({ model }),
+  SelectedDate:
+    ({ date }) =>
+    model => ({
       model: evo(model, {
-        maybeStartDate: () => Option.none(),
-        endDate: DatePicker.reflectMinDate(Option.none()),
+        maybeStartDate: () => Option.some(date),
+        endDate: DatePicker.reflectMinDate(Option.some(date)),
       }),
     }),
+  ClearedDate: () => model => ({
+    model: evo(model, {
+      maybeStartDate: () => Option.none(),
+      endDate: DatePicker.reflectMinDate(Option.none()),
+    }),
   }),
-)
+})
 
 const foldStartDate = Update.foldChild({
   update: DatePicker.update,
@@ -114,26 +113,25 @@ const foldStartDate = Update.foldChild({
   foldOutMessage: foldStartDateOutMessage,
 })
 
-const foldEndDateOutMessage = Match.type<DatePicker.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    ChangedViewMonth: () => model => ({ model }),
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, {
-          maybeEndDate: () => Option.some(date),
-          startDate: DatePicker.reflectMaxDate(Option.some(date)),
-        }),
-      }),
-    ClearedDate: () => model => ({
+const foldEndDateOutMessage = DatePicker.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedViewMonth: () => model => ({ model }),
+  SelectedDate:
+    ({ date }) =>
+    model => ({
       model: evo(model, {
-        maybeEndDate: () => Option.none(),
-        startDate: DatePicker.reflectMaxDate(Option.none()),
+        maybeEndDate: () => Option.some(date),
+        startDate: DatePicker.reflectMaxDate(Option.some(date)),
       }),
     }),
+  ClearedDate: () => model => ({
+    model: evo(model, {
+      maybeEndDate: () => Option.none(),
+      startDate: DatePicker.reflectMaxDate(Option.none()),
+    }),
   }),
-)
+})
 
 const foldEndDate = Update.foldChild({
   update: DatePicker.update,

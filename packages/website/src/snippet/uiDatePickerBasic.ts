@@ -57,28 +57,27 @@ const Message = defineMessageUnion({
 // `ChangedViewMonth` fires when calendar navigation shifts the visible month
 // without selecting a date. Each arm returns an Update.Step over the parent
 // Model, which already has the next DatePicker Model written back:
-const foldDatePickerOutMessage = Match.type<DatePicker.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    // The child has emitted `SelectedDate`. This is where the parent lifts
-    // the committed date into its own field, which is then passed back to
-    // the picker as `maybeSelectedDate`, so the parent stays the single
-    // source of truth for the selection.
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, { maybeSelectedDate: () => Option.some(date) }),
-      }),
-    // The user cleared the selection. Reset the parent's field.
-    ClearedDate: () => model => ({
-      model: evo(model, { maybeSelectedDate: () => Option.none() }),
+const foldDatePickerOutMessage = DatePicker.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  // The child has emitted `SelectedDate`. This is where the parent lifts
+  // the committed date into its own field, which is then passed back to
+  // the picker as `maybeSelectedDate`, so the parent stays the single
+  // source of truth for the selection.
+  SelectedDate:
+    ({ date }) =>
+    model => ({
+      model: evo(model, { maybeSelectedDate: () => Option.some(date) }),
     }),
-    // The child has emitted `ChangedViewMonth`. In this arm the parent can
-    // update its own state or dispatch its own Commands, for example
-    // prefetch month data, fire analytics, or trigger a downstream Command.
-    ChangedViewMonth: () => model => ({ model }),
+  // The user cleared the selection. Reset the parent's field.
+  ClearedDate: () => model => ({
+    model: evo(model, { maybeSelectedDate: () => Option.none() }),
   }),
-)
+  // The child has emitted `ChangedViewMonth`. In this arm the parent can
+  // update its own state or dispatch its own Commands, for example
+  // prefetch month data, fire analytics, or trigger a downstream Command.
+  ChangedViewMonth: () => model => ({ model }),
+})
 
 // Update.foldChild wires the child into the parent: it delegates navigation,
 // focus, and popover messages to DatePicker.update, writes the next DatePicker

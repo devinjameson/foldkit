@@ -1,4 +1,4 @@
-import { Array, Match, Number, Option, Result } from 'effect'
+import { Array, Number, Option, Result } from 'effect'
 import { Command, Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -223,14 +223,13 @@ const appendGeneratedParticle =
     }
   }
 
-const foldFlowStrengthSliderOutMessage = Match.type<Slider.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    ChangedValue:
-      ({ value }) =>
-      model => ({ model: evo(model, { flowStrength: () => value }) }),
-  }),
-)
+const foldFlowStrengthSliderOutMessage = Slider.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedValue:
+    ({ value }) =>
+    model => ({ model: evo(model, { flowStrength: () => value }) }),
+})
 
 const foldFlowStrengthSlider = Update.foldChild({
   update: Slider.update,
@@ -241,14 +240,13 @@ const foldFlowStrengthSlider = Update.foldChild({
   foldOutMessage: foldFlowStrengthSliderOutMessage,
 })
 
-const foldNoiseScaleSliderOutMessage = Match.type<Slider.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    ChangedValue:
-      ({ value }) =>
-      model => ({ model: evo(model, { noiseScale: () => value }) }),
-  }),
-)
+const foldNoiseScaleSliderOutMessage = Slider.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedValue:
+    ({ value }) =>
+    model => ({ model: evo(model, { noiseScale: () => value }) }),
+})
 
 const foldNoiseScaleSlider = Update.foldChild({
   update: Slider.update,

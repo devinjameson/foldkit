@@ -279,27 +279,24 @@ type UpdateReturn = Update.Return<Model, Message>
 const DietListbox = Listbox.create<string>()
 const PeriodListbox = Listbox.create<string>()
 
-const foldDietListboxOutMessage: (
-  outMessage: Listbox.OutMessage,
-) => Update.Step<Model, Message> = Match.type<Listbox.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => {
-        const fields = routeToBrowseFields(model.route)
-        return {
-          model,
-          commands: [
-            ReplaceFilters({
-              ...fields,
-              diet: selectionToParam(Option.some(value), Diet),
-            }),
-          ],
-        }
-      },
-  }),
-)
+const foldDietListboxOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => {
+      const fields = routeToBrowseFields(model.route)
+      return {
+        model,
+        commands: [
+          ReplaceFilters({
+            ...fields,
+            diet: selectionToParam(Option.some(value), Diet),
+          }),
+        ],
+      }
+    },
+})
 
 const foldDietListbox = Update.foldChild({
   update: DietListbox.update,
@@ -310,27 +307,24 @@ const foldDietListbox = Update.foldChild({
   foldOutMessage: foldDietListboxOutMessage,
 })
 
-const foldPeriodListboxOutMessage: (
-  outMessage: Listbox.OutMessage,
-) => Update.Step<Model, Message> = Match.type<Listbox.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => {
-        const fields = routeToBrowseFields(model.route)
-        return {
-          model,
-          commands: [
-            ReplaceFilters({
-              ...fields,
-              period: selectionToParam(Option.some(value), Period),
-            }),
-          ],
-        }
-      },
-  }),
-)
+const foldPeriodListboxOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => {
+      const fields = routeToBrowseFields(model.route)
+      return {
+        model,
+        commands: [
+          ReplaceFilters({
+            ...fields,
+            period: selectionToParam(Option.some(value), Period),
+          }),
+        ],
+      }
+    },
+})
 
 const foldPeriodListbox = Update.foldChild({
   update: PeriodListbox.update,

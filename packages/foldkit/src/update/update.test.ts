@@ -351,8 +351,8 @@ const counterUpdate = (
     }),
   )
 
-type ChangedValue = Readonly<{ _tag: 'ChangedValue' }>
-const ChangedValue = (): ChangedValue => ({ _tag: 'ChangedValue' })
+const CounterOutMessage = defineMessageUnion({ ChangedValue: {} })
+type ChangedValue = typeof CounterOutMessage.ChangedValue.Type
 
 const counterUpdateWithOutMessage = (
   model: CounterModel,
@@ -366,7 +366,7 @@ const counterUpdateWithOutMessage = (
       BumpedValue: () => ({
         model: evo(model, { value: Number.increment }),
         commands: [saveCount],
-        outMessage: ChangedValue(),
+        outMessage: CounterOutMessage.ChangedValue(),
       }),
       CompletedSaveCount: () => ({ model }),
     }),
@@ -609,25 +609,17 @@ describe('foldChild', () => {
 
     type DashboardOutMessage = ReportedValue | ReachedThreshold
 
-    const foldThresholdCounterOutMessage = Match.type<ChangedValue>().pipe(
-      Match.withReturnType<
-        StepWithOutMessage<
-          DashboardModel,
-          DashboardMessage,
-          DashboardOutMessage
-        >
-      >(),
-      Match.tagsExhaustive({
-        ChangedValue: () => model => ({
-          model: {
-            ...model,
-            lastReportedValue: model.counter.value,
-          },
-          commands: [notifyValueChanged],
-          outMessage: ReachedThreshold(),
+    const foldThresholdCounterOutMessage = CounterOutMessage.match<
+      StepWithOutMessage<DashboardModel, DashboardMessage, DashboardOutMessage>
+    >({
+      ChangedValue: () => model => ({
+        model: evo(model, {
+          lastReportedValue: () => model.counter.value,
         }),
+        commands: [notifyValueChanged],
+        outMessage: ReachedThreshold(),
       }),
-    )
+    })
 
     const foldThresholdCounter = foldChild({
       update: counterUpdateWithOutMessage,
@@ -663,20 +655,16 @@ describe('foldChild', () => {
     type ReportedValue = Readonly<{ _tag: 'ReportedValue' }>
     const ReportedValue = (): ReportedValue => ({ _tag: 'ReportedValue' })
 
-    const foldDeferringCounterOutMessage = Match.type<ChangedValue>().pipe(
-      Match.withReturnType<
-        StepWithOutMessage<DashboardModel, DashboardMessage, ReportedValue>
-      >(),
-      Match.tagsExhaustive({
-        ChangedValue: () => model => ({
-          model: {
-            ...model,
-            lastReportedValue: model.counter.value,
-          },
-          commands: [notifyValueChanged],
+    const foldDeferringCounterOutMessage = CounterOutMessage.match<
+      StepWithOutMessage<DashboardModel, DashboardMessage, ReportedValue>
+    >({
+      ChangedValue: () => model => ({
+        model: evo(model, {
+          lastReportedValue: () => model.counter.value,
         }),
+        commands: [notifyValueChanged],
       }),
-    )
+    })
 
     const foldDeferringCounter = foldChild({
       update: counterUpdateWithOutMessage,
@@ -704,21 +692,17 @@ describe('foldChild', () => {
       _tag: 'ReachedThreshold',
     })
 
-    const foldDerivingCounterOutMessage = Match.type<ChangedValue>().pipe(
-      Match.withReturnType<
-        StepWithOutMessage<DashboardModel, DashboardMessage, ReachedThreshold>
-      >(),
-      Match.tagsExhaustive({
-        ChangedValue: () => model => ({
-          model: {
-            ...model,
-            lastReportedValue: model.counter.value,
-          },
-          commands: [notifyValueChanged],
-          outMessage: ReachedThreshold(),
+    const foldDerivingCounterOutMessage = CounterOutMessage.match<
+      StepWithOutMessage<DashboardModel, DashboardMessage, ReachedThreshold>
+    >({
+      ChangedValue: () => model => ({
+        model: evo(model, {
+          lastReportedValue: () => model.counter.value,
         }),
+        commands: [notifyValueChanged],
+        outMessage: ReachedThreshold(),
       }),
-    )
+    })
 
     const foldDerivingCounter = foldChild({
       update: counterUpdateWithOutMessage,
@@ -792,15 +776,12 @@ const foldSettlingCounterOutMessage: (
   outMessage: ChangedValue,
   context: FoldContext<CounterMessage, DashboardMessage>,
 ) => Step<DashboardModel, DashboardMessage> = (outMessage, { liftCommand }) =>
-  Match.value(outMessage).pipe(
-    Match.withReturnType<Step<DashboardModel, DashboardMessage>>(),
-    Match.tagsExhaustive({
-      ChangedValue: () => model => ({
-        model,
-        commands: [liftCommand(settleCounter)],
-      }),
+  CounterOutMessage.match<Step<DashboardModel, DashboardMessage>>(outMessage, {
+    ChangedValue: () => model => ({
+      model,
+      commands: [liftCommand(settleCounter)],
     }),
-  )
+  })
 
 const foldSettlingCounter = foldChild({
   update: counterUpdateWithOutMessage,
@@ -899,15 +880,15 @@ describe('foldChild fold context', () => {
   it('keeps a one-parameter foldOutMessage assignable', () => {
     const foldReportedValueOutMessage: (
       outMessage: ChangedValue,
-    ) => Step<DashboardModel, DashboardMessage> =
-      Match.type<ChangedValue>().pipe(
-        Match.withReturnType<Step<DashboardModel, DashboardMessage>>(),
-        Match.tagsExhaustive({
-          ChangedValue: () => model => ({
-            model: { ...model, lastReportedValue: model.counter.value },
-          }),
+    ) => Step<DashboardModel, DashboardMessage> = CounterOutMessage.match<
+      Step<DashboardModel, DashboardMessage>
+    >({
+      ChangedValue: () => model => ({
+        model: evo(model, {
+          lastReportedValue: () => model.counter.value,
         }),
-      )
+      }),
+    })
 
     const foldReportedValue = foldChild({
       update: counterUpdateWithOutMessage,
@@ -944,7 +925,7 @@ const resetCounterWithOutMessage = (
 ): ReturnWithOutMessage<CounterModel, CounterMessage, ChangedValue> => ({
   model: { ...model, value: 0 },
   commands: [saveCount],
-  outMessage: ChangedValue(),
+  outMessage: CounterOutMessage.ChangedValue(),
 })
 
 describe('foldChildStep', () => {
@@ -1000,17 +981,14 @@ describe('foldChildStep', () => {
 
     type DashboardOutMessage = ReportedReset | ResetDashboard
 
-    const foldCounterResetOutMessage = Match.type<ChangedValue>().pipe(
-      Match.withReturnType<
-        StepWithOutMessage<DashboardModel, DashboardMessage, ResetDashboard>
-      >(),
-      Match.tagsExhaustive({
-        ChangedValue: () => model => ({
-          model,
-          outMessage: ResetDashboard(),
-        }),
+    const foldCounterResetOutMessage = CounterOutMessage.match<
+      StepWithOutMessage<DashboardModel, GotCounterMessage, ResetDashboard>
+    >({
+      ChangedValue: () => model => ({
+        model,
+        outMessage: ResetDashboard(),
       }),
-    )
+    })
 
     const foldCounterReset = foldChildStep({
       update: resetCounterWithOutMessage,
@@ -1061,18 +1039,17 @@ describe('foldChildStep', () => {
       _tag: 'ResetDashboard',
     })
 
-    const foldCounterResetOutMessage = Match.type<ChangedValue>().pipe(
-      Match.withReturnType<
-        StepWithOutMessage<DashboardModel, DashboardMessage, ResetDashboard>
-      >(),
-      Match.tagsExhaustive({
-        ChangedValue: () => model => ({
-          model: { ...model, lastReportedValue: model.counter.value },
-          commands: [notifyValueChanged],
-          outMessage: ResetDashboard(),
+    const foldCounterResetOutMessage = CounterOutMessage.match<
+      StepWithOutMessage<DashboardModel, DashboardMessage, ResetDashboard>
+    >({
+      ChangedValue: () => model => ({
+        model: evo(model, {
+          lastReportedValue: () => model.counter.value,
         }),
+        commands: [notifyValueChanged],
+        outMessage: ResetDashboard(),
       }),
-    )
+    })
 
     const foldDerivingCounterReset = foldChildStep({
       update: resetCounterWithOutMessage,
@@ -1133,7 +1110,7 @@ describe('foldChildStep', () => {
       update: (model: CounterModel) => ({
         model: { ...model, value: 0 },
         commands: [saveCount],
-        outMessage: ChangedValue(),
+        outMessage: CounterOutMessage.ChangedValue(),
       }),
       read: (model: DashboardModel) => Option.some(model.counter),
       write: (model, nextCounter) => ({ ...model, counter: nextCounter }),
@@ -1203,7 +1180,11 @@ describe('types', () => {
     CounterMessage,
     ChangedValue,
     TestServices
-  > => ({ model, commands: [saveWithServices], outMessage: ChangedValue() })
+  > => ({
+    model,
+    commands: [saveWithServices],
+    outMessage: CounterOutMessage.ChangedValue(),
+  })
   const resetCounterWithServices = (
     model: CounterModel,
   ): ReturnWithOutMessage<
@@ -1211,7 +1192,11 @@ describe('types', () => {
     CounterMessage,
     ChangedValue,
     TestServices
-  > => ({ model, commands: [saveWithServices], outMessage: ChangedValue() })
+  > => ({
+    model,
+    commands: [saveWithServices],
+    outMessage: CounterOutMessage.ChangedValue(),
+  })
   const notifyWithPersistence: Command<
     TestMessage,
     never,
@@ -1222,17 +1207,14 @@ describe('types', () => {
       Effect.as(Message.CompletedLoad()),
     ),
   }
-  const foldChangedValueWithPersistence = Match.type<ChangedValue>().pipe(
-    Match.withReturnType<
-      Step<FoldInferenceModel, TestMessage, PersistenceServices>
-    >(),
-    Match.tagsExhaustive({
-      ChangedValue: () => model => ({
-        model: evo(model, { status: () => 'Saved' }),
-        commands: [notifyWithPersistence],
-      }),
+  const foldChangedValueWithPersistence = CounterOutMessage.match<
+    Step<FoldInferenceModel, TestMessage, PersistenceServices>
+  >({
+    ChangedValue: () => model => ({
+      model: evo(model, { status: () => 'Saved' }),
+      commands: [notifyWithPersistence],
     }),
-  )
+  })
 
   it('Return carries the Model and optional Commands', () => {
     expectTypeOf<Return<TestModel, TestMessage>>().toEqualTypeOf<

@@ -113,6 +113,15 @@ export function update(model: Model, message: Message): UpdateReturn {
   })
 }
 
+/** Toggles the animation between its shown and hidden states. */
+export const toggle = (model: Model): Update.Return<Model, Message> => {
+  if (model.isShowing) {
+    return update(model, Message.Hid())
+  } else {
+    return update(model, Message.Showed())
+  }
+}
+
 /** Creates the standard leave-phase command that waits for CSS animations on the element to settle. Use this when handling the `StartedLeaveAnimating` OutMessage for components that don't need custom leave behavior. */
 export const defaultLeaveCommand = (model: Model): Command.Command<Message> =>
   WaitForAnimationSettled({ id: model.id })

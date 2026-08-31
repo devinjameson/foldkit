@@ -173,7 +173,6 @@ export const uiInit = (today: Calendar.CalendarDate): InitReturn => ({
       showDelay: 0,
     }),
     animationDemo: Animation.init({ id: 'animation-demo' }),
-    isAnimationDemoShowing: false,
     virtualListDemo: VirtualList.init({
       id: 'virtual-list-demo',
       rowHeightPx: 56,
