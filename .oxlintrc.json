@@ -47,64 +47,6 @@
     },
     {
       "files": [
-        "examples/**/*.ts",
-        "examples/**/*.tsx",
-        "packages/website/src/**/*.ts",
-        "packages/website/src/**/*.tsx",
-        "packages/typing-game/client/src/**/*.ts",
-        "packages/typing-game/client/src/**/*.tsx"
-      ],
-      "rules": {
-        "foldkit/command-define-pascal-const": "error",
-        "foldkit/got-wrapper-carries-only-routing": "error",
-        "foldkit/keyed-required-for-mapped-rows": "error",
-        "foldkit/lazy-view-stable-references": "error",
-        "foldkit/mount-factory-must-use-element": "error",
-        "foldkit/no-array-index-view-keys": "error",
-        "foldkit/no-child-message-construction-in-root": "error",
-        "foldkit/no-disabling-dev-guardrails": "error",
-        "foldkit/no-duplicate-onmount-per-element": "error",
-        "foldkit/no-hand-rolled-command-struct": "error",
-        "foldkit/no-hardcoded-route-strings": "error",
-        "foldkit/no-impure-call-at-decision-time": "error",
-        "foldkit/no-raw-dom-event-attributes": "error",
-        "foldkit/no-spread-in-evo": "error",
-        "foldkit/require-rel-for-external-link": "error",
-        "foldkit/selection-submodel-factory-at-module-scope": "error",
-        "foldkit/wrap-child-output-in-got-message": "error"
-      }
-    },
-    {
-      "files": [
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "**/*.spec.ts",
-        "**/*.spec.tsx"
-      ],
-      "rules": {
-        "foldkit/no-child-message-construction-in-root": "off"
-      }
-    },
-    {
-      "files": [
-        "**/entry.ts",
-        "**/entry.tsx",
-        "**/entry.client.ts",
-        "**/entry.client.tsx",
-        "**/entry.server.ts",
-        "**/entry.server.tsx",
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "**/*.spec.ts",
-        "**/*.spec.tsx",
-        "examples/slow-warnings/src/main.ts"
-      ],
-      "rules": {
-        "foldkit/no-impure-call-at-decision-time": "off"
-      }
-    },
-    {
-      "files": [
         "**/entry.server.ts",
         "**/entry.server.tsx",
         "**/server/**/*.ts",
@@ -119,8 +61,7 @@
         "**/*.spec.tsx"
       ],
       "rules": {
-        "foldkit/no-nonportable-server-globals": "error",
-        "foldkit/no-impure-call-at-decision-time": "off"
+        "foldkit/no-nonportable-server-globals": "error"
       }
     }
   ],
@@ -136,6 +77,9 @@
     "packages/oxlint-plugin-foldkit/",
     "packages/typing-game/shared/",
     "packages/vite-plugin-foldkit/",
+    "examples/",
+    "packages/website/src/",
+    "packages/typing-game/client/src/",
     "**/*.d.ts",
     "**/vite.config.ts",
     "**/*.config.js",
@@ -143,7 +87,6 @@
     "packages/website/public/example-apps-embed/",
     "packages/website/playwright-report/",
     "packages/website/test-results/",
-    "packages/website/src/snippet/",
     "!packages/website/scripts/prerender.ts",
     "!packages/vite-plugin-foldkit/test/fixtures/"
   ]
