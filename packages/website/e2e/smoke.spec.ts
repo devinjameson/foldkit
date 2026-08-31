@@ -39,6 +39,25 @@ test('closes the hover-intent menu without navigating', async ({ page }) => {
   await expect(page).toHaveURL(/\/ui\/hover-intent$/)
 })
 
+test('names the mobile menu and moves focus into it', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/ui/dialog')
+
+  const trigger = page.getByRole('button', { name: 'Toggle menu' })
+  await trigger.click()
+
+  const dialog = page.getByRole('dialog', { name: 'Navigation menu' })
+  await expect(dialog).toHaveAccessibleDescription(
+    'Browse Foldkit documentation',
+  )
+  await expect(
+    dialog.getByRole('navigation', { name: 'Documentation' }),
+  ).toBeFocused()
+
+  await dialog.getByRole('button', { name: 'Close menu' }).click()
+  await expect(trigger).toBeFocused()
+})
+
 test('selects an item from the combobox', async ({ page }) => {
   await page.goto('/')
 
@@ -54,9 +73,11 @@ test('selects an item from the combobox', async ({ page }) => {
   await docsNav.getByRole('link', { name: 'Combobox', exact: true }).click()
   await expect(page).toHaveURL(/\/ui\/combobox$/)
 
-  const combobox = page
-    .getByRole('region', { name: 'Single-Select' })
-    .getByRole('combobox')
+  const singleSelect = page.getByRole('region', { name: 'Single-Select' })
+  const combobox = singleSelect.getByRole('combobox')
+  await expect(
+    singleSelect.getByRole('button', { name: 'Show suggestions' }),
+  ).toBeVisible()
 
   await combobox.click()
   await combobox.pressSequentially('Oxf')

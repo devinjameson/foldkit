@@ -469,6 +469,143 @@ describe('showDialog', () => {
   }
 
   it.effect(
+    'falls back to the first focusable descendant when focusSelector misses',
+    () =>
+      Effect.gen(function* () {
+        const dialog = makeDialog('solo')
+        const button = dialog.querySelector('button')
+
+        yield* showDialog('#solo', { focusSelector: '#missing' })
+
+        expect(document.activeElement).toBe(button)
+
+        yield* closeDialog('#solo')
+        document.body.innerHTML = ''
+      }),
+  )
+
+  it.effect(
+    'falls back when focusSelector matches an element that cannot receive focus',
+    () =>
+      Effect.gen(function* () {
+        const dialog = makeDialog('solo')
+        const nonFocusable = document.createElement('div')
+        nonFocusable.id = 'non-focusable'
+        dialog.prepend(nonFocusable)
+        const button = dialog.querySelector('button')
+
+        yield* showDialog('#solo', { focusSelector: '#non-focusable' })
+
+        expect(document.activeElement).toBe(button)
+
+        yield* closeDialog('#solo')
+        document.body.innerHTML = ''
+      }),
+  )
+
+  it.effect('focuses the first focusable descendant by default', () =>
+    Effect.gen(function* () {
+      const dialog = makeDialog('solo')
+      const button = dialog.querySelector('button')
+
+      yield* showDialog('#solo')
+
+      expect(document.activeElement).toBe(button)
+
+      yield* closeDialog('#solo')
+      document.body.innerHTML = ''
+    }),
+  )
+
+  it.effect('skips descendants that cannot receive focus', () =>
+    Effect.gen(function* () {
+      const dialog = document.createElement('dialog')
+      dialog.id = 'solo'
+
+      const hiddenInput = document.createElement('input')
+      hiddenInput.type = 'hidden'
+
+      const hiddenButton = document.createElement('button')
+      hiddenButton.style.display = 'none'
+
+      const disabledButton = document.createElement('button')
+      disabledButton.disabled = true
+
+      const visibleButton = document.createElement('button')
+
+      dialog.append(hiddenInput, hiddenButton, disabledButton, visibleButton)
+      document.body.appendChild(dialog)
+
+      yield* showDialog('#solo')
+
+      expect(document.activeElement).toBe(visibleButton)
+      expect(pressTab().defaultPrevented).toBe(true)
+      expect(document.activeElement).toBe(visibleButton)
+
+      yield* closeDialog('#solo')
+      document.body.innerHTML = ''
+    }),
+  )
+
+  it.effect('ignores nonfocusable descendants when trapping Tab', () =>
+    Effect.gen(function* () {
+      const dialog = document.createElement('dialog')
+      dialog.id = 'solo'
+
+      const visibleButton = document.createElement('button')
+
+      const hiddenInput = document.createElement('input')
+      hiddenInput.type = 'hidden'
+
+      const hiddenButton = document.createElement('button')
+      hiddenButton.style.display = 'none'
+
+      dialog.append(visibleButton, hiddenInput, hiddenButton)
+      document.body.appendChild(dialog)
+
+      yield* showDialog('#solo')
+
+      expect(document.activeElement).toBe(visibleButton)
+      expect(pressTab().defaultPrevented).toBe(true)
+      expect(document.activeElement).toBe(visibleButton)
+
+      yield* closeDialog('#solo')
+      document.body.innerHTML = ''
+    }),
+  )
+
+  it.effect('focuses the dialog when it has no focusable descendants', () =>
+    Effect.gen(function* () {
+      const dialog = document.createElement('dialog')
+      dialog.id = 'solo'
+      document.body.appendChild(dialog)
+
+      yield* showDialog('#solo')
+
+      expect(document.activeElement).toBe(dialog)
+
+      yield* closeDialog('#solo')
+      document.body.innerHTML = ''
+    }),
+  )
+
+  it.effect('traps Tab on a dialog with no focusable descendants', () =>
+    Effect.gen(function* () {
+      const dialog = document.createElement('dialog')
+      dialog.id = 'solo'
+      document.body.appendChild(dialog)
+
+      yield* showDialog('#solo')
+
+      expect(pressTab().defaultPrevented).toBe(true)
+      expect(document.activeElement).toBe(dialog)
+
+      yield* closeDialog('#solo')
+      document.body.innerHTML = ''
+    }),
+  )
+
+  it.effect(
     'closeDialog reports whether it released the hygiene showDialog installed',
     () =>
       Effect.gen(function* () {

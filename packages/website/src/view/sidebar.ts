@@ -302,12 +302,20 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
     h,
   ])
 
-  const mobileMenuContent = (
-    closeButton: Dialog.RenderInfo['closeButton'],
-  ): Html =>
+  const mobileMenuContent = ({
+    closeButton,
+    description,
+    initialFocus,
+    title,
+  }: Dialog.RenderInfo): Html =>
     h.div(
       [h.Class('flex flex-col h-full')],
       [
+        h.span([...title, h.Class('sr-only')], ['Navigation menu']),
+        h.span(
+          [...description, h.Class('sr-only')],
+          ['Browse Foldkit documentation'],
+        ),
         h.div(
           [
             h.Class(
@@ -347,7 +355,7 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
             h.Id(MOBILE_MENU_NAV_ID),
             h.Class('flex-1 overflow-y-auto'),
             h.Tabindex(-1),
-            h.Autofocus(true),
+            ...initialFocus,
           ],
           [blogSection(model.route, h), mobileNavLinks],
         ),
@@ -381,20 +389,23 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
     model: model.mobileMenuDialog,
     view: Dialog.view,
     viewInputs: {
-      toView: ({ dialog, backdrop, panel, closeButton, isVisible }) =>
+      toView: renderInfo =>
         h.dialog(
-          [...dialog, h.Class('md:hidden')],
-          isVisible
+          [...renderInfo.dialog, h.Class('md:hidden')],
+          renderInfo.isVisible
             ? [
-                h.div([...backdrop, h.Class('fixed inset-0 z-[59]')]),
+                h.div([
+                  ...renderInfo.backdrop,
+                  h.Class('fixed inset-0 z-[59]'),
+                ]),
                 h.div(
                   [
-                    ...panel,
+                    ...renderInfo.panel,
                     h.Class(
                       'fixed inset-0 z-[60] bg-cream dark:bg-gray-900 flex flex-col',
                     ),
                   ],
-                  [mobileMenuContent(closeButton)],
+                  [mobileMenuContent(renderInfo)],
                 ),
               ]
             : [],
