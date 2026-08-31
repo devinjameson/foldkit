@@ -17,6 +17,8 @@ describe('findActiveSectionKey', () => {
     ['Performance', 'faq'],
     ['UiButton', 'foldkitUi'],
     ['AiOverview', 'ai'],
+    ['DevToolsOverview', 'devtools'],
+    ['DevToolsReRenderOutlines', 'devtools'],
     ['Testing', 'testing'],
     ['BestPracticesKeying', 'bestPractices'],
     ['Examples', 'examples'],

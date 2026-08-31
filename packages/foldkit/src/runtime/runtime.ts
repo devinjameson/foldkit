@@ -605,6 +605,7 @@ export const makeRuntime = <
         } = yield* makeRenderer<Model, Message>({
           status,
           container,
+          runtimeId,
           view,
           htmlBuilder,
           manageDocument,
