@@ -10,9 +10,8 @@ import {
 
 import { Menu } from '@foldkit/ui'
 
-import { type RenderCopyButton } from '../../component/codeBlock'
+import { type CodeBlock, Shared } from '../../component'
 import { Icon } from '../../icon'
-import { Shared } from '../../view'
 import {
   type ExampleMeta,
   type ExampleSlug,
@@ -182,7 +181,7 @@ const playgroundMenuView = (
   })
 
 type ViewInputs = Readonly<{
-  renderCopyButton: RenderCopyButton
+  renderCopyButton: CodeBlock.RenderCopyButton
   isNarrowViewport: boolean
   maybeIsChromium: Option.Option<boolean>
   maybeGitHubStarCount: Option.Option<number>
@@ -264,7 +263,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
     const content = contentView(
       viewInputs.renderCopyButton,
       demoTabsView,
-      Shared.emailSignupContentView,
+      Shared.emailSignupContent,
       playgroundMenu,
       model.aiHeadingToggleCount,
       viewInputs.maybeGitHubStarCount,

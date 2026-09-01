@@ -550,8 +550,8 @@ const durationButtonClass = (
   })
 
 export const view = Submodel.defineView<Model, Message>((model, h): Html =>
-  DemoView.demoViewShell(
-    DemoView.codePanelView(
+  DemoView.shell(
+    DemoView.codePanel(
       'note-demo-code-panel',
       'note-demo-phase',
       model.highlightPhase,
@@ -583,7 +583,7 @@ const appPanel = (model: Model, h: HtmlBuilder<Message>): Html => {
               playbackControlView(model, canPlay, h),
             ],
           ),
-          DemoView.modelStateView([
+          DemoView.modelState([
             DemoView.modelStateField(
               'playbackState',
               playbackStateLabel(model),
@@ -592,7 +592,7 @@ const appPanel = (model: Model, h: HtmlBuilder<Message>): Html => {
             DemoView.modelStateField('noteInput', noteInputLabel(model)),
           ]),
           phaseIndicatorView(model),
-          DemoView.eventLogView(model.messageLog),
+          DemoView.eventLog(model.messageLog),
         ],
       ),
     ],
@@ -945,7 +945,7 @@ const phaseColorClass = (phase: NoteHighlightPhase): string =>
   )
 
 const phaseIndicatorView = (model: Model): Html =>
-  DemoView.phaseIndicatorView(
+  DemoView.phaseIndicator(
     phaseLabel(model.highlightPhase),
     phaseColorClass(model.highlightPhase),
     [],

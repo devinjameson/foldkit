@@ -62,7 +62,9 @@ export type IslandViewsFor<Definitions extends IslandDefinitions> = Readonly<{
 
 /**
  * One view function per markdown node. Container nodes receive their already
- * rendered content alongside the node itself.
+ * rendered content alongside the node itself. Code blocks additionally receive
+ * their zero-based occurrence index in document order so consumers can derive
+ * stable per-instance identifiers.
  */
 export type Views = Readonly<{
   Text: (text: Text) => Html | string
@@ -75,7 +77,7 @@ export type Views = Readonly<{
   Image: (image: Image) => Html
   Heading: (heading: Heading, content: InlineContent) => Html
   Paragraph: (paragraph: Paragraph, content: InlineContent) => Html
-  CodeBlock: (codeBlock: CodeBlock) => Html
+  CodeBlock: (codeBlock: CodeBlock, occurrenceIndex: number) => Html
   List: (list: List, items: ReadonlyArray<Html>) => Html
   ListItem: (listItem: ListItem, blocks: ReadonlyArray<Html>) => Html
   Blockquote: (blockquote: Blockquote, blocks: ReadonlyArray<Html>) => Html
@@ -314,16 +316,30 @@ const warnMissingIslandOnce = (islandName: string): void => {
   }
 }
 
-type IslandOccurrenceCounts = Map<string, number>
+type ViewState = Readonly<{
+  islandOccurrenceCounts: Map<string, number>
+  blockOccurrenceCounts: Map<Block['_tag'], number>
+}>
+
+const nextOccurrenceIndex = <Key>(
+  occurrenceCounts: Map<Key, number>,
+  key: Key,
+): number => {
+  const occurrenceIndex = occurrenceCounts.get(key) ?? 0
+  occurrenceCounts.set(key, occurrenceIndex + 1)
+  return occurrenceIndex
+}
 
 const islandView = (
   views: Views,
   islands: Islands,
-  islandOccurrenceCounts: IslandOccurrenceCounts,
+  viewState: ViewState,
   island: Island,
 ): Html => {
-  const occurrenceIndex = islandOccurrenceCounts.get(island.name) ?? 0
-  islandOccurrenceCounts.set(island.name, occurrenceIndex + 1)
+  const occurrenceIndex = nextOccurrenceIndex(
+    viewState.islandOccurrenceCounts,
+    island.name,
+  )
 
   return Option.match(Record.get(islands, island.name), {
     onNone: () => {
@@ -334,7 +350,7 @@ const islandView = (
       renderIsland(
         island.attributes,
         Array.map(island.blocks, block =>
-          blockView(views, islands, islandOccurrenceCounts, block),
+          blockView(views, islands, viewState, block),
         ),
         occurrenceIndex,
       ),
@@ -344,7 +360,7 @@ const islandView = (
 const blockView = (
   views: Views,
   islands: Islands,
-  islandOccurrenceCounts: IslandOccurrenceCounts,
+  viewState: ViewState,
   block: Block,
 ): Html =>
   Match.value(block).pipe(
@@ -354,7 +370,11 @@ const blockView = (
         views.Heading(heading, inlineContent(views, heading.content)),
       Paragraph: paragraph =>
         views.Paragraph(paragraph, inlineContent(views, paragraph.content)),
-      CodeBlock: views.CodeBlock,
+      CodeBlock: codeBlock =>
+        views.CodeBlock(
+          codeBlock,
+          nextOccurrenceIndex(viewState.blockOccurrenceCounts, codeBlock._tag),
+        ),
       List: list =>
         views.List(
           list,
@@ -362,7 +382,7 @@ const blockView = (
             views.ListItem(
               item,
               Array.map(item.blocks, child =>
-                blockView(views, islands, islandOccurrenceCounts, child),
+                blockView(views, islands, viewState, child),
               ),
             ),
           ),
@@ -371,7 +391,7 @@ const blockView = (
         views.Blockquote(
           blockquote,
           Array.map(blockquote.blocks, child =>
-            blockView(views, islands, islandOccurrenceCounts, child),
+            blockView(views, islands, viewState, child),
           ),
         ),
       ThematicBreak: views.ThematicBreak,
@@ -383,8 +403,7 @@ const blockView = (
             tableRowView(views, table, row, false),
           ),
         ),
-      Island: island =>
-        islandView(views, islands, islandOccurrenceCounts, island),
+      Island: island => islandView(views, islands, viewState, island),
     }),
   )
 
@@ -398,9 +417,12 @@ export const viewBlocks = (
 ): ReadonlyArray<Html> => {
   const views: Views = { ...defaultViews, ...config.views }
   const islands = config.islands ?? {}
-  const islandOccurrenceCounts: IslandOccurrenceCounts = new Map()
+  const viewState: ViewState = {
+    islandOccurrenceCounts: new Map(),
+    blockOccurrenceCounts: new Map(),
+  }
   return Array.map(document.blocks, block =>
-    blockView(views, islands, islandOccurrenceCounts, block),
+    blockView(views, islands, viewState, block),
   )
 }
 

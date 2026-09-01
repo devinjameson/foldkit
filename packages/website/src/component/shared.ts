@@ -44,7 +44,7 @@ export const betaTag: Html = ih.span(
   ['Beta'],
 )
 
-export const iconLink = (link: string, ariaLabel: string, icon: Html) =>
+export const iconLink = (link: string, ariaLabel: string, icon: Html): Html =>
   ih.a(
     [
       ih.Href(link),
@@ -108,7 +108,7 @@ const BUTTONDOWN_SUBSCRIBE_URL =
 // fetch request cannot hand the subscriber over when Buttondown needs them to
 // solve a CAPTCHA or fix a rejected address, so this form posts straight to
 // Buttondown and the browser follows the response into a new tab.
-export const emailFormView: Html = ih.form(
+export const emailForm: Html = ih.form(
   [
     ih.Action(BUTTONDOWN_SUBSCRIBE_URL),
     ih.Method('post'),
@@ -149,7 +149,7 @@ const siteLinkClassName =
 const siteLink = (href: string, label: string): Html =>
   ih.a([ih.Href(href), ih.Class(siteLinkClassName)], [label])
 
-export const siteLinksView: Html = ih.nav(
+export const siteLinks: Html = ih.nav(
   [
     ih.AriaLabel('Site information'),
     ih.Class('mt-2 flex flex-wrap gap-x-4 gap-y-1'),
@@ -162,7 +162,7 @@ export const siteLinksView: Html = ih.nav(
   ],
 )
 
-export const emailSignupContentView: Html = ih.div(
+export const emailSignupContent: Html = ih.div(
   [ih.Id('newsletter')],
   [
     ih.h2(
@@ -177,6 +177,6 @@ export const emailSignupContentView: Html = ih.div(
       [ih.Class('text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-xl')],
       ['New releases, patterns, and the occasional deep dive.'],
     ),
-    emailFormView,
+    emailForm,
   ],
 )

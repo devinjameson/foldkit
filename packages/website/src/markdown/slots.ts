@@ -1,7 +1,7 @@
 import { Option, Record } from 'effect'
 import { Html, inertHtml as ih } from 'foldkit/html'
 
-import type { RenderCopyButton } from '../component/codeBlock'
+import { type CodeBlock } from '../component'
 import type { RenderHeadingLink } from '../prose'
 
 // SLOTS
@@ -30,16 +30,13 @@ export type Slots<DemoName extends string> = Readonly<{
   demos: Demos<DemoName>
   renderFaq?: RenderFaq
   /**
-   * Controls the page does not own but its markdown renders: the snippet copy
-   * button and the heading copy-link. Both dispatch app-level Messages, so only
-   * a holder of the app's builder can construct them, via
-   * `defaultRenderCopyButton` and `defaultRenderHeadingLink`. A page rendered
-   * in the root frame builds them from its own threaded builder; a page
-   * embedded with `h.submodel` receives them from its parent through
-   * `viewInputs`, so they are built in the parent's boundary and their
-   * app-level Messages reach `update` unwrapped.
+   * Controls the page does not own but its markdown renders: the SnippetCopy
+   * Submodel button and the heading copy-link. The boundary that owns those
+   * behaviors constructs the renderers. A page embedded with `h.submodel`
+   * receives them from its parent through `viewInputs`, so each control keeps
+   * dispatching through its actual owner rather than the page's boundary.
    */
-  renderCopyButton: RenderCopyButton
+  renderCopyButton: CodeBlock.RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 

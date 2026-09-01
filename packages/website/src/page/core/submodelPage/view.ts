@@ -1,39 +1,34 @@
-import type { Html, HtmlBuilder } from 'foldkit/html'
+import { clsx } from 'clsx'
+import { Submodel } from 'foldkit'
+import { type Html, type HtmlBuilder } from 'foldkit/html'
 
 import { Disclosure } from '@foldkit/ui'
 
-import {
-  type CopiedSnippets,
-  type RenderCopyButton,
-  defaultRenderCopyButton,
-  highlightedCodeBlock,
-} from '../../component/codeBlock'
-import { Icon } from '../../icon'
-import { slotDocPage } from '../../markdown'
-import { Message } from '../../message'
-import { defaultRenderHeadingLink, inlineCode } from '../../prose'
-import * as Snippet from '../../snippet'
-import raw from './submodel.md'
-
-// DEMO
+import { CodeBlock } from '../../../component'
+import { Icon } from '../../../icon'
+import { slotDocPage } from '../../../markdown'
+import { type RenderHeadingLink, inlineCode } from '../../../prose'
+import * as Snippet from '../../../snippet'
+import raw from '../submodel.md'
+import { Message } from './message'
+import { type Model } from './model'
 
 const MAP_MESSAGES_DISCLOSURE_ID = 'submodel-map-messages-disclosure'
 
-/**
- * The one live demo on this page: a disclosure that reveals the
- * `Command.mapMessages` internals. Embedded through the page's
- * `::Demo{name="map-messages-under-hood"}` island, so its open state stays in
- * the app Model (`isMapMessagesUnderHoodOpen`) while the prose lives in markdown.
- */
+export type ViewInputs = Readonly<{
+  renderCopyButton: CodeBlock.RenderCopyButton
+  renderHeadingLink: RenderHeadingLink
+}>
+
 const mapMessagesUnderHoodDemo = (
-  isMapMessagesUnderHoodOpen: boolean,
-  renderCopyButton: RenderCopyButton,
+  model: Model,
+  renderCopyButton: CodeBlock.RenderCopyButton,
   h: HtmlBuilder<Message>,
 ): Html =>
   Disclosure.view(
     {
       id: MAP_MESSAGES_DISCLOSURE_ID,
-      isOpen: isMapMessagesUnderHoodOpen,
+      isOpen: model.isMapMessagesUnderHoodOpen,
       onToggle: isOpen => Message.ToggledMapMessagesUnderHood({ isOpen }),
       toView: attributes =>
         h.div(
@@ -46,21 +41,25 @@ const mapMessagesUnderHoodDemo = (
                 h.span(
                   [
                     h.Class(
-                      `text-gray-600 dark:text-gray-300 transition-transform ${isMapMessagesUnderHoodOpen ? 'rotate-180' : ''}`,
+                      clsx(
+                        'text-gray-600 dark:text-gray-300 transition-transform',
+                        { 'rotate-180': model.isMapMessagesUnderHoodOpen },
+                      ),
                     ),
                   ],
                   [Icon.chevronDown('w-4 h-4')],
                 ),
               ],
             ),
-            isMapMessagesUnderHoodOpen
+            model.isMapMessagesUnderHoodOpen
               ? h.div(
                   [...attributes.panel, h.Class('docs-disclosure-panel')],
                   [
                     h.div(
                       [h.Class('-mt-8')],
                       [
-                        highlightedCodeBlock(
+                        CodeBlock.highlightedView(
+                          'core-submodel-map-messages-under-hood',
                           h.div([
                             h.Class('text-sm'),
                             h.InnerHTML(
@@ -101,29 +100,22 @@ const mapMessagesUnderHoodDemo = (
     h,
   )
 
-// PAGE
-
 const { tableOfContents, view: renderPage } =
   slotDocPage<'map-messages-under-hood'>(raw, 'core/submodel')
 
 export { tableOfContents }
 
-export const view = (
-  copiedSnippets: CopiedSnippets,
-  isMapMessagesUnderHoodOpen: boolean,
-  h: HtmlBuilder<Message>,
-): Html => {
-  const renderCopyButton = defaultRenderCopyButton(copiedSnippets, h)
-
-  return renderPage({
-    demos: {
-      'map-messages-under-hood': mapMessagesUnderHoodDemo(
-        isMapMessagesUnderHoodOpen,
-        renderCopyButton,
-        h,
-      ),
-    },
-    renderCopyButton,
-    renderHeadingLink: defaultRenderHeadingLink(h),
-  })
-}
+export const view = Submodel.defineView<Model, Message, ViewInputs>(
+  (model, viewInputs, h) =>
+    renderPage({
+      demos: {
+        'map-messages-under-hood': mapMessagesUnderHoodDemo(
+          model,
+          viewInputs.renderCopyButton,
+          h,
+        ),
+      },
+      renderCopyButton: viewInputs.renderCopyButton,
+      renderHeadingLink: viewInputs.renderHeadingLink,
+    }),
+)

@@ -1,21 +1,45 @@
 import { Match, Option } from 'effect'
-import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
+import {
+  Html,
+  type HtmlBuilder,
+  createKeyedLazy,
+  inertHtml as ih,
+} from 'foldkit/html'
 
+import { Shared } from '../component'
 import {
   docsFooterView,
   docsHeaderView,
   searchSubmodelView,
   searchWeight,
 } from '../layout/docs'
-import { type Message } from '../message'
+import { Message } from '../message'
 import { type Model } from '../model'
 import { Blog, NotFound } from '../page'
+import * as Prose from '../prose'
 import { type BlogPostRoute, type BlogRoute, homeRouter } from '../route'
-import * as Shared from './shared'
+import * as SnippetCopy from '../snippetCopy'
 import * as Sidebar from './sidebar'
 
 const PagefindBody = ih.DataAttribute('pagefind-body', '')
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
+
+const postView = (
+  post: Blog.BlogPost,
+  snippetCopy: SnippetCopy.Model,
+  h: HtmlBuilder<Message>,
+): Html =>
+  Blog.BlogPostPage.view(
+    post,
+    SnippetCopy.renderer(
+      snippetCopy,
+      message => Message.GotSnippetCopyMessage({ message }),
+      h,
+    ),
+    Prose.renderHeadingLink(hash => Message.ClickedCopyLink({ hash }), h),
+  )
+
+const lazyPostView = createKeyedLazy()
 
 // VIEW
 
@@ -31,7 +55,8 @@ export const view = (
       BlogPost: ({ postSlug }) =>
         Option.match(Blog.findPostBySlug(postSlug), {
           onNone: () => NotFound.view(postSlug, homeRouter()),
-          onSome: post => Blog.BlogPostPage.view(post, model.copiedSnippets, h),
+          onSome: post =>
+            lazyPostView(post.slug, postView, [post, model.snippetCopy, h]),
         }),
     }),
   )
@@ -47,7 +72,7 @@ export const view = (
       Shared.skipNavLink,
       docsHeaderView(model, h),
       searchSubmodelView(model, h),
-      Sidebar.mobileMenuView(model, h),
+      Sidebar.mobileView(model, h),
       h.main(
         [
           h.Id('main-content'),

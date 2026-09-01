@@ -1,5 +1,5 @@
 import { type Html } from 'foldkit/html'
 
-import { Shared } from '../../view'
+import { Shared } from '../../component'
 
-export const content: Html = Shared.emailSignupContentView
+export const content: Html = Shared.emailSignupContent

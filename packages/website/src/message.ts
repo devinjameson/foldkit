@@ -6,14 +6,18 @@ import { Url } from 'foldkit/url'
 
 import { Dialog } from '@foldkit/ui'
 
-import * as ApiReference from './page/apiReference/message'
-import * as ComingFromReact from './page/comingFromReact/message'
-import * as ExampleDetail from './page/example/message'
-import * as Home from './page/home/message'
-import * as Playground from './page/playground'
-import * as Ui from './page/ui/message'
-import * as Search from './search/message'
+import {
+  ApiReference,
+  ComingFromReact,
+  Core,
+  Example,
+  Home,
+  Playground,
+  Ui,
+} from './page'
+import * as Search from './search'
 import { GroupKey, SidebarState } from './sidebarStorage'
+import * as SnippetCopy from './snippetCopy'
 
 // THEME
 
@@ -51,11 +55,7 @@ export const Message = defineMessageUnion({
   FailedCopyLink: {},
   ClickedLink: { request: UrlRequest },
   ChangedUrl: { url: Url },
-  ClickedCopySnippet: { text: Schema.String },
   ClickedCopyLink: { hash: Schema.String },
-  SucceededCopySnippet: { text: Schema.String },
-  FailedCopySnippet: {},
-  CompletedWaitBeforeHidingCopiedIndicator: { text: Schema.String },
   GotMobileMenuDialogMessage: { message: Dialog.Message },
   ClickedOpenMobileMenu: {},
   ClickedOpenSearch: {},
@@ -67,13 +67,14 @@ export const Message = defineMessageUnion({
   ChangedSystemTheme: { theme: ResolvedTheme },
   ChangedViewportWidth: { isNarrow: Schema.Boolean },
   GotHomeMessage: { message: Home.Message },
+  GotSnippetCopyMessage: { message: SnippetCopy.Message },
+  GotCoreSubmodelPageMessage: { message: Core.SubmodelPage.Message },
   GotPlaygroundMessage: { message: Playground.Message },
   GotComingFromReactMessage: { message: ComingFromReact.Message },
   GotApiReferenceMessage: { message: ApiReference.Message },
   GotUiPageMessage: { message: Ui.Message },
   ToggledSidebarGroup: { key: GroupKey, isOpen: Schema.Boolean },
-  GotExampleDetailMessage: { message: ExampleDetail.Message },
+  GotExampleDetailMessage: { message: Example.ExampleDetail.Message },
   GotSearchMessage: { message: Search.Message },
-  ToggledMapMessagesUnderHood: { isOpen: Schema.Boolean },
 })
 export type Message = typeof Message.Type

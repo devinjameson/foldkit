@@ -4,7 +4,7 @@ import { type Attribute, Html, inertHtml as ih } from 'foldkit/html'
 import type { Alignment } from '@foldkit/markdown'
 import type * as Markdown from '@foldkit/markdown'
 
-import { type RenderCopyButton, codeBlock } from '../component/codeBlock'
+import { CodeBlock } from '../component'
 import {
   type RenderHeadingLink,
   diagram,
@@ -21,7 +21,7 @@ import { type HeadingIds, headingId } from './tableOfContents'
 export type DocViewConfig = Readonly<{
   pageId: string
   idByHeading: HeadingIds
-  renderCopyButton: RenderCopyButton
+  renderCopyButton: CodeBlock.RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
@@ -150,10 +150,11 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
       )
     },
 
-    CodeBlock: ({ maybeLanguage, value }) =>
+    CodeBlock: ({ maybeLanguage, value }, occurrenceIndex) =>
       Option.contains(maybeLanguage, diagramLanguage)
         ? diagram(value)
-        : codeBlock(
+        : CodeBlock.view(
+            `${config.pageId}-code-${occurrenceIndex}`,
             value,
             'Copy code to clipboard',
             config.renderCopyButton,

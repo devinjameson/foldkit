@@ -2,7 +2,6 @@ import {
   Array,
   DateTime,
   Effect,
-  HashSet,
   Layer,
   Match,
   Option,
@@ -41,6 +40,7 @@ import { Model } from './model'
 import {
   ApiReference,
   ComingFromReact,
+  Core,
   Example,
   Home,
   Playground,
@@ -61,6 +61,7 @@ import {
   SidebarState,
   SidebarStateJsonString,
 } from './sidebarStorage'
+import * as SnippetCopy from './snippetCopy'
 import * as Subscriptions from './subscription'
 import { NARROW_VIEWPORT_QUERY } from './viewport'
 
@@ -236,6 +237,8 @@ export const init: Runtime.RoutingApplicationInit<
     flags.maybeExampleSources,
   )
   const searchInit = Search.init()
+  const snippetCopyInit = SnippetCopy.init()
+  const coreSubmodelPageInit = Core.SubmodelPage.init()
 
   const maybeInitialActiveSectionKey = findActiveSectionKey(
     initialRoute._tag,
@@ -271,7 +274,7 @@ export const init: Runtime.RoutingApplicationInit<
       route: initialRoute,
       url,
       deployment: flags.deployment,
-      copiedSnippets: HashSet.empty(),
+      snippetCopy: snippetCopyInit.model,
       maybeGitHubStarCount: Option.fromNullishOr(githubStarCount),
       currentYear: flags.currentYear,
       mobileMenuDialog: Dialog.init({ id: 'mobile-menu' }),
@@ -289,7 +292,7 @@ export const init: Runtime.RoutingApplicationInit<
         Option.none(),
         maybeInitialActiveSectionKey,
       ),
-      isMapMessagesUnderHoodOpen: false,
+      coreSubmodelPage: coreSubmodelPageInit.model,
       maybeThemePreference,
       systemTheme,
       resolvedTheme,
@@ -365,6 +368,22 @@ const foldMobileMenuDialogOpen = Update.foldChildStep({
   write: writeMobileMenuDialog,
   toParentMessage: toGotMobileMenuDialogMessage,
   foldOutMessage: foldMobileMenuDialogOutMessage,
+})
+
+const foldSnippetCopy = Update.foldChild({
+  update: SnippetCopy.update,
+  read: (model: Model) => Option.some(model.snippetCopy),
+  write: (model, nextSnippetCopy) =>
+    evo(model, { snippetCopy: () => nextSnippetCopy }),
+  toParentMessage: message => Message.GotSnippetCopyMessage({ message }),
+})
+
+const foldCoreSubmodelPage = Update.foldChild({
+  update: Core.SubmodelPage.update,
+  read: (model: Model) => Option.some(model.coreSubmodelPage),
+  write: (model, nextCoreSubmodelPage) =>
+    evo(model, { coreSubmodelPage: () => nextCoreSubmodelPage }),
+  toParentMessage: message => Message.GotCoreSubmodelPageMessage({ message }),
 })
 
 const readHome = (model: Model): Option.Option<Home.Model> => model.maybeHome
@@ -627,11 +646,6 @@ export const update = (model: Model, message: Message) =>
       ])
     },
 
-    ClickedCopySnippet: ({ text }) => ({
-      model,
-      commands: [CopySnippet({ text })],
-    }),
-
     ClickedCopyLink: ({ hash }) => ({
       model,
       commands: [
@@ -639,22 +653,6 @@ export const update = (model: Model, message: Message) =>
           url: urlToString({ ...model.url, hash: Option.some(hash) }),
         }),
       ],
-    }),
-
-    SucceededCopySnippet: ({ text }) =>
-      HashSet.has(model.copiedSnippets, text)
-        ? { model }
-        : {
-            model: evo(model, {
-              copiedSnippets: HashSet.add(text),
-            }),
-            commands: [WaitBeforeHidingCopiedIndicator({ text })],
-          },
-
-    CompletedWaitBeforeHidingCopiedIndicator: ({ text }) => ({
-      model: evo(model, {
-        copiedSnippets: HashSet.remove(text),
-      }),
     }),
 
     ClickedOpenMobileMenu: () =>
@@ -672,6 +670,11 @@ export const update = (model: Model, message: Message) =>
 
     GotMobileMenuDialogMessage: ({ message }) =>
       foldMobileMenuDialog(model, message),
+
+    GotSnippetCopyMessage: ({ message }) => foldSnippetCopy(model, message),
+
+    GotCoreSubmodelPageMessage: ({ message }) =>
+      foldCoreSubmodelPage(model, message),
 
     ToggledMobileTableOfContents: ({ isOpen }) => ({
       model: evo(model, { isMobileTableOfContentsOpen: () => isOpen }),
@@ -786,10 +789,6 @@ export const update = (model: Model, message: Message) =>
       return { model: nextModel, commands: [saveSidebarState(nextModel)] }
     },
 
-    ToggledMapMessagesUnderHood: ({ isOpen }) => ({
-      model: evo(model, { isMapMessagesUnderHoodOpen: () => isOpen }),
-    }),
-
     GotExampleDetailMessage: ({ message }) => foldExampleDetail(model, message),
 
     GotSearchMessage: ({ message }) => foldSearch(model, message),
@@ -809,7 +808,6 @@ export const update = (model: Model, message: Message) =>
     CompletedSaveSidebarState: () => ({ model }),
     SucceededCopyLink: () => ({ model }),
     FailedCopyLink: () => ({ model }),
-    FailedCopySnippet: () => ({ model }),
   })
 
 // COMMAND
@@ -833,19 +831,6 @@ const InjectSpeedInsights = Command.define('InjectSpeedInsights', {
   ),
 })
 
-const CopySnippet = Command.define('CopySnippet', {
-  args: { text: Schema.String },
-  messages: [Message.SucceededCopySnippet, Message.FailedCopySnippet],
-  execute: ({ text }) =>
-    Effect.tryPromise({
-      try: () => navigator.clipboard.writeText(text),
-      catch: () => new Error('Failed to copy to clipboard'),
-    }).pipe(
-      Effect.as(Message.SucceededCopySnippet({ text })),
-      Effect.catch(() => Effect.succeed(Message.FailedCopySnippet())),
-    ),
-})
-
 const CopyLink = Command.define('CopyLink', {
   args: { url: Schema.String },
   messages: [Message.SucceededCopyLink, Message.FailedCopyLink],
@@ -858,20 +843,6 @@ const CopyLink = Command.define('CopyLink', {
       Effect.catch(() => Effect.succeed(Message.FailedCopyLink())),
     ),
 })
-
-const COPY_INDICATOR_DURATION = '2 seconds'
-
-const WaitBeforeHidingCopiedIndicator = Command.define(
-  'WaitBeforeHidingCopiedIndicator',
-  {
-    args: { text: Schema.String },
-    messages: [Message.CompletedWaitBeforeHidingCopiedIndicator],
-    execute: ({ text }) =>
-      Effect.sleep(COPY_INDICATOR_DURATION).pipe(
-        Effect.as(Message.CompletedWaitBeforeHidingCopiedIndicator({ text })),
-      ),
-  },
-)
 
 export const ScrollToTop = Command.define('ScrollToTop', {
   messages: [Message.CompletedScrollToTop],

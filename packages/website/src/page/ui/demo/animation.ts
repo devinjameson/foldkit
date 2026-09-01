@@ -13,7 +13,7 @@ const contentClassName =
 
 // VIEW
 
-export const animationDemo = (
+export const view = (
   animationModel: Animation.Model,
   h: HtmlBuilder<Message>,
 ) => {

@@ -1,90 +1,19 @@
 import { clsx } from 'clsx'
-import { HashSet } from 'effect'
-import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
-
-import { Icon } from '../icon'
-import { Message } from '../message'
+import { Html, inertHtml as ih } from 'foldkit/html'
 
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 
-export type CopiedSnippets = HashSet.HashSet<string>
-
-/**
- * Builds the copy control for a code block.
- *
- * A page rendered through `h.submodel` must supply one of these from its
- * parent, because a handler's dispatcher is chosen by where the element is
- * built. Left to build itself inside a Submodel's view, the button's app-level
- * Message meets that Submodel's `toParentMessage` and is rejected.
- */
 export type RenderCopyButton = (
-  textToCopy: string,
-  ariaLabel: string,
-  positionClass: string,
+  config: Readonly<{
+    id: string
+    text: string
+    ariaLabel: string
+    positionClass: string
+  }>,
 ) => Html
 
-const copyButtonWithIndicator = (
-  textToCopy: string,
-  ariaLabel: string,
-  copiedSnippets: CopiedSnippets,
-  positionClass: string,
-  h: HtmlBuilder<Message>,
-) => {
-  const isCopied = HashSet.has(copiedSnippets, textToCopy)
-
-  const copiedIndicator = isCopied
-    ? h.div(
-        [
-          h.Class(
-            'absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-sm rounded py-1 px-2 font-normal bg-accent-600 dark:bg-accent-500 text-white dark:text-accent-900 whitespace-nowrap',
-          ),
-        ],
-        ['Copied'],
-      )
-    : h.empty
-
-  const liveAnnouncement = h.span(
-    [h.Role('status'), h.AriaLive('polite'), h.Class('sr-only')],
-    [isCopied ? 'Copied to clipboard' : ''],
-  )
-
-  const copyButton = h.button(
-    [
-      h.Class(
-        'p-2 rounded transition cursor-pointer border border-gray-300 dark:border-gray-700/50 bg-[var(--code-background)] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700/30',
-      ),
-      h.AriaLabel(ariaLabel),
-      h.OnClick(Message.ClickedCopySnippet({ text: textToCopy })),
-    ],
-    [Icon.copy()],
-  )
-
-  return h.div(
-    [h.Class(clsx('code-embed-copy absolute', positionClass))],
-    [copiedIndicator, liveAnnouncement, copyButton],
-  )
-}
-
-/**
- * Builds a copy control bound to the root frame's builder.
- *
- * This is the only way to construct a {@link RenderCopyButton}, and it demands
- * a builder typed to the app's Message. A Submodel's own builder cannot satisfy
- * it, which is what forces the control to be created by an ancestor and passed
- * down rather than built in place.
- */
-export const defaultRenderCopyButton =
-  (copiedSnippets: CopiedSnippets, h: HtmlBuilder<Message>): RenderCopyButton =>
-  (textToCopy, ariaLabel, positionClass) =>
-    copyButtonWithIndicator(
-      textToCopy,
-      ariaLabel,
-      copiedSnippets,
-      positionClass,
-      h,
-    )
-
-export const codeBlock = (
+export const view = (
+  id: string,
   code: string,
   ariaLabel: string,
   renderCopyButton: RenderCopyButton,
@@ -112,11 +41,20 @@ export const codeBlock = (
         ),
       ),
     ],
-    [content, renderCopyButton(code, ariaLabel, 'top-2 right-2')],
+    [
+      content,
+      renderCopyButton({
+        id,
+        text: code,
+        ariaLabel,
+        positionClass: 'top-2 right-2',
+      }),
+    ],
   )
 }
 
-export const highlightedCodeBlock = (
+export const highlightedView = (
+  id: string,
   content: Html,
   rawCode: string,
   ariaLabel: string,
@@ -125,23 +63,33 @@ export const highlightedCodeBlock = (
 ) =>
   ih.div(
     [PagefindIgnore, ih.Class(clsx('relative min-w-0 mt-8', className))],
-    [content, renderCopyButton(rawCode, ariaLabel, 'top-2 right-2')],
+    [
+      content,
+      renderCopyButton({
+        id,
+        text: rawCode,
+        ariaLabel,
+        positionClass: 'top-2 right-2',
+      }),
+    ],
   )
 
 /**
- * `highlightedCodeBlock` bound to a page-supplied copy-button renderer, for a
+ * `highlightedView` bound to a page-supplied copy-button renderer, for a
  * page rendered inside a Submodel. Bind once at the top of the view and the
  * call sites below it are unchanged.
  */
-export const highlightedCodeBlockFor =
+export const highlightedViewFor =
   (renderCopyButton: RenderCopyButton) =>
   (
+    id: string,
     content: Html,
     rawCode: string,
     ariaLabel: string,
     className?: string,
   ): Html =>
-    highlightedCodeBlock(
+    highlightedView(
+      id,
       content,
       rawCode,
       ariaLabel,

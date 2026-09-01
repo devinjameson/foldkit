@@ -1,7 +1,7 @@
 import { Submodel } from 'foldkit'
 import type { Html } from 'foldkit/html'
 
-import type { RenderCopyButton } from '../../component/codeBlock'
+import { type CodeBlock } from '../../component'
 import { slotDocPage } from '../../markdown'
 import { type RenderHeadingLink, demoContainer } from '../../prose'
 import raw from './comboboxPage.md'
@@ -20,7 +20,7 @@ const { tableOfContents, view: renderPage } = slotDocPage<
 export { tableOfContents }
 
 type ViewInputs = Readonly<{
-  renderCopyButton: RenderCopyButton
+  renderCopyButton: CodeBlock.RenderCopyButton
   renderHeadingLink: RenderHeadingLink
 }>
 
@@ -29,7 +29,7 @@ export const view = Submodel.defineView<Model, Message, ViewInputs>(
     renderPage({
       demos: {
         'single-select': demoContainer(
-          ...Combobox.comboboxDemo(
+          ...Combobox.view(
             model.comboboxDemo,
             model.maybeComboboxDemoSelectedCity,
             h,

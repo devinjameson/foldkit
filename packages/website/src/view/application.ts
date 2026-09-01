@@ -1,7 +1,7 @@
 import { Match, Option } from 'effect'
 import { type Document, type HtmlBuilder } from 'foldkit/html'
 
-import { defaultRenderCopyButton } from '../component/codeBlock'
+import { Shared } from '../component'
 import { Deployment } from '../deployment'
 import { docsView } from '../layout/docs'
 import * as Marketing from '../layout/marketing'
@@ -9,8 +9,8 @@ import { Message } from '../message'
 import { type Model } from '../model'
 import { Home, Newsletter, Playground } from '../page'
 import { routeTitle } from '../routeTitle'
+import * as SnippetCopy from '../snippetCopy'
 import * as Blog from './blog'
-import * as Shared from './shared'
 
 const homeView = (
   model: Model,
@@ -22,7 +22,11 @@ const homeView = (
     model: homeModel,
     view: Home.view,
     viewInputs: {
-      renderCopyButton: defaultRenderCopyButton(model.copiedSnippets, h),
+      renderCopyButton: SnippetCopy.renderer(
+        model.snippetCopy,
+        message => Message.GotSnippetCopyMessage({ message }),
+        h,
+      ),
       isNarrowViewport: model.isNarrowViewport,
       maybeIsChromium: model.maybeIsChromium,
       maybeGitHubStarCount: model.maybeGitHubStarCount,

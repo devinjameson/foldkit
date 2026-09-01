@@ -89,6 +89,32 @@ describe('view', () => {
     ).toStrictEqual(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
   })
 
+  it('passes each code block its occurrence index in document order', () => {
+    const document = parseMarkdown(
+      lines(
+        '```ts',
+        'const first = 1',
+        '```',
+        '',
+        '```ts',
+        'const second = 2',
+        '```',
+      ),
+    )
+    const receivedIndexes: Array<number> = []
+
+    view(document, {
+      views: {
+        CodeBlock: (_codeBlock, occurrenceIndex) => {
+          receivedIndexes.push(occurrenceIndex)
+          return ih.pre([])
+        },
+      },
+    })
+
+    expect(receivedIndexes).toStrictEqual([0, 1])
+  })
+
   it('renders nested inline content through the default views', () => {
     const document = parseMarkdown(
       'Some *emphasis*, `code`, and a [link](https://example.com).',

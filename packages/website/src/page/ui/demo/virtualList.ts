@@ -143,10 +143,7 @@ const buttonClassName =
 const headerClassName =
   'flex items-end justify-between text-sm text-gray-600 dark:text-gray-400'
 
-export const virtualListDemo = (
-  model: VirtualList.Model,
-  h: HtmlBuilder<Message>,
-) => {
+export const view = (model: VirtualList.Model, h: HtmlBuilder<Message>) => {
   return [
     h.div(
       [h.Class('flex flex-col gap-4 w-full')],
