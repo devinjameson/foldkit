@@ -1,4 +1,4 @@
-import { Context, Effect, Queue, Stream } from 'effect'
+import { Context, Effect, Queue, Schema, Stream } from 'effect'
 import { expect, vi } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -6,6 +6,7 @@ import { describe, it } from '@effect/vitest'
 import { defineMessageUnion } from '../message/index.js'
 import type { MountAction } from '../mount/index.js'
 import { MountTracker } from '../mount/index.js'
+import { onUnmountModule } from '../onUnmountModule.js'
 import { propsModule } from '../propsModule.js'
 import { noOpDispatch } from '../runtime/crashUI.js'
 import { Dispatch } from '../runtime/index.js'
@@ -18,7 +19,7 @@ import {
   styleModule,
   toVNode,
 } from '../snabbdom/index.js'
-import type { VNode } from '../vdom.js'
+import { type VNode, dedupeSharedVNodes } from '../vdom.js'
 import type { BoundaryRegistry } from './boundary.js'
 import { childAttributes } from './childAttribute.js'
 import {
@@ -30,6 +31,7 @@ import {
   __createBoundaryRegistry as createHtmlBoundaryRegistry,
   defineView,
   __endReplayRender as endReplayRender,
+  __flushReplayUnmountsAfterPatchFailure as flushReplayUnmountsAfterPatchFailure,
   __setRuntime as setHtmlRuntime,
 } from './index.js'
 
@@ -38,12 +40,14 @@ const patch = init([
   classModule,
   datasetModule,
   eventListenersModule,
+  onUnmountModule,
   propsModule,
   styleModule,
 ])
 
 const Message = defineMessageUnion({
   Unmounted: {},
+  UnmountedNamed: { name: Schema.String },
   Mounted: {},
 })
 
@@ -175,6 +179,146 @@ describe('OnUnmount', () => {
     }
 
     expect(dispatched).toStrictEqual([])
+
+    beginReplayRender()
+    try {
+      flushReplayUnmountsAfterPatchFailure()
+    } finally {
+      endReplayRender()
+    }
+
+    expect(dispatched).toStrictEqual([])
+  })
+
+  it('dispatches a replay-suppressed unmount once when patch recovery destroys the live tree', () => {
+    const h = __htmlBuilder<typeof Message.Unmounted.Type>()
+    const { dispatch, dispatched } = createCapturingDispatch()
+    const withChild = () =>
+      h.div([], [h.span([h.OnUnmount(Message.Unmounted())])])
+    const withoutChild = () => h.div([])
+    const mounted = patch(
+      toVNode(makeRootContainer()),
+      renderView(withChild, dispatch),
+    )
+    const child = mounted.children?.[0]
+    if (child === undefined || typeof child === 'string') {
+      throw new Error('Expected the mounted child VNode')
+    }
+
+    beginReplayRender()
+    try {
+      patch(mounted, renderView(withoutChild, Dispatch.of(noOpDispatch)))
+      onUnmountModule.destroy?.(child)
+      flushReplayUnmountsAfterPatchFailure()
+    } finally {
+      endReplayRender()
+    }
+
+    expect(dispatched).toStrictEqual([Message.Unmounted()])
+  })
+
+  it('preserves the live callback when a replay VNode patches the element in place', () => {
+    const h = __htmlBuilder<typeof Message.Unmounted.Type>()
+    const { dispatch, dispatched } = createCapturingDispatch()
+    const mounted = patch(
+      toVNode(makeRootContainer()),
+      renderView(
+        () => h.div([], [h.span([h.OnUnmount(Message.Unmounted())])]),
+        dispatch,
+      ),
+    )
+
+    beginReplayRender()
+    try {
+      const replayed = patch(
+        mounted,
+        renderView(() => h.div([], [h.span([])]), Dispatch.of(noOpDispatch)),
+      )
+      patch(
+        replayed,
+        renderView(() => h.div([]), Dispatch.of(noOpDispatch)),
+      )
+      flushReplayUnmountsAfterPatchFailure()
+    } finally {
+      endReplayRender()
+    }
+
+    expect(dispatched).toStrictEqual([Message.Unmounted()])
+  })
+
+  it('keeps distinct unmounts from VNodes that share one callback', () => {
+    const h = __htmlBuilder<typeof Message.Unmounted.Type>()
+    const { dispatch, dispatched } = createCapturingDispatch()
+    const mounted = patch(
+      toVNode(makeRootContainer()),
+      renderView(() => {
+        const shared = h.span([h.OnUnmount(Message.Unmounted())])
+        const root = h.div([], [shared, shared])
+        if (root === null) {
+          throw new Error('Expected a VNode')
+        }
+        return dedupeSharedVNodes(root)
+      }, dispatch),
+    )
+
+    beginReplayRender()
+    try {
+      patch(
+        mounted,
+        renderView(() => h.div([]), Dispatch.of(noOpDispatch)),
+      )
+      flushReplayUnmountsAfterPatchFailure()
+    } finally {
+      endReplayRender()
+    }
+
+    expect(dispatched).toStrictEqual([Message.Unmounted(), Message.Unmounted()])
+  })
+
+  it('preserves distinct live callbacks when replay VNodes share data', () => {
+    const h = __htmlBuilder<typeof Message.UnmountedNamed.Type>()
+    const { dispatch, dispatched } = createCapturingDispatch()
+    const mounted = patch(
+      toVNode(makeRootContainer()),
+      renderView(
+        () =>
+          h.div(
+            [],
+            [
+              h.span([h.OnUnmount(Message.UnmountedNamed({ name: 'first' }))]),
+              h.span([h.OnUnmount(Message.UnmountedNamed({ name: 'second' }))]),
+            ],
+          ),
+        dispatch,
+      ),
+    )
+
+    beginReplayRender()
+    try {
+      const replayed = patch(
+        mounted,
+        renderView(() => {
+          const shared = h.span([])
+          const root = h.div([], [shared, shared])
+          if (root === null) {
+            throw new Error('Expected a VNode')
+          }
+          return dedupeSharedVNodes(root)
+        }, Dispatch.of(noOpDispatch)),
+      )
+      patch(
+        replayed,
+        renderView(() => h.div([]), Dispatch.of(noOpDispatch)),
+      )
+      flushReplayUnmountsAfterPatchFailure()
+    } finally {
+      endReplayRender()
+    }
+
+    expect(dispatched).toStrictEqual([
+      Message.UnmountedNamed({ name: 'first' }),
+      Message.UnmountedNamed({ name: 'second' }),
+    ])
   })
 
   it('dispatches again on a normal unmount after the replay window has closed', () => {
@@ -311,6 +455,9 @@ const GotChildMessage = (message: ChildUnmounted): GotChildMessage => ({
   _tag: 'GotChildMessage',
   message,
 })
+type ParentUnmounted = Readonly<{ _tag: 'ParentUnmounted' }>
+const ParentUnmounted: ParentUnmounted = { _tag: 'ParentUnmounted' }
+type ParentMessage = GotChildMessage | ParentUnmounted
 
 type ChildViewInputs = Readonly<{
   toView: (dialog: ReadonlyArray<ChildAttribute>) => VNode | null
@@ -363,8 +510,8 @@ const renderViewWithRegistry = (
 }
 
 describe('OnUnmount across a Submodel boundary', () => {
-  it('dispatches the parent-wrapped Message when the boundary is torn down', () => {
-    const h = __htmlBuilder<GotChildMessage>()
+  it('composes child and parent callbacks on the same element', () => {
+    const h = __htmlBuilder<ParentMessage>()
     const { dispatch, dispatched } = createCapturingDispatch()
     const registry = createHtmlBoundaryRegistry()
 
@@ -382,7 +529,8 @@ describe('OnUnmount across a Submodel boundary', () => {
             model: { id: 'child-dialog' },
             view: childView,
             viewInputs: {
-              toView: dialog => h.dialog([...dialog]),
+              toView: dialog =>
+                h.dialog([...dialog, h.OnUnmount(ParentUnmounted)]),
             },
             toParentMessage: message => GotChildMessage(message),
           }),
@@ -397,6 +545,9 @@ describe('OnUnmount across a Submodel boundary', () => {
 
     patch(mounted, renderViewWithRegistry(withoutChild, dispatch, registry))
 
-    expect(dispatched).toStrictEqual([GotChildMessage(ChildUnmounted)])
+    expect(dispatched).toStrictEqual([
+      GotChildMessage(ChildUnmounted),
+      ParentUnmounted,
+    ])
   })
 })

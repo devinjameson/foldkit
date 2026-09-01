@@ -310,7 +310,34 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
 
 // MAP MOUNT
 
-const mountMap = (element: Element, hostId: string) =>
+type MountedMap = Readonly<{
+  map: MapInstance
+  markerElements: ReadonlyArray<HTMLButtonElement>
+}>
+
+const applyMapViewState = (
+  { map, markerElements }: MountedMap,
+  viewState: Mount.ViewState,
+): Effect.Effect<void> =>
+  Effect.sync(() => {
+    const isLive = viewState === 'Live'
+
+    if (isLive) {
+      map.keyboard.enable()
+    } else {
+      map.keyboard.disable()
+    }
+
+    Array.forEach(markerElements, markerElement => {
+      markerElement.disabled = !isLive
+    })
+  })
+
+const mountMap = (
+  element: Element,
+  hostId: string,
+  viewStateChanges: Stream.Stream<Mount.ViewState>,
+) =>
   Effect.gen(function* () {
     if (!(element instanceof HTMLElement)) {
       return Message.FailedMountMap({
@@ -319,7 +346,7 @@ const mountMap = (element: Element, hostId: string) =>
     }
 
     return yield* Effect.gen(function* () {
-      yield* Effect.acquireRelease(
+      const mountedMap = yield* Effect.acquireRelease(
         Effect.gen(function* () {
           const maplibre = yield* Effect.tryPromise(() => import('maplibre-gl'))
           maplibre.setWorkerUrl(maplibreWorkerUrl)
@@ -330,20 +357,31 @@ const mountMap = (element: Element, hostId: string) =>
             zoom: INITIAL_MAP_ZOOM,
           })
 
-          Array.forEach(featuredLocations, ({ id, lng, lat }) => {
-            const markerElement = document.createElement('button')
-            markerElement.setAttribute('data-location-id', id)
-            markerElement.setAttribute('aria-label', `Marker: ${id}`)
-            markerElement.className = markerStyle
-            new maplibre.Marker({ element: markerElement })
-              .setLngLat([lng, lat])
-              .addTo(map)
-          })
+          const markerElements = Array.map(
+            featuredLocations,
+            ({ id, lng, lat }) => {
+              const markerElement = document.createElement('button')
+              markerElement.setAttribute('data-location-id', id)
+              markerElement.setAttribute('aria-label', `Marker: ${id}`)
+              markerElement.className = markerStyle
+              new maplibre.Marker({ element: markerElement })
+                .setLngLat([lng, lat])
+                .addTo(map)
+              return markerElement
+            },
+          )
 
           setMap(hostId, map)
-          return map
+          return { map, markerElements }
         }),
         () => Effect.sync(() => removeMap(hostId)),
+      )
+
+      yield* viewStateChanges.pipe(
+        Stream.runForEach(viewState =>
+          applyMapViewState(mountedMap, viewState),
+        ),
+        Effect.forkScoped,
       )
 
       return Message.SucceededMountMap({ hostId })
@@ -361,7 +399,8 @@ const mountMap = (element: Element, hostId: string) =>
 export const MountMap = Mount.define('MountMap', {
   args: { hostId: Schema.String },
   messages: [Message.SucceededMountMap, Message.FailedMountMap],
-  execute: ({ element, hostId }) => mountMap(element, hostId),
+  execute: ({ element, hostId, viewStateChanges }) =>
+    mountMap(element, hostId, viewStateChanges),
 })
 
 // SUBSCRIPTIONS

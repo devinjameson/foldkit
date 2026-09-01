@@ -499,13 +499,22 @@ const streamPlaygroundEditorMessages = (
   path: string,
   initialContent: string,
   files: Readonly<Record<string, string>>,
+  viewStateChanges: Stream.Stream<Mount.ViewState>,
 ) =>
   Stream.callback<PlaygroundEditorMessage>(queue =>
     Effect.acquireRelease(
       acquirePlaygroundEditor(queue, element, path, initialContent, files),
       releasePlaygroundEditor,
     ).pipe(
-      Effect.flatMap(() => Effect.never),
+      Effect.flatMap(({ editor }) =>
+        viewStateChanges.pipe(
+          Stream.runForEach(viewState =>
+            Effect.sync(() =>
+              editor.updateOptions({ readOnly: viewState === 'Paused' }),
+            ),
+          ),
+        ),
+      ),
       Effect.catch(error =>
         Effect.sync(() => {
           Queue.offerUnsafe(
@@ -519,7 +528,7 @@ const streamPlaygroundEditorMessages = (
     ),
   )
 
-const PlaygroundEditor = Mount.defineStream('PlaygroundEditor', {
+export const PlaygroundEditor = Mount.defineStream('PlaygroundEditor', {
   args: {
     path: Schema.String,
     initialContent: Schema.String,
@@ -530,8 +539,14 @@ const PlaygroundEditor = Mount.defineStream('PlaygroundEditor', {
     Message.FailedMountPlaygroundEditor,
     Message.EditedPlaygroundFile,
   ],
-  execute: ({ element, path, initialContent, files }) =>
-    streamPlaygroundEditorMessages(element, path, initialContent, files),
+  execute: ({ element, path, initialContent, files, viewStateChanges }) =>
+    streamPlaygroundEditorMessages(
+      element,
+      path,
+      initialContent,
+      files,
+      viewStateChanges,
+    ),
 })
 
 // COMMAND

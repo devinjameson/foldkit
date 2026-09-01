@@ -25,7 +25,17 @@ import {
 } from '../domReflection.js'
 import type { File } from '../file/index.js'
 import type { MountAction } from '../mount/index.js'
-import { MountTracker } from '../mount/index.js'
+import {
+  MountRuntime,
+  MountTracker,
+  liveViewStateChanges,
+} from '../mount/index.js'
+import {
+  attachOnUnmount,
+  beginReplayUnmountRender,
+  endReplayUnmountRender,
+  flushReplayUnmountsAfterPatchFailure,
+} from '../onUnmountModule.js'
 import {
   hasTrustedInnerHtml,
   isClientOnlyProperty,
@@ -52,10 +62,13 @@ import {
 } from './dragZoneTracking.js'
 import {
   type DispatchSync,
+  type MountDispatchResolver,
+  type MountRenderOwner,
   type UnmountResolver,
   clearRuntime,
   requireBoundaryMappers,
   requireDispatch,
+  requireMountDispatchResolver,
   requireRuntimeContext,
   requireUnmountResolver,
   setRuntime,
@@ -456,8 +469,16 @@ export type TagName =
   | 'munderover'
   | 'semantics'
 
+type OnMountLifecycle = {
+  isActive: boolean
+  isStarted: boolean
+}
+
 type OnMountState = {
   fiber: Fiber.Fiber<void>
+  lifecycle: OnMountLifecycle
+  notifyEnded: () => void
+  owner: MountRenderOwner
 }
 
 const onMountStates = new WeakMap<Element, OnMountState>()
@@ -468,23 +489,25 @@ const onMountStates = new WeakMap<Element, OnMountState>()
 // its own. Mount Effects get this for free because the replayed tree is built
 // with `noOpDispatch`, but the `OnUnmount` destroy hook fires against the prior
 // live tree, so the runtime opens this window during a replay render and
-// `OnUnmount` reads it to skip dispatching a hygiene Message into live history.
-let isReplayRenderActive = false
+// the OnUnmount VDOM module defers dispatching a hygiene Message into live
+// history. A successful replay discards those callbacks. Patch-failure recovery
+// flushes them because it destroys and later rebuilds the imperative live tree.
 
 /** Opens a replay-render window. The runtime calls this immediately before a
  *  DevTools time-travel render and closes it with {@link __endReplayRender}
- *  afterward, so any `OnUnmount` destroy hook that fires while the replayed
- *  tree is patched in skips its dispatch. Without the gate the hook would
+ *  afterward, so the `OnUnmount` module can defer live callbacks while the
+ *  replayed tree is patched in. Without the gate the callback would
  *  enqueue a hygiene Message into live history during mere inspection of past
  *  state. */
-export const __beginReplayRender = (): void => {
-  isReplayRenderActive = true
-}
+export const __beginReplayRender = beginReplayUnmountRender
 
 /** Closes the replay-render window opened by {@link __beginReplayRender}. */
-export const __endReplayRender = (): void => {
-  isReplayRenderActive = false
-}
+export const __endReplayRender = endReplayUnmountRender
+
+/** Dispatches the live `OnUnmount` callbacks deferred by a replay patch that
+ *  failed and forced the runtime to discard the damaged DOM. */
+export const __flushReplayUnmountsAfterPatchFailure =
+  flushReplayUnmountsAfterPatchFailure
 
 /** Key under which the OnMount attribute stamps a `{ name }` marker on the
  *  snabbdom `VNodeData`. Snabbdom passes unknown data fields through without
@@ -497,8 +520,9 @@ export const FOLDKIT_MOUNT_KEY = 'foldkitMount' as const
  *  introspection can identify pending mounts. When the mount lives inside a
  *  Submodel boundary, it also carries that boundary's `toParentMessage` chain
  *  (innermost first), snapshotted at render time, so `Scene.Mount.resolve` can
- *  replay the lift the result travels through in production. The chain is read
- *  only by the Scene harness; production dispatch lifts via `ctx.dispatch`. */
+ *  replay the lift the result travels through in production. Production keeps
+ *  the Mount bound to the dispatcher owned by its acquiring render, then
+ *  resolves that owner's latest chain when the Mount emits. */
 export type FoldkitMountMarker = Readonly<{
   name: string
   args?: Record<string, unknown>
@@ -1205,16 +1229,17 @@ const {
 
 export { Prop, OnCustomEvent }
 
-// BUILD CONTEXT: per-VNode bag of mutable VNode data plus the dispatcher this
-// VNode's events route through. Allocated once per unique dispatcher in
-// `buildVNodeData`, typically once total (a second time when ChildAttribute
-// items route through a child Submodel's own dispatch).
+// BUILD CONTEXT: per-VNode bag of mutable VNode data plus the dispatchers this
+// VNode's events and Mount results route through. Allocated once per unique
+// dispatcher in `buildVNodeData`, typically once total (a second time when
+// ChildAttribute items route through a child Submodel's own dispatch).
 type BuildContext = Readonly<{
   data: VNodeData
   getPostpatchProps: () => Array<Readonly<{ propName: string; value: unknown }>>
   dispatch: DispatchSync
   resolveUnmount: UnmountResolver
   boundaryMappers: ReadonlyArray<(message: unknown) => unknown>
+  resolveMountDispatch?: MountDispatchResolver
   getCapturedContext: () => Context.Context<never>
 }>
 
@@ -2335,6 +2360,9 @@ const attributeHandlers: AttributeHandlers = {
   OnMount: ({ action }, ctx: BuildContext) => {
     const capturedContext = ctx.getCapturedContext()
     const maybeTracker = Context.getOption(capturedContext, MountTracker)
+    const maybeMountRuntime = Context.getOption(capturedContext, MountRuntime)
+    const resolveMountDispatch =
+      ctx.resolveMountDispatch ?? currentMountDispatchResolverOrFallback()
     const notifyStarted = Option.isSome(maybeTracker)
       ? () => maybeTracker.value.started(action.name, action.args)
       : Function.constVoid
@@ -2357,22 +2385,19 @@ const attributeHandlers: AttributeHandlers = {
       insert: vnode => {
         if (vnode.elm instanceof Element) {
           const element = vnode.elm
-          notifyStarted()
-          const fiber = Effect.runForkWith(capturedContext)(
-            Stream.runForEach(action.f(element), message =>
-              Effect.sync(() => ctx.dispatch(message)),
-            ).pipe(
-              Effect.catchCause(cause =>
-                Effect.sync(() => {
-                  console.error(
-                    `[OnMount ${action.name}] unhandled failure`,
-                    cause,
-                  )
-                }),
-              ),
-            ),
-          )
-          onMountStates.set(element, { fiber })
+          acquireMount(element)
+        }
+      },
+      postpatch: (_previousVNode, vnode) => {
+        if (vnode.elm instanceof Element) {
+          const state = onMountStates.get(vnode.elm)
+          if (
+            state?.owner === 'Replay' &&
+            resolveMountDispatch.owner === 'Live'
+          ) {
+            releaseMount(state)
+            acquireMount(vnode.elm, state.fiber)
+          }
         }
       },
       destroy: vnode => {
@@ -2382,12 +2407,63 @@ const attributeHandlers: AttributeHandlers = {
         if (vnode.elm instanceof Element) {
           const state = onMountStates.get(vnode.elm)
           if (state) {
+            releaseMount(state)
             Effect.runFork(Fiber.interrupt(state.fiber))
             onMountStates.delete(vnode.elm)
-            notifyEnded()
           }
         }
       },
+    }
+
+    function releaseMount(state: OnMountState): void {
+      state.lifecycle.isActive = false
+      if (state.lifecycle.isStarted) {
+        state.lifecycle.isStarted = false
+        if (state.owner === 'Live') {
+          state.notifyEnded()
+        }
+      }
+    }
+
+    function acquireMount(
+      element: Element,
+      previousFiber?: Fiber.Fiber<void>,
+    ): void {
+      const lifecycle: OnMountLifecycle = {
+        isActive: true,
+        isStarted: true,
+      }
+      const mountDispatch = resolveMountDispatch.resolve()
+      const viewStateChanges = Option.match(maybeMountRuntime, {
+        onNone: () => liveViewStateChanges,
+        onSome: mountRuntime => mountRuntime.captureViewStateChanges(),
+      })
+      notifyStarted()
+      const runMount = Effect.suspend(() => {
+        if (!lifecycle.isActive) {
+          return Effect.void
+        }
+        return Stream.runForEach(action.f(element, viewStateChanges), message =>
+          Effect.sync(() => mountDispatch(message)),
+        )
+      }).pipe(
+        Effect.catchCause(cause =>
+          Effect.sync(() => {
+            console.error(`[OnMount ${action.name}] unhandled failure`, cause)
+          }),
+        ),
+      )
+      const acquire =
+        previousFiber === undefined
+          ? runMount
+          : Fiber.interrupt(previousFiber).pipe(Effect.andThen(runMount))
+      const fiber = Effect.runForkWith(capturedContext)(acquire)
+      onMountStates.set(element, {
+        fiber,
+        lifecycle,
+        notifyEnded,
+        owner: resolveMountDispatch.owner,
+      })
     }
   },
   OnUnmount: ({ message }, ctx: BuildContext) => {
@@ -2397,18 +2473,7 @@ const attributeHandlers: AttributeHandlers = {
     // deregistered the wrap, so a fire-time lookup would throw; the
     // precomputed thunk sidesteps that teardown race.
     const dispatchUnmount = ctx.resolveUnmount(message)
-    const existingDestroy = ctx.data.hook?.destroy
-    ctx.data.hook = {
-      ...ctx.data.hook,
-      destroy: vnode => {
-        if (existingDestroy !== undefined) {
-          existingDestroy(vnode)
-        }
-        if (!isReplayRenderActive) {
-          dispatchUnmount()
-        }
-      },
-    }
+    attachOnUnmount(ctx.data, dispatchUnmount)
   },
 }
 
@@ -2469,6 +2534,14 @@ const currentUnmountResolverOrFallback = (): UnmountResolver => {
   }
 }
 
+const currentMountDispatchResolverOrFallback = (): MountDispatchResolver => {
+  try {
+    return requireMountDispatchResolver()
+  } catch {
+    return { owner: 'Live', resolve: () => fallbackDispatch }
+  }
+}
+
 const capturedContextOrEmpty = (): Context.Context<never> => {
   try {
     return requireRuntimeContext()
@@ -2514,14 +2587,16 @@ const attachPostpatchHook = (
   postpatchProps: ReadonlyArray<Readonly<{ propName: string; value: unknown }>>,
 ): void => {
   const existingInsert = data.hook?.insert
+  const existingPostpatch = data.hook?.postpatch
   data.hook = {
     ...data.hook,
     insert: vnode => {
       applyControlledProps(vnode, postpatchProps)
       existingInsert?.(vnode)
     },
-    postpatch: (_oldVnode, vnode) => {
+    postpatch: (oldVnode, vnode) => {
       applyControlledProps(vnode, postpatchProps)
+      existingPostpatch?.(oldVnode, vnode)
     },
   }
 }
@@ -2575,13 +2650,20 @@ const buildVNodeData = <Message>(
     if (isChildAttribute(item)) {
       boundaryCtxByDispatch ??= new Map()
       let ctx = boundaryCtxByDispatch.get(item.dispatch)
-      if (ctx === undefined) {
+      if (
+        ctx === undefined ||
+        (item.resolveMountDispatch !== undefined &&
+          ctx.resolveMountDispatch !== item.resolveMountDispatch)
+      ) {
         ctx = {
           data,
           getPostpatchProps: getSharedPostpatchProps,
           dispatch: item.dispatch,
           resolveUnmount: item.resolveUnmount,
           boundaryMappers: item.boundaryMappers,
+          ...(item.resolveMountDispatch !== undefined && {
+            resolveMountDispatch: item.resolveMountDispatch,
+          }),
           getCapturedContext: capturedContextOrEmpty,
         }
         boundaryCtxByDispatch.set(item.dispatch, ctx)

@@ -23,6 +23,23 @@ export class MountTracker extends Context.Service<
   }
 >()('@foldkit/MountTracker') {}
 
+/** The state of the DOM currently owned by the Foldkit renderer. `Live` means
+ *  it represents the current live Model. `Paused` means time travel has
+ *  installed a historical view while the live application continues running. */
+export const ViewState = Schema.Literals(['Live', 'Paused'])
+
+/** The state of the DOM currently owned by the Foldkit renderer. */
+export type ViewState = typeof ViewState.Type
+
+/** @internal Runtime state used by `OnMount` to supply
+ *  `viewStateChanges`. */
+export class MountRuntime extends Context.Service<
+  MountRuntime,
+  {
+    readonly captureViewStateChanges: () => Stream.Stream<ViewState>
+  }
+>()('@foldkit/MountRuntime') {}
+
 /** Type-level brand for MountDefinition values. */
 /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
 export const MountDefinitionTypeId: unique symbol = Symbol.for(
@@ -34,9 +51,12 @@ export type MountDefinitionTypeId = typeof MountDefinitionTypeId
 
 /** A named, type-constrained per-element side effect, optionally carrying the
  *  args used to construct it. The runtime invokes `f` with the live `Element`
- *  when the element mounts, and dispatches each Message emitted by the
- *  returned Stream. The Stream's scope is tied to the element's lifetime: when
- *  the element unmounts, the runtime interrupts the fiber, which closes the
+ *  and required view-state Stream when the element mounts. A Mount acquired by
+ *  a live render keeps live dispatch, while one acquired by a historical
+ *  render uses no-op dispatch. When resume reuses a replay-created element,
+ *  the runtime releases its historical Mount before starting the live action.
+ *  Otherwise the Stream's scope is tied to the element's lifetime: when the
+ *  element unmounts, the runtime interrupts the fiber, which closes the
  *  Stream's scope and runs any registered `acquireRelease` finalizers.
  *
  *  Authors don't construct this shape directly. `Mount.define` builds it from
@@ -46,7 +66,10 @@ export type MountDefinitionTypeId = typeof MountDefinitionTypeId
 export type MountAction<Message, E = never> = Readonly<{
   name: string
   args?: Record<string, unknown>
-  f: (element: Element) => Stream.Stream<Message, E>
+  f: (
+    element: Element,
+    viewStateChanges: Stream.Stream<ViewState>,
+  ) => Stream.Stream<Message, E>
 }>
 
 /** A Mount definition for a Mount with no declared args. Call as `Definition()` to produce a MountAction. */
@@ -55,7 +78,10 @@ export interface MountDefinitionNoArgs<Name extends string, ResultMessage> {
   readonly name: Name
   (): Readonly<{
     name: Name
-    f: (element: Element) => Stream.Stream<ResultMessage>
+    f: (
+      element: Element,
+      viewStateChanges: Stream.Stream<ViewState>,
+    ) => Stream.Stream<ResultMessage>
   }>
 }
 
@@ -70,7 +96,10 @@ export interface MountDefinitionWithArgs<
   (args: Schema.Schema.Type<Schema.Struct<Fields>>): Readonly<{
     name: Name
     args: Schema.Schema.Type<Schema.Struct<Fields>>
-    f: (element: Element) => Stream.Stream<ResultMessage>
+    f: (
+      element: Element,
+      viewStateChanges: Stream.Stream<ViewState>,
+    ) => Stream.Stream<ResultMessage>
   }>
 }
 
@@ -86,6 +115,23 @@ export type MountDefinition<Name extends string = string, ResultMessage = any> =
  *  literal is the type error a colliding declaration produces. */
 type ElementFieldIsReserved =
   'Mount args cannot declare `element`: execute already receives the live element'
+
+/** @internal Rejects an args field named `viewStateChanges`. `execute`
+ *  receives the runtime-owned Stream under that name. */
+type ViewStateChangesFieldIsReserved =
+  'Mount args cannot declare `viewStateChanges`: execute already receives the view-state Stream'
+
+/** @internal Fields the runtime supplies to every Mount execution. */
+type ExecuteRuntimeInput = Readonly<{
+  element: Element
+  viewStateChanges: Stream.Stream<ViewState>
+}>
+
+/** @internal Type-level rejection for args that collide with runtime fields. */
+type ReservedExecuteFields = Readonly<{
+  element?: ElementFieldIsReserved
+  viewStateChanges?: ViewStateChangesFieldIsReserved
+}>
 
 /** @internal The shape {@link define} and {@link defineStream} read at
  *  runtime. The public overloads carry the precise types; this is only what
@@ -109,14 +155,29 @@ const brandAsDefinition = (definition: unknown, name: string): void => {
   })
 }
 
+/** A never-ending view-state Stream for renderers without time travel.
+ *  It emits `Live` immediately and never completes. Custom renderers and
+ *  low-level MountAction wrappers can pass it as the required second argument
+ *  to `MountAction.f` when the rendered view is always live. */
+export const liveViewStateChanges: Stream.Stream<ViewState> = Stream.concat(
+  Stream.make(ViewState.make('Live')),
+  Stream.never,
+)
+
 const wrapEffectAsStream =
   <Message>(
-    toEffect: (element: Element) => Effect.Effect<Message, never, Scope.Scope>,
+    toEffect: (
+      element: Element,
+      viewStateChanges: Stream.Stream<ViewState>,
+    ) => Effect.Effect<Message, never, Scope.Scope>,
   ) =>
-  (element: Element): Stream.Stream<Message> =>
+  (
+    element: Element,
+    viewStateChanges: Stream.Stream<ViewState>,
+  ): Stream.Stream<Message> =>
     Stream.callback<Message>(queue =>
       Effect.gen(function* () {
-        const message = yield* toEffect(element)
+        const message = yield* toEffect(element, viewStateChanges)
         Queue.offerUnsafe(queue, message)
         return yield* Effect.never
       }),
@@ -126,18 +187,35 @@ const wrapEffectAsStream =
  * Defines a one-shot Mount. Every input is a named field: `args` declares the
  * args Schema, `messages` lists the Messages this Mount can produce, and
  * `execute` holds the work. `execute` receives the live `Element` as `element`
- * alongside the declared args, and returns an `Effect<Message>` that runs once
- * when the element mounts and produces exactly one Message.
+ * and the runtime's `viewStateChanges` Stream alongside the declared args, and
+ * returns an `Effect<Message>` that runs once when the element mounts and
+ * produces exactly one Message.
  *
  * `args` is optional. Omit it and the Definition is callable as `Definition()`;
  * declare it and the Definition is callable as `Definition(args)`. `execute`
- * keeps the same shape either way, because a Mount always has an element. An
- * args field named `element` is rejected where you declare it, since it would
- * collide with the element `execute` receives.
+ * keeps the same shape either way, because a Mount always has an element and a
+ * view-state Stream. Args fields named `element` or `viewStateChanges` are
+ * rejected where you declare them, since they would collide with the runtime
+ * fields `execute` receives.
  *
  * Constructing a MountAction never runs `execute`. The runtime calls it when
  * the element enters the DOM, so nothing the body does happens inside the pure
  * view that built the action.
+ *
+ * `viewStateChanges` begins with the rendered view's `Live | Paused` state at
+ * the moment the Mount is acquired, followed by changes. This acquisition
+ * state stays available when `execute` performs asynchronous setup before
+ * consuming the Stream, so a Mount inserted by a historical render always
+ * observes `Paused` first. Time travel pauses the rendered view, not the live
+ * application. Use this Stream to make an imperative integration read-only
+ * while historical DOM is installed. A surviving live Mount stays acquired
+ * throughout pause and resume. Its live async work and external event sources
+ * also continue, so the integration must use the Stream to stop DOM-derived
+ * interaction while paused. Mounts acquired by a historical render cannot
+ * dispatch to the live Model. If the resumed live view owns the same element,
+ * Foldkit releases the replay acquisition before starting the live action. The
+ * Stream stays open for the Mount's lifetime. When time travel is unavailable,
+ * it emits only `Live`.
  *
  * Cleanup composes via `Effect.acquireRelease` inside the Effect: registered
  * finalizers run when the element unmounts. The Mount's scope stays open
@@ -251,11 +329,10 @@ export function define<
 >(
   name: Name,
   config: Readonly<{
-    args: Fields & Readonly<{ element?: ElementFieldIsReserved }>
+    args: Fields & ReservedExecuteFields
     messages: Messages
     execute: (
-      input: Readonly<{ element: Element }> &
-        Schema.Schema.Type<Schema.Struct<Fields>>,
+      input: ExecuteRuntimeInput & Schema.Schema.Type<Schema.Struct<Fields>>,
     ) => Effect.Effect<Schema.Schema.Type<Messages[number]>, never, Scope.Scope>
   }>,
 ): MountDefinitionWithArgs<Name, Fields, Schema.Schema.Type<Messages[number]>>
@@ -269,7 +346,7 @@ export function define<
     args?: never
     messages: Messages
     execute: (
-      input: Readonly<{ element: Element }>,
+      input: ExecuteRuntimeInput,
     ) => Effect.Effect<Schema.Schema.Type<Messages[number]>, never, Scope.Scope>
   }>,
 ): MountDefinitionNoArgs<Name, Schema.Schema.Type<Messages[number]>>
@@ -281,14 +358,18 @@ export function define(name: string, config: DefineConfig): unknown {
     const definition = (args: any) => ({
       name,
       args,
-      f: wrapEffectAsStream(element => config.execute({ ...args, element })),
+      f: wrapEffectAsStream((element, viewStateChanges) =>
+        config.execute({ ...args, element, viewStateChanges }),
+      ),
     })
     brandAsDefinition(definition, name)
     return definition
   } else {
     const definition = () => ({
       name,
-      f: wrapEffectAsStream(element => config.execute({ element })),
+      f: wrapEffectAsStream((element, viewStateChanges) =>
+        config.execute({ element, viewStateChanges }),
+      ),
     })
     brandAsDefinition(definition, name)
     return definition
@@ -299,22 +380,36 @@ export function define(name: string, config: DefineConfig): unknown {
  * Defines a streaming Mount. Every input is a named field, exactly as in
  * `Mount.define`: `args` declares the args Schema, `messages` lists the
  * Messages this Mount can produce, and `execute` holds the work. `execute`
- * receives the live `Element` as `element` alongside the declared args, and
- * returns a `Stream<Message>` whose lifetime is bound to the element's
- * lifetime: each emitted Message is dispatched, and the Stream's scope is
- * closed (running any registered `Effect.acquireRelease` finalizers) when the
- * element unmounts. Use this form when the Mount emits a continuum of events
- * from observers or listeners attached to the element.
+ * receives the live `Element` as `element` and the runtime's
+ * `viewStateChanges` Stream alongside the declared args, and returns a
+ * `Stream<Message>` whose lifetime is bound to the element's lifetime: each
+ * emitted Message is dispatched, and the Stream's scope is closed (running any
+ * registered `Effect.acquireRelease` finalizers) when the element unmounts.
+ * Use this form when the Mount emits a continuum of events from observers or
+ * listeners attached to the element.
  *
  * `args` is optional. Omit it and the Definition is callable as `Definition()`;
  * declare it and the Definition is callable as `Definition(args)`. `execute`
- * keeps the same shape either way, because a Mount always has an element. An
- * args field named `element` is rejected where you declare it, since it would
- * collide with the element `execute` receives.
+ * keeps the same shape either way, because a Mount always has an element and a
+ * view-state Stream. Args fields named `element` or `viewStateChanges` are
+ * rejected where you declare them, since they would collide with the runtime
+ * fields `execute` receives.
  *
  * Constructing a MountAction never runs `execute`. The runtime calls it when
  * the element enters the DOM, so nothing the body does happens inside the pure
  * view that built the action.
+ *
+ * `viewStateChanges` has the same semantics as in `Mount.define`: it begins
+ * with the rendered view's state at acquisition even after asynchronous
+ * setup, keeps a surviving live Mount acquired, and returns to `Live` only
+ * after the latest live view has been patched back into the DOM. A live
+ * Mount's external sources continue while paused, so use the state to stop
+ * listeners from turning historical DOM interaction into Messages. A Mount
+ * acquired by a historical render cannot dispatch to the live Model. If the
+ * resumed live view owns the same element, Foldkit releases the replay
+ * acquisition before starting the live action. The state Stream stays open
+ * for the Mount's lifetime. When time travel is unavailable, it emits only
+ * `Live`.
  *
  * At least one result Message schema is required. The Stream's emission
  * type is `Schema.Schema.Type<Messages[number]>`; without a declared
@@ -408,11 +503,10 @@ export function defineStream<
 >(
   name: Name,
   config: Readonly<{
-    args: Fields & Readonly<{ element?: ElementFieldIsReserved }>
+    args: Fields & ReservedExecuteFields
     messages: Messages
     execute: (
-      input: Readonly<{ element: Element }> &
-        Schema.Schema.Type<Schema.Struct<Fields>>,
+      input: ExecuteRuntimeInput & Schema.Schema.Type<Schema.Struct<Fields>>,
     ) => Stream.Stream<Schema.Schema.Type<Messages[number]>, never, never>
   }>,
 ): MountDefinitionWithArgs<Name, Fields, Schema.Schema.Type<Messages[number]>>
@@ -426,7 +520,7 @@ export function defineStream<
     args?: never
     messages: Messages
     execute: (
-      input: Readonly<{ element: Element }>,
+      input: ExecuteRuntimeInput,
     ) => Stream.Stream<Schema.Schema.Type<Messages[number]>, never, never>
   }>,
 ): MountDefinitionNoArgs<Name, Schema.Schema.Type<Messages[number]>>
@@ -438,14 +532,23 @@ export function defineStream(name: string, config: DefineConfig): unknown {
     const definition = (args: any) => ({
       name,
       args,
-      f: (element: Element) => config.execute({ ...args, element }),
+      f: (element: Element, viewStateChanges: Stream.Stream<ViewState>) =>
+        config.execute({
+          ...args,
+          element,
+          viewStateChanges,
+        }),
     })
     brandAsDefinition(definition, name)
     return definition
   } else {
     const definition = () => ({
       name,
-      f: (element: Element) => config.execute({ element }),
+      f: (element: Element, viewStateChanges: Stream.Stream<ViewState>) =>
+        config.execute({
+          element,
+          viewStateChanges,
+        }),
     })
     brandAsDefinition(definition, name)
     return definition
@@ -468,6 +571,7 @@ export const mapMessage: {
     f: (message: A) => B,
   ): MountAction<B, E> => ({
     ...action,
-    f: (element: Element) => action.f(element).pipe(Stream.map(f)),
+    f: (element: Element, viewStateChanges: Stream.Stream<ViewState>) =>
+      action.f(element, viewStateChanges).pipe(Stream.map(f)),
   }),
 )
