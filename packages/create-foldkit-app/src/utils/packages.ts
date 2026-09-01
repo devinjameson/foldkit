@@ -191,6 +191,37 @@ const readReleaseManifest = Effect.gen(function* () {
   return yield* Schema.decodeUnknownEffect(ReleaseManifest)(JSON.parse(content))
 })
 
+/**
+ * The git ref in the Foldkit repository that matches a CLI release manifest.
+ * A stable release is tagged `foldkit@<version>` at promotion, so the ref is
+ * that tag for the manifest's `foldkit` package. A canary release is
+ * commit-addressed and never tagged, so the ref is its source commit.
+ */
+export const foldkitSubtreeRef = (
+  manifest: typeof ReleaseManifest.Type,
+): string =>
+  Match.value(manifest.channel).pipe(
+    Match.when('stable', () =>
+      Option.match(Record.get(manifest.packages, 'foldkit'), {
+        onNone: () => manifest.sourceCommit,
+        onSome: version => `foldkit@${version}`,
+      }),
+    ),
+    Match.when('canary', () => manifest.sourceCommit),
+    Match.exhaustive,
+  )
+
+/**
+ * The subtree ref for the release manifest bundled with this CLI. The create
+ * command resolves it before scaffolding, so a broken manifest fails before
+ * any files are created, then prints it in the success message so the user
+ * vendors the Foldkit repository at the release the scaffold installs.
+ */
+export const readFoldkitSubtreeRef = Effect.map(
+  readReleaseManifest,
+  foldkitSubtreeRef,
+)
+
 const releaseVersions = (manifest: typeof ReleaseManifest.Type) =>
   Record.union(
     manifest.dependencies,
