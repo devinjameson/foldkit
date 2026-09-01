@@ -25,12 +25,7 @@ import {
 // NOTE: Animation imports are split across schema + update to avoid a circular
 // dependency: animation → html → runtime → devtools → popover → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
-import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-  type OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
+import * as Animation from '../animation/schema.js'
 import { update as animationUpdate } from '../animation/update.js'
 import * as OptionExt from '../internal/optionExtensions.js'
 import { idSelector } from '../internal/selectors.js'
@@ -44,7 +39,7 @@ export const Model = Schema.Struct({
   isAnimated: Schema.Boolean,
   isModal: Schema.Boolean,
   contentFocus: Schema.Boolean,
-  animation: AnimationModel,
+  animation: Animation.Model,
   maybeLastButtonPointerType: Schema.Option(Schema.String),
 })
 
@@ -71,7 +66,7 @@ export const Message = defineMessageUnion({
   SuppressedSpaceScroll: {},
   CompletedAnchorPopover: {},
   CompletedPortalPopoverBackdrop: {},
-  GotAnimationMessage: { message: AnimationMessage },
+  GotAnimationMessage: { message: Animation.Message },
 })
 
 export type RequestedOpen = typeof Message.RequestedOpen.Type
@@ -116,7 +111,7 @@ export const init = (config: InitConfig): Model => ({
   isAnimated: config.isAnimated ?? false,
   isModal: config.isModal ?? false,
   contentFocus: config.contentFocus ?? false,
-  animation: animationInit({ id: `${config.id}-panel` }),
+  animation: Animation.init({ id: `${config.id}-panel` }),
   maybeLastButtonPointerType: Option.none(),
 })
 
@@ -202,14 +197,14 @@ export const DetectMovementOrAnimationEnd = Command.define(
         Dom.detectElementMovement(buttonSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
         Dom.waitForAnimationSettled(panelSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
@@ -217,16 +212,15 @@ export const DetectMovementOrAnimationEnd = Command.define(
   },
 )
 
-const foldAnimationOutMessage = Match.type<AnimationOutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    StartedLeaveAnimating: () => model => ({
-      model,
-      commands: [DetectMovementOrAnimationEnd({ id: model.id })],
-    }),
-    TransitionedOut: () => model => ({ model }),
+const foldAnimationOutMessage = Animation.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  StartedLeaveAnimating: () => model => ({
+    model,
+    commands: [DetectMovementOrAnimationEnd({ id: model.id })],
   }),
-)
+  TransitionedOut: () => model => ({ model }),
+})
 
 const foldAnimation = Update.foldChild({
   update: animationUpdate,
@@ -270,7 +264,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       const popoverOpen = Update.combine(baseModel, [
         stepModel => ({ model: stepModel, commands: openCommands }),
-        foldAnimation(AnimationMessage.Showed()),
+        foldAnimation(Animation.Message.Showed()),
         stepModel => ({
           model: evo(stepModel, { isOpen: () => true }),
         }),
@@ -298,7 +292,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       return Update.combine(closed, [
         stepModel => ({ model: stepModel, commands }),
-        foldAnimation(AnimationMessage.Hid()),
+        foldAnimation(Animation.Message.Hid()),
       ])
     }
 

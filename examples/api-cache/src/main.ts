@@ -143,15 +143,15 @@ const activateTab = (model: Model, tab: Tab): UpdateReturn => {
   )
 }
 
-const foldTabsOutMessage = Match.type<Tabs.OutMessage<Tab>>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model =>
-        activateTab(model, value),
-  }),
-)
+const foldTabsOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>,
+  Tabs.OutMessage<Tab>
+>({
+  Selected:
+    ({ value }) =>
+    model =>
+      activateTab(model, value),
+})
 
 const foldTabs = Update.foldChild({
   update: AppTabs.update,

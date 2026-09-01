@@ -84,6 +84,7 @@ export const Message = defineMessageUnion({
   GotHoverIntentMenuDemoMessage: { message: HoverIntent.Message },
   ClickedHoverIntentMenuItem: {},
   GotAnimationDemoMessage: { message: Animation.Message },
+  ToggledAnimationDemo: {},
   GotVirtualListDemoMessage: { message: VirtualList.Message },
   ClickedVirtualListScrollToMiddle: {},
   GotVirtualListVariableDemoMessage: { message: VirtualList.Message },

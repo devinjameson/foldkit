@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -54,9 +54,8 @@ type Message = typeof Message.Type
 // At module scope, fold the OutMessage into your own Model, lifting the
 // DismissedToast event into domain state. The arm returns an Update.Step over
 // the parent Model, which already has the next Toast Model written back:
-const foldToastOutMessage = Match.type<typeof Toast.OutMessage.Type>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
+const foldToastOutMessage = Toast.OutMessage.match<Update.Step<Model, Message>>(
+  {
     DismissedToast:
       ({ payload }) =>
       model => ({
@@ -64,7 +63,7 @@ const foldToastOutMessage = Match.type<typeof Toast.OutMessage.Type>().pipe(
           maybeLastDismissedBody: () => Option.some(payload.bodyText),
         }),
       }),
-  }),
+  },
 )
 
 // Update.foldChild wires the child into the parent: it delegates Toast's own

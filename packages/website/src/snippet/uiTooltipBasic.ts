@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match, Option, Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -32,19 +32,18 @@ const Message = defineMessageUnion({
 // `Hidden` mark the visibility transitions. Fire analytics or coordinate with
 // the rest of your UI from the parent. Each arm returns an Update.Step over
 // the parent Model, which already has the next Tooltip Model written back:
-const foldTooltipOutMessage = Match.type<Tooltip.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    // The child has emitted `Shown`. In this arm the parent can update its
-    // own state or dispatch its own Commands, for example log analytics,
-    // prefetch content, or trigger a downstream Command.
-    Shown: () => model => ({ model }),
-    // The child has emitted `Hidden`. In this arm the parent can update its
-    // own state or dispatch its own Commands, for example clear ephemeral
-    // state, fire analytics, or trigger a downstream Command.
-    Hidden: () => model => ({ model }),
-  }),
-)
+const foldTooltipOutMessage = Tooltip.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  // The child has emitted `Shown`. In this arm the parent can update its
+  // own state or dispatch its own Commands, for example log analytics,
+  // prefetch content, or trigger a downstream Command.
+  Shown: () => model => ({ model }),
+  // The child has emitted `Hidden`. In this arm the parent can update its
+  // own state or dispatch its own Commands, for example clear ephemeral
+  // state, fire analytics, or trigger a downstream Command.
+  Hidden: () => model => ({ model }),
+})
 
 // Update.foldChild wires the child into the parent: it runs Tooltip.update,
 // writes the next Tooltip Model back, maps the Submodel's Commands into your

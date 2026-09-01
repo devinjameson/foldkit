@@ -1,7 +1,8 @@
-import { Effect, Match, Option, Schema } from 'effect'
+import { Array, Effect, Option, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
 import * as Update from '../../update/index.js'
 
 // CHILD MODEL
@@ -94,19 +95,18 @@ export const initialParentModel: ParentModel = {
 
 // PARENT UPDATE
 
-const foldChildOutMessage = Match.type<ChildOutMessage>().pipe(
-  Match.withReturnType<Update.Step<ParentModel, ParentMessage>>(),
-  Match.tagsExhaustive({
-    RequestedSave:
-      ({ id }) =>
-      model => ({
-        model: { ...model, savedIds: [...model.savedIds, id] },
-      }),
-    RequestedCancel: () => model => ({
-      model: { ...model, cancelled: true },
+const foldChildOutMessage = ChildOutMessage.match<
+  Update.Step<ParentModel, ParentMessage>
+>({
+  RequestedSave:
+    ({ id }) =>
+    model => ({
+      model: evo(model, { savedIds: Array.append(id) }),
     }),
+  RequestedCancel: () => model => ({
+    model: evo(model, { cancelled: () => true }),
   }),
-)
+})
 
 const foldChildUpdate = Update.foldChild({
   update: childUpdate,

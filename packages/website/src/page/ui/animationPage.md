@@ -2,7 +2,7 @@
 
 ## Overview
 
-Animation coordinates CSS enter and leave phases with a state machine and data attributes. You dispatch `Showed` or `Hid`, Animation records each lifecycle phase in its Model, and your CSS styles those phases. The transitions stay visible in DevTools and can be tested through update without waiting for a browser animation.
+Animation coordinates CSS enter and leave phases with a state machine and data attributes. A parent Message calls the child-owned `Animation.toggle` entry point through `Update.foldChildStep`, Animation records each lifecycle phase in its Model, and your CSS styles those phases. The transitions stay visible in DevTools and can be tested through update without waiting for a browser animation.
 
 Animation uses the [OutMessage](/core/submodel#surfacing-facts) pattern. The `foldOutMessage` of your [`Update.foldChild`](/core/submodel#fold-child) config handles `StartedLeaveAnimating` by providing a Command that detects settlement, then handles `TransitionedOut` when post-animation cleanup can begin. Dialog, Menu, Popover, Listbox, and Combobox use the same Submodel internally when `isAnimated` is true.
 
@@ -24,7 +24,7 @@ Check out how Animation is wired up in a [real Foldkit app](https://github.com/f
 
 ## Examples
 
-Send `Animation.Showed()` to start the enter animation and `Animation.Hid()` to start the leave animation. Style with Tailwind data-attribute selectors like `data-[closed]:opacity-0`.
+Dispatch a parent Message that applies `Animation.toggle` through `Update.foldChildStep`. Style with Tailwind data-attribute selectors like `data-[closed]:opacity-0`.
 
 ::Demo{name="animation"}
 
@@ -34,11 +34,13 @@ Send `Animation.Showed()` to start the enter animation and `Animation.Hid()` to 
 
 Animation drives the enter phase to completion on its own. The leave phase hands control back to the parent halfway through so the parent can decide how settlement is detected. For example, Foldkit's [Dialog](/ui/dialog) just waits for CSS, while its [Popover](/ui/popover) races CSS against the anchor button scrolling off-screen. The asymmetry exists because leave detection varies by consumer, while enter detection does not.
 
+Internally, `Animation.toggle` applies the `Showed` or `Hid` Message according to the current Animation Model.
+
 ```diagram
 ENTER                                LEAVE
 Animation drives completion          Parent detects settlement
 
-Showed()                              Hid()
+Showed (internal Message)             Hid (internal Message)
    |                                    |
    v                                    v
 EnterStart                           LeaveStart
@@ -76,6 +78,10 @@ The `animateSize` option uses CSS grid (`grid-template-rows: 0fr` → `1fr`) for
 | `data-transition` | Present during any animation phase.                                                    |
 
 ## API Reference
+
+### toggle
+
+`Animation.toggle(model)` returns the Animation update result that starts the enter or leave lifecycle according to `model.isShowing`. Use it as the `update` entry point of `Update.foldChildStep` when a parent Message toggles visibility.
 
 ### InitConfig {#init-config}
 

@@ -26,12 +26,7 @@ import {
 // NOTE: Animation imports are split across schema + update to avoid a circular
 // dependency: animation → html → runtime → devtools → menu → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
-import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-  type OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
+import * as Animation from '../animation/schema.js'
 import { update as animationUpdate } from '../animation/update.js'
 import { groupContiguous } from '../group.js'
 import * as OptionExt from '../internal/optionExtensions.js'
@@ -61,7 +56,7 @@ export const Model = Schema.Struct({
   isOpen: Schema.Boolean,
   isAnimated: Schema.Boolean,
   isModal: Schema.Boolean,
-  animation: AnimationModel,
+  animation: Animation.Model,
   maybeActiveItemIndex: Schema.Option(Schema.Number),
   activationTrigger: ActivationTrigger,
   searchQuery: Schema.String,
@@ -108,7 +103,7 @@ export const Message = defineMessageUnion({
   SuppressedSpaceScroll: {},
   CompletedAnchorMenu: {},
   CompletedPortalMenuBackdrop: {},
-  GotAnimationMessage: { message: AnimationMessage },
+  GotAnimationMessage: { message: Animation.Message },
   PressedPointerOnButton: {
     pointerType: Schema.String,
     button: Schema.Number,
@@ -180,7 +175,7 @@ export const init = (config: InitConfig): Model => ({
   isOpen: false,
   isAnimated: config.isAnimated ?? false,
   isModal: config.isModal ?? false,
-  animation: animationInit({ id: `${config.id}-items` }),
+  animation: Animation.init({ id: `${config.id}-items` }),
   maybeActiveItemIndex: Option.none(),
   activationTrigger: 'Keyboard',
   searchQuery: '',
@@ -302,14 +297,14 @@ export const DetectMovementOrAnimationEnd = Command.define(
         Dom.detectElementMovement(buttonSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
         Dom.waitForAnimationSettled(itemsSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
@@ -317,16 +312,15 @@ export const DetectMovementOrAnimationEnd = Command.define(
   },
 )
 
-const foldAnimationOutMessage = Match.type<AnimationOutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    StartedLeaveAnimating: () => model => ({
-      model,
-      commands: [DetectMovementOrAnimationEnd({ id: model.id })],
-    }),
-    TransitionedOut: () => model => ({ model }),
+const foldAnimationOutMessage = Animation.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  StartedLeaveAnimating: () => model => ({
+    model,
+    commands: [DetectMovementOrAnimationEnd({ id: model.id })],
   }),
-)
+  TransitionedOut: () => model => ({ model }),
+})
 
 const foldAnimation = Update.foldChild({
   update: animationUpdate,
@@ -371,7 +365,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       return Update.combine(baseModel, [
         stepModel => ({ model: stepModel, commands: openCommands }),
-        foldAnimation(AnimationMessage.Showed()),
+        foldAnimation(Animation.Message.Showed()),
         stepModel => ({
           model: evo(stepModel, { isOpen: () => true }),
         }),
@@ -397,7 +391,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       return Update.combine(closed, [
         stepModel => ({ model: stepModel, commands }),
-        foldAnimation(AnimationMessage.Hid()),
+        foldAnimation(Animation.Message.Hid()),
       ])
     }
 

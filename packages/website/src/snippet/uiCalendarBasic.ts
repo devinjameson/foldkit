@@ -55,24 +55,23 @@ const Message = defineMessageUnion({
 // `ChangedViewMonth` fires when navigation shifts the visible month without
 // selecting a date. Each arm returns an Update.Step over the parent Model,
 // which already has the next Calendar Model written back:
-const foldCalendarOutMessage = Match.type<UiCalendar.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    // The child has emitted `SelectedDate`. This is where the parent lifts
-    // the committed date into its own field. That field is then passed back
-    // to the calendar as `maybeSelectedDate`, so the parent stays the single
-    // source of truth for the selection.
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, { maybeSelectedDate: () => Option.some(date) }),
-      }),
-    // The child has emitted `ChangedViewMonth`. In this arm the parent can
-    // update its own state or dispatch its own Commands, for example
-    // prefetch month data, fire analytics, or trigger a downstream Command.
-    ChangedViewMonth: () => model => ({ model }),
-  }),
-)
+const foldCalendarOutMessage = UiCalendar.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  // The child has emitted `SelectedDate`. This is where the parent lifts
+  // the committed date into its own field. That field is then passed back
+  // to the calendar as `maybeSelectedDate`, so the parent stays the single
+  // source of truth for the selection.
+  SelectedDate:
+    ({ date }) =>
+    model => ({
+      model: evo(model, { maybeSelectedDate: () => Option.some(date) }),
+    }),
+  // The child has emitted `ChangedViewMonth`. In this arm the parent can
+  // update its own state or dispatch its own Commands, for example
+  // prefetch month data, fire analytics, or trigger a downstream Command.
+  ChangedViewMonth: () => model => ({ model }),
+})
 
 // Update.foldChild wires the child into the parent: it delegates navigation,
 // focus, and picker-mode transitions to UiCalendar.update, writes the next

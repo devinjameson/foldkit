@@ -1,14 +1,13 @@
-import { Match, Option } from 'effect'
+import { Option } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-const toParentDialogOutMessage = Match.type<Dialog.OutMessage>().pipe(
-  Match.withReturnType<OutMessage | undefined>(),
-  Match.tagsExhaustive({
-    Opened: () => undefined,
-    Closed: () => OutMessage.ClosedDialog(),
-  }),
-)
+const toParentDialogOutMessage = Dialog.OutMessage.match<
+  OutMessage | undefined
+>({
+  Opened: () => undefined,
+  Closed: () => OutMessage.ClosedDialog(),
+})
 
 const foldDialogClose = Update.foldChildStep({
   update: Dialog.close,

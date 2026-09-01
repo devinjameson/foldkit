@@ -53,19 +53,16 @@ const RedirectToHome = Command.define('RedirectToHome', {
 type UpdateReturn = Update.Return<Model, Message>
 const withUpdateReturn = Match.withReturnType<UpdateReturn>()
 
-const foldLoggedOutOutMessage: (
-  outMessage: LoggedOut.OutMessage,
-) => Update.Step<Model, Message> = Match.type<LoggedOut.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    SucceededLogin:
-      ({ session }) =>
-      () => ({
-        model: LoggedIn.init(AppRoute.Dashboard(), session),
-        commands: [SaveSession({ session }), RedirectToDashboard()],
-      }),
-  }),
-)
+const foldLoggedOutOutMessage = LoggedOut.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  SucceededLogin:
+    ({ session }) =>
+    () => ({
+      model: LoggedIn.init(AppRoute.Dashboard(), session),
+      commands: [SaveSession({ session }), RedirectToDashboard()],
+    }),
+})
 
 const foldLoggedOut = Update.foldChild({
   update: LoggedOut.update,
@@ -81,17 +78,14 @@ const foldLoggedOut = Update.foldChild({
   foldOutMessage: foldLoggedOutOutMessage,
 })
 
-const foldLoggedInOutMessage: (
-  outMessage: LoggedIn.OutMessage,
-) => Update.Step<Model, Message> = Match.type<LoggedIn.OutMessage>().pipe(
-  Match.withReturnType<Update.Step<Model, Message>>(),
-  Match.tagsExhaustive({
-    RequestedLogout: () => () => ({
-      model: LoggedOut.init(AppRoute.Home()),
-      commands: [ClearSession(), RedirectToHome()],
-    }),
+const foldLoggedInOutMessage = LoggedIn.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  RequestedLogout: () => () => ({
+    model: LoggedOut.init(AppRoute.Home()),
+    commands: [ClearSession(), RedirectToHome()],
   }),
-)
+})
 
 const foldLoggedIn = Update.foldChild({
   update: LoggedIn.update,

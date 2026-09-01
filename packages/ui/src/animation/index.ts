@@ -7,13 +7,20 @@ import {
   WaitForAnimationSettled,
   WaitForPaint,
   defaultLeaveCommand,
+  toggle,
   update,
 } from './update.js'
 
 export type { Hid, InitConfig, Showed } from './schema.js'
 export { init, Message, Model, OutMessage, TransitionState }
 
-export { WaitForAnimationSettled, WaitForPaint, defaultLeaveCommand, update }
+export {
+  WaitForAnimationSettled,
+  WaitForPaint,
+  defaultLeaveCommand,
+  toggle,
+  update,
+}
 
 // VIEW
 

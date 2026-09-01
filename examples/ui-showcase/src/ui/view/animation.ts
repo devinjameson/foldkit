@@ -26,7 +26,7 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
                 h.Class(triggerClassName),
                 h.OnClick(UiMessage.ToggledAnimationDemo()),
               ],
-              [model.isAnimationDemoShowing ? 'Hide Content' : 'Show Content'],
+              [model.animationDemo.isShowing ? 'Hide Content' : 'Show Content'],
             ),
           ],
         ),

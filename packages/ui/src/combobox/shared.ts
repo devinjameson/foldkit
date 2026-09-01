@@ -16,12 +16,7 @@ import {
 // NOTE: Animation imports are split across schema + update to avoid a circular
 // dependency: animation → html → runtime → devtools → combobox → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
-import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-  type OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
+import * as Animation from '../animation/schema.js'
 import { update as animationUpdate } from '../animation/update.js'
 import { groupContiguous } from '../group.js'
 import * as OptionExt from '../internal/optionExtensions.js'
@@ -45,7 +40,7 @@ export const BaseModel = Schema.Struct({
   nullable: Schema.Boolean,
   immediate: Schema.Boolean,
   selectInputOnFocus: Schema.Boolean,
-  animation: AnimationModel,
+  animation: Animation.Model,
   maybeActiveItemIndex: Schema.Option(Schema.Number),
   activationTrigger: ActivationTrigger,
   inputValue: Schema.String,
@@ -79,7 +74,7 @@ export const baseInit = (config: BaseInitConfig): BaseModel => ({
   nullable: config.nullable ?? false,
   immediate: config.immediate ?? false,
   selectInputOnFocus: config.selectInputOnFocus ?? false,
-  animation: animationInit({ id: `${config.id}-items` }),
+  animation: Animation.init({ id: `${config.id}-items` }),
   maybeActiveItemIndex: Option.none(),
   activationTrigger: 'Keyboard',
   inputValue: '',
@@ -130,7 +125,7 @@ export const Message = defineMessageUnion({
   CompletedAttachComboboxPreventBlur: {},
   CompletedAttachComboboxSelectOnFocus: {},
   CompletedPortalComboboxBackdrop: {},
-  GotAnimationMessage: { message: AnimationMessage },
+  GotAnimationMessage: { message: Animation.Message },
   UpdatedInputValue: { value: Schema.String },
   PressedToggleButton: {
     restingInputValue: Schema.String,
@@ -294,14 +289,14 @@ export const DetectMovementOrAnimationEnd = Command.define(
         Dom.detectElementMovement(inputWrapperSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
         Dom.waitForAnimationSettled(itemsSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
@@ -333,16 +328,15 @@ export const makeUpdate = <Model extends BaseModel>(
   type PlainUpdateReturn = Update.Return<Model, Message>
   type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
-  const foldAnimationOutMessage = Match.type<AnimationOutMessage>().pipe(
-    Match.withReturnType<Update.Step<Model, Message>>(),
-    Match.tagsExhaustive({
-      StartedLeaveAnimating: () => model => ({
-        model,
-        commands: [DetectMovementOrAnimationEnd({ id: model.id })],
-      }),
-      TransitionedOut: () => model => ({ model }),
+  const foldAnimationOutMessage = Animation.OutMessage.match<
+    Update.Step<Model, Message>
+  >({
+    StartedLeaveAnimating: () => model => ({
+      model,
+      commands: [DetectMovementOrAnimationEnd({ id: model.id })],
     }),
-  )
+    TransitionedOut: () => model => ({ model }),
+  })
 
   const foldAnimation = Update.foldChild({
     update: animationUpdate,
@@ -389,7 +383,7 @@ export const makeUpdate = <Model extends BaseModel>(
           nextModel,
           Update.combine([
             stepModel => ({ model: stepModel, commands }),
-            foldAnimation(AnimationMessage.Hid()),
+            foldAnimation(Animation.Message.Hid()),
           ]),
           Update.withOutMessage(outMessage),
         )
@@ -405,7 +399,7 @@ export const makeUpdate = <Model extends BaseModel>(
             model: stepModel,
             commands: Array.getSomes([maybeLockScroll, maybeInertOthers]),
           }),
-          foldAnimation(AnimationMessage.Showed()),
+          foldAnimation(Animation.Message.Showed()),
           stepModel => ({
             model: constrainedEvo(stepModel, { isOpen: () => true }),
           }),
@@ -435,7 +429,7 @@ export const makeUpdate = <Model extends BaseModel>(
           comboboxClose.model,
           Update.combine([
             stepModel => ({ model: stepModel, commands }),
-            foldAnimation(AnimationMessage.Hid()),
+            foldAnimation(Animation.Message.Hid()),
           ]),
           Update.withOutMessage(comboboxClose.outMessage),
         )
