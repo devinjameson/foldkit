@@ -1,5 +1,5 @@
 import { Effect } from 'effect'
-import { Command } from 'foldkit'
+import { Command as Commands } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
 const Message = defineMessageUnion({
@@ -8,7 +8,7 @@ const Message = defineMessageUnion({
 
 const fetchWeatherEffect = Effect.succeed(Message.CompletedFetchWeather())
 
-export const fetchWeather = Command.define('FetchWeather', {
+export const fetchWeather = Commands.define('FetchWeather', {
   messages: [Message.CompletedFetchWeather],
   execute: fetchWeatherEffect,
 })

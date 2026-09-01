@@ -5,7 +5,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 import type { EntryHandlers, Variant } from '@foldkit/ui/toast'
 
 import * as Icon from '../../icon'
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { UiModel } from '../model'
 import { Toast } from '../toast'
 

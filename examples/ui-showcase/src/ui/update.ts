@@ -21,7 +21,7 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
-import { UiMessage } from './message'
+import { Message as UiMessage } from './message'
 import type {
   City,
   DemoColumn,
@@ -134,6 +134,15 @@ const foldMobileMenuDialog = Update.foldChild({
 
 const foldMobileMenuDialogOpen = Update.foldChildStep({
   update: Dialog.open,
+  read: (model: UiModel) => Option.some(model.mobileMenuDialog),
+  write: (model, nextMobileMenuDialog) =>
+    evo(model, { mobileMenuDialog: () => nextMobileMenuDialog }),
+  toParentMessage: message => UiMessage.GotMobileMenuDialogMessage({ message }),
+  foldOutMessage: foldDialogOutMessage,
+})
+
+const foldMobileMenuDialogClose = Update.foldChildStep({
+  update: Dialog.close,
   read: (model: UiModel) => Option.some(model.mobileMenuDialog),
   write: (model, nextMobileMenuDialog) =>
     evo(model, { mobileMenuDialog: () => nextMobileMenuDialog }),
@@ -829,8 +838,16 @@ const foldAnimationDemo = Update.foldChild({
   foldOutMessage: foldAnimationDemoOutMessage,
 })
 
-const foldAnimationDemoToggle = Update.foldChildStep({
-  update: Animation.toggle,
+const foldAnimationDemoShow = Update.foldChildStep({
+  update: Animation.show,
+  read: (model: UiModel) => Option.some(model.animationDemo),
+  write: (model, nextAnimationDemo) =>
+    evo(model, { animationDemo: () => nextAnimationDemo }),
+  toParentMessage: message => UiMessage.GotAnimationDemoMessage({ message }),
+})
+
+const foldAnimationDemoHide = Update.foldChildStep({
+  update: Animation.hide,
   read: (model: UiModel) => Option.some(model.animationDemo),
   write: (model, nextAnimationDemo) =>
     evo(model, { animationDemo: () => nextAnimationDemo }),
@@ -879,8 +896,6 @@ const foldVirtualListVariableDemoScrollToIndex = Update.foldChild({
 
 export const uiUpdate = (model: UiModel, message: UiMessage) =>
   UiMessage.match<Update.Return<UiModel, UiMessage>>(message, {
-    ClickedOpenMobileMenu: () => foldMobileMenuDialogOpen(model),
-
     GotMobileMenuDialogMessage: ({ message }) =>
       foldMobileMenuDialog(model, message),
 
@@ -1127,7 +1142,10 @@ export const uiUpdate = (model: UiModel, message: UiMessage) =>
 
     GotAnimationDemoMessage: ({ message }) => foldAnimationDemo(model, message),
 
-    ToggledAnimationDemo: () => foldAnimationDemoToggle(model),
+    ToggledAnimationDemo: () =>
+      model.animationDemo.isShowing
+        ? foldAnimationDemoHide(model)
+        : foldAnimationDemoShow(model),
 
     GotVirtualListDemoMessage: ({ message }) =>
       foldVirtualListDemo(model, message),
@@ -1147,3 +1165,9 @@ export const uiUpdate = (model: UiModel, message: UiMessage) =>
         Math.floor(VIRTUAL_LIST_ROW_COUNT / 2),
       ),
   })
+
+export const openMobileMenu = (model: UiModel) =>
+  foldMobileMenuDialogOpen(model)
+
+export const closeMobileMenu = (model: UiModel) =>
+  foldMobileMenuDialogClose(model)

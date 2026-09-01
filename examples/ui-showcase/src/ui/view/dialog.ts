@@ -4,7 +4,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Combobox, Dialog } from '@foldkit/ui'
 
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { City, UiModel } from '../model'
 import { CityCombobox, comboboxInputs } from './combobox'
 

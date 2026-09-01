@@ -226,7 +226,7 @@ Keeps a Got wrapper payload to the child Message plus routing keys: message, id,
 
 ### foldkit/no-child-message-construction-in-root {#no-child-message-construction-in-root}
 
-Rejects constructing a child Message variant from outside the child. Call a child-exported helper and route its output through the wrapper.
+Rejects constructing a child Message variant from a parent. Expose a child-owned update capability that applies the internal fact, then integrate it with `Update.foldChild` or `Update.foldChildStep`. A child-owned view, Command, or Subscription may still construct that child's Messages; the boundary is ownership, not file spelling. See [Informing Submodels](/patterns/informing-submodels) for the complete pattern.
 
 ::Snippet{name="lintNoChildMessageConstructionInRoot" label="foldkit/no-child-message-construction-in-root example"}
 

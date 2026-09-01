@@ -794,8 +794,16 @@ const foldAnimationDemo = Update.foldChild({
   foldOutMessage: foldAnimationDemoOutMessage,
 })
 
-const foldAnimationDemoToggle = Update.foldChildStep({
-  update: Animation.toggle,
+const foldAnimationDemoShow = Update.foldChildStep({
+  update: Animation.show,
+  read: (model: Model) => Option.some(model.animationDemo),
+  write: (model, nextAnimationDemo) =>
+    evo(model, { animationDemo: () => nextAnimationDemo }),
+  toParentMessage: message => Message.GotAnimationDemoMessage({ message }),
+})
+
+const foldAnimationDemoHide = Update.foldChildStep({
+  update: Animation.hide,
   read: (model: Model) => Option.some(model.animationDemo),
   write: (model, nextAnimationDemo) =>
     evo(model, { animationDemo: () => nextAnimationDemo }),
@@ -1148,7 +1156,10 @@ export const update = (model: Model, message: Message) =>
 
     GotAnimationDemoMessage: ({ message }) => foldAnimationDemo(model, message),
 
-    ToggledAnimationDemo: () => foldAnimationDemoToggle(model),
+    ClickedToggleAnimationDemo: () =>
+      model.animationDemo.isShowing
+        ? foldAnimationDemoHide(model)
+        : foldAnimationDemoShow(model),
 
     GotFileDropBasicDemoMessage: ({ message }) =>
       foldFileDropBasicDemo(model, message),

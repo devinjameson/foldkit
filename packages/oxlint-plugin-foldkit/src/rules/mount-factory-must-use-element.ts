@@ -1,9 +1,41 @@
 import { Array, Effect, Option, pipe } from 'effect'
-import { AST, Diagnostic, type ESTree, Rule, RuleContext } from 'effect-oxlint'
+import {
+  AST,
+  Diagnostic,
+  type ESTree,
+  type Reference,
+  Rule,
+  RuleContext,
+} from 'effect-oxlint'
 
-import { isCallExpression, isObjectExpression } from '../guards.ts'
+import {
+  indexReferences,
+  isCallExpression,
+  isObjectExpression,
+  resolveFoldkitApiPath,
+} from '../guards.ts'
 
 const MOUNT_DEFINITION_METHODS = ['define', 'defineStream']
+
+const isMountDefinitionCall = (
+  node: ESTree.CallExpression,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
+): boolean => {
+  if (references === undefined) {
+    return AST.isCallOf(node, 'Mount', MOUNT_DEFINITION_METHODS)
+  }
+
+  return Option.exists(resolveFoldkitApiPath(references, node.callee), path => {
+    const [namespace, methodName, extraMember] = path
+
+    return (
+      namespace === 'Mount' &&
+      methodName !== undefined &&
+      MOUNT_DEFINITION_METHODS.includes(methodName) &&
+      extraMember === undefined
+    )
+  })
+}
 
 const ELEMENT_FIELD = 'element'
 
@@ -225,11 +257,14 @@ export const mountFactoryMustUseElement = Rule.define({
   }),
   create: function* () {
     const ctx = yield* RuleContext
+    const scopes = ctx.sourceCode.scopeManager?.scopes
+    const references =
+      scopes === undefined ? undefined : indexReferences(scopes)
     return {
       CallExpression: (node: ESTree.Node) => {
         if (
           !isCallExpression(node) ||
-          !AST.isCallOf(node, 'Mount', MOUNT_DEFINITION_METHODS)
+          !isMountDefinitionCall(node, references)
         ) {
           return Effect.void
         }

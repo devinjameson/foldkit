@@ -2,7 +2,7 @@ import { Subscription } from 'foldkit'
 
 import { DragAndDrop, Slider, VirtualList } from '@foldkit/ui'
 
-import { UiMessage } from './message'
+import { Message as UiMessage } from './message'
 import type { UiModel } from './model'
 
 const dragAndDropSubscriptions = Subscription.lift({

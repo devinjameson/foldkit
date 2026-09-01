@@ -7,7 +7,7 @@ import { Combobox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/combobox'
 
 import * as Icon from '../../icon'
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { City, UiModel } from '../model'
 
 export const CityCombobox = Combobox.create<City>()

@@ -5,6 +5,7 @@ import { isAbsolute, relative } from 'node:path'
 export type LintDiagnostic = Readonly<{
   code: string
   filename: string
+  message: string
 }>
 
 const parseDiagnostic = (cwd: string, value: unknown): LintDiagnostic => {
@@ -14,14 +15,20 @@ const parseDiagnostic = (cwd: string, value: unknown): LintDiagnostic => {
     !('code' in value) ||
     typeof value.code !== 'string' ||
     !('filename' in value) ||
-    typeof value.filename !== 'string'
+    typeof value.filename !== 'string' ||
+    !('message' in value) ||
+    typeof value.message !== 'string'
   ) {
     throw new Error('Oxlint returned an invalid diagnostic')
   }
   const filename = isAbsolute(value.filename)
     ? relative(cwd, value.filename)
     : value.filename
-  return { code: value.code, filename: filename.replaceAll('\\', '/') }
+  return {
+    code: value.code,
+    filename: filename.replaceAll('\\', '/'),
+    message: value.message,
+  }
 }
 
 const parseDiagnostics = (

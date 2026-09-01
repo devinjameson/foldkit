@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { runOxlint } from './run-oxlint.ts'
+import { type LintDiagnostic, runOxlint } from './run-oxlint.ts'
 
 // Runs every rule through real oxlint against fixtures written in real
 // Foldkit idioms. `invalid/` must produce at least one diagnostic and
@@ -45,7 +45,10 @@ afterAll(() => {
 
 type FixtureKind = 'valid' | 'invalid'
 
-const countDiagnostics = (rule: string, kind: FixtureKind): number => {
+const diagnosticsFor = (
+  rule: string,
+  kind: FixtureKind,
+): ReadonlyArray<LintDiagnostic> => {
   const targetDir = join(fixturesRoot, rule, kind)
   const config = {
     plugins: ['typescript'],
@@ -70,7 +73,28 @@ const countDiagnostics = (rule: string, kind: FixtureKind): number => {
       )
     }
   }
-  return diagnostics.length
+  return diagnostics
+}
+
+const countDiagnostics = (rule: string, kind: FixtureKind): number =>
+  diagnosticsFor(rule, kind).length
+
+const reportedCalleeLabel = (diagnostic: LintDiagnostic): string => {
+  const match = diagnostic.message.match(/`([^`]+)\(\.\.\.\)`/)
+  if (match === null) {
+    throw new Error(
+      `Diagnostic does not contain a callee label: ${diagnostic.message}`,
+    )
+  }
+
+  const [, label] = match
+  if (label === undefined) {
+    throw new Error(
+      `Diagnostic has an empty callee label: ${diagnostic.message}`,
+    )
+  }
+
+  return label
 }
 
 const ruleFixtures = readdirSync(fixturesRoot, { withFileTypes: true })
@@ -101,6 +125,54 @@ describe('real-oxlint rule fixtures', () => {
     expect(countDiagnostics('no-impure-call-at-decision-time', 'invalid')).toBe(
       23,
     )
+  })
+
+  it('reports every direct child Message import form', () => {
+    const diagnostics = diagnosticsFor(
+      'no-child-message-construction-in-root',
+      'invalid',
+    )
+
+    expect(diagnostics.map(reportedCalleeLabel).sort()).toEqual(
+      [
+        'Child.Message.ClickedBarrelSave',
+        'Child.Message.ClickedDirectBarrelSave',
+        'Child.Message.ClickedNestedSave',
+        'Child.Message.ClickedParentViewSave',
+        'Child.Message.ClickedWorkspaceSave',
+        'Child.server.Message.ClickedServerChildSave',
+        'CommandPalette.Message.OpenedCommandPalette',
+        'DirectChild.Message.ClickedDirectChildSave',
+        'Feature.Message.ClickedFeatureSave',
+        'Profile.Message.ClickedProfileSave',
+        'Search.Message.ClickedSearchResult',
+      ].sort(),
+    )
+  })
+
+  it('resolves aliased constructors and helpers to their imported APIs', () => {
+    expect(countDiagnostics('no-hardcoded-route-strings', 'invalid')).toBe(2)
+    expect(countDiagnostics('keyed-required-for-mapped-rows', 'invalid')).toBe(
+      3,
+    )
+    expect(
+      countDiagnostics('got-prefix-requires-submodel-payload', 'invalid'),
+    ).toBe(3)
+    expect(
+      countDiagnostics('wrap-child-output-in-got-message', 'invalid'),
+    ).toBe(2)
+    expect(
+      countDiagnostics('got-wrapper-carries-only-routing', 'invalid'),
+    ).toBe(2)
+    expect(countDiagnostics('no-noop-message', 'invalid')).toBe(2)
+  })
+
+  it('recognizes explicit and contextual HtmlBuilder parameters', () => {
+    expect(countDiagnostics('no-empty-children-array', 'invalid')).toBe(6)
+  })
+
+  it('tracks same-named tagged unions by binding', () => {
+    expect(countDiagnostics('no-empty-object-tagged-call', 'invalid')).toBe(3)
   })
 
   it('fixes only structurally safe empty commands properties', async () => {

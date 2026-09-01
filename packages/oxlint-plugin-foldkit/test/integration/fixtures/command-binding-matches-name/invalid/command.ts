@@ -1,5 +1,5 @@
 import { Effect } from 'effect'
-import { Command } from 'foldkit'
+import { Command as Commands } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
 const Message = defineMessageUnion({
@@ -7,7 +7,7 @@ const Message = defineMessageUnion({
 })
 
 
-export const SaveUser = Command.define('FetchUser', {
+export const SaveUser = Commands.define('FetchUser', {
   messages: [Message.CompletedFetchUser],
   execute: Effect.succeed(Message.CompletedFetchUser()),
 })

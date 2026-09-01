@@ -6,6 +6,8 @@ import * as Update from 'foldkit/update'
 import * as Animation from '../animation/schema.js'
 import {
   defaultLeaveCommand as animationDefaultLeaveCommand,
+  hide as animationHide,
+  show as animationShow,
   update as animationUpdate,
 } from '../animation/update.js'
 import * as OptionExt from '../internal/optionExtensions.js'
@@ -180,8 +182,7 @@ export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
 
   const foldEntryAnimationShow = (entry: Entry) =>
     Update.foldChildStep({
-      update: (animation: Animation.Model) =>
-        animationUpdate(animation, Animation.Message.Showed()),
+      update: animationShow,
       read: readEntryAnimation(entry.id),
       write: writeEntryAnimation(entry.id),
       toParentMessage: toGotAnimationMessage(entry.id),
@@ -189,8 +190,7 @@ export const makeRuntime = <A, I>(payloadSchema: Schema.Codec<A, I>) => {
 
   const foldEntryAnimationHide = (entry: Entry) =>
     Update.foldChildStep({
-      update: (animation: Animation.Model) =>
-        animationUpdate(animation, Animation.Message.Hid()),
+      update: animationHide,
       read: readEntryAnimation(entry.id),
       write: writeEntryAnimation(entry.id),
       toParentMessage: toGotAnimationMessage(entry.id),

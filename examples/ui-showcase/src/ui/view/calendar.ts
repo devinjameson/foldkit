@@ -5,7 +5,7 @@ import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
 import { Calendar } from '@foldkit/ui'
 
 import * as Icon from '../../icon'
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const containerClassName =

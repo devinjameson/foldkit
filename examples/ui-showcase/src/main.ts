@@ -20,10 +20,10 @@ import { Dialog, Nav } from '@foldkit/ui'
 
 import * as Icon from './icon'
 import { uiInit } from './ui/init'
-import { UiMessage } from './ui/message'
+import { Message as UiMessage } from './ui/message'
 import { UiModel } from './ui/model'
 import * as UiSubscriptions from './ui/subscriptions'
-import { uiUpdate } from './ui/update'
+import { closeMobileMenu, openMobileMenu, uiUpdate } from './ui/update'
 import * as View from './ui/view'
 
 // ROUTE
@@ -158,6 +158,7 @@ export const Message = defineMessageUnion({
   CompletedLoadExternal: {},
   ClickedLink: { request: UrlRequest },
   ChangedUrl: { url: Url },
+  ClickedOpenMobileMenu: {},
   GotUiMessage: { message: UiMessage },
 })
 
@@ -211,13 +212,8 @@ export const init: Runtime.RoutingApplicationInit<Model, Message, Flags> = (
 
 // UPDATE
 
-const toUiMessage = (message: typeof UiMessage.Type): Message =>
+const toUiMessage = (message: UiMessage): Message =>
   Message.GotUiMessage({ message })
-
-const toMobileMenuDialogMessage = (message: Dialog.Message): Message =>
-  Message.GotUiMessage({
-    message: UiMessage.GotMobileMenuDialogMessage({ message }),
-  })
 
 const foldUi = Update.foldChild({
   update: uiUpdate,
@@ -226,22 +222,18 @@ const foldUi = Update.foldChild({
   toParentMessage: toUiMessage,
 })
 
-const foldMobileMenuDialogOutMessage = Dialog.OutMessage.match<
-  Update.Step<Model, Message>
->({
-  Opened: () => model => ({ model }),
-  Closed: () => model => ({ model }),
+const foldUiOpenMobileMenu = Update.foldChildStep({
+  update: openMobileMenu,
+  read: (model: Model) => Option.some(model.uiModel),
+  write: (model, nextUiModel) => evo(model, { uiModel: () => nextUiModel }),
+  toParentMessage: toUiMessage,
 })
 
-const foldMobileMenuDialogClose = Update.foldChildStep({
-  update: Dialog.close,
-  read: (model: Model) => Option.some(model.uiModel.mobileMenuDialog),
-  write: (model, nextMobileMenuDialog) =>
-    evo(model, {
-      uiModel: evo({ mobileMenuDialog: () => nextMobileMenuDialog }),
-    }),
-  toParentMessage: toMobileMenuDialogMessage,
-  foldOutMessage: foldMobileMenuDialogOutMessage,
+const foldUiCloseMobileMenu = Update.foldChildStep({
+  update: closeMobileMenu,
+  read: (model: Model) => Option.some(model.uiModel),
+  write: (model, nextUiModel) => evo(model, { uiModel: () => nextUiModel }),
+  toParentMessage: toUiMessage,
 })
 
 type UpdateReturn = Update.Return<Model, Message>
@@ -268,8 +260,10 @@ export const update = (model: Model, message: Message) =>
         stepModel => ({
           model: evo(stepModel, { route: () => urlToAppRoute(url) }),
         }),
-        foldMobileMenuDialogClose,
+        foldUiCloseMobileMenu,
       ]),
+
+    ClickedOpenMobileMenu: () => foldUiOpenMobileMenu(model),
 
     GotUiMessage: ({ message }) => foldUi(model, message),
   })
@@ -347,7 +341,7 @@ const componentNav = (
     toView,
   })
 
-const navListView = (
+const navListView = <Message>(
   items: ReadonlyArray<Nav.ItemInfo>,
   linkClassName: (isActive: boolean) => string,
   h: HtmlBuilder<Message>,
@@ -420,7 +414,7 @@ const sidebarView = (currentRoute: AppRoute, h: HtmlBuilder<Message>): Html =>
 const mobileMenuContent = (
   currentRoute: AppRoute,
   closeButton: Dialog.RenderInfo['closeButton'],
-  h: HtmlBuilder<Message>,
+  h: HtmlBuilder<UiMessage>,
 ): Html =>
   h.div(
     [h.Class('flex flex-col h-full')],
@@ -509,17 +503,25 @@ const mobileHeaderView = (model: Model, h: HtmlBuilder<Message>): Html =>
           ),
           h.AriaExpanded(model.uiModel.mobileMenuDialog.isOpen),
           h.AriaLabel('Toggle menu'),
-          h.OnClick(toUiMessage(UiMessage.ClickedOpenMobileMenu())),
+          h.OnClick(Message.ClickedOpenMobileMenu()),
         ],
         [Icon.menu('w-6 h-6')],
       ),
     ],
   )
 
-const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html =>
+type MobileMenuViewInputs = Readonly<{
+  currentRoute: AppRoute
+}>
+
+const mobileMenuDialogView = Submodel.defineView<
+  UiModel,
+  UiMessage,
+  MobileMenuViewInputs
+>((model, { currentRoute }, h): Html =>
   h.submodel({
-    slotId: model.uiModel.mobileMenuDialog.id,
-    model: model.uiModel.mobileMenuDialog,
+    slotId: model.mobileMenuDialog.id,
+    model: model.mobileMenuDialog,
     view: Dialog.view,
     viewInputs: {
       toView: ({ dialog, backdrop, panel, closeButton, isVisible }) =>
@@ -533,13 +535,24 @@ const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html =>
                     ...panel,
                     h.Class('fixed inset-0 z-[60] bg-white flex flex-col'),
                   ],
-                  [mobileMenuContent(model.route, closeButton, h)],
+                  [mobileMenuContent(currentRoute, closeButton, h)],
                 ),
               ]
             : [],
         ),
     },
-    toParentMessage: message => toMobileMenuDialogMessage(message),
+    toParentMessage: message =>
+      UiMessage.GotMobileMenuDialogMessage({ message }),
+  }),
+)
+
+const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.submodel({
+    slotId: 'mobile-menu',
+    model: model.uiModel,
+    view: mobileMenuDialogView,
+    viewInputs: { currentRoute: model.route },
+    toParentMessage: toUiMessage,
   })
 
 const homeView = (h: HtmlBuilder<Message>): Html =>
