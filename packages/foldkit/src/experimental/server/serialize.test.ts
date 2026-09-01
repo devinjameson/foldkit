@@ -23,6 +23,7 @@ import {
   hydrationKeyMarker,
 } from '../../hydrationMarkers.js'
 import { defineMessageUnion } from '../../message/index.js'
+import { markTrustedInnerHtml } from '../../propertyProvenance.js'
 import { h as snabbdomH } from '../../snabbdom/index.js'
 import type { VNode } from '../../snabbdom/vnode.js'
 import { __patchVNode } from '../../vdom.js'
@@ -36,6 +37,15 @@ const Message = defineMessageUnion({
 type Message = typeof Message.Type
 
 const h = __htmlBuilder<Message>()
+const unrestrictedTextarea = customElement<Message>()('textarea')
+const elementWithTrustedInnerHtml = (
+  tagName: string,
+  innerHtml: string,
+): VNode => {
+  const props = { innerHTML: innerHtml }
+  markTrustedInnerHtml(props, innerHtml)
+  return snabbdomH(tagName, { props })
+}
 
 describe('serializeHtml', () => {
   let registry: BoundaryRegistry
@@ -500,8 +510,8 @@ describe('serializeHtml', () => {
     expect(serializeHtml(view)).toBe('<textarea>\n\nfirst line</textarea>')
   })
 
-  it('preserves a leading newline in children-rendered textarea content', () => {
-    const view = h.textarea([], ['\nfirst line'])
+  it('preserves a leading newline in internally built textarea content', () => {
+    const view = unrestrictedTextarea([], ['\nfirst line'])
     expect(serializeHtml(view)).toBe('<textarea>\n\nfirst line</textarea>')
   })
 
@@ -863,7 +873,10 @@ describe('raw text and RCDATA coverage', () => {
     // closes it and puts the rest of the fragment in the document.
     expect(() =>
       serializeHtml(
-        h.textarea([h.InnerHTML('</textarea><img src=x onerror=alert(1)>')]),
+        elementWithTrustedInnerHtml(
+          'textarea',
+          '</textarea><img src=x onerror=alert(1)>',
+        ),
       ),
     ).toThrow(/<\/textarea sequence/)
     expect(() =>
@@ -895,7 +908,7 @@ describe('trusted InnerHTML in newline-dropping elements', () => {
         '&NewLine;foo',
       ]) {
         const html = serializeHtml(
-          customElement<never>()(tagName)([h.InnerHTML(fragment)]),
+          elementWithTrustedInnerHtml(tagName, fragment),
         )
 
         expect(html, `${tagName} ${JSON.stringify(fragment)}`).toBe(
@@ -922,9 +935,9 @@ describe('trusted InnerHTML in newline-dropping elements', () => {
       }
     }
 
-    expect(() => serializeHtml(h.textarea([h.InnerHTML('\rfoo')]))).toThrow(
-      /carriage return/,
-    )
+    expect(() =>
+      serializeHtml(elementWithTrustedInnerHtml('textarea', '\rfoo')),
+    ).toThrow(/carriage return/)
   })
 
   it('does not pad an element that keeps its leading newline', () => {
@@ -964,12 +977,22 @@ describe('one owner for an element\u2019s content', () => {
 
   it('rejects InnerHTML alongside a controlled value', () => {
     for (const build of [
-      () => h.textarea([h.InnerHTML('<b>raw</b>'), h.Value('model')]),
       () => h.output([h.InnerHTML('<b>raw</b>'), h.Value('model')]),
       () => h.select([h.InnerHTML('<option></option>'), h.Value('model')]),
     ]) {
       expect(build).toThrow(/both h.InnerHTML and a controlled value/)
     }
+  })
+
+  it('rejects either innerHTML owner on a textarea', () => {
+    expect(() => unrestrictedTextarea([h.InnerHTML('<b>raw</b>')])).toThrow(
+      /must use h.Value/,
+    )
+    expect(() =>
+      unrestrictedTextarea([
+        Prop({ key: 'innerHTML', value: '<b>property</b>' }),
+      ]),
+    ).toThrow(/must use h.Value/)
   })
 
   it('rejects a client-only innerHTML property alongside a controlled value', () => {

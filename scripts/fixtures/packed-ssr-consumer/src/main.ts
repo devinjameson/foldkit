@@ -116,7 +116,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
             ),
             h.textarea(
               model.formState === 'Released'
-                ? [h.Id('released-textarea'), h.InnerHTML('textarea default')]
+                ? [h.Id('released-textarea'), h.Value('textarea default')]
                 : [h.Id('released-textarea'), h.Value('controlled')],
             ),
             h.output(

@@ -18,6 +18,7 @@ import {
 } from './server.js'
 
 const h = __htmlBuilder<never>()
+const unrestrictedTextarea = customElement<never>()('textarea')
 
 // NOTE: a hydratable render requires the deployment's build id, which every
 // case here supplies through this wrapper so each test keeps exercising what it
@@ -633,13 +634,18 @@ describe('renderToString', () => {
     rendersHydratable(h.textarea([h.Value('model')]), '>model</textarea>'),
   )
 
-  it.effect('renders an uncontrolled textarea with text children', () =>
-    rendersHydratable(h.textarea([], ['hello']), '>hello</textarea>'),
+  it.effect(
+    'renders an internally constructed textarea with text children',
+    () =>
+      rendersHydratable(
+        unrestrictedTextarea([], ['hello']),
+        '>hello</textarea>',
+      ),
   )
 
   it.effect(
-    'rejects a textarea with element children parsing folds to text',
-    () => failsHydratableRender(h.textarea([], [h.b([], ['x'])])),
+    'rejects an internally constructed textarea whose elements parse to text',
+    () => failsHydratableRender(unrestrictedTextarea([], [h.b([], ['x'])])),
   )
 
   it.effect(
@@ -648,10 +654,10 @@ describe('renderToString', () => {
   )
 
   it.effect(
-    'pads an uncontrolled <textarea> with empty then newline-prefixed text',
+    'pads an internally constructed <textarea> before newline-prefixed text',
     () =>
       rendersHydratable(
-        h.textarea([], ['', '\nfirst']),
+        unrestrictedTextarea([], ['', '\nfirst']),
         '\n\nfirst</textarea>',
       ),
   )

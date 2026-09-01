@@ -2691,6 +2691,13 @@ const assertSingleContentOwner = (
   const innerHtmlOwner = hasTrustedInnerHtml(properties)
     ? 'h.InnerHTML'
     : 'a client-only innerHTML property'
+  if (lowerTagName === 'textarea') {
+    throw new Error(
+      `[foldkit] <textarea> was given ${innerHtmlOwner}. Textarea content ` +
+        'must use h.Value because innerHTML stops updating the live value ' +
+        'after the browser marks the field dirty. Remove the innerHTML owner.',
+    )
+  }
   if (children.length > 0) {
     throw new Error(
       `[foldkit] <${lowerTagName}> was given both ${innerHtmlOwner} and children. ` +
@@ -3015,7 +3022,7 @@ const voidElement =
     createElement(tagName, attributes, [])
 
 const keyed =
-  <Message>() =>
+  <Message>(): KeyedFunction<Message> =>
   (tagName: TagName) =>
   (
     key: PropertyKey,
@@ -3035,6 +3042,35 @@ type ElementFunction<Message> = (
 type VoidElementFunction<Message> = (
   attributes: ReadonlyArray<Attribute<Message> | ChildAttribute>,
 ) => Html
+
+/** An attribute accepted by textarea builders. Textarea content must use
+ *  `h.Value`; innerHTML does not keep the live value tracking the Model after
+ *  the field is dirty. */
+export type TextareaAttribute<Message> = Exclude<
+  Attribute<Message>,
+  Readonly<{ _tag: 'InnerHTML' }>
+>
+
+type TextValueElementFunction<Message> = (
+  attributes: ReadonlyArray<TextareaAttribute<Message> | ChildAttribute>,
+) => Html
+
+type KeyedElementFunction<Message> = (
+  key: PropertyKey,
+  attributes?: ReadonlyArray<Attribute<Message> | ChildAttribute>,
+  children?: ReadonlyArray<Child>,
+) => Html
+
+type KeyedTextValueElementFunction<Message> = (
+  key: PropertyKey,
+  attributes?: ReadonlyArray<TextareaAttribute<Message> | ChildAttribute>,
+) => Html
+
+type KeyedFunction<Message> = <Name extends TagName>(
+  tagName: Name,
+) => Name extends 'textarea'
+  ? KeyedTextValueElementFunction<Message>
+  : KeyedElementFunction<Message>
 
 type HtmlElements<Message> = {
   a: ElementFunction<Message>
@@ -3137,7 +3173,7 @@ type HtmlElements<Message> = {
   tbody: ElementFunction<Message>
   td: ElementFunction<Message>
   template: ElementFunction<Message>
-  textarea: ElementFunction<Message>
+  textarea: TextValueElementFunction<Message>
   tfoot: ElementFunction<Message>
   th: ElementFunction<Message>
   thead: ElementFunction<Message>
@@ -5145,13 +5181,7 @@ export type HtmlBuilder<Message> = MessageUniverse<Message> &
   HtmlAttributes<Message> &
   Readonly<{
     empty: null
-    keyed: (
-      tagName: TagName,
-    ) => (
-      key: PropertyKey,
-      attributes?: ReadonlyArray<Attribute<Message> | ChildAttribute>,
-      children?: ReadonlyArray<Child>,
-    ) => Html
+    keyed: KeyedFunction<Message>
     submodel: <View extends AnySubmodelView>(
       config: SubmodelConfig<View, Message>,
     ) => Html

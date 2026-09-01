@@ -22,7 +22,7 @@ export type ViewInputs = Readonly<{
   content: Html
   className?: string
   attributes?: ReadonlyArray<ChildAttribute>
-  element?: TagName
+  element?: Exclude<TagName, 'textarea'>
   /** When true, wraps content in a CSS grid container that smoothly animates
    *  height via `grid-template-rows: 0fr → 1fr`. The element stays in the DOM
    *  when hidden (collapsed to zero height) instead of being removed. */

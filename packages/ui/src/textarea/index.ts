@@ -1,11 +1,16 @@
 import { Predicate } from 'effect'
-import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
+import type {
+  Attribute,
+  Html,
+  HtmlBuilder,
+  TextareaAttribute,
+} from 'foldkit/html'
 
 // VIEW
 
 /** Attribute groups the textarea component provides to the consumer's `toView` callback. */
 export type TextareaAttributes<Message> = Readonly<{
-  textarea: ReadonlyArray<Attribute<Message>>
+  textarea: ReadonlyArray<TextareaAttribute<Message>>
   label: ReadonlyArray<Attribute<Message>>
   description: ReadonlyArray<Attribute<Message>>
 }>

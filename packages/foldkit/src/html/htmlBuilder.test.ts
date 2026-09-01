@@ -164,6 +164,26 @@ describe('HtmlBuilder type guarantees', () => {
     expect(imgWithChildren).toBeTypeOf('function')
   })
 
+  it('restricts textarea content ownership on direct and keyed builders', () => {
+    if (false) {
+      // @ts-expect-error textarea content must be set with h.Value
+      inertHtml.textarea([], ['default'])
+
+      // @ts-expect-error textarea content must be set with h.Value
+      inertHtml.keyed('textarea')('draft', [], ['default'])
+
+      inertHtml.textarea([
+        // @ts-expect-error textarea content must be set with h.Value
+        inertHtml.InnerHTML('<b>default</b>'),
+      ])
+
+      inertHtml.keyed('textarea')('draft', [
+        // @ts-expect-error textarea content must be set with h.Value
+        inertHtml.InnerHTML('<b>default</b>'),
+      ])
+    }
+  })
+
   it('rejects an element builder call that omits attributes', () => {
     // @ts-expect-error children are optional, attributes are not
     const divWithoutAttributes = () => inertHtml.div()

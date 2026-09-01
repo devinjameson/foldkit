@@ -97,7 +97,7 @@ Configuration object passed to `Animation.view()`.
 | `animateSize` | `boolean`                           | `false` | Animates height collapse/expand using CSS grid. When true, the element stays in the DOM with grid-template-rows transitioning between 0fr and 1fr. |
 | `className`   | `string`                            | —       | CSS class for the animation wrapper.                                                                                                               |
 | `attributes`  | `ReadonlyArray<Attribute<Message>>` | —       | Additional attributes for the wrapper.                                                                                                             |
-| `element`     | `TagName`                           | `'div'` | The HTML element for the wrapper.                                                                                                                  |
+| `element`     | `Exclude<TagName, 'textarea'>`      | `'div'` | The HTML element for the wrapper. Textarea is excluded because the wrapper renders children.                                                       |
 
 ### OutMessage
 
