@@ -10,6 +10,7 @@ import {
   type PackageManager,
   devCommand,
   installDependencies,
+  readFoldkitSubtreeRef,
 } from '../utils/packages.js'
 import { validateProjectName } from '../validateName.js'
 
@@ -168,7 +169,11 @@ const installProjectDependencies = (
     yield* Console.log('')
   })
 
-const displaySuccessMessage = (name: string, packageManager: PackageManager) =>
+const displaySuccessMessage = (
+  name: string,
+  packageManager: PackageManager,
+  subtreeRef: string,
+) =>
   Effect.gen(function* () {
     yield* Console.log(chalk.bold('All systems nominal.'))
     yield* Console.log('')
@@ -178,9 +183,10 @@ const displaySuccessMessage = (name: string, packageManager: PackageManager) =>
     yield* Console.log(chalk.bold('AI-Assisted Development'))
     yield* Console.log('')
     yield* Console.log(
-      '  Vendor Foldkit in as a git subtree so your AI assistant can\n' +
-        '  reference the source, examples, and documentation. Commit\n' +
-        '  the scaffold first so subtree has a base commit to merge into:',
+      '  Vendor Foldkit in as a git subtree, pinned to the release this\n' +
+        '  project installs, so your AI assistant can reference the matching\n' +
+        '  source, examples, and documentation. Commit the scaffold first so\n' +
+        '  subtree has a base commit to merge into:',
     )
     yield* Console.log('')
     yield* Console.log(`  > ${chalk.cyan('cd')} ${name}`)
@@ -190,7 +196,7 @@ const displaySuccessMessage = (name: string, packageManager: PackageManager) =>
       `  > ${chalk.cyan('git commit -m "chore: initial commit"')}`,
     )
     yield* Console.log(
-      `  > ${chalk.cyan('git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash')}`,
+      `  > ${chalk.cyan(`git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git ${subtreeRef} --squash`)}`,
     )
     yield* Console.log('')
     yield* Console.log(`  Details: ${chalk.cyan('foldkit.dev/ai/overview')}`)
@@ -238,6 +244,9 @@ export const create = (input: CreateInput) =>
     const projectPath = path.resolve(name)
 
     yield* validateProject(name, projectPath, packageManager)
+
+    const subtreeRef = yield* readFoldkitSubtreeRef
+
     yield* setupProject(name, projectPath, scaffold, packageManager)
     yield* installProjectDependencies(
       projectPath,
@@ -245,7 +254,7 @@ export const create = (input: CreateInput) =>
       scaffold,
       input.maybeDependencyManifestsDirectory,
     )
-    yield* displaySuccessMessage(name, packageManager)
+    yield* displaySuccessMessage(name, packageManager, subtreeRef)
 
     return name
   })

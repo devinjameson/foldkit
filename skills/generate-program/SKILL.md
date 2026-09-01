@@ -307,12 +307,14 @@ After scaffolding, offer to vendor Foldkit in as a git subtree so future AI sess
 git init          # if not already a git repo
 git add .
 git commit -m "chore: initial commit"
-git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash
+git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git "foldkit@$(node -p "require('./node_modules/foldkit/package.json').version")" --squash
 ```
+
+The `foldkit@<version>` tag pins the subtree to the release the scaffold just installed, so the vendored source, examples, and docs match the APIs the app compiles against. Vendoring `main` instead can hand future sessions examples and APIs from a release the app has not installed. A canary install (`x.y.z-canary.<commit>`) has no tag; pin to the full hash of the commit its version names instead, which GitHub expands at `https://github.com/foldkit/foldkit/commit/<commit>`.
 
 This is optional but strongly recommended. The scaffolded `AGENTS.md` includes a `subtree_prompted: false` line that agents check on future sessions. If the subtree is absent and this flag is false, the agent offers to add it. Handling it up front here means the user's next AI session already has full context. If the user declines, update the line to `subtree_prompted: true` so they aren't asked again.
 
-To refresh the subtree later: `git subtree pull --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash`.
+To re-pin the subtree after a Foldkit package upgrade, run the same command with `pull` in place of `add`.
 
 ### Replace the scaffold
 

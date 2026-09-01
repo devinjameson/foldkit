@@ -9,6 +9,7 @@ import {
   buildUnresolvedDevDeps,
   dependencyExample,
   devCommand,
+  foldkitSubtreeRef,
   installCommand,
   scaffoldDevDependencies,
 } from './packages.js'
@@ -87,6 +88,46 @@ describe('scaffoldDevDependencies', () => {
     ).toEqual([])
     expect(scaffoldDevDependencies(Scaffold.Ssg())).toEqual(['@types/node'])
     expect(scaffoldDevDependencies(Scaffold.Ssr())).toEqual(['@types/node'])
+  })
+})
+
+describe('foldkitSubtreeRef', () => {
+  const sourceCommit = '4aab52dcbe58d06414a74e108307b9bcdab56df6'
+
+  it('pins a stable release to the foldkit tag for the released version', () => {
+    expect(
+      foldkitSubtreeRef({
+        schemaVersion: 1,
+        channel: 'stable',
+        sourceCommit,
+        packages: { foldkit: '0.156.0', '@foldkit/ui': '0.42.0' },
+        dependencies: { effect: '4.0.0-beta.106' },
+      }),
+    ).toBe('foldkit@0.156.0')
+  })
+
+  it('pins a canary release to its source commit, which no tag names', () => {
+    expect(
+      foldkitSubtreeRef({
+        schemaVersion: 1,
+        channel: 'canary',
+        sourceCommit,
+        packages: { foldkit: `0.156.0-canary.${sourceCommit.slice(0, 12)}` },
+        dependencies: {},
+      }),
+    ).toBe(sourceCommit)
+  })
+
+  it('falls back to the source commit when a stable manifest omits foldkit', () => {
+    expect(
+      foldkitSubtreeRef({
+        schemaVersion: 1,
+        channel: 'stable',
+        sourceCommit,
+        packages: {},
+        dependencies: {},
+      }),
+    ).toBe(sourceCommit)
   })
 })
 

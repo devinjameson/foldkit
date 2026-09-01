@@ -12,15 +12,17 @@ Architecture is only half of the context. APIs and conventions change, so the ag
 
 ## Vendoring the Foldkit Repository
 
-Vendor the Foldkit repository into your project as a git subtree:
+Vendor the Foldkit repository into your project as a git subtree, pinned to the release you have installed:
 
 ::Snippet{name="aiOverviewAddSubtree" label="vendor the Foldkit repository"}
+
+Each stable release publishes a `foldkit@<version>` git tag, and the command reads the installed version from `node_modules`, so the vendored copy describes the APIs your app compiles against. Vendoring `main` instead can hand an agent examples and docs from a release you have not installed. A canary install has no tag; its version names its source commit (`0.156.0-canary.<commit>`), and the full hash of that commit is the ref to pin instead. GitHub expands the short hash at `https://github.com/foldkit/foldkit/commit/<commit>`.
 
 The subtree gives an agent local access to the framework source, runnable examples, this documentation site, and the production apps built with Foldkit. Treat it as read-only reference material. Application imports should still come from the installed npm packages.
 
 Unlike a submodule, a subtree is committed with your repository. Teammates, CI runners, and cloud agents receive the reference source with a normal clone. Projects created with `create-foldkit-app` include a `FOLDKIT.md` that points agents to these references, an `AGENTS.md` for your own instructions, and a `.ignore` file that keeps `repos/` out of the editor file tree.
 
-Refresh the subtree when you want the latest source and examples:
+The subtree does not move on its own. After upgrading your Foldkit packages, re-pin it to the release you now have:
 
 ::Snippet{name="aiOverviewRefreshSubtree" label="refresh the Foldkit repository"}
 
@@ -28,7 +30,7 @@ Refresh the subtree when you want the latest source and examples:
 
 `create-foldkit-app` writes `FOLDKIT.md` when it creates the project, and the conventions in it change with the framework. A stale copy can steer an agent toward APIs the installed packages no longer export.
 
-Replace the whole file when you upgrade Foldkit. If you vendor the repository, copy `repos/foldkit/packages/create-foldkit-app/templates/base/FOLDKIT.md` over it. Otherwise take the [current template on GitHub](https://github.com/foldkit/foldkit/blob/main/packages/create-foldkit-app/templates/base/FOLDKIT.md). There is nothing to merge, because your own instructions live in `AGENTS.md`, which the upgrade leaves alone.
+Replace the whole file when you upgrade Foldkit. If you vendor the repository, re-pin the subtree to the new release and copy `repos/foldkit/packages/create-foldkit-app/templates/base/FOLDKIT.md` over it. Otherwise take the template from GitHub at the tag matching the installed version: `https://github.com/foldkit/foldkit/blob/foldkit@<version>/packages/create-foldkit-app/templates/base/FOLDKIT.md`. There is nothing to merge, because your own instructions live in `AGENTS.md`, which the upgrade leaves alone.
 
 ## Foldkit Skills
 
