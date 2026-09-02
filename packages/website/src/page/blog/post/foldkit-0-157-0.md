@@ -1,6 +1,6 @@
 ---
 title: Foldkit 0.156.0 and 0.157.0
-description: Foldkit 0.156.0 and 0.157.0 add two recommended lint rules, improve refined union matching, and update Story, Scene, Mount, Foldkit UI, and Vite.
+description: Two new recommended @foldkit/oxlint-plugin rules, less boilerplate when matching refined unions, plus updates to Story, Scene, Mount, @foldkit/ui, and Foldkit's Vite plugin.
 date: 2026-09-02
 coverImage: /blog/foldkit-0-157-0/cover.webp
 coverImageAlt: The number 157 in large cyan type layered over the number 156 in coral on a light gray background.
