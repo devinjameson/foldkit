@@ -77,7 +77,7 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
   ),
   Roadmap: docs(
     'Roadmap',
-    'The work that gates Foldkit 1.0, experimental features available today, possible directions after 1.0, and architectural decisions that will not change.',
+    'Where Foldkit is today, how it got here, the work remaining before 1.0, and the architectural promises that will not change.',
     'Docs',
   ),
   ComingFromReact: docs(
