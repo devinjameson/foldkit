@@ -114,14 +114,14 @@ describe('section predicates', () => {
       route: Route.AppRoute.Home(),
       isDocsSection: false,
       isBlog: false,
-      isSearch: false,
+      isSearch: true,
     },
     {
       name: 'Newsletter',
       route: Route.AppRoute.Newsletter(),
       isDocsSection: false,
       isBlog: false,
-      isSearch: false,
+      isSearch: true,
     },
     {
       name: 'Playground',

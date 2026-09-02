@@ -3,8 +3,7 @@ import { type Document, type HtmlBuilder } from 'foldkit/html'
 
 import { Shared } from '../component'
 import { Deployment } from '../deployment'
-import { docsView } from '../layout/docs'
-import * as Marketing from '../layout/marketing'
+import { Docs, Marketing } from '../layout'
 import { Message } from '../message'
 import { type Model } from '../model'
 import { Home, Newsletter, Playground } from '../page'
@@ -81,7 +80,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
           }),
       }),
     ),
-    Match.orElse(route => docsView(model, route, h)),
+    Match.orElse(route => Docs.view(model, route, h)),
   )
 
   return {

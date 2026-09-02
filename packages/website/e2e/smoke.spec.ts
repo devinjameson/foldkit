@@ -84,3 +84,35 @@ test('selects an item from the combobox', async ({ page }) => {
   await page.getByRole('option', { name: 'Oxford' }).click()
   await expect(combobox).toHaveValue('Oxford')
 })
+
+test('opens search from the landing page', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' })
+  await expect(page.locator('[data-foldkit-build]')).toHaveCount(0)
+
+  const dialog = page.locator('#search-dialog')
+
+  await page.getByRole('button', { name: 'Search documentation' }).click()
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('combobox')).toBeFocused()
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+
+  await page.keyboard.press('ControlOrMeta+k')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('combobox')).toBeFocused()
+})
+
+test('opens search from the landing page below the wide trigger', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 900 })
+  await page.goto('/', { waitUntil: 'networkidle' })
+  await expect(page.locator('[data-foldkit-build]')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Search documentation' }).click()
+
+  const dialog = page.locator('#search-dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('combobox')).toBeFocused()
+})

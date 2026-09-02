@@ -1,4 +1,5 @@
 export * as HeaderNav from './headerNav'
+export * as Search from './search'
 export * as Sidebar from './sidebar'
 export * as TableOfContents from './tableOfContents'
 export * as ThemeSelector from './themeSelector'

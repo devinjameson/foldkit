@@ -6,7 +6,7 @@ import { Link } from '../link'
 import { Message } from '../message'
 import { type Model } from '../model'
 import { gettingStartedRouter, homeRouter } from '../route'
-import { HeaderNav, Sidebar, ThemeSelector } from '../view'
+import { HeaderNav, Search, Sidebar, ThemeSelector } from '../view'
 
 const PagefindBody = ih.DataAttribute('pagefind-body', '')
 
@@ -39,10 +39,12 @@ const headerView = (model: Model, h: HtmlBuilder<Message>) =>
             'hidden sm:flex items-center gap-6 mr-4',
             h,
           ),
+          Search.triggerView('hidden lg:flex', h),
           h.div(
             [h.Class('hidden md:flex')],
             [ThemeSelector.view(model.maybeThemePreference, h)],
           ),
+          Search.compactTriggerView('hidden sm:inline-flex lg:hidden', h),
           h.a(
             [
               h.Href(gettingStartedRouter()),
@@ -111,6 +113,7 @@ export const view = (
     [
       Shared.skipNavLink,
       headerView(model, h),
+      Search.dialogView(model, h),
       Sidebar.mobileView(model, h),
       h.main(
         [
