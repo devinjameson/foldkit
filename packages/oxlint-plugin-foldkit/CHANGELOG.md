@@ -1,5 +1,31 @@
 # @foldkit/oxlint-plugin
 
+## 0.12.0
+
+### Minor Changes
+
+- [#1270](https://github.com/foldkit/foldkit/pull/1270) [`49d911a`](https://github.com/foldkit/foldkit/commit/49d911a3b592b658cd44918e668d28f10b19cde2) Thanks [@devinjameson](https://github.com/devinjameson)! - Resolve imported Foldkit, UI, Effect, and child Message APIs through Oxlint's scope manager. Rules now recognize aliased imports, ignore local shadows, and distinguish Submodel Message payloads from unrelated `message` fields without requiring TypeScript parser services.
+
+  This can introduce lint failures where an alias previously hid parent-owned construction of a child Message. Expose an update capability from the child and invoke it through `Update.foldChild` or `Update.foldChildStep` instead.
+
+  Expose Animation `show` and `hide` update capabilities so parents can drive visibility through `Update.foldChildStep` without constructing child Messages.
+
+- [#1213](https://github.com/foldkit/foldkit/pull/1213) [`57e2436`](https://github.com/foldkit/foldkit/commit/57e24366c8997cd235002f58c9dc38477a6cb1a3) Thanks [@devinjameson](https://github.com/devinjameson)! - Add the recommended `foldkit/prefer-effect-module-names` rule. It reports PascalCase modules imported from `effect` under abbreviated or trailing-underscore aliases and safely fixes aliases when the exported name is available. Qualify a same-named JavaScript or TypeScript global through `globalThis`. An explicit conflict alias such as `Order as EffectOrder` remains valid when an existing local or public binding must keep the module name.
+
+  Projects that want to keep Effect module aliases can disable the rule:
+
+  ```json
+  {
+    "rules": {
+      "foldkit/prefer-effect-module-names": "off"
+    }
+  }
+  ```
+
+- [#1234](https://github.com/foldkit/foldkit/pull/1234) [`c9f9c65`](https://github.com/foldkit/foldkit/commit/c9f9c65ffa49f50e838be794e369a7513f8d0d8a) Thanks [@devinjameson](https://github.com/devinjameson)! - Add `foldkit/no-impure-call-at-decision-time`, which flags direct time and randomness calls unless they appear inside a recognized deferred Effect or lifecycle execution callback. The rule reports a call whether it appears directly in Command args or is assigned to a local variable first. It respects shadowed globals, stays off in tests, runtime entry files, and host server files, and is enabled by the recommended preset used in newly scaffolded apps.
+
+  This can introduce lint failures in existing applications that use the recommended or all preset. Move reported calls into an Effect or lifecycle execution callback, then return generated values through Messages. Consumers can temporarily disable the rule while migrating.
+
 ## 0.11.0
 
 ### Minor Changes

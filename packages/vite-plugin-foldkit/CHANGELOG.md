@@ -1,5 +1,19 @@
 # @foldkit/vite-plugin
 
+## 0.20.1
+
+### Patch Changes
+
+- [#1213](https://github.com/foldkit/foldkit/pull/1213) [`57e2436`](https://github.com/foldkit/foldkit/commit/57e24366c8997cd235002f58c9dc38477a6cb1a3) Thanks [@devinjameson](https://github.com/devinjameson)! - Use full Effect module names in published source, examples, templates, and documentation. JavaScript and TypeScript globals that share an Effect module name are now qualified through `globalThis`.
+
+- [#1246](https://github.com/foldkit/foldkit/pull/1246) [`5b9a897`](https://github.com/foldkit/foldkit/commit/5b9a8976cf4d63e70a4937014fd29d7f04e6fb6a) Thanks [@filipfalcon](https://github.com/filipfalcon)! - Declare the DevTools overlay's imports to the dep optimizer.
+
+  The overlay is a virtual module injected into the served page, and its two imports, `@foldkit/devtools/vite` and `foldkit/devtools-host`, appear in no source file. Vite's optimizer scans only source, so on a cold cache (a fresh install, a changed lockfile) it discovered them on the first page load and re-optimized mid-session, and the full-page reload that follows tears down whatever the page was running. In development that was a flash on the first load; under a browser-mode test runner it was the suite itself: Vitest reports "Vite unexpectedly reloaded a test", the run flakes, and it can also hang outright when the runner keeps waiting on a browser session the reload destroyed.
+
+  The plugin now adds the overlay imports owned by registry-installed packages to `optimizeDeps.include` before serving it, so the optimizer has them before the first request and nothing changes mid-run. Projects that had added the entries to their own config as a workaround can drop them.
+
+  Each specifier is declared on the standing of the package that owns it: `@foldkit/devtools/vite` when `@foldkit/devtools` is a registry install, `foldkit/devtools-host` when `foldkit` is. One owned by a linked package, the workspace's own examples included, stays undeclared: the optimizer serves linked packages from source, and force-including one would freeze that source into the cache where edits to it no longer reach the page. A layout that links one package and installs the other gets exactly the declaration its installed half needs.
+
 ## 0.20.0
 
 ### Minor Changes

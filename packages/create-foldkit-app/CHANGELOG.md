@@ -1,5 +1,17 @@
 # create-foldkit-app
 
+## 0.32.1
+
+### Patch Changes
+
+- [#1213](https://github.com/foldkit/foldkit/pull/1213) [`57e2436`](https://github.com/foldkit/foldkit/commit/57e24366c8997cd235002f58c9dc38477a6cb1a3) Thanks [@devinjameson](https://github.com/devinjameson)! - Use full Effect module names in published source, examples, templates, and documentation. JavaScript and TypeScript globals that share an Effect module name are now qualified through `globalThis`.
+
+- [#1234](https://github.com/foldkit/foldkit/pull/1234) [`c9f9c65`](https://github.com/foldkit/foldkit/commit/c9f9c65ffa49f50e838be794e369a7513f8d0d8a) Thanks [@devinjameson](https://github.com/devinjameson)! - Add `foldkit/no-impure-call-at-decision-time`, which flags direct time and randomness calls unless they appear inside a recognized deferred Effect or lifecycle execution callback. The rule reports a call whether it appears directly in Command args or is assigned to a local variable first. It respects shadowed globals, stays off in tests, runtime entry files, and host server files, and is enabled by the recommended preset used in newly scaffolded apps.
+
+  This can introduce lint failures in existing applications that use the recommended or all preset. Move reported calls into an Effect or lifecycle execution callback, then return generated values through Messages. Consumers can temporarily disable the rule while migrating.
+
+- [#1279](https://github.com/foldkit/foldkit/pull/1279) [`0f787f3`](https://github.com/foldkit/foldkit/commit/0f787f3ff84b849c9ff90675c477026f4f011aba) Thanks [@devinjameson](https://github.com/devinjameson)! - Pin the recommended Foldkit subtree to the installed release instead of `main`, which can be ahead of the installed packages. The scaffolder's success message vendors `repos/foldkit` at the exact release it installs: the `foldkit@<version>` git tag for a stable release, the source commit for a canary. The `FOLDKIT.md` template derives the tag from the version in `node_modules/foldkit/package.json` at run time and points canary installs at the source commit their version names.
+
 ## 0.32.0
 
 ### Minor Changes
