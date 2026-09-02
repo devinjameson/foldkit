@@ -1,5 +1,76 @@
 # foldkit
 
+## 0.157.0
+
+### Minor Changes
+
+- [#1000](https://github.com/foldkit/foldkit/pull/1000) [`f26af99`](https://github.com/foldkit/foldkit/commit/f26af9919036186f853486ada8db73f13c61c1af) Thanks [@devinjameson](https://github.com/devinjameson)! - `Machine.unreachableStates` and `Machine.deadTransitions` accept an optional array of extra walk roots for entry states the declared Edge set does not reach from `initial`, such as states restored from persistence or entered through deep links. The roots are additive: `initial` is always a root, so passing extra roots can only shrink the findings. The analysis docs now state their assumptions plainly: the results describe the declared Edge set walked from its roots, the walk cannot see state advanced outside `transition` and `step`, and entry points other than `initial` must be passed as extra roots or the analysis reports false positives.
+
+- [#1229](https://github.com/foldkit/foldkit/pull/1229) [`13f4f70`](https://github.com/foldkit/foldkit/commit/13f4f703eb6ab6fdd3b90b1ea9ed09155c01031b) Thanks [@devinjameson](https://github.com/devinjameson)! - Let Mount integrations observe whether the rendered view is `Live` or `Paused` through the new `viewStateChanges` Stream supplied to `Mount.define` and `Mount.defineStream` execution.
+
+  The Stream begins with the rendered view state at the moment the Mount is acquired and stays open for the Mount's lifetime. That initial state is retained across asynchronous setup before the Stream is consumed. A live-acquired Mount that survives a time-travel render stays acquired and observes `Live`, then `Paused`, then `Live` after the latest live view has been patched back into the DOM. A Mount inserted by a replay starts in `Paused`, and a runtime without time travel reports only `Live`.
+
+  A Mount acquired by a historical render cannot dispatch to the live Model. If the resumed live view reuses its element and declares a Mount there, Foldkit releases the replay acquisition before starting the live action with the current args and dispatch. A Mount acquired by the live view stays live so asynchronous setup and external streams can continue; its results follow the latest live Submodel wiring without crossing into historical wiring. Integrations use `viewStateChanges` to stop DOM-derived interaction while the historical view is installed. Commands, Subscriptions, ManagedResources, the live Model, and DevTools history also continue normally.
+
+  This reserves `viewStateChanges` as a runtime-supplied Mount execution field. Rename any Mount arg with that name before upgrading. The low-level `MountAction.f` view-state parameter is now required; MountAction wrappers must accept and forward it.
+
+  Custom renderers without time travel can pass the public `Mount.liveViewStateChanges` Stream to that parameter. It emits `Live` immediately and stays open.
+
+- [#1268](https://github.com/foldkit/foldkit/pull/1268) [`3a4ccd0`](https://github.com/foldkit/foldkit/commit/3a4ccd0f6611f3ef90a5af43a821bbc2d8821fbe) Thanks [@devinjameson](https://github.com/devinjameson)! - Preserve structurally refined payload types in exhaustive Foldkit union matchers, migrate OutMessage folds to their owning union matcher, and add `Animation.toggle` as a child-owned visibility entry point.
+
+- [#1273](https://github.com/foldkit/foldkit/pull/1273) [`62ae446`](https://github.com/foldkit/foldkit/commit/62ae44614013a75af0e649f6ad593ae35a59b131) Thanks [@devinjameson](https://github.com/devinjameson)! - Preserve Message and OutMessage type safety across Story and Scene steps.
+
+  `Story.message`, `Story.expectOutMessage`, `Scene.Subscription.emit`, `Scene.expectOutMessage`, and `Scene.expectOutMessages` are now typed data steps rather than callable simulation transforms. Story and Scene validate those values against the Message and OutMessage types of the update under test, including narrow variants of a wider union.
+
+  ## Migration
+
+  Passing these steps directly to `story` or `scene` is unchanged. Any code that treated one of these returned steps as a function must migrate, including direct invocation, storing it as a simulation transform, or composition through Effect's `flow` or another helper in either Story or Scene.
+
+  Use the new `Story.steps` API for a reusable Story sequence. It accepts the same steps as `story`, preserves their Model, Message, and OutMessage constraints, and can itself be passed anywhere a Story step is accepted.
+
+  Scene has no grouped-step API. Pass `Subscription.emit` and OutMessage assertion steps as separate arguments to `scene`; do not compose them as functions.
+
+  Before:
+
+  ```ts
+  import { flow } from 'effect'
+  import { given, message } from 'foldkit/story'
+
+  const givenIncremented = flow(
+    given({ count: 0 }),
+    message(ClickedIncrement()),
+  )
+  ```
+
+  After:
+
+  ```ts
+  import { given, message, steps } from 'foldkit/story'
+
+  const givenIncremented = steps(
+    given({ count: 0 }),
+    message(ClickedIncrement()),
+  )
+  ```
+
+  Remove the `flow` import when it was used only to group Story steps. This is not a general deprecation of Effect's `flow`; continue to use it for ordinary function composition outside the Story step API.
+
+- [#1269](https://github.com/foldkit/foldkit/pull/1269) [`b5ec356`](https://github.com/foldkit/foldkit/commit/b5ec356d1d88d136f77bca416b753479d4aa7b50) Thanks [@devinjameson](https://github.com/devinjameson)! - Reject children and `h.InnerHTML` passed to `h.textarea` or `h.keyed('textarea')` so the Model remains the field's single source of truth. This is a breaking change: move textarea content into the live value property with `h.Value(text)`. The UI Textarea helper now exposes the narrower `TextareaAttribute` group. Animation wrapper elements and Virtual List row elements also exclude `textarea` because both render children.
+
+### Patch Changes
+
+- [#1250](https://github.com/foldkit/foldkit/pull/1250) [`21d56b2`](https://github.com/foldkit/foldkit/commit/21d56b2de3cdc6a010d1b1e1ac9af56ee1169583) Thanks [@devinjameson](https://github.com/devinjameson)! - Rename the Foldkit philosophy page to “Why Foldkit” and update its URL in the package README.
+
+- [#1213](https://github.com/foldkit/foldkit/pull/1213) [`57e2436`](https://github.com/foldkit/foldkit/commit/57e24366c8997cd235002f58c9dc38477a6cb1a3) Thanks [@devinjameson](https://github.com/devinjameson)! - Use full Effect module names in published source, examples, templates, and documentation. JavaScript and TypeScript globals that share an Effect module name are now qualified through `globalThis`.
+
+- [#1114](https://github.com/foldkit/foldkit/pull/1114) [`1593f90`](https://github.com/foldkit/foldkit/commit/1593f90f783752aba16c9c77a171d3d72f9206df) Thanks [@devinjameson](https://github.com/devinjameson)! - Let a consumer export a Machine Edge built with `to` or `when` from `foldkit/experimental/machine`.
+
+  `Edge` has a hidden field that carries the guard value type. Its key was a `unique symbol` that Foldkit did not export. TypeScript had to write that key into the consumer's `.d.ts` file, but it had no name for it, so it failed with `TS4023: ... has or is using name 'EdgeGuardValueTypeId' ... but cannot be named`. This hit any package that builds an Edge in one module and exports it, as soon as that package turned on declaration emit. `When`, `Otherwise`, and `TransitionTable` embed `Edge`, so exporting any of them hit the same error.
+
+  The key is now a normal property, `'~foldkit/EdgeGuardValue'`, following the same fix as the runtime boot key. Consumers need to do nothing. The field is still internal and still has no runtime representation.
+
+- [#1267](https://github.com/foldkit/foldkit/pull/1267) [`a43f524`](https://github.com/foldkit/foldkit/commit/a43f5241c4f7a6cea57386153863fea9ebf9eab8) Thanks [@devinjameson](https://github.com/devinjameson)! - Move focus into dialogs when the requested initial target is missing or cannot receive focus.
+
 ## 0.156.0
 
 ## 0.155.0

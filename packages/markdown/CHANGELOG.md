@@ -1,5 +1,15 @@
 # @foldkit/markdown
 
+## 0.9.0
+
+### Minor Changes
+
+- [#1277](https://github.com/foldkit/foldkit/pull/1277) [`ff1c88c`](https://github.com/foldkit/foldkit/commit/ff1c88cd2f655247df4b4f599ef593608b51049a) Thanks [@devinjameson](https://github.com/devinjameson)! - Pass each code block's zero-based document occurrence index to its view override.
+
+### Patch Changes
+
+- [#1213](https://github.com/foldkit/foldkit/pull/1213) [`57e2436`](https://github.com/foldkit/foldkit/commit/57e24366c8997cd235002f58c9dc38477a6cb1a3) Thanks [@devinjameson](https://github.com/devinjameson)! - Use full Effect module names in published source, examples, templates, and documentation. JavaScript and TypeScript globals that share an Effect module name are now qualified through `globalThis`.
+
 ## 0.8.1
 
 ### Patch Changes

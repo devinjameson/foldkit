@@ -1,5 +1,23 @@
 # @foldkit/ui
 
+## 0.157.0
+
+### Minor Changes
+
+- [#1270](https://github.com/foldkit/foldkit/pull/1270) [`49d911a`](https://github.com/foldkit/foldkit/commit/49d911a3b592b658cd44918e668d28f10b19cde2) Thanks [@devinjameson](https://github.com/devinjameson)! - Resolve imported Foldkit, UI, Effect, and child Message APIs through Oxlint's scope manager. Rules now recognize aliased imports, ignore local shadows, and distinguish Submodel Message payloads from unrelated `message` fields without requiring TypeScript parser services.
+
+  This can introduce lint failures where an alias previously hid parent-owned construction of a child Message. Expose an update capability from the child and invoke it through `Update.foldChild` or `Update.foldChildStep` instead.
+
+  Expose Animation `show` and `hide` update capabilities so parents can drive visibility through `Update.foldChildStep` without constructing child Messages.
+
+- [#1268](https://github.com/foldkit/foldkit/pull/1268) [`3a4ccd0`](https://github.com/foldkit/foldkit/commit/3a4ccd0f6611f3ef90a5af43a821bbc2d8821fbe) Thanks [@devinjameson](https://github.com/devinjameson)! - Preserve structurally refined payload types in exhaustive Foldkit union matchers, migrate OutMessage folds to their owning union matcher, and add `Animation.toggle` as a child-owned visibility entry point.
+
+- [#1269](https://github.com/foldkit/foldkit/pull/1269) [`b5ec356`](https://github.com/foldkit/foldkit/commit/b5ec356d1d88d136f77bca416b753479d4aa7b50) Thanks [@devinjameson](https://github.com/devinjameson)! - Reject children and `h.InnerHTML` passed to `h.textarea` or `h.keyed('textarea')` so the Model remains the field's single source of truth. This is a breaking change: move textarea content into the live value property with `h.Value(text)`. The UI Textarea helper now exposes the narrower `TextareaAttribute` group. Animation wrapper elements and Virtual List row elements also exclude `textarea` because both render children.
+
+### Patch Changes
+
+- [#1213](https://github.com/foldkit/foldkit/pull/1213) [`57e2436`](https://github.com/foldkit/foldkit/commit/57e24366c8997cd235002f58c9dc38477a6cb1a3) Thanks [@devinjameson](https://github.com/devinjameson)! - Use full Effect module names in published source, examples, templates, and documentation. JavaScript and TypeScript globals that share an Effect module name are now qualified through `globalThis`.
+
 ## 0.156.0
 
 ### Minor Changes
