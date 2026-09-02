@@ -512,7 +512,7 @@ const isGuardList = <State extends Tagged, Message extends Tagged, R>(
     | LooseEdge<State, Message, R>
     | ReadonlyArray<LooseGuardedEdge<State, Message, R>>,
 ): edgeOrGuardedEdges is ReadonlyArray<LooseGuardedEdge<State, Message, R>> =>
-  globalThis.Array.isArray(edgeOrGuardedEdges)
+  Array.isArray(edgeOrGuardedEdges)
 
 const extractLiteralTag = (tagField: unknown): Option.Option<string> => {
   if (
@@ -535,6 +535,20 @@ const extractMemberTag = (member: unknown): Option.Option<string> =>
     Option.filter(Predicate.hasProperty('_tag')),
     Option.flatMap(fields => extractLiteralTag(fields._tag)),
   )
+
+const flattenUnionMembers = (
+  members: ReadonlyArray<unknown>,
+): ReadonlyArray<unknown> =>
+  Array.flatMap(members, member => {
+    if (
+      Predicate.hasProperty(member, 'members') &&
+      Array.isArray(member.members)
+    ) {
+      return flattenUnionMembers(member.members)
+    } else {
+      return [member]
+    }
+  })
 
 /**
  * Compiles a declarative transition table into a {@link Machine}.
@@ -597,6 +611,7 @@ export const define =
 
     const stateTags = pipe(
       schemas.state.members,
+      flattenUnionMembers,
       Array.map(member =>
         Option.getOrThrowWith(
           extractMemberTag(member),
