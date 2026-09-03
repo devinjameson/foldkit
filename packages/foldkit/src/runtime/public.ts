@@ -6,7 +6,7 @@ export {
   makeApplication,
   makeElement,
   run,
-} from './runtime.js'
+} from './index.js'
 
 export type {
   RoutingConfig,
@@ -43,10 +43,7 @@ export type {
   DevToolsMode,
   DevToolsModeConfig,
   DevToolsPosition,
-} from './runtime.js'
-
-export type {
   ViewTransitionConfig,
   ViewTransitionContext,
   ViewTransitionDecision,
-} from './viewTransition.js'
+} from './index.js'

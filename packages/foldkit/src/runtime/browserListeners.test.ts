@@ -4,8 +4,7 @@ import { describe, it } from '@effect/vitest'
 
 import { type UrlRequest } from '../navigation/urlRequest.js'
 import { type Url } from '../url/index.js'
-import { addLinkClickListener } from './browserListeners.js'
-import { type RoutingConfig } from './runtime.js'
+import { type RoutingConfig, addLinkClickListener } from './browserListeners.js'
 
 declare global {
   interface Window {

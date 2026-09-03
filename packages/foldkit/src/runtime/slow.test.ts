@@ -6,13 +6,13 @@ import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import * as Subscription from '../subscription/subscription.js'
 import type * as Update from '../update/index.js'
+import { makeElement } from './runtime.js'
 import {
   type SlowContext,
   type SlowSubscriptionDependenciesContext,
   type SlowUpdateContext,
   __resolveSlowConfig,
-  makeElement,
-} from './runtime.js'
+} from './slowPhase.js'
 
 const Message = defineMessageUnion({
   ClickedIncrement: {},
