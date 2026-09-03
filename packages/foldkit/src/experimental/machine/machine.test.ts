@@ -511,6 +511,69 @@ const shadowedGuardMachine = define({
   },
 })
 
+const shadowedUnderUnreachableSourceMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Error: {
+      on: {
+        ClickedRetry: [
+          otherwise(to('Loading', () => RemoteData.Loading())),
+          when(
+            (_state, message) => Option.some(message),
+            'Ok',
+            () => RemoteData.Ok({ data: 'unreachable' }),
+          ),
+        ],
+      },
+    },
+  },
+})
+
+const DelimiterCollisionState = defineTaggedUnion({
+  'A|B': {},
+  A: {},
+  Target0: {},
+  Target1: {},
+})
+
+const DelimiterCollisionMessage = defineMessageUnion({
+  C: {},
+  'B|C': {},
+})
+
+const delimiterCollisionMachine = define({
+  state: DelimiterCollisionState,
+  message: DelimiterCollisionMessage,
+})({
+  initial: DelimiterCollisionState.A(),
+  states: {
+    'A|B': {
+      on: {
+        C: [otherwise(to('Target0', () => DelimiterCollisionState.Target0()))],
+      },
+    },
+    A: {
+      on: {
+        'B|C': [
+          when(
+            () => false,
+            'Target0',
+            () => DelimiterCollisionState.Target0(),
+          ),
+          when(
+            () => true,
+            'Target1',
+            () => DelimiterCollisionState.Target1(),
+          ),
+        ],
+      },
+    },
+  },
+})
+
 const PlainIdle = Schema.Struct({ _tag: Schema.Literal('PlainIdle') })
 const PlainActive = Schema.Struct({ _tag: Schema.Literal('PlainActive') })
 
@@ -1232,6 +1295,60 @@ describe('type-level guarantees', () => {
           guard: { _tag: 'When', position: 1 },
         },
         reason: 'ShadowedByOtherwise',
+      },
+    ])
+  })
+
+  it('does not walk through guards listed after otherwise', () => {
+    expect(shadowedGuardMachine.reachableFrom('Idle')).toEqual(
+      new Set(['Idle', 'Loading']),
+    )
+    expect(shadowedGuardMachine.unreachableStates()).toEqual(['Error', 'Ok'])
+  })
+
+  it('reports a shadowed edge under an unreachable source once', () => {
+    expect(shadowedUnderUnreachableSourceMachine.deadTransitions()).toEqual([
+      {
+        edge: {
+          from: 'Error',
+          messageTag: 'ClickedRetry',
+          target: 'Loading',
+          guard: { _tag: 'Otherwise', position: 0 },
+        },
+        reason: 'UnreachableSource',
+      },
+      {
+        edge: {
+          from: 'Error',
+          messageTag: 'ClickedRetry',
+          target: 'Ok',
+          guard: { _tag: 'When', position: 1 },
+        },
+        reason: 'ShadowedByOtherwise',
+      },
+    ])
+  })
+
+  it('keeps source and message tags distinct when they contain delimiters', () => {
+    const result = delimiterCollisionMachine.step(
+      DelimiterCollisionState.A(),
+      DelimiterCollisionMessage['B|C'](),
+    )
+
+    expect(result._tag).toBe('Transitioned')
+    expect(result.state).toStrictEqual(DelimiterCollisionState.Target1())
+    expect(delimiterCollisionMachine.reachableFrom('A')).toEqual(
+      new Set(['A', 'Target0', 'Target1']),
+    )
+    expect(delimiterCollisionMachine.deadTransitions()).toEqual([
+      {
+        edge: {
+          from: 'A|B',
+          messageTag: 'C',
+          target: 'Target0',
+          guard: { _tag: 'Otherwise', position: 0 },
+        },
+        reason: 'UnreachableSource',
       },
     ])
   })

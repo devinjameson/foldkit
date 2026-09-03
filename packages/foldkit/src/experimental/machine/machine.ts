@@ -416,16 +416,22 @@ export type Machine<
     message: Message,
   ) => Update.Return<State, Message, R>
   step: (state: State, message: Message) => TransitionResult<State, Message, R>
-  /** The state tags a walk of the declared Edge set visits starting from `tag`. */
+  /**
+   * The state tags a walk of the statically selectable declared Edges visits
+   * starting from `tag`. Edges listed after an `otherwise` are excluded because
+   * the runtime can never select them.
+   */
   reachableFrom: (tag: TagOf<State>) => ReadonlySet<TagOf<State>>
   /**
-   * The state tags a walk of the declared Edge set never visits, starting
-   * from the initial state's tag plus `extraRoots`. The walk sees only the
-   * declared Edges, so state changes made outside `transition` and `step`
-   * are invisible to it, and it always starts at `initial`. Entry points
-   * other than `initial`, such as restored persistence, deep links, or SSR
-   * hydration, must be passed as `extraRoots`, or the states they enter are
-   * reported unreachable even though the running program visits them.
+   * The state tags a walk of the statically selectable declared Edges never
+   * visits, starting from the initial state's tag plus `extraRoots`. Edges
+   * listed after an `otherwise` are excluded because the runtime can never
+   * select them. The walk sees only declared Edges, so state changes made
+   * outside `transition` and `step` are invisible to it, and it always starts
+   * at `initial`. Entry points other than `initial`, such as restored
+   * persistence, deep links, or SSR hydration, must be passed as `extraRoots`,
+   * or the states they enter are reported unreachable even though the running
+   * program visits them.
    */
   unreachableStates: (
     extraRoots?: ReadonlyArray<TagOf<State>>,
@@ -433,11 +439,13 @@ export type Machine<
   /**
    * The Edges that cannot fire in a walk of the declared Edge set starting
    * from the initial state's tag plus `extraRoots`, each with its
-   * {@link DeadTransitionReason}. The same assumptions as
-   * `unreachableStates` apply: the walk cannot see state changes made
-   * outside `transition` and `step`, and entry points other than `initial`
-   * must be passed as `extraRoots`, or their outgoing Edges are reported as
-   * `UnreachableSource` even though the running program fires them.
+   * {@link DeadTransitionReason}. Each Edge appears at most once;
+   * `ShadowedByOtherwise` takes precedence when its source is also
+   * unreachable. The same assumptions as `unreachableStates` apply: the walk
+   * cannot see state changes made outside `transition` and `step`, and entry
+   * points other than `initial` must be passed as `extraRoots`, or their
+   * outgoing Edges are reported as `UnreachableSource` even though the running
+   * program fires them.
    */
   deadTransitions: (
     extraRoots?: ReadonlyArray<TagOf<State>>,
@@ -789,9 +797,83 @@ export const define =
       }
     }
 
+    type EdgeGroup = ReadonlyArray<EdgeSummary<State, Message>>
+    type PositionedEdgeGuard = Exclude<
+      EdgeGuard,
+      Readonly<{ _tag: 'Unguarded' }>
+    >
+
+    const isPositionedEdgeGuard = (
+      guard: EdgeGuard,
+    ): guard is PositionedEdgeGuard => guard._tag !== 'Unguarded'
+
+    const maybeGuardPosition = (
+      edgeSummary: EdgeSummary<State, Message>,
+    ): Option.Option<number> =>
+      pipe(
+        edgeSummary.guard,
+        Option.liftPredicate(isPositionedEdgeGuard),
+        Option.map(guard => guard.position),
+      )
+
+    const groupEdgesByMessageTag = (
+      edgesFromState: EdgeGroup,
+    ): ReadonlyArray<EdgeGroup> =>
+      pipe(
+        edgesFromState,
+        Array.groupBy<EdgeSummary<State, Message>, string>(
+          edgeSummary => edgeSummary.messageTag,
+        ),
+        Record.values,
+      )
+
+    const edgesAfterGuardPosition = (
+      edgeGroup: EdgeGroup,
+      guardPosition: number,
+    ): EdgeGroup =>
+      Array.filter(edgeGroup, edgeSummary =>
+        pipe(
+          maybeGuardPosition(edgeSummary),
+          Option.exists(position => position > guardPosition),
+        ),
+      )
+
+    const shadowedEdgesInGroup = (edgeGroup: EdgeGroup): EdgeGroup =>
+      pipe(
+        edgeGroup,
+        Array.findFirst(edgeSummary => edgeSummary.guard._tag === 'Otherwise'),
+        Option.flatMap(maybeGuardPosition),
+        Option.match({
+          onNone: () => [],
+          onSome: otherwisePosition =>
+            edgesAfterGuardPosition(edgeGroup, otherwisePosition),
+        }),
+      )
+
+    const edgeGroups = pipe(
+      edges,
+      Array.groupBy<EdgeSummary<State, Message>, string>(
+        edgeSummary => edgeSummary.from,
+      ),
+      Record.values,
+      Array.flatMap(groupEdgesByMessageTag),
+    )
+
+    const shadowedEdges: ReadonlyArray<EdgeSummary<State, Message>> = pipe(
+      edgeGroups,
+      Array.flatMap(shadowedEdgesInGroup),
+    )
+
+    const shadowedEdgeSet = HashSet.fromIterable(shadowedEdges)
+
+    const selectableEdges = Array.filter(
+      edges,
+      edgeSummary => !HashSet.has(shadowedEdgeSet, edgeSummary),
+    )
+
     const targetsFrom = (tag: TagOf<State>): ReadonlyArray<TagOf<State>> =>
       pipe(
-        edges,
+        selectableEdges,
         Array.filter(edgeSummary => edgeSummary.from === tag),
         Array.map(edgeSummary => edgeSummary.target),
       )
@@ -832,62 +914,25 @@ export const define =
       reason: DeadTransitionReason,
     ): DeadTransition<State, Message> => ({ edge, reason })
 
-    const guardPosition = (
-      edgeSummary: EdgeSummary<State, Message>,
-    ): Option.Option<number> =>
-      edgeSummary.guard._tag === 'Unguarded'
-        ? Option.none()
-        : Option.some(edgeSummary.guard.position)
-
-    const shadowedEdges = (): ReadonlyArray<DeadTransition<State, Message>> =>
-      pipe(
-        edges,
-        Array.groupBy<EdgeSummary<State, Message>, string>(
-          edgeSummary => `${edgeSummary.from}|${edgeSummary.messageTag}`,
-        ),
-        Record.values,
-        Array.flatMap(group => {
-          const maybeOtherwisePosition = pipe(
-            group,
-            Array.findFirst(
-              edgeSummary => edgeSummary.guard._tag === 'Otherwise',
-            ),
-            Option.flatMap(guardPosition),
-          )
-
-          return Option.match(maybeOtherwisePosition, {
-            onNone: () => [],
-            onSome: otherwisePosition =>
-              pipe(
-                group,
-                Array.filter(edgeSummary =>
-                  Option.match(guardPosition(edgeSummary), {
-                    onNone: () => false,
-                    onSome: position => position > otherwisePosition,
-                  }),
-                ),
-                Array.map(edgeSummary =>
-                  makeDeadTransition(edgeSummary, 'ShadowedByOtherwise'),
-                ),
-              ),
-          })
-        }),
-      )
-
     const deadTransitions = (
       extraRoots: ReadonlyArray<TagOf<State>> = [],
     ): ReadonlyArray<DeadTransition<State, Message>> => {
       const reachable = reachableFromRoots([initialTag, ...extraRoots])
 
       const unreachableSourceEdges = pipe(
-        edges,
+        selectableEdges,
         Array.filter(edgeSummary => !reachable.has(edgeSummary.from)),
         Array.map(edgeSummary =>
           makeDeadTransition(edgeSummary, 'UnreachableSource'),
         ),
       )
 
-      return [...unreachableSourceEdges, ...shadowedEdges()]
+      return Array.flatten([
+        unreachableSourceEdges,
+        Array.map(shadowedEdges, edgeSummary =>
+          makeDeadTransition(edgeSummary, 'ShadowedByOtherwise'),
+        ),
+      ])
     }
 
     const toMermaid = (): string => {
