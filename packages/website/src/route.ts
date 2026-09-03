@@ -103,6 +103,8 @@ export const AppRoute = defineRouteUnion({
   UiAnimation: {},
   UiAnchor: {},
   UiVirtualList: {},
+  UiMeter: {},
+  UiProgress: {},
   About: {},
   Contact: {},
   Privacy: {},
@@ -204,6 +206,8 @@ export const DocsRoute = AppRoute.subset([
   'UiAnimation',
   'UiAnchor',
   'UiVirtualList',
+  'UiMeter',
+  'UiProgress',
   'AiOverview',
   'AiSkills',
   'AiMcp',
@@ -469,6 +473,8 @@ export const uiTooltipRouter = ui('tooltip', AppRoute.UiTooltip)
 export const uiAnimationRouter = ui('animation', AppRoute.UiAnimation)
 export const uiAnchorRouter = ui('anchor', AppRoute.UiAnchor)
 export const uiVirtualListRouter = ui('virtual-list', AppRoute.UiVirtualList)
+export const uiMeterRouter = ui('meter', AppRoute.UiMeter)
+export const uiProgressRouter = ui('progress', AppRoute.UiProgress)
 
 export const aboutRouter = staticPage('about', AppRoute.About)
 export const contactRouter = staticPage('contact', AppRoute.Contact)
@@ -587,6 +593,8 @@ const uiParser = oneOf(
   uiAnimationRouter,
   uiAnchorRouter,
   uiVirtualListRouter,
+  uiMeterRouter,
+  uiProgressRouter,
 )
 
 const aiParser = oneOf(aiOverviewRouter, aiSkillsRouter, aiMcpRouter)
