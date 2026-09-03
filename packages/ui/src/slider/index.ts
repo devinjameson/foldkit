@@ -301,6 +301,9 @@ export const reflectRange: Reflect<
 
 // SUBSCRIPTION
 
+const THUMB_SIZE = '0.75rem'
+const THUMB_HALF = '0.375rem'
+
 const DragActivity = S.Literals(['Idle', 'Active'])
 
 const dragActivityFromModel = (model: Model): typeof DragActivity.Type =>
@@ -313,20 +316,35 @@ const dragActivityFromModel = (model: Model): typeof DragActivity.Type =>
 const trackElement = (
   id: string,
   root: Document | ShadowRoot,
-): Option.Option<HTMLElement> =>
+): Option.Option<Element> =>
   Option.fromNullishOr(
-    root.querySelector<HTMLElement>(
-      attributeSelector('data-slider-track-id', id),
-    ),
+    root.querySelector<Element>(attributeSelector('data-slider-track-id', id)),
   )
 
-const valueFromClientX = (
+const isVerticalTrack = (element: Element): boolean =>
+  element.hasAttribute('data-vertical') ||
+  element.closest('[data-vertical]') !== null
+
+/** Maps a pointer position to a slider value, respecting the track's
+ *  orientation. Vertical tracks invert the axis so the bottom represents
+ *  `min` and the top represents `max`, matching the WAI-ARIA slider
+ *  convention. */
+export const valueFromPointer = (
   clientX: number,
-  trackElement_: HTMLElement,
+  clientY: number,
+  track: Element,
   min: number,
   max: number,
 ): number => {
-  const rect = trackElement_.getBoundingClientRect()
+  const rect = track.getBoundingClientRect()
+  if (isVerticalTrack(track)) {
+    if (rect.height === 0) {
+      return min
+    } else {
+      const fraction = clamp(1 - (clientY - rect.top) / rect.height, 0, 1)
+      return min + fraction * (max - min)
+    }
+  }
   if (rect.width === 0) {
     return min
   } else {
@@ -367,7 +385,13 @@ export const subscriptionsForRoot = (
                 Effect.sync(() =>
                   Option.map(trackElement(id, getTrackRoot()), element =>
                     Message.MovedDragPointer({
-                      value: valueFromClientX(event.clientX, element, min, max),
+                      value: valueFromPointer(
+                        event.clientX,
+                        event.clientY,
+                        element,
+                        min,
+                        max,
+                      ),
                     }),
                   ),
                 ),
@@ -478,12 +502,88 @@ export type SliderAttributes = Readonly<{
   hiddenInput: ReadonlyArray<ChildAttribute>
 }>
 
+export type Orientation = 'horizontal' | 'vertical'
+
+export type ThumbAlignment = 'center' | 'edge'
+
+const filledTrackStyle = (
+  orientation: Orientation,
+  thumbAlignment: ThumbAlignment,
+  fraction: number,
+): Readonly<Record<string, string>> => {
+  if (orientation === 'vertical') {
+    return {
+      position: 'absolute',
+      bottom: '0',
+      left: '0',
+      right: '0',
+      height: percentString(fraction),
+      width: '100%',
+      'pointer-events': 'none',
+    }
+  }
+  if (thumbAlignment === 'center') {
+    return {
+      position: 'absolute',
+      left: '0',
+      top: '0',
+      bottom: '0',
+      width: percentString(fraction),
+      'pointer-events': 'none',
+    }
+  }
+  return {
+    position: 'absolute',
+    left: '0',
+    top: '0',
+    bottom: '0',
+    width: `calc((100% - ${THUMB_SIZE}) * ${fraction} + ${THUMB_HALF})`,
+    'pointer-events': 'none',
+  }
+}
+
+const thumbStyle = (
+  orientation: Orientation,
+  thumbAlignment: ThumbAlignment,
+  fraction: number,
+): Readonly<Record<string, string>> => {
+  if (orientation === 'vertical') {
+    return {
+      position: 'absolute',
+      bottom: percentString(fraction),
+      left: '50%',
+      transform: 'translateX(-50%) translateY(-50%)',
+      'touch-action': 'none',
+    }
+  }
+  if (thumbAlignment === 'center') {
+    return {
+      position: 'absolute',
+      left: percentString(fraction),
+      transform: 'translateX(-50%)',
+      'touch-action': 'none',
+    }
+  }
+  return {
+    position: 'absolute',
+    left: `calc((100% - ${THUMB_SIZE}) * ${fraction})`,
+    'touch-action': 'none',
+  }
+}
+
 /** Per-render view inputs passed to `view` via `h.submodel`'s `viewInputs` field. */
 export type ViewInputs = Readonly<{
   /** The current value, read straight from the parent Model. The thumb
    *  position, `aria-valuenow`, and the filled track all derive from it. */
   value: number
   toView: (attributes: SliderAttributes) => Html
+  /** Layout axis for the track, range, and thumb. Vertical sliders place
+   *  `min` at the bottom and `max` at the top. */
+  orientation?: Orientation
+  /** How the thumb aligns within the track. `edge` keeps the thumb fully
+   *  inside the track at the extremes, `center` lets it overflow by half its
+   *  width. Defaults to `edge` for shadcn parity. */
+  thumbAlignment?: ThumbAlignment
   ariaLabel?: string
   ariaLabelledBy?: string
   formatValue?: (value: number) => string
@@ -523,6 +623,8 @@ export const view = defineView<Model, Message, ViewInputs>(
       isDisabled = false,
       isReadOnly = false,
       name,
+      orientation = 'horizontal',
+      thumbAlignment = 'edge',
       getTrackRoot = () => document,
     } = viewInputs
     const { id, min, max } = model
@@ -534,10 +636,13 @@ export const view = defineView<Model, Message, ViewInputs>(
         Message.PressedKeyboardNavigation({ direction, value }),
       )
 
-    const pointerAtClientX = (clientX: number): Option.Option<Message> =>
+    const pointerAtPointer = (
+      clientX: number,
+      clientY: number,
+    ): Option.Option<Message> =>
       Option.map(trackElement(id, getTrackRoot()), element =>
         Message.PressedPointer({
-          value: valueFromClientX(clientX, element, min, max),
+          value: valueFromPointer(clientX, clientY, element, min, max),
           originValue: value,
         }),
       )
@@ -549,11 +654,12 @@ export const view = defineView<Model, Message, ViewInputs>(
       _screenY: number,
       _timeStamp: number,
       clientX: number,
+      clientY: number,
     ): Option.Option<Message> =>
       pipe(
         button,
         Option.liftPredicate(Equal.equals(LEFT_MOUSE_BUTTON)),
-        Option.flatMap(() => pointerAtClientX(clientX)),
+        Option.flatMap(() => pointerAtPointer(clientX, clientY)),
       )
 
     const thumbPointerHandler = (
@@ -574,7 +680,8 @@ export const view = defineView<Model, Message, ViewInputs>(
 
     const rootAttributes = [
       h.DataAttribute('slider-id', id),
-      h.DataAttribute('orientation', 'horizontal'),
+      h.DataAttribute('orientation', orientation),
+      h.DataAttribute(orientation, ''),
       ...stateAttributes,
     ]
 
@@ -586,20 +693,15 @@ export const view = defineView<Model, Message, ViewInputs>(
 
     const trackAttributes = [
       h.DataAttribute('slider-track-id', id),
+      h.DataAttribute('orientation', orientation),
+      h.DataAttribute(orientation, ''),
       h.Style({ position: 'relative', 'touch-action': 'none' }),
       ...stateAttributes,
       ...trackInteractionAttributes,
     ]
 
     const filledTrackAttributes = [
-      h.Style({
-        position: 'absolute',
-        left: '0',
-        top: '0',
-        bottom: '0',
-        width: percentString(fraction),
-        'pointer-events': 'none',
-      }),
+      h.Style(filledTrackStyle(orientation, thumbAlignment, fraction)),
       ...stateAttributes,
     ]
 
@@ -628,7 +730,7 @@ export const view = defineView<Model, Message, ViewInputs>(
       h.Id(`${id}-thumb`),
       h.Role('slider'),
       h.Tabindex(0),
-      h.AriaOrientation('horizontal'),
+      h.AriaOrientation(orientation),
       h.AriaValuemin(min),
       h.AriaValuemax(max),
       h.AriaValuenow(value),
@@ -636,12 +738,7 @@ export const view = defineView<Model, Message, ViewInputs>(
       ...thumbLabelAttributes,
       ...(isDisabled ? [h.AriaDisabled(true)] : []),
       ...(isReadOnly ? [h.AriaReadonly(true)] : []),
-      h.Style({
-        position: 'absolute',
-        left: percentString(fraction),
-        transform: 'translateX(-50%)',
-        'touch-action': 'none',
-      }),
+      h.Style(thumbStyle(orientation, thumbAlignment, fraction)),
       ...stateAttributes,
       ...thumbInteractionAttributes,
     ]

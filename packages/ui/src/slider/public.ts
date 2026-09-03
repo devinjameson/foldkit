@@ -7,6 +7,7 @@ export {
   subscriptionsForRoot,
   fractionOfValue,
   snapAndClamp,
+  valueFromPointer,
   Model,
   Message,
   OutMessage,
@@ -18,4 +19,10 @@ export {
   type PressedKeyboardNavigation,
 } from './index.js'
 
-export type { InitConfig, ViewInputs, SliderAttributes } from './index.js'
+export type {
+  InitConfig,
+  ViewInputs,
+  SliderAttributes,
+  Orientation,
+  ThumbAlignment,
+} from './index.js'
