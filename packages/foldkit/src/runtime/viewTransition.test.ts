@@ -8,7 +8,8 @@ import { defineMessageUnion } from '../message/index.js'
 import { afterCommit } from '../render/render.js'
 import * as Subscription from '../subscription/subscription.js'
 import type * as Update from '../update/index.js'
-import { __setDevToolsOverlay, makeElement } from './runtime.js'
+import { __setDevToolsOverlay } from './devToolsConfig.js'
+import { makeElement } from './runtime.js'
 import {
   __decideViewTransition,
   __resolveStartViewTransition,

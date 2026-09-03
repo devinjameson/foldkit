@@ -34,7 +34,7 @@ import type {
 import type { Entry as ManagedResourceEntry } from '../managedResource/index.js'
 import { MountTracker } from '../mount/index.js'
 import type { MountDefinition } from '../mount/index.js'
-import { Dispatch } from '../runtime/index.js'
+import { Dispatch } from '../runtime/dispatch.js'
 import type { VNode } from '../vdom.js'
 import type {
   AnyCommand,

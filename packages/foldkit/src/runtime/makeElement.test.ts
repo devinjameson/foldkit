@@ -5,11 +5,8 @@ import { TextDirection, __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import type * as Update from '../update/index.js'
-import {
-  __setDevToolsOverlay,
-  makeApplication,
-  makeElement,
-} from './runtime.js'
+import { __setDevToolsOverlay } from './devToolsConfig.js'
+import { makeApplication, makeElement } from './runtime.js'
 
 const Message = defineMessageUnion({
   Rendered: {},
