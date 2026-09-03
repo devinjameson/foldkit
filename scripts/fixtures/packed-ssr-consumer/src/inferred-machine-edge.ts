@@ -16,7 +16,7 @@ export const startEdge = to<
   IdleState,
   MachineMessage,
   'Running'
->('Running', () => MachineState.Running())
+>('Running', () => ({ model: MachineState.Running() }))
 
 export const guardedStartEdge = when<
   MachineState,
@@ -28,5 +28,5 @@ export const guardedStartEdge = when<
 >(
   state => Option.some(state._tag.length),
   'Running',
-  () => MachineState.Running(),
+  () => ({ model: MachineState.Running() }),
 )

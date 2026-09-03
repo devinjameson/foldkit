@@ -43,27 +43,27 @@ const remoteDataMachine = define({
   states: {
     Idle: {
       on: {
-        ClickedFetch: to('Loading', () => RemoteData.Loading()),
+        ClickedFetch: to('Loading', () => ({ model: RemoteData.Loading() })),
       },
     },
     Loading: {
       on: {
-        SucceededFetch: to('Ok', ({ message }) =>
-          RemoteData.Ok({ data: message.data }),
-        ),
-        FailedFetch: to('Error', ({ message }) =>
-          RemoteData.Error({ error: message.error }),
-        ),
+        SucceededFetch: to('Ok', ({ message }) => ({
+          model: RemoteData.Ok({ data: message.data }),
+        })),
+        FailedFetch: to('Error', ({ message }) => ({
+          model: RemoteData.Error({ error: message.error }),
+        })),
       },
     },
     Error: {
       on: {
-        ClickedRetry: to('Loading', () => RemoteData.Loading()),
+        ClickedRetry: to('Loading', () => ({ model: RemoteData.Loading() })),
       },
     },
     Ok: {
       on: {
-        ClickedFetch: to('Loading', () => RemoteData.Loading()),
+        ClickedFetch: to('Loading', () => ({ model: RemoteData.Loading() })),
       },
     },
   },
@@ -136,79 +136,82 @@ const connectionMachine = define({
   states: {
     Disconnected: {
       on: {
-        ClickedConnect: to('Connecting', () =>
-          ConnectionState.Connecting({ attemptCount: 1 }),
-        ),
+        ClickedConnect: to('Connecting', () => ({
+          model: ConnectionState.Connecting({ attemptCount: 1 }),
+        })),
       },
     },
     Connecting: {
       on: {
-        SocketOpened: to(
-          'Connected',
-          ({ message }) =>
-            ConnectionState.Connected({ sessionId: message.sessionId }),
-          ({ message }) => [
+        SocketOpened: to('Connected', ({ message }) => ({
+          model: ConnectionState.Connected({
+            sessionId: message.sessionId,
+          }),
+          commands: [
             LogTransition({
               description: `Opened session ${message.sessionId}`,
             }),
           ],
-        ),
+        })),
         SocketErrored: [
           when(
             connectingToMaybeBackoff,
             'Reconnecting',
-            ({ state, guardValue }) =>
-              ConnectionState.Reconnecting({
+            ({ state, guardValue }) => ({
+              model: ConnectionState.Reconnecting({
                 attemptCount: state.attemptCount,
                 delayMillis: guardValue.delayMillis,
               }),
+            }),
           ),
           otherwise(
-            to('Failed', ({ state, message }) =>
-              ConnectionState.Failed({
+            to('Failed', ({ state, message }) => ({
+              model: ConnectionState.Failed({
                 attemptCount: state.attemptCount,
                 reason: message.reason,
               }),
-            ),
+            })),
           ),
         ],
       },
     },
     Connected: {
       on: {
-        SocketClosed: to('Reconnecting', () =>
-          ConnectionState.Reconnecting({
+        SocketClosed: to('Reconnecting', () => ({
+          model: ConnectionState.Reconnecting({
             attemptCount: 1,
             delayMillis: backoffDelayMillis(1),
           }),
-        ),
-        ClickedDisconnect: to('Disconnected', () =>
-          ConnectionState.Disconnected(),
-        ),
+        })),
+        ClickedDisconnect: to('Disconnected', () => ({
+          model: ConnectionState.Disconnected(),
+        })),
       },
     },
     Reconnecting: {
       on: {
-        TimedOutBackoff: to('Connecting', ({ state }) =>
-          ConnectionState.Connecting({ attemptCount: state.attemptCount + 1 }),
-        ),
-        ClickedDisconnect: to('Disconnected', () =>
-          ConnectionState.Disconnected(),
-        ),
+        TimedOutBackoff: to('Connecting', ({ state }) => ({
+          model: ConnectionState.Connecting({
+            attemptCount: state.attemptCount + 1,
+          }),
+        })),
+        ClickedDisconnect: to('Disconnected', () => ({
+          model: ConnectionState.Disconnected(),
+        })),
       },
     },
     Failed: {
       on: {
-        ClickedConnect: to('Connecting', () =>
-          ConnectionState.Connecting({ attemptCount: 1 }),
-        ),
+        ClickedConnect: to('Connecting', () => ({
+          model: ConnectionState.Connecting({ attemptCount: 1 }),
+        })),
       },
     },
     Suspended: {
       on: {
-        ClickedConnect: to('Connecting', () =>
-          ConnectionState.Connecting({ attemptCount: 1 }),
-        ),
+        ClickedConnect: to('Connecting', () => ({
+          model: ConnectionState.Connecting({ attemptCount: 1 }),
+        })),
       },
     },
   },
@@ -222,19 +225,19 @@ const extraRootsMachine = define({
   states: {
     Disconnected: {
       on: {
-        ClickedConnect: to('Connecting', () =>
-          ConnectionState.Connecting({ attemptCount: 1 }),
-        ),
+        ClickedConnect: to('Connecting', () => ({
+          model: ConnectionState.Connecting({ attemptCount: 1 }),
+        })),
       },
     },
     Suspended: {
       on: {
-        SocketErrored: to('Failed', ({ message }) =>
-          ConnectionState.Failed({
+        SocketErrored: to('Failed', ({ message }) => ({
+          model: ConnectionState.Failed({
             attemptCount: MAX_CONNECT_ATTEMPTS,
             reason: message.reason,
           }),
-        ),
+        })),
       },
     },
   },
@@ -364,10 +367,12 @@ const narrowingMachine = define({
               const sourceTag: 'Connecting' = guardValue.sourceTag
               const messageTag: 'SocketErrored' = guardValue.messageTag
 
-              return ConnectionState.Failed({
-                attemptCount: state.attemptCount,
-                reason: `${sourceTag} ${messageTag} ${message.reason}`,
-              })
+              return {
+                model: ConnectionState.Failed({
+                  attemptCount: state.attemptCount,
+                  reason: `${sourceTag} ${messageTag} ${message.reason}`,
+                }),
+              }
             },
           ),
         ],
@@ -388,11 +393,12 @@ const guardValueMachine = define({
           when(
             connectingToMaybeNextAttempt,
             'Reconnecting',
-            ({ state, guardValue }) =>
-              ConnectionState.Reconnecting({
+            ({ state, guardValue }) => ({
+              model: ConnectionState.Reconnecting({
                 attemptCount: guardValue.nextAttemptCount,
                 delayMillis: backoffDelayMillis(state.attemptCount),
               }),
+            }),
           ),
         ],
       },
@@ -412,19 +418,20 @@ const booleanGuardMachine = define({
           when(
             state => state.attemptCount < MAX_CONNECT_ATTEMPTS,
             'Reconnecting',
-            ({ state }) =>
-              ConnectionState.Reconnecting({
+            ({ state }) => ({
+              model: ConnectionState.Reconnecting({
                 attemptCount: state.attemptCount,
                 delayMillis: backoffDelayMillis(state.attemptCount),
               }),
+            }),
           ),
           otherwise(
-            to('Failed', ({ state, message }) =>
-              ConnectionState.Failed({
+            to('Failed', ({ state, message }) => ({
+              model: ConnectionState.Failed({
                 attemptCount: state.attemptCount,
                 reason: message.reason,
               }),
-            ),
+            })),
           ),
         ],
       },
@@ -440,8 +447,8 @@ const wrongVariantMachine = define({
   states: {
     Idle: {
       on: {
-        // @ts-expect-error the build function must return the RemoteData.Loading variant named by the target tag
-        ClickedFetch: to('Loading', () => RemoteData.Idle()),
+        // @ts-expect-error the handler's model must be the RemoteData.Loading variant named by the target tag
+        ClickedFetch: to('Loading', () => ({ model: RemoteData.Idle() })),
       },
     },
   },
@@ -456,7 +463,7 @@ const wrongTargetTagMachine = define({
     Idle: {
       on: {
         // @ts-expect-error 'Loadingg' is not a state tag
-        ClickedFetch: to('Loadingg', () => RemoteData.Loading()),
+        ClickedFetch: to('Loadingg', () => ({ model: RemoteData.Loading() })),
       },
     },
   },
@@ -484,7 +491,7 @@ const unknownMessageTagMachine = define({
     Idle: {
       on: {
         // @ts-expect-error 'ClickedFetchh' is not a Message tag
-        ClickedFetchh: to('Loading', () => RemoteData.Loading()),
+        ClickedFetchh: to('Loading', () => ({ model: RemoteData.Loading() })),
       },
     },
   },
@@ -499,11 +506,11 @@ const shadowedGuardMachine = define({
     Idle: {
       on: {
         ClickedFetch: [
-          otherwise(to('Loading', () => RemoteData.Loading())),
+          otherwise(to('Loading', () => ({ model: RemoteData.Loading() }))),
           when(
             (_state, message) => Option.some(message),
             'Ok',
-            () => RemoteData.Ok({ data: 'unreachable' }),
+            () => ({ model: RemoteData.Ok({ data: 'unreachable' }) }),
           ),
         ],
       },
@@ -520,11 +527,11 @@ const shadowedUnderUnreachableSourceMachine = define({
     Error: {
       on: {
         ClickedRetry: [
-          otherwise(to('Loading', () => RemoteData.Loading())),
+          otherwise(to('Loading', () => ({ model: RemoteData.Loading() }))),
           when(
             (_state, message) => Option.some(message),
             'Ok',
-            () => RemoteData.Ok({ data: 'unreachable' }),
+            () => ({ model: RemoteData.Ok({ data: 'unreachable' }) }),
           ),
         ],
       },
@@ -552,7 +559,13 @@ const delimiterCollisionMachine = define({
   states: {
     'A|B': {
       on: {
-        C: [otherwise(to('Target0', () => DelimiterCollisionState.Target0()))],
+        C: [
+          otherwise(
+            to('Target0', () => ({
+              model: DelimiterCollisionState.Target0(),
+            })),
+          ),
+        ],
       },
     },
     A: {
@@ -561,12 +574,12 @@ const delimiterCollisionMachine = define({
           when(
             () => false,
             'Target0',
-            () => DelimiterCollisionState.Target0(),
+            () => ({ model: DelimiterCollisionState.Target0() }),
           ),
           when(
             () => true,
             'Target1',
-            () => DelimiterCollisionState.Target1(),
+            () => ({ model: DelimiterCollisionState.Target1() }),
           ),
         ],
       },
@@ -588,7 +601,9 @@ const plainTagMachine = define({
   states: {
     PlainIdle: {
       on: {
-        ClickedFetch: to('PlainActive', () => ({ _tag: 'PlainActive' })),
+        ClickedFetch: to('PlainActive', () => ({
+          model: { _tag: 'PlainActive' },
+        })),
       },
     },
   },
@@ -613,19 +628,23 @@ const nestedUnionMachine = define({
   states: {
     NestedIdle: {
       on: {
-        ClickedFetch: to('NestedLoading', () => NestedState.NestedLoading()),
+        ClickedFetch: to('NestedLoading', () => ({
+          model: NestedState.NestedLoading(),
+        })),
       },
     },
     NestedLoading: {
       on: {
-        SucceededFetch: to('NestedOk', ({ message }) =>
-          NestedState.NestedOk({ data: message.data }),
-        ),
+        SucceededFetch: to('NestedOk', ({ message }) => ({
+          model: NestedState.NestedOk({ data: message.data }),
+        })),
       },
     },
     NestedOk: {
       on: {
-        ClickedRetry: to('NestedIdle', () => NestedState.NestedIdle()),
+        ClickedRetry: to('NestedIdle', () => ({
+          model: NestedState.NestedIdle(),
+        })),
       },
     },
   },
@@ -692,11 +711,10 @@ const inferredRequirementsMachine = define({
   states: {
     Idle: {
       on: {
-        ClickedSubmit: to(
-          'Presigning',
-          () => SubmitState.Presigning(),
-          () => [Presign()],
-        ),
+        ClickedSubmit: to('Presigning', () => ({
+          model: SubmitState.Presigning(),
+          commands: [Presign()],
+        })),
       },
     },
   },
@@ -714,10 +732,12 @@ const inferredGuardRequirementsMachine = define({
           when(
             () => true,
             'Presigning',
-            () => SubmitState.Presigning(),
-            () => [Presign()],
+            () => ({
+              model: SubmitState.Presigning(),
+              commands: [Presign()],
+            }),
           ),
-          otherwise(to('Idle', () => SubmitState.Idle())),
+          otherwise(to('Idle', () => ({ model: SubmitState.Idle() }))),
         ],
       },
     },
@@ -736,14 +756,13 @@ const inferredOtherwiseRequirementsMachine = define({
           when(
             () => false,
             'Submitted',
-            () => SubmitState.Submitted(),
+            () => ({ model: SubmitState.Submitted() }),
           ),
           otherwise(
-            to(
-              'Presigning',
-              () => SubmitState.Presigning(),
-              () => [Presign()],
-            ),
+            to('Presigning', () => ({
+              model: SubmitState.Presigning(),
+              commands: [Presign()],
+            })),
           ),
         ],
       },
@@ -759,11 +778,10 @@ const explicitRequirementsMachine = define({
   states: {
     Idle: {
       on: {
-        ClickedSubmit: to(
-          'Presigning',
-          () => SubmitState.Presigning(),
-          () => [Presign()],
-        ),
+        ClickedSubmit: to('Presigning', () => ({
+          model: SubmitState.Presigning(),
+          commands: [Presign()],
+        })),
       },
     },
     Presigning: {
@@ -772,16 +790,20 @@ const explicitRequirementsMachine = define({
           when(
             () => true,
             'Persisting',
-            () => SubmitState.Persisting(),
-            () => [Persist()],
+            () => ({
+              model: SubmitState.Persisting(),
+              commands: [Persist()],
+            }),
           ),
-          otherwise(to('Idle', () => SubmitState.Idle())),
+          otherwise(to('Idle', () => ({ model: SubmitState.Idle() }))),
         ],
       },
     },
     Persisting: {
       on: {
-        SucceededPersist: to('Submitted', () => SubmitState.Submitted()),
+        SucceededPersist: to('Submitted', () => ({
+          model: SubmitState.Submitted(),
+        })),
       },
     },
   },
