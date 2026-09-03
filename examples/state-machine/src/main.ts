@@ -164,170 +164,184 @@ export const checkoutMachine = Machine.define({
   states: {
     Cart: {
       on: {
-        SelectedEdition: to('Cart', ({ state, message }) =>
-          evo(state, { isShippingRequired: () => message.isShippingRequired }),
-        ),
+        SelectedEdition: to('Cart', ({ state, message }) => ({
+          model: evo(state, {
+            isShippingRequired: () => message.isShippingRequired,
+          }),
+        })),
         ClickedContinue: [
           when(
             state => state.isShippingRequired,
             'Shipping',
-            ({ state }) =>
-              CheckoutState.Shipping({
+            ({ state }) => ({
+              model: CheckoutState.Shipping({
                 isShippingRequired: state.isShippingRequired,
               }),
+            }),
           ),
           otherwise(
-            to('Payment', ({ state }) =>
-              CheckoutState.Payment({
+            to('Payment', ({ state }) => ({
+              model: CheckoutState.Payment({
                 isPaymentMethodSelected: false,
                 isShippingRequired: state.isShippingRequired,
               }),
-            ),
+            })),
           ),
         ],
-        ClickedCancel: to('Cancelled', ({ state }) =>
-          CheckoutState.Cancelled({
+        ClickedCancel: to('Cancelled', ({ state }) => ({
+          model: CheckoutState.Cancelled({
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
+        })),
       },
     },
     Shipping: {
       on: {
-        ClickedContinue: to('Payment', ({ state }) =>
-          CheckoutState.Payment({
+        ClickedContinue: to('Payment', ({ state }) => ({
+          model: CheckoutState.Payment({
             isPaymentMethodSelected: false,
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
-        ClickedBack: to('Cart', ({ state }) =>
-          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
-        ),
-        ClickedCancel: to('Cancelled', ({ state }) =>
-          CheckoutState.Cancelled({
+        })),
+        ClickedBack: to('Cart', ({ state }) => ({
+          model: CheckoutState.Cart({
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
+        })),
+        ClickedCancel: to('Cancelled', ({ state }) => ({
+          model: CheckoutState.Cancelled({
+            isShippingRequired: state.isShippingRequired,
+          }),
+        })),
       },
     },
     Payment: {
       on: {
-        ToggledPaymentMethod: to('Payment', ({ state, message }) =>
-          evo(state, { isPaymentMethodSelected: () => message.isSelected }),
-        ),
-        ClickedContinue: to('Review', ({ state }) =>
-          CheckoutState.Review({
+        ToggledPaymentMethod: to('Payment', ({ state, message }) => ({
+          model: evo(state, {
+            isPaymentMethodSelected: () => message.isSelected,
+          }),
+        })),
+        ClickedContinue: to('Review', ({ state }) => ({
+          model: CheckoutState.Review({
             isPaymentMethodSelected: state.isPaymentMethodSelected,
             isShippingRequired: state.isShippingRequired,
             isTermsAccepted: false,
             promo: Promo.NoPromo(),
             promoCodeInput: '',
           }),
-        ),
+        })),
         ClickedBack: [
           when(
             state => state.isShippingRequired,
             'Shipping',
-            ({ state }) =>
-              CheckoutState.Shipping({
+            ({ state }) => ({
+              model: CheckoutState.Shipping({
                 isShippingRequired: state.isShippingRequired,
               }),
+            }),
           ),
           otherwise(
-            to('Cart', ({ state }) =>
-              CheckoutState.Cart({
+            to('Cart', ({ state }) => ({
+              model: CheckoutState.Cart({
                 isShippingRequired: state.isShippingRequired,
               }),
-            ),
+            })),
           ),
         ],
-        ClickedCancel: to('Cancelled', ({ state }) =>
-          CheckoutState.Cancelled({
+        ClickedCancel: to('Cancelled', ({ state }) => ({
+          model: CheckoutState.Cancelled({
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
+        })),
       },
     },
     Review: {
       on: {
-        ToggledPaymentMethod: to('Review', ({ state, message }) =>
-          evo(state, { isPaymentMethodSelected: () => message.isSelected }),
-        ),
-        ToggledTermsAccepted: to('Review', ({ state, message }) =>
-          evo(state, { isTermsAccepted: () => message.isAccepted }),
-        ),
-        UpdatedPromoCode: to('Review', ({ state, message }) =>
-          evo(state, {
+        ToggledPaymentMethod: to('Review', ({ state, message }) => ({
+          model: evo(state, {
+            isPaymentMethodSelected: () => message.isSelected,
+          }),
+        })),
+        ToggledTermsAccepted: to('Review', ({ state, message }) => ({
+          model: evo(state, { isTermsAccepted: () => message.isAccepted }),
+        })),
+        UpdatedPromoCode: to('Review', ({ state, message }) => ({
+          model: evo(state, {
             promoCodeInput: () => message.value,
             promo: currentPromo =>
               currentPromo._tag === 'RejectedPromo'
                 ? Promo.NoPromo()
                 : currentPromo,
           }),
-        ),
+        })),
         SubmittedPromoCode: [
           when(
             reviewToMaybeDiscount,
             'Review',
-            ({ state, guardValue: discount }) =>
-              evo(state, { promo: () => Promo.AppliedPromo({ discount }) }),
+            ({ state, guardValue: discount }) => ({
+              model: evo(state, {
+                promo: () => Promo.AppliedPromo({ discount }),
+              }),
+            }),
           ),
           otherwise(
-            to('Review', ({ state }) =>
-              evo(state, { promo: () => Promo.RejectedPromo() }),
-            ),
+            to('Review', ({ state }) => ({
+              model: evo(state, { promo: () => Promo.RejectedPromo() }),
+            })),
           ),
         ],
         ClickedPlaceOrder: [
-          when(
-            isReviewReady,
-            'Placing',
-            ({ state }) =>
-              CheckoutState.Placing({
-                isShippingRequired: state.isShippingRequired,
-                maybeDiscount: promoToMaybeDiscount(state.promo),
-              }),
-            ({ state }) => [
+          when(isReviewReady, 'Placing', ({ state }) => ({
+            model: CheckoutState.Placing({
+              isShippingRequired: state.isShippingRequired,
+              maybeDiscount: promoToMaybeDiscount(state.promo),
+            }),
+            commands: [
               PlaceOrder({ isShippingRequired: state.isShippingRequired }),
             ],
-          ),
+          })),
         ],
-        ClickedBack: to('Payment', ({ state }) =>
-          CheckoutState.Payment({
+        ClickedBack: to('Payment', ({ state }) => ({
+          model: CheckoutState.Payment({
             isPaymentMethodSelected: state.isPaymentMethodSelected,
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
-        ClickedCancel: to('Cancelled', ({ state }) =>
-          CheckoutState.Cancelled({
+        })),
+        ClickedCancel: to('Cancelled', ({ state }) => ({
+          model: CheckoutState.Cancelled({
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
+        })),
       },
     },
     Placing: {
       on: {
-        SucceededPlaceOrder: to('Confirmed', ({ state, message }) =>
-          CheckoutState.Confirmed({
+        SucceededPlaceOrder: to('Confirmed', ({ state, message }) => ({
+          model: CheckoutState.Confirmed({
             isShippingRequired: state.isShippingRequired,
             maybeDiscount: state.maybeDiscount,
             orderId: message.orderId,
           }),
-        ),
+        })),
       },
     },
     Confirmed: {
       on: {
-        ClickedStartOver: to('Cart', ({ state }) =>
-          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
-        ),
+        ClickedStartOver: to('Cart', ({ state }) => ({
+          model: CheckoutState.Cart({
+            isShippingRequired: state.isShippingRequired,
+          }),
+        })),
       },
     },
     Cancelled: {
       on: {
-        ClickedStartOver: to('Cart', ({ state }) =>
-          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
-        ),
+        ClickedStartOver: to('Cart', ({ state }) => ({
+          model: CheckoutState.Cart({
+            isShippingRequired: state.isShippingRequired,
+          }),
+        })),
       },
     },
   },

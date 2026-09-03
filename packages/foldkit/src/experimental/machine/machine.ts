@@ -29,10 +29,10 @@ export type Variant<Union extends Tagged, Tag extends TagOf<Union>> = Extract<
 // EDGE
 
 /**
- * The single argument an Edge's `build` and `commands` callbacks receive:
- * the source state, the triggering Message, and the guard value produced by
- * the Edge's {@link when} guard (`void` on unguarded and boolean-guarded
- * Edges). Destructure the fields you need.
+ * The single argument an Edge handler receives: the source state, the
+ * triggering Message, and the guard value produced by the Edge's {@link when}
+ * guard (`void` on unguarded and boolean-guarded Edges). Destructure the fields
+ * you need.
  */
 export type EdgeInput<
   SourceState extends Tagged,
@@ -46,11 +46,10 @@ export type EdgeInput<
 
 /**
  * A single transition edge. The target state tag is a literal value, so the
- * edge set of a Machine is enumerable data. `build` constructs the target
- * variant from its {@link EdgeInput}. `maybeCommands` holds transition-time
- * effects, dispatched as ordinary Commands.
+ * edge set of a Machine is enumerable data. `handler` returns the target
+ * variant and any transition-time Commands as an `Update.Return` record.
  *
- * The correlation between `target` and `build`'s return variant is enforced
+ * The correlation between `target` and `handler`'s Model variant is enforced
  * by {@link to}'s signature, not by this type. Keeping this type free of the
  * target tag is what lets TypeScript infer the source state and trigger
  * Message from the transition table position.
@@ -67,12 +66,9 @@ export type Edge<
 > = Readonly<{
   _tag: 'Edge'
   target: TagOf<State>
-  build: (input: EdgeInput<SourceState, TriggerMessage, unknown>) => State
-  maybeCommands: Option.Option<
-    (
-      input: EdgeInput<SourceState, TriggerMessage, unknown>,
-    ) => ReadonlyArray<Command<Message, never, R>>
-  >
+  handler: (
+    input: EdgeInput<SourceState, TriggerMessage, unknown>,
+  ) => Update.Return<State, Message, R>
   readonly '~foldkit/EdgeGuardValue'?: GuardValue
 }>
 
@@ -168,12 +164,9 @@ const makeEdge = <
   R = never,
 >(
   target: TargetTag,
-  build: (
+  handler: (
     input: NoInfer<EdgeInput<SourceState, TriggerMessage, GuardValue>>,
-  ) => NoInfer<Variant<State, TargetTag>>,
-  commands?: (
-    input: NoInfer<EdgeInput<SourceState, TriggerMessage, GuardValue>>,
-  ) => NoInfer<ReadonlyArray<Command<Message, never, R>>>,
+  ) => Update.Return<NoInfer<Variant<State, TargetTag>>, NoInfer<Message>, R>,
 ): Edge<State, Message, SourceState, TriggerMessage, GuardValue, R> => {
   const narrowGuardValue = (
     input: EdgeInput<SourceState, TriggerMessage, unknown>,
@@ -185,23 +178,20 @@ const makeEdge = <
   return {
     _tag: 'Edge',
     target,
-    build: input => build(narrowGuardValue(input)),
-    maybeCommands:
-      commands === undefined
-        ? Option.none()
-        : Option.some(input => commands(narrowGuardValue(input))),
+    handler: input => handler(narrowGuardValue(input)),
   }
 }
 
 /**
  * Declares a transition Edge to the state variant named by `target`. The
- * `build` callback receives an {@link EdgeInput} whose state and Message are
- * narrowed to the variants the Edge sits under in the transition table, and
- * must return the target variant. Optional `commands` attach transition-time
- * effects.
+ * `handler` receives an {@link EdgeInput} whose state and Message are narrowed
+ * to the variants the Edge sits under in the transition table, and returns an
+ * `Update.Return` record whose `model` is the target variant and whose optional
+ * `commands` are transition-time effects.
  *
- * The `commands` callback may return Commands whose Effects need services. The
- * requirements they carry flow into the Machine's `R` through {@link define}.
+ * The handler's `commands` field may contain Commands whose Effects need
+ * services. The requirements they carry flow into the Machine's `R` through
+ * {@link define}.
  *
  * Only meaningful inside a {@link TransitionTable}: the source and trigger
  * types flow in from the table position contextually.
@@ -217,20 +207,17 @@ export const to = <
   R = never,
 >(
   target: TargetTag,
-  build: (
+  handler: (
     input: NoInfer<EdgeInput<SourceState, TriggerMessage>>,
-  ) => NoInfer<Variant<State, TargetTag>>,
-  commands?: (
-    input: NoInfer<EdgeInput<SourceState, TriggerMessage>>,
-  ) => ReadonlyArray<Command<NoInfer<Message>, never, R>>,
+  ) => Update.Return<NoInfer<Variant<State, TargetTag>>, NoInfer<Message>, R>,
 ): Edge<State, Message, SourceState, TriggerMessage, void, R> =>
-  makeEdge(target, build, commands)
+  makeEdge(target, handler)
 
 /**
  * Guards an Edge. Guard lists run in order, and the first guard that passes
  * fires its Edge. A guard either resolves the state and Message to an
  * `Option` (returning `Option.some` passes, and the wrapped value flows into
- * the Edge's build and commands callbacks as `guardValue`) or returns a
+ * the Edge's handler as `guardValue`) or returns a
  * plain boolean when there is nothing to extract (returning `true` passes,
  * and `guardValue` is `void`).
  *
@@ -253,16 +240,11 @@ export const when = <
     message: NoInfer<TriggerMessage>,
   ) => GuardResult,
   target: TargetTag,
-  build: (
+  handler: (
     input: NoInfer<
       EdgeInput<SourceState, TriggerMessage, GuardValueOf<GuardResult>>
     >,
-  ) => NoInfer<Variant<State, TargetTag>>,
-  commands?: (
-    input: NoInfer<
-      EdgeInput<SourceState, TriggerMessage, GuardValueOf<GuardResult>>
-    >,
-  ) => ReadonlyArray<Command<NoInfer<Message>, never, R>>,
+  ) => Update.Return<NoInfer<Variant<State, TargetTag>>, NoInfer<Message>, R>,
 ): When<
   State,
   Message,
@@ -281,13 +263,13 @@ export const when = <
       return result
     }
   },
-  edge: makeEdge(target, build, commands),
+  edge: makeEdge(target, handler),
 })
 
 /**
- * The unconditional fallback at the end of a guard list. Its edge may carry
- * Commands whose Effects need services, threading their requirements into the
- * Machine's `R` the same way {@link to} and {@link when} do.
+ * The unconditional fallback at the end of a guard list. Its Edge handler may
+ * return Commands whose Effects need services, threading their requirements
+ * into the Machine's `R` the same way {@link to} and {@link when} do.
  *
  * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
  */
@@ -569,10 +551,10 @@ const flattenUnionMembers = (
  * narrowing collapses.
  *
  * The Machine is not a runtime: `transition` has the same shape as a Foldkit
- * `update` branch and returns `[nextState, commands]`, so the machine state
- * lives in the Model and the Foldkit runtime never learns the Machine
- * exists. Messages that match no Edge leave the state unchanged; use `step`
- * when the `Ignored` outcome should be observable.
+ * `update` branch and returns an `Update.Return`, so the machine state lives in
+ * the Model and the Foldkit runtime never learns the Machine exists. Messages
+ * that match no Edge leave the state unchanged; use `step` when the `Ignored`
+ * outcome should be observable.
  *
  * Because every Edge names a literal target tag, the Edge set is plain data:
  * `reachableFrom`, `unreachableStates`, `deadTransitions`, and `toMermaid`
@@ -591,7 +573,10 @@ const flattenUnionMembers = (
  *   states: {
  *     Idle: {
  *       on: {
- *         ClickedSubmit: to('Uploading', () => Uploading(), () => [Presign()]),
+ *         ClickedSubmit: to('Uploading', () => ({
+ *           model: Uploading(),
+ *           commands: [Presign()],
+ *         })),
  *       },
  *     },
  *   },
@@ -726,26 +711,22 @@ export const define =
       state: State,
       message: Message,
       selectedEdge: SelectedEdge<State, Message, R>,
-    ): Transitioned<State, Message, R> => ({
-      _tag: 'Transitioned',
-      from: state._tag,
-      target: selectedEdge.edge.target,
-      messageTag: message._tag,
-      state: selectedEdge.edge.build({
+    ): Transitioned<State, Message, R> => {
+      const edgeUpdate = selectedEdge.edge.handler({
         state,
         message,
         guardValue: selectedEdge.guardValue,
-      }),
-      commands: Option.match(selectedEdge.edge.maybeCommands, {
-        onNone: () => [],
-        onSome: buildCommands =>
-          buildCommands({
-            state,
-            message,
-            guardValue: selectedEdge.guardValue,
-          }),
-      }),
-    })
+      })
+
+      return {
+        _tag: 'Transitioned',
+        from: state._tag,
+        target: selectedEdge.edge.target,
+        messageTag: message._tag,
+        state: edgeUpdate.model,
+        commands: edgeUpdate.commands ?? [],
+      }
+    }
 
     const makeIgnored = (
       state: State,
