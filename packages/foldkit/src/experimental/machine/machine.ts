@@ -26,23 +26,65 @@ export type Variant<Union extends Tagged, Tag extends TagOf<Union>> = Extract<
   Readonly<{ _tag: Tag }>
 >
 
+declare const NoMachineContextTypeId: unique symbol
+type NoMachineContext = typeof NoMachineContextTypeId
+
+type IsAny<Value> = 0 extends 1 & Value ? true : false
+type IsNever<Value> = [Value] extends [never] ? true : false
+
+type HasMachineContext<Context> =
+  IsAny<Context> extends true
+    ? true
+    : [Context] extends [never]
+      ? true
+      : [Context] extends [NoMachineContext]
+        ? false
+        : true
+
+type ContextArguments<Context> =
+  HasMachineContext<Context> extends true ? [context: Context] : []
+
+type MachineContextArgument<Context> =
+  IsAny<Context> extends true
+    ? Context
+    : IsNever<Context> extends true
+      ? Context
+      : undefined extends Context
+        ? Exclude<Context, void | undefined> | undefined
+        : Context
+
+type MachineContextArguments<Context> =
+  HasMachineContext<Context> extends true
+    ? [context: MachineContextArgument<Context>]
+    : []
+
 // EDGE
 
 /**
  * The single argument an Edge handler receives: the source state, the
- * triggering Message, and the guard value produced by the Edge's {@link when}
- * guard (`void` on unguarded and boolean-guarded Edges). Destructure the fields
- * you need.
+ * triggering Message, the guard value produced by the Edge's {@link when}
+ * guard (`void` on unguarded and boolean-guarded Edges), and the read-only
+ * context declared for the Machine when one exists. Destructure the fields you
+ * need.
  */
 export type EdgeInput<
   SourceState extends Tagged,
   TriggerMessage extends Tagged,
   GuardValue = void,
-> = Readonly<{
-  state: SourceState
-  message: TriggerMessage
-  guardValue: GuardValue
-}>
+  Context = NoMachineContext,
+> =
+  HasMachineContext<Context> extends true
+    ? Readonly<{
+        state: SourceState
+        message: TriggerMessage
+        guardValue: GuardValue
+        context: Context
+      }>
+    : Readonly<{
+        state: SourceState
+        message: TriggerMessage
+        guardValue: GuardValue
+      }>
 
 /**
  * A single transition edge. The target state tag is a literal value, so the
@@ -63,11 +105,12 @@ export type Edge<
   TriggerMessage extends Message,
   GuardValue = void,
   R = never,
+  Context = NoMachineContext,
 > = Readonly<{
   _tag: 'Edge'
   target: TagOf<State>
   handler: (
-    input: EdgeInput<SourceState, TriggerMessage, unknown>,
+    input: EdgeInput<SourceState, TriggerMessage, unknown, Context>,
   ) => Update.Return<State, Message, R>
   readonly '~foldkit/EdgeGuardValue'?: GuardValue
 }>
@@ -80,10 +123,23 @@ export type When<
   TriggerMessage extends Message,
   GuardValue = unknown,
   R = never,
+  Context = NoMachineContext,
 > = Readonly<{
   _tag: 'When'
-  guard: (state: SourceState, message: TriggerMessage) => Option.Option<unknown>
-  edge: Edge<State, Message, SourceState, TriggerMessage, GuardValue, R>
+  guard: (
+    state: SourceState,
+    message: TriggerMessage,
+    ...context: ContextArguments<Context>
+  ) => Option.Option<unknown>
+  edge: Edge<
+    State,
+    Message,
+    SourceState,
+    TriggerMessage,
+    GuardValue,
+    R,
+    Context
+  >
 }>
 
 /** The unconditional fallback Edge at the end of a guard list. Construct with {@link otherwise}. */
@@ -93,9 +149,10 @@ export type Otherwise<
   SourceState extends State,
   TriggerMessage extends Message,
   R = never,
+  Context = NoMachineContext,
 > = Readonly<{
   _tag: 'Otherwise'
-  edge: Edge<State, Message, SourceState, TriggerMessage, void, R>
+  edge: Edge<State, Message, SourceState, TriggerMessage, void, R, Context>
 }>
 
 /** One entry in an ordered guard list: a {@link When} or the {@link Otherwise} fallback. */
@@ -105,9 +162,10 @@ export type GuardedEdge<
   SourceState extends State,
   TriggerMessage extends Message,
   R = never,
+  Context = NoMachineContext,
 > =
-  | When<State, Message, SourceState, TriggerMessage, unknown, R>
-  | Otherwise<State, Message, SourceState, TriggerMessage, R>
+  | When<State, Message, SourceState, TriggerMessage, unknown, R, Context>
+  | Otherwise<State, Message, SourceState, TriggerMessage, R, Context>
 
 type OptionValue<MaybeValue> =
   MaybeValue extends Option.Option<infer Value> ? Value : never
@@ -129,6 +187,7 @@ export type TransitionTable<
   State extends Tagged,
   Message extends Tagged,
   R = never,
+  Context = NoMachineContext,
 > = Readonly<{
   [SourceTag in TagOf<State>]?: Readonly<{
     on: Readonly<{
@@ -139,7 +198,8 @@ export type TransitionTable<
             Variant<State, SourceTag>,
             Variant<Message, MessageTag>,
             void,
-            R
+            R,
+            Context
           >
         | ReadonlyArray<
             GuardedEdge<
@@ -147,7 +207,8 @@ export type TransitionTable<
               Message,
               Variant<State, SourceTag>,
               Variant<Message, MessageTag>,
-              R
+              R,
+              Context
             >
           >
     }>
@@ -162,17 +223,26 @@ const makeEdge = <
   const TargetTag extends TagOf<State>,
   GuardValue = void,
   R = never,
+  Context = NoMachineContext,
 >(
   target: TargetTag,
   handler: (
-    input: NoInfer<EdgeInput<SourceState, TriggerMessage, GuardValue>>,
+    input: NoInfer<EdgeInput<SourceState, TriggerMessage, GuardValue, Context>>,
   ) => Update.Return<NoInfer<Variant<State, TargetTag>>, NoInfer<Message>, R>,
-): Edge<State, Message, SourceState, TriggerMessage, GuardValue, R> => {
+): Edge<
+  State,
+  Message,
+  SourceState,
+  TriggerMessage,
+  GuardValue,
+  R,
+  Context
+> => {
   const narrowGuardValue = (
-    input: EdgeInput<SourceState, TriggerMessage, unknown>,
-  ): EdgeInput<SourceState, TriggerMessage, GuardValue> => {
+    input: EdgeInput<SourceState, TriggerMessage, unknown, Context>,
+  ): EdgeInput<SourceState, TriggerMessage, GuardValue, Context> => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    return input as EdgeInput<SourceState, TriggerMessage, GuardValue>
+    return input as EdgeInput<SourceState, TriggerMessage, GuardValue, Context>
   }
 
   return {
@@ -187,7 +257,8 @@ const makeEdge = <
  * `handler` receives an {@link EdgeInput} whose state and Message are narrowed
  * to the variants the Edge sits under in the transition table, and returns an
  * `Update.Return` record whose `model` is the target variant and whose optional
- * `commands` are transition-time effects.
+ * `commands` are transition-time effects. When the Machine declares a context,
+ * the input also contains that context for the current transition.
  *
  * The handler's `commands` field may contain Commands whose Effects need
  * services. The requirements they carry flow into the Machine's `R` through
@@ -205,13 +276,23 @@ export const to = <
   TriggerMessage extends Message,
   const TargetTag extends TagOf<State>,
   R = never,
+  Context = NoMachineContext,
 >(
   target: TargetTag,
   handler: (
-    input: NoInfer<EdgeInput<SourceState, TriggerMessage>>,
+    input: NoInfer<EdgeInput<SourceState, TriggerMessage, void, Context>>,
   ) => Update.Return<NoInfer<Variant<State, TargetTag>>, NoInfer<Message>, R>,
-): Edge<State, Message, SourceState, TriggerMessage, void, R> =>
-  makeEdge(target, handler)
+): Edge<State, Message, SourceState, TriggerMessage, void, R, Context> =>
+  makeEdge<
+    State,
+    Message,
+    SourceState,
+    TriggerMessage,
+    TargetTag,
+    void,
+    R,
+    Context
+  >(target, handler)
 
 /**
  * Guards an Edge. Guard lists run in order, and the first guard that passes
@@ -221,8 +302,10 @@ export const to = <
  * plain boolean when there is nothing to extract (returning `true` passes,
  * and `guardValue` is `void`).
  *
- * The state and Message parameters are `NoInfer` so they resolve from the
- * guard list's table position alone.
+ * When the Machine declares a context, the guard receives it as a third
+ * parameter and its Edge handler receives it in {@link EdgeInput}. The state,
+ * Message, and context parameters are `NoInfer` so they resolve from the guard
+ * list's table position alone.
  *
  * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
  */
@@ -234,15 +317,17 @@ export const when = <
   GuardResult extends Option.Option<unknown> | boolean,
   const TargetTag extends TagOf<State>,
   R = never,
+  Context = NoMachineContext,
 >(
   guard: (
     state: NoInfer<SourceState>,
     message: NoInfer<TriggerMessage>,
+    ...context: ContextArguments<NoInfer<Context>>
   ) => GuardResult,
   target: TargetTag,
   handler: (
     input: NoInfer<
-      EdgeInput<SourceState, TriggerMessage, GuardValueOf<GuardResult>>
+      EdgeInput<SourceState, TriggerMessage, GuardValueOf<GuardResult>, Context>
     >,
   ) => Update.Return<NoInfer<Variant<State, TargetTag>>, NoInfer<Message>, R>,
 ): When<
@@ -251,20 +336,38 @@ export const when = <
   SourceState,
   TriggerMessage,
   GuardValueOf<GuardResult>,
-  R
-> => ({
-  _tag: 'When',
-  guard: (state, message) => {
-    const result = guard(state, message)
+  R,
+  Context
+> => {
+  const normalizeGuard = (
+    state: SourceState,
+    message: TriggerMessage,
+    ...context: ContextArguments<Context>
+  ): Option.Option<unknown> => {
+    const result = guard(state, message, ...context)
 
     if (Predicate.isBoolean(result)) {
       return result ? Option.some(undefined) : Option.none()
     } else {
       return result
     }
-  },
-  edge: makeEdge(target, handler),
-})
+  }
+
+  return {
+    _tag: 'When',
+    guard: normalizeGuard,
+    edge: makeEdge<
+      State,
+      Message,
+      SourceState,
+      TriggerMessage,
+      TargetTag,
+      GuardValueOf<GuardResult>,
+      R,
+      Context
+    >(target, handler),
+  }
+}
 
 /**
  * The unconditional fallback at the end of a guard list. Its Edge handler may
@@ -279,9 +382,10 @@ export const otherwise = <
   SourceState extends State,
   TriggerMessage extends Message,
   R = never,
+  Context = NoMachineContext,
 >(
-  edge: Edge<State, Message, SourceState, TriggerMessage, void, R>,
-): Otherwise<State, Message, SourceState, TriggerMessage, R> => ({
+  edge: Edge<State, Message, SourceState, TriggerMessage, void, R, Context>,
+): Otherwise<State, Message, SourceState, TriggerMessage, R, Context> => ({
   _tag: 'Otherwise',
   edge,
 })
@@ -383,21 +487,28 @@ export type Machine<
   State extends Tagged,
   Message extends Tagged,
   R = never,
+  Context = NoMachineContext,
 > = Readonly<{
   initial: State
   stateTags: ReadonlyArray<TagOf<State>>
   edges: ReadonlyArray<EdgeSummary<State, Message>>
   /** Runs one Message through the Machine as a Foldkit update. The returned
    * `Update.Return<State, Message, R>` stores the next Machine state in
-   * `model` and any transition-time Commands in `commands`, so `transition`
-   * can be passed directly to `Update.foldChild`. Use `step` when code needs
-   * to distinguish a `Transitioned` result from an `Ignored` result or
-   * inspect Edge metadata. */
+   * `model` and any transition-time Commands in `commands`, so a context-free
+   * `transition` can be passed directly to `Update.foldChild`. Use a closure
+   * around a contextual `transition`. Use `step` when code needs to distinguish
+   * a `Transitioned` result from an `Ignored` result or inspect Edge metadata.
+   */
   transition: (
     state: State,
     message: Message,
+    ...context: MachineContextArguments<Context>
   ) => Update.Return<State, Message, R>
-  step: (state: State, message: Message) => TransitionResult<State, Message, R>
+  step: (
+    state: State,
+    message: Message,
+    ...context: MachineContextArguments<Context>
+  ) => TransitionResult<State, Message, R>
   /**
    * The state tags a walk of the statically selectable declared Edges visits
    * starting from `tag`. Edges listed after an `otherwise` are excluded because
@@ -440,7 +551,7 @@ export type Machine<
  * union. Passed to `define`'s first stage so the type parameters are
  * fully resolved before the transition table is checked.
  */
-export type MachineSchemas<
+type MachineSchemaFields<
   State extends Tagged,
   Message extends Tagged,
 > = Readonly<{
@@ -448,6 +559,20 @@ export type MachineSchemas<
     Readonly<{ Type: State; members: ReadonlyArray<Schema.Top> }>
   message: Schema.Top & Readonly<{ Type: Message }>
 }>
+
+/**
+ * The Schemas a Machine is defined over, including an optional read-only
+ * context Schema. A declared context is required by the Machine's guards,
+ * Edge handlers, `transition`, and `step`.
+ */
+export type MachineSchemas<
+  State extends Tagged,
+  Message extends Tagged,
+  ContextSchema extends Schema.Top | undefined = undefined,
+> = MachineSchemaFields<State, Message> &
+  ([ContextSchema] extends [Schema.Top]
+    ? Readonly<{ context: ContextSchema }>
+    : Readonly<{ context?: never }>)
 
 /** The Machine definition: the initial state and the transition table.
  *
@@ -457,25 +582,41 @@ export type MachineDefinition<
   State extends Tagged,
   Message extends Tagged,
   R = never,
+  Context = NoMachineContext,
 > = Readonly<{
   initial: State
-  states: TransitionTable<State, Message, R>
+  states: TransitionTable<State, Message, R, Context>
 }>
 
-type LooseEdge<State extends Tagged, Message extends Tagged, R> = Edge<
-  State,
-  Message,
-  State,
-  Message,
-  unknown,
-  R
->
+type RuntimeEdgeInput<State extends Tagged, Message extends Tagged> = Readonly<{
+  state: State
+  message: Message
+  guardValue: unknown
+  context?: unknown
+}>
 
-type LooseGuardedEdge<
-  State extends Tagged,
-  Message extends Tagged,
-  R,
-> = GuardedEdge<State, Message, State, Message, R>
+type LooseEdge<State extends Tagged, Message extends Tagged, R> = Readonly<{
+  _tag: 'Edge'
+  target: TagOf<State>
+  handler: (
+    input: RuntimeEdgeInput<State, Message>,
+  ) => Update.Return<State, Message, R>
+}>
+
+type LooseGuardedEdge<State extends Tagged, Message extends Tagged, R> =
+  | Readonly<{
+      _tag: 'When'
+      guard: (
+        state: State,
+        message: Message,
+        context?: unknown,
+      ) => Option.Option<unknown>
+      edge: LooseEdge<State, Message, R>
+    }>
+  | Readonly<{
+      _tag: 'Otherwise'
+      edge: LooseEdge<State, Message, R>
+    }>
 
 type SelectedEdge<State extends Tagged, Message extends Tagged, R> = Readonly<{
   edge: LooseEdge<State, Message, R>
@@ -550,11 +691,20 @@ const flattenUnionMembers = (
  * table while the type parameters are still being inferred, and the
  * narrowing collapses.
  *
- * The Machine is not a runtime: `transition` has the same shape as a Foldkit
- * `update` branch and returns an `Update.Return`, so the machine state lives in
- * the Model and the Foldkit runtime never learns the Machine exists. Messages
- * that match no Edge leave the state unchanged; use `step` when the `Ignored`
- * outcome should be observable.
+ * The Machine is not a runtime: `transition` returns an `Update.Return`, so the
+ * Machine state lives in the Model and the Foldkit runtime never learns the
+ * Machine exists. A context-free `transition` has the same shape as a Foldkit
+ * `update` branch and can be passed directly to `Update.foldChild`. A
+ * contextual Machine needs a closure that reads its context from the parent
+ * Model. Messages that match no Edge leave the state unchanged; use `step`
+ * when the `Ignored` outcome should be observable.
+ *
+ * Declare a `context` Schema when transitions need a read-only view of data
+ * outside the Machine state. The context is passed to guards and Edge handlers
+ * on each call; it is not decoded, stored, or included in static analysis. Data
+ * that the state owns for its lifetime belongs in the state as a snapshot.
+ * Values that should be visible as facts in Story tests and DevTools should
+ * still enter through Messages.
  *
  * Because every Edge names a literal target tag, the Edge set is plain data:
  * `reachableFrom`, `unreachableStates`, `deadTransitions`, and `toMermaid`
@@ -566,33 +716,70 @@ const flattenUnionMembers = (
  * distinct services `R` cannot be inferred to their union, so supply it on the
  * second call: `define(schemas)<UploadsClient | SaveClient>({ ... })`.
  *
- * @example An edge Command that needs a service
+ * @example Read external Model data through context
  * ```ts
- * const machine = define({ state: DialogState, message: DialogMessage })({
+ * const machine = define({
+ *   state: DialogState,
+ *   message: DialogMessage,
+ *   context: UploadQueues,
+ * })({
  *   initial: Idle(),
  *   states: {
  *     Idle: {
  *       on: {
- *         ClickedSubmit: to('Uploading', () => ({
- *           model: Uploading(),
- *           commands: [Presign()],
- *         })),
+ *         ClickedSubmit: [
+ *           when(
+ *             (_state, message, queues) => queues.has(message.fileId),
+ *             'Uploading',
+ *             ({ message, context: queues }) => ({
+ *               model: Uploading({ fileId: message.fileId }),
+ *               commands: [UploadFromQueue({ queues, fileId: message.fileId })],
+ *             }),
+ *           ),
+ *         ],
  *       },
  *     },
  *   },
  * })
- * // Commands on the return from machine.transition(...) require UploadsClient.
+ * machine.transition(model.dialog, message, model.uploadQueues)
  * ```
  *
  * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
  */
-export const define =
-  <State extends Tagged, Message extends Tagged>(
-    schemas: MachineSchemas<State, Message>,
-  ) =>
-  <R = never>(
-    definition: MachineDefinition<State, Message, R>,
-  ): Machine<State, Message, R> => {
+export function define<
+  State extends Tagged,
+  Message extends Tagged,
+  ContextSchema extends Schema.Top,
+>(
+  schemas: MachineSchemas<State, Message, ContextSchema>,
+): <R = never>(
+  definition: MachineDefinition<State, Message, R, ContextSchema['Type']>,
+) => Machine<State, Message, R, ContextSchema['Type']>
+export function define<State extends Tagged, Message extends Tagged>(
+  schemas: MachineSchemas<State, Message>,
+): <R = never>(
+  definition: MachineDefinition<State, Message, R>,
+) => Machine<State, Message, R>
+export function define(
+  schemas: MachineSchemaFields<Tagged, Tagged> &
+    Readonly<{ context?: Schema.Top }>,
+): unknown {
+  return defineImplementation(schemas)
+}
+
+function defineImplementation<
+  State extends Tagged,
+  Message extends Tagged,
+  Context = NoMachineContext,
+>(
+  schemas: MachineSchemaFields<State, Message> &
+    Readonly<{ context?: Schema.Top }>,
+): <R = never>(
+  definition: MachineDefinition<State, Message, R, Context>,
+) => Machine<State, Message, R, Context> {
+  return <R = never>(
+    definition: MachineDefinition<State, Message, R, Context>,
+  ): Machine<State, Message, R, Context> => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
     const looseStates = definition.states as unknown as LooseTable<
       State,
@@ -600,6 +787,7 @@ export const define =
       R
     >
 
+    const hasContext = Predicate.hasProperty(schemas, 'context')
     const initialTag = definition.initial._tag
 
     const stateTags = pipe(
@@ -668,16 +856,38 @@ export const define =
       HashSet.fromIterable,
     )
 
+    const runGuard = (
+      guardedEdge: Extract<
+        LooseGuardedEdge<State, Message, R>,
+        Readonly<{ _tag: 'When' }>
+      >,
+      state: State,
+      message: Message,
+      context?: Context,
+    ): Option.Option<unknown> => {
+      if (hasContext) {
+        return guardedEdge.guard(state, message, context)
+      } else {
+        return guardedEdge.guard(state, message)
+      }
+    }
+
     const selectFromGuardList = (
       guardedEdges: ReadonlyArray<LooseGuardedEdge<State, Message, R>>,
       state: State,
       message: Message,
+      context?: Context,
     ): Option.Option<SelectedEdge<State, Message, R>> =>
       Array.matchLeft(guardedEdges, {
         onEmpty: () => Option.none(),
         onNonEmpty: (guardedEdge, rest) => {
           if (guardedEdge._tag === 'When') {
-            const maybeGuardValue = guardedEdge.guard(state, message)
+            const maybeGuardValue = runGuard(
+              guardedEdge,
+              state,
+              message,
+              context,
+            )
 
             if (Option.isSome(maybeGuardValue)) {
               return Option.some({
@@ -685,7 +895,7 @@ export const define =
                 guardValue: maybeGuardValue.value,
               })
             } else {
-              return selectFromGuardList(rest, state, message)
+              return selectFromGuardList(rest, state, message, context)
             }
           } else {
             return Option.some({
@@ -702,21 +912,39 @@ export const define =
         | ReadonlyArray<LooseGuardedEdge<State, Message, R>>,
       state: State,
       message: Message,
+      context?: Context,
     ): Option.Option<SelectedEdge<State, Message, R>> =>
       isGuardList(edgeOrGuardedEdges)
-        ? selectFromGuardList(edgeOrGuardedEdges, state, message)
+        ? selectFromGuardList(edgeOrGuardedEdges, state, message, context)
         : Option.some({ edge: edgeOrGuardedEdges, guardValue: undefined })
+
+    const makeRuntimeEdgeInput = (
+      state: State,
+      message: Message,
+      guardValue: unknown,
+      context?: Context,
+    ): RuntimeEdgeInput<State, Message> => {
+      if (hasContext) {
+        return { state, message, guardValue, context }
+      } else {
+        return { state, message, guardValue }
+      }
+    }
 
     const makeTransitioned = (
       state: State,
       message: Message,
       selectedEdge: SelectedEdge<State, Message, R>,
+      context?: Context,
     ): Transitioned<State, Message, R> => {
-      const edgeUpdate = selectedEdge.edge.handler({
+      const edgeInput = makeRuntimeEdgeInput(
         state,
         message,
-        guardValue: selectedEdge.guardValue,
-      })
+        selectedEdge.guardValue,
+        context,
+      )
+
+      const edgeUpdate = selectedEdge.edge.handler(edgeInput)
 
       return {
         _tag: 'Transitioned',
@@ -743,8 +971,11 @@ export const define =
     const step = (
       state: State,
       message: Message,
-    ): TransitionResult<State, Message, R> =>
-      pipe(
+      ...contextArguments: [context?: Context]
+    ): TransitionResult<State, Message, R> => {
+      const context = pipe(contextArguments, Array.head, Option.getOrUndefined)
+
+      return pipe(
         Record.get(looseStates, state._tag),
         Option.flatMap(stateEntry => Record.get(stateEntry.on, message._tag)),
         Option.match({
@@ -757,19 +988,24 @@ export const define =
                 : 'OutOfAlphabet',
             ),
           onSome: edgeOrGuardedEdges =>
-            Option.match(chooseEdge(edgeOrGuardedEdges, state, message), {
-              onNone: () => makeIgnored(state, message, 'GuardsFellThrough'),
-              onSome: selectedEdge =>
-                makeTransitioned(state, message, selectedEdge),
-            }),
+            Option.match(
+              chooseEdge(edgeOrGuardedEdges, state, message, context),
+              {
+                onNone: () => makeIgnored(state, message, 'GuardsFellThrough'),
+                onSome: selectedEdge =>
+                  makeTransitioned(state, message, selectedEdge, context),
+              },
+            ),
         }),
       )
+    }
 
     const transition = (
       state: State,
       message: Message,
+      ...contextArguments: [context?: Context]
     ): Update.Return<State, Message, R> => {
-      const result = step(state, message)
+      const result = step(state, message, ...contextArguments)
 
       if (result._tag === 'Transitioned') {
         return { model: result.state, commands: result.commands }
@@ -957,3 +1193,4 @@ export const define =
       toMermaid,
     }
   }
+}
