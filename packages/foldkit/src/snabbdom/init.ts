@@ -696,6 +696,7 @@ export function init(
   return function patch(
     oldVnode: VNode | Element | DocumentFragment,
     vnode: VNode,
+    onRootPatched?: (vnode: VNode) => void,
   ): VNode {
     const insertedVnodeQueue: VNodeQueue = []
     isDuplicateKeyWarningIssued = false
@@ -726,6 +727,11 @@ export function init(
         removeVnodes(parent, [oldVnode], 0, 0)
       }
     }
+
+    // NOTE: insert hooks run after the root has been installed and the old
+    // root may already be detached. Callers recovering from an insert-hook
+    // defect need the VNode that owns the DOM before those hooks can throw.
+    onRootPatched?.(vnode)
 
     for (
       let insertedVnodeIndex = 0;

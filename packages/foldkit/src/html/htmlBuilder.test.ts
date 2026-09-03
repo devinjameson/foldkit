@@ -1,4 +1,4 @@
-import { Context, Number, Schema as S } from 'effect'
+import { Context, Number, Schema } from 'effect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { defineMessageUnion } from '../message/index.js'
@@ -28,7 +28,7 @@ import { defineView } from './submodel.js'
 type ChildModel = Readonly<{ value: number }>
 
 const ChildMessage = defineMessageUnion({
-  ClickedChild: { value: S.Number },
+  ClickedChild: { value: Schema.Number },
 })
 type ChildMessage = typeof ChildMessage.Type
 
@@ -164,6 +164,26 @@ describe('HtmlBuilder type guarantees', () => {
     expect(imgWithChildren).toBeTypeOf('function')
   })
 
+  it('restricts textarea content ownership on direct and keyed builders', () => {
+    if (false) {
+      // @ts-expect-error textarea content must be set with h.Value
+      inertHtml.textarea([], ['default'])
+
+      // @ts-expect-error textarea content must be set with h.Value
+      inertHtml.keyed('textarea')('draft', [], ['default'])
+
+      inertHtml.textarea([
+        // @ts-expect-error textarea content must be set with h.Value
+        inertHtml.InnerHTML('<b>default</b>'),
+      ])
+
+      inertHtml.keyed('textarea')('draft', [
+        // @ts-expect-error textarea content must be set with h.Value
+        inertHtml.InnerHTML('<b>default</b>'),
+      ])
+    }
+  })
+
   it('rejects an element builder call that omits attributes', () => {
     // @ts-expect-error children are optional, attributes are not
     const divWithoutAttributes = () => inertHtml.div()
@@ -286,7 +306,7 @@ describe('HtmlBuilder runtime guarantees', () => {
   it('supplies the root view its builder in a live runtime and routes clicks to update', async () => {
     const Message = defineMessageUnion({ ClickedIncrement: {} })
     type Message = typeof Message.Type
-    const Model = S.Struct({ count: S.Number })
+    const Model = Schema.Struct({ count: Schema.Number })
     type Model = typeof Model.Type
 
     const container = document.createElement('div')
@@ -330,7 +350,7 @@ describe('HtmlBuilder runtime guarantees', () => {
   it('passes an explicitly undefined viewInputs through as the inputs argument', async () => {
     const Message = defineMessageUnion({ IgnoredChildRender: {} })
     type Message = typeof Message.Type
-    const Model = S.Struct({ ready: S.Boolean })
+    const Model = Schema.Struct({ ready: Schema.Boolean })
     type Model = typeof Model.Type
 
     // `undefined` is a legitimate value for these inputs, so the runtime must

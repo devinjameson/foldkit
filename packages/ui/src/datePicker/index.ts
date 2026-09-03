@@ -1,4 +1,4 @@
-import { Function, Match as M, Option, Predicate, Schema as S } from 'effect'
+import { Function, Option, Predicate, Schema } from 'effect'
 import * as Calendar from 'foldkit/calendar'
 import type { CalendarDate } from 'foldkit/calendar'
 import type { ChildAttribute, Html } from 'foldkit/html'
@@ -19,8 +19,8 @@ import * as Popover from '../popover/index.js'
  * `ViewInputs.maybeSelectedDate`. This holds the embedded Calendar submodel
  * (the visible grid) and the embedded Popover submodel (the open/close +
  * transition layer). */
-export const Model = S.Struct({
-  id: S.String,
+export const Model = Schema.Struct({
+  id: Schema.String,
   calendar: UiCalendar.Model,
   popover: Popover.Model,
 })
@@ -44,8 +44,8 @@ export type Message = typeof Message.Type
 /** Union of out-messages the date picker can produce. */
 export const OutMessage = defineMessageUnion({
   ChangedViewMonth: {
-    year: S.Int,
-    month: S.Int,
+    year: Schema.Int,
+    month: Schema.Int,
   },
   SelectedDate: { date: Calendar.CalendarDate },
   ClearedDate: {},
@@ -119,13 +119,12 @@ const writePopover = (model: Model, nextPopover: Popover.Model): Model =>
 const toGotPopoverMessage = (message: Popover.Message): Message =>
   Message.GotPopoverMessage({ message })
 
-const foldPopoverOutMessage = M.type<Popover.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Opened: () => dropCalendarToDays,
-    Closed: () => dropCalendarToDays,
-  }),
-)
+const foldPopoverOutMessage = Popover.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => dropCalendarToDays,
+  Closed: () => dropCalendarToDays,
+})
 
 const foldPopover = Update.foldChild({
   update: Popover.update,
@@ -151,24 +150,18 @@ const foldPopoverClose = Update.foldChildStep({
   foldOutMessage: foldPopoverOutMessage,
 })
 
-const foldCalendarOutMessage = M.type<UiCalendar.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    ChangedViewMonth: () => model => ({ model }),
-    SelectedDate: () => foldPopoverClose,
-  }),
-)
+const foldCalendarOutMessage = UiCalendar.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedViewMonth: () => model => ({ model }),
+  SelectedDate: () => foldPopoverClose,
+})
 
-const toDatePickerOutMessage: (
-  outMessage: UiCalendar.OutMessage,
-) => OutMessage = M.type<UiCalendar.OutMessage>().pipe(
-  M.withReturnType<OutMessage>(),
-  M.tagsExhaustive({
-    ChangedViewMonth: ({ year, month }) =>
-      OutMessage.ChangedViewMonth({ year, month }),
-    SelectedDate: ({ date }) => OutMessage.SelectedDate({ date }),
-  }),
-)
+const toDatePickerOutMessage = UiCalendar.OutMessage.match<OutMessage>({
+  ChangedViewMonth: ({ year, month }) =>
+    OutMessage.ChangedViewMonth({ year, month }),
+  SelectedDate: ({ date }) => OutMessage.SelectedDate({ date }),
+})
 
 const foldCalendar = Update.foldChild({
   update: UiCalendar.update,
@@ -317,7 +310,7 @@ export const triggerId = (id: string): string => `${id}-popover-button`
 
 // VIEW
 
-const encodeIsoDate = S.encodeSync(Calendar.CalendarDateFromIsoString)
+const encodeIsoDate = Schema.encodeSync(Calendar.CalendarDateFromIsoString)
 
 /** Per-render view inputs passed to `view` via `h.submodel`'s `viewInputs` field.
  *

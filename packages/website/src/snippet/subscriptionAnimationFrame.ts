@@ -1,22 +1,21 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { Subscription } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
 // MESSAGE
 
 const Message = defineMessageUnion({
-  TickedFrame: { deltaTime: S.Number },
+  TickedFrame: { deltaTime: Schema.Number },
   ClickedTogglePlay: {},
 })
 type Message = typeof Message.Type
 
 // MODEL
 
-const Model = S.Struct({
-  isPlaying: S.Boolean,
-  angle: S.Number,
+const Model = Schema.Struct({
+  isPlaying: Schema.Boolean,
+  angle: Schema.Number,
 })
-
 type Model = typeof Model.Type
 
 // SUBSCRIPTION

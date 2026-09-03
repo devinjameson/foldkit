@@ -109,16 +109,16 @@ Store the Calendar Model as a field in the parent Model. It contains interaction
 
 Pass these fields under `viewInputs` when `h.submodel` renders `Calendar.view`. The surrounding `h.submodel` configuration separately receives `slotId`, `model`, `view`, and `toParentMessage`.
 
-| Name                       | Type                                       | Default                    | Description                                                                                                |
-| -------------------------- | ------------------------------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `maybeSelectedDate`        | `Option<CalendarDate>`                     | —                          | Parent-owned selection used to derive selected-cell state. Pass it on every render.                        |
-| `toView`                   | `(attributes: CalendarAttributes) => Html` | —                          | Renders the current grid from the mode-specific attribute bundle. Match on `_tag` with `M.tagsExhaustive`. |
-| `previousMonthLabel`       | `string`                                   | `'Previous month'`         | Accessible label for the previous-month button in Days mode.                                               |
-| `nextMonthLabel`           | `string`                                   | `'Next month'`             | Accessible label for the next-month button in Days mode.                                                   |
-| `previousYearsPageLabel`   | `string`                                   | `'Previous 12 years'`      | Accessible label for the previous-page button in Years mode.                                               |
-| `nextYearsPageLabel`       | `string`                                   | `'Next 12 years'`          | Accessible label for the next-page button in Years mode.                                                   |
-| `daysHeadingButtonLabel`   | `string`                                   | `'Switch to month picker'` | Accessible label for the heading button in Days mode.                                                      |
-| `monthsHeadingButtonLabel` | `string`                                   | `'Switch to year picker'`  | Accessible label for the heading button in Months mode.                                                    |
+| Name                       | Type                                       | Default                    | Description                                                                                                    |
+| -------------------------- | ------------------------------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `maybeSelectedDate`        | `Option<CalendarDate>`                     | —                          | Parent-owned selection used to derive selected-cell state. Pass it on every render.                            |
+| `toView`                   | `(attributes: CalendarAttributes) => Html` | —                          | Renders the current grid from the mode-specific attribute bundle. Match on `_tag` with `Match.tagsExhaustive`. |
+| `previousMonthLabel`       | `string`                                   | `'Previous month'`         | Accessible label for the previous-month button in Days mode.                                                   |
+| `nextMonthLabel`           | `string`                                   | `'Next month'`             | Accessible label for the next-month button in Days mode.                                                       |
+| `previousYearsPageLabel`   | `string`                                   | `'Previous 12 years'`      | Accessible label for the previous-page button in Years mode.                                                   |
+| `nextYearsPageLabel`       | `string`                                   | `'Next 12 years'`          | Accessible label for the next-page button in Years mode.                                                       |
+| `daysHeadingButtonLabel`   | `string`                                   | `'Switch to month picker'` | Accessible label for the heading button in Days mode.                                                          |
+| `monthsHeadingButtonLabel` | `string`                                   | `'Switch to year picker'`  | Accessible label for the heading button in Months mode.                                                        |
 
 ### CalendarAttributes {#calendar-attributes}
 
@@ -126,7 +126,7 @@ Pass these fields under `viewInputs` when `h.submodel` renders `Calendar.view`. 
 
 | Name      | Type                            | Description                                                                                |
 | --------- | ------------------------------- | ------------------------------------------------------------------------------------------ |
-| `_tag`    | `'Days' \| 'Months' \| 'Years'` | Discriminator for exhaustive rendering with `M.tagsExhaustive`.                            |
+| `_tag`    | `'Days' \| 'Months' \| 'Years'` | Discriminator for exhaustive rendering with `Match.tagsExhaustive`.                        |
 | `root`    | `ReadonlyArray<ChildAttribute>` | Attributes for the outermost Calendar element, including its ID.                           |
 | `grid`    | `ReadonlyArray<ChildAttribute>` | Grid semantics, keyboard and focus handlers, accessible name, and active-descendant state. |
 | `heading` | `{ id: string; text: string }`  | Heading ID and localized text for the current month, year, or 12-year window.              |

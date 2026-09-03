@@ -1,4 +1,4 @@
-import { Effect, Match as M, Schema as S } from 'effect'
+import { Effect, Match, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
@@ -8,12 +8,12 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  email: S.String,
-  password: S.String,
-  status: S.Literals(['Idle', 'Submitting', 'LoggedIn', 'Error']),
-  username: S.String,
-  error: S.String,
+export const Model = Schema.Struct({
+  email: Schema.String,
+  password: Schema.String,
+  status: Schema.Literals(['Idle', 'Submitting', 'LoggedIn', 'Error']),
+  username: Schema.String,
+  error: Schema.String,
 })
 
 export type Model = typeof Model.Type
@@ -21,11 +21,11 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedEmail: { value: S.String },
-  UpdatedPassword: { value: S.String },
+  UpdatedEmail: { value: Schema.String },
+  UpdatedPassword: { value: Schema.String },
   SubmittedLogin: {},
-  SucceededAuthenticate: { username: S.String },
-  FailedAuthenticate: { error: S.String },
+  SucceededAuthenticate: { username: Schema.String },
+  FailedAuthenticate: { error: Schema.String },
   ClickedLogout: {},
 })
 
@@ -89,15 +89,15 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   return h.div(
     [h.Id('app')],
     [
-      M.value(model.status).pipe(
-        M.withReturnType<Html>(),
-        M.when('Submitting', () =>
+      Match.value(model.status).pipe(
+        Match.withReturnType<Html>(),
+        Match.when('Submitting', () =>
           h.form(
             [h.Class('login-form')],
             [h.button([h.Type('submit'), h.Disabled(true)], ['Signing in...'])],
           ),
         ),
-        M.when('LoggedIn', () =>
+        Match.when('LoggedIn', () =>
           h.div(
             [
               h.Class('logged-in'),
@@ -120,7 +120,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
             ],
           ),
         ),
-        M.when('Error', () =>
+        Match.when('Error', () =>
           h.div(
             [],
             [
@@ -132,7 +132,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
             ],
           ),
         ),
-        M.when('Idle', () =>
+        Match.when('Idle', () =>
           h.form(
             [h.OnSubmit(Message.SubmittedLogin()), h.Class('login-form')],
             [
@@ -159,7 +159,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
             ],
           ),
         ),
-        M.exhaustive,
+        Match.exhaustive,
       ),
     ],
   )

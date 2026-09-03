@@ -1,8 +1,9 @@
 import { Effect, Queue, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 
-import { type Model, NARROW_VIEWPORT_QUERY } from '../main'
 import { Message } from '../message'
+import { type Model } from '../model'
+import { NARROW_VIEWPORT_QUERY } from '../viewport'
 
 export const subscriptions = Subscription.make<Model, Message>()(_entry => ({
   viewportWidth: Subscription.persistent(

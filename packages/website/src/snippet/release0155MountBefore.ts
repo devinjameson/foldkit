@@ -1,6 +1,6 @@
 const AnchorPopover = Mount.define(
   'AnchorPopover',
-  { buttonId: S.String, anchor: AnchorConfig },
+  { buttonId: Schema.String, anchor: AnchorConfig },
   CompletedAnchorPopover,
 )(
   ({ buttonId, anchor }) =>

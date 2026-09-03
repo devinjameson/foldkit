@@ -1,4 +1,4 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import * as CustomElement from 'foldkit/customElement'
 import { Server } from 'foldkit/experimental'
 import { type Html, type HtmlBuilder } from 'foldkit/html'
@@ -206,7 +206,7 @@ const SELECT_REFUSALS: ReadonlyArray<Refusal> = [
     build: h => {
       const selectLike = CustomElement.define({
         tag: 'x-select-like',
-        properties: { value: S.Unknown },
+        properties: { value: Schema.Unknown },
         events: {},
       }).withMessage(h)
       return h.select(

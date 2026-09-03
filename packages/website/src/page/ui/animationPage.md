@@ -2,7 +2,7 @@
 
 ## Overview
 
-Animation coordinates CSS enter and leave phases with a state machine and data attributes. You dispatch `Showed` or `Hid`, Animation records each lifecycle phase in its Model, and your CSS styles those phases. The transitions stay visible in DevTools and can be tested through update without waiting for a browser animation.
+Animation coordinates CSS enter and leave phases with a state machine and data attributes. A parent invokes the child-owned `show`, `hide`, or `toggle` update capability through `Update.foldChildStep`; Animation applies its internal `Showed` or `Hid` fact, records each lifecycle phase in its Model, and exposes the resulting Commands through the fold. The transitions stay visible in DevTools and can be tested through update without waiting for a browser animation.
 
 Animation uses the [OutMessage](/core/submodel#surfacing-facts) pattern. The `foldOutMessage` of your [`Update.foldChild`](/core/submodel#fold-child) config handles `StartedLeaveAnimating` by providing a Command that detects settlement, then handles `TransitionedOut` when post-animation cleanup can begin. Dialog, Menu, Popover, Listbox, and Combobox use the same Submodel internally when `isAnimated` is true.
 
@@ -24,7 +24,7 @@ Check out how Animation is wired up in a [real Foldkit app](https://github.com/f
 
 ## Examples
 
-Send `Animation.Showed()` to start the enter animation and `Animation.Hid()` to start the leave animation. Style with Tailwind data-attribute selectors like `data-[closed]:opacity-0`.
+Fold `Animation.show` with `Update.foldChildStep` to start the enter animation and fold `Animation.hide` to start the leave animation. Style with Tailwind data-attribute selectors like `data-[closed]:opacity-0`.
 
 ::Demo{name="animation"}
 
@@ -34,11 +34,13 @@ Send `Animation.Showed()` to start the enter animation and `Animation.Hid()` to 
 
 Animation drives the enter phase to completion on its own. The leave phase hands control back to the parent halfway through so the parent can decide how settlement is detected. For example, Foldkit's [Dialog](/ui/dialog) just waits for CSS, while its [Popover](/ui/popover) races CSS against the anchor button scrolling off-screen. The asymmetry exists because leave detection varies by consumer, while enter detection does not.
 
+Internally, the `show`, `hide`, and `toggle` capabilities apply the `Showed` or `Hid` Message according to the current Animation Model and requested transition.
+
 ```diagram
 ENTER                                LEAVE
 Animation drives completion          Parent detects settlement
 
-Showed()                              Hid()
+show()                                hide()
    |                                    |
    v                                    v
 EnterStart                           LeaveStart
@@ -77,6 +79,10 @@ The `animateSize` option uses CSS grid (`grid-template-rows: 0fr` → `1fr`) for
 
 ## API Reference
 
+### toggle
+
+`Animation.toggle(model)` returns the Animation update result that starts the enter or leave lifecycle according to `model.isShowing`. Use it as the `update` entry point of `Update.foldChildStep` when the parent does not need to choose a directional capability.
+
 ### InitConfig {#init-config}
 
 Configuration object passed to `Animation.init()`.
@@ -85,6 +91,10 @@ Configuration object passed to `Animation.init()`.
 | ----------- | --------- | ------- | ------------------------------------- |
 | `id`        | `string`  | —       | Unique ID for the animation instance. |
 | `isShowing` | `boolean` | `false` | Initial visibility state.             |
+
+### show and hide
+
+`Animation.show(model)` and `Animation.hide(model)` return the next Animation Model and any Commands. Fold these child entry points into the parent with `Update.foldChildStep`; do not construct `Animation.Message.Showed()` or `Animation.Message.Hid()` from the parent.
 
 ### ViewConfig {#view-config}
 
@@ -97,7 +107,7 @@ Configuration object passed to `Animation.view()`.
 | `animateSize` | `boolean`                           | `false` | Animates height collapse/expand using CSS grid. When true, the element stays in the DOM with grid-template-rows transitioning between 0fr and 1fr. |
 | `className`   | `string`                            | —       | CSS class for the animation wrapper.                                                                                                               |
 | `attributes`  | `ReadonlyArray<Attribute<Message>>` | —       | Additional attributes for the wrapper.                                                                                                             |
-| `element`     | `TagName`                           | `'div'` | The HTML element for the wrapper.                                                                                                                  |
+| `element`     | `Exclude<TagName, 'textarea'>`      | `'div'` | The HTML element for the wrapper. Textarea is excluded because the wrapper renders children.                                                       |
 
 ### OutMessage
 

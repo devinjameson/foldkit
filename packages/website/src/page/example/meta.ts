@@ -1,8 +1,8 @@
-import { Array, Option, Schema as S } from 'effect'
+import { Array, Option, Schema } from 'effect'
 
 type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 
-export const ExampleSlug = S.Literals([
+export const ExampleSlug = Schema.Literals([
   'counter',
   'counters',
   'todo',

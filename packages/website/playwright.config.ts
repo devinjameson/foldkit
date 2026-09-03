@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 4173
+const PORT = Number(process.env['FOLDKIT_WEBSITE_E2E_PORT'] ?? 4173)
 export const BASE_URL = `http://localhost:${PORT}`
 const liveWebsiteUrl = process.env['FOLDKIT_LIVE_WEBSITE_URL']
 const isLivePlaygroundSmoke = liveWebsiteUrl !== undefined

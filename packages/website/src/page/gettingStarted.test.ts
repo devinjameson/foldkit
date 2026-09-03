@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { describe, expect, test } from 'vitest'
 
 import foldkitPackageJson from '../../../foldkit/package.json?raw'
@@ -8,11 +8,11 @@ import gettingStartedSource from './gettingStarted.md?raw'
 // Effect-bump job rewrites package.json and pnpm-workspace.yaml but not prose,
 // so without this guard the getting-started version silently drifts from what
 // Foldkit ships.
-const FoldkitPackageJson = S.Struct({
-  peerDependencies: S.Struct({ effect: S.String }),
+const FoldkitPackageJson = Schema.Struct({
+  peerDependencies: Schema.Struct({ effect: Schema.String }),
 })
 
-const { peerDependencies } = S.decodeUnknownSync(FoldkitPackageJson)(
+const { peerDependencies } = Schema.decodeUnknownSync(FoldkitPackageJson)(
   JSON.parse(foldkitPackageJson),
 )
 

@@ -1,4 +1,4 @@
-import { Array, Effect, Number, Schema as S } from 'effect'
+import { Array, Effect, Number, Schema } from 'effect'
 import { Command, Runtime, type Update } from 'foldkit'
 import { Document, type HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -6,18 +6,18 @@ import { evo } from 'foldkit/struct'
 
 // MODEL
 
-const HeavyItem = S.Struct({
-  id: S.Number,
-  label: S.String,
-  category: S.String,
-  isActive: S.Boolean,
+const HeavyItem = Schema.Struct({
+  id: Schema.Number,
+  label: Schema.String,
+  category: Schema.String,
+  isActive: Schema.Boolean,
 })
 type HeavyItem = typeof HeavyItem.Type
 
-export const Model = S.Struct({
-  tickCount: S.Number,
-  lastReceivedPayloadSize: S.Number,
-  largeArray: S.Array(HeavyItem),
+export const Model = Schema.Struct({
+  tickCount: Schema.Number,
+  lastReceivedPayloadSize: Schema.Number,
+  largeArray: Schema.Array(HeavyItem),
 })
 type Model = typeof Model.Type
 
@@ -25,11 +25,11 @@ type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   ClickedTick: {},
-  ClickedDispatchLargeMessage: { payload: S.Array(HeavyItem) },
-  ClickedFillLargeModel: { items: S.Array(HeavyItem) },
+  ClickedDispatchLargeMessage: { payload: Schema.Array(HeavyItem) },
+  ClickedFillLargeModel: { items: Schema.Array(HeavyItem) },
   ClickedClearLargeModel: {},
   ClickedFillHistory: {},
-  CompletedFillHistoryStep: { remaining: S.Number },
+  CompletedFillHistoryStep: { remaining: Schema.Number },
 })
 type Message = typeof Message.Type
 
@@ -51,7 +51,7 @@ const heavyPayload = makeHeavyArray(HEAVY_ITEM_COUNT)
 // COMMAND
 
 const FillHistoryStep = Command.define('FillHistoryStep', {
-  args: { remaining: S.Number },
+  args: { remaining: Schema.Number },
   messages: [Message.CompletedFillHistoryStep],
   execute: ({ remaining }) =>
     Effect.sync(() => Message.CompletedFillHistoryStep({ remaining })),

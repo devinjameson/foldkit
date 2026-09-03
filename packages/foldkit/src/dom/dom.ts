@@ -1,12 +1,4 @@
-import {
-  Array,
-  Effect,
-  Equal,
-  Function,
-  Match as M,
-  Number,
-  Option,
-} from 'effect'
+import { Array, Effect, Equal, Function, Match, Number, Option } from 'effect'
 
 import { afterCommit, afterPaint } from '../render/render.js'
 import { ElementNotFound } from './error.js'
@@ -42,6 +34,38 @@ const FOCUSABLE_SELECTOR = Array.join(
   ],
   ', ',
 )
+
+const isFocusableElement = (element: Element): element is HTMLElement => {
+  if (!(element instanceof HTMLElement)) {
+    return false
+  }
+
+  if (element.matches(':disabled')) {
+    return false
+  }
+
+  if (element instanceof HTMLInputElement && element.type === 'hidden') {
+    return false
+  }
+
+  if (element.tabIndex < 0 && !element.hasAttribute('tabindex')) {
+    return false
+  }
+
+  if (element.closest('[hidden], [inert]') !== null) {
+    return false
+  }
+
+  return element.checkVisibility({ visibilityProperty: true })
+}
+
+const focusableElementsWithin = (
+  root: ParentNode,
+): ReadonlyArray<HTMLElement> =>
+  Array.filter(
+    Array.fromIterable(root.querySelectorAll(FOCUSABLE_SELECTOR)),
+    isFocusableElement,
+  )
 
 const queryHTMLElement = (
   selector: string,
@@ -122,6 +146,8 @@ export const focus = (
  * Fails with `ElementNotFound` if the selector does not match an `HTMLDialogElement`.
  *
  * Pass `focusSelector` to focus an element inside the dialog when it opens.
+ * When it does not match a focusable element, or when none is provided, focus
+ * falls back to the first focusable descendant and then to the dialog itself.
  *
  * Records the element that had focus when the dialog opened so `closeDialog`
  * can return focus there, the way `showModal()` would natively.
@@ -179,8 +205,8 @@ export const showDialog = (
         return
       }
 
-      M.value(event.key).pipe(
-        M.when('Escape', () => {
+      Match.value(event.key).pipe(
+        Match.when('Escape', () => {
           if (event.defaultPrevented) {
             return
           }
@@ -188,10 +214,10 @@ export const showDialog = (
           event.preventDefault()
           element.dispatchEvent(new Event('cancel', { cancelable: true }))
         }),
-        M.when('Tab', () => {
+        Match.when('Tab', () => {
           trapFocusWithinDialog(event, element)
         }),
-        M.orElse(Function.constVoid),
+        Match.orElse(Function.constVoid),
       )
     }
 
@@ -202,21 +228,35 @@ export const showDialog = (
       returnFocus,
     })
 
-    if (options?.focusSelector) {
-      const focusTarget = element.querySelector(options.focusSelector)
-      if (focusTarget instanceof HTMLElement) {
-        focusTarget.focus()
-      }
-    }
+    const focusTarget = findDialogFocusTarget(element, options?.focusSelector)
+    focusTarget.focus()
   })
+
+const findDialogFocusTarget = (
+  dialog: HTMLDialogElement,
+  focusSelector: string | undefined,
+): HTMLElement => {
+  if (focusSelector !== undefined) {
+    const requestedFocusTarget = dialog.querySelector(focusSelector)
+    if (
+      requestedFocusTarget !== null &&
+      isFocusableElement(requestedFocusTarget)
+    ) {
+      return requestedFocusTarget
+    }
+  }
+
+  return Option.match(Array.head(focusableElementsWithin(dialog)), {
+    onSome: Function.identity,
+    onNone: () => dialog,
+  })
+}
 
 const trapFocusWithinDialog = (
   event: KeyboardEvent,
   dialog: HTMLDialogElement,
 ): void => {
-  const focusable = Array.fromIterable(
-    dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-  )
+  const focusable = focusableElementsWithin(dialog)
   if (Array.isReadonlyArrayNonEmpty(focusable)) {
     const first = Array.headNonEmpty(focusable)
     const last = Array.lastNonEmpty(focusable)
@@ -228,6 +268,9 @@ const trapFocusWithinDialog = (
       event.preventDefault()
       first.focus()
     }
+  } else {
+    event.preventDefault()
+    dialog.focus()
   }
 }
 
@@ -441,10 +484,10 @@ export const scrollIntoViewIfNotVisible = (
 ): Effect.Effect<void, ElementNotFound> =>
   Effect.gen(function* () {
     const when = options?.when ?? 'Paint'
-    yield* M.value(when).pipe(
-      M.when('Paint', () => afterPaint),
-      M.when('Commit', () => afterCommit),
-      M.exhaustive,
+    yield* Match.value(when).pipe(
+      Match.when('Paint', () => afterPaint),
+      Match.when('Commit', () => afterCommit),
+      Match.exhaustive,
     )
     const element = yield* queryHTMLElement(selector)
     Option.match(findScrollParent(element), {
@@ -484,9 +527,7 @@ export const advanceFocus = (
 
     const reference = yield* queryHTMLElement(selector)
 
-    const focusableElements = Array.fromIterable(
-      document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-    )
+    const focusableElements = focusableElementsWithin(document)
 
     const referenceElementIndex = Array.findFirstIndex(
       focusableElements,
@@ -497,10 +538,10 @@ export const advanceFocus = (
       return yield* Effect.fail(new ElementNotFound({ selector }))
     }
 
-    const offsetReferenceElementIndex = M.value(direction).pipe(
-      M.when('Next', () => Number.increment),
-      M.when('Previous', () => Number.decrement),
-      M.exhaustive,
+    const offsetReferenceElementIndex = Match.value(direction).pipe(
+      Match.when('Next', () => Number.increment),
+      Match.when('Previous', () => Number.decrement),
+      Match.exhaustive,
     )(referenceElementIndex.value)
 
     const nextElement = Array.get(

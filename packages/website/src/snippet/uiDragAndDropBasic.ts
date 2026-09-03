@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit each into your own Model, init, Message,
 // update, subscriptions, and view definitions.
-import { Match as M, Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { Subscription, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -10,8 +10,10 @@ import { evo } from 'foldkit/struct'
 import { DragAndDrop } from '@foldkit/ui'
 
 // Add a field to your Model for the DragAndDrop Submodel plus the items being sorted:
-const Model = S.Struct({
-  items: S.Array(S.Struct({ id: S.String, label: S.String })),
+const Model = Schema.Struct({
+  items: Schema.Array(
+    Schema.Struct({ id: Schema.String, label: Schema.String }),
+  ),
   dragAndDrop: DragAndDrop.Model,
   // ...your other fields
 })
@@ -38,23 +40,22 @@ const Message = defineMessageUnion({
 // carries the move so you can apply it to your own list. Each arm returns an
 // Update.Step over the parent Model, which already has the next DragAndDrop
 // Model written back:
-const foldDragAndDropOutMessage = M.type<DragAndDrop.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Reordered:
-      ({ itemId, fromIndex, toIndex }) =>
-      model => ({
-        model: evo(model, {
-          // reorder is your own function that moves the item
-          items: () => reorder(model.items, itemId, fromIndex, toIndex),
-        }),
+const foldDragAndDropOutMessage = DragAndDrop.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Reordered:
+    ({ itemId, fromIndex, toIndex }) =>
+    model => ({
+      model: evo(model, {
+        // reorder is your own function that moves the item
+        items: items => reorder(items, itemId, fromIndex, toIndex),
       }),
-    // The child has emitted `Cancelled`. In this arm the parent can update
-    // its own state or dispatch its own Commands, for example revert an
-    // optimistic UI change, log analytics, or trigger a downstream Command.
-    Cancelled: () => model => ({ model }),
-  }),
-)
+    }),
+  // The child has emitted `Cancelled`. In this arm the parent can update
+  // its own state or dispatch its own Commands, for example revert an
+  // optimistic UI change, log analytics, or trigger a downstream Command.
+  Cancelled: () => model => ({ model }),
+})
 
 // Update.foldChild wires the child into the parent: it runs
 // DragAndDrop.update, writes the next DragAndDrop Model back, maps the

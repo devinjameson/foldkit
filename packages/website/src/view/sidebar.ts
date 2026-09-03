@@ -5,6 +5,7 @@ import apiModuleIndex from 'virtual:api-module-index'
 
 import { Dialog, Disclosure } from '@foldkit/ui'
 
+import { Shared } from '../component'
 import {
   DOCS_SIDEBAR_NAV_ID,
   MOBILE_MENU_NAV_ID,
@@ -15,8 +16,8 @@ import {
 } from '../docsNav'
 import { Icon } from '../icon'
 import { Link } from '../link'
-import { type Model } from '../main'
 import { Message } from '../message'
+import { type Model } from '../model'
 import {
   AppRoute,
   apiModuleRouter,
@@ -25,7 +26,6 @@ import {
   isBlogRoute,
 } from '../route'
 import { type GroupKey, type SidebarGroups } from '../sidebarStorage'
-import { betaTag, iconLink } from './shared'
 
 const GROUP_ID: Record<GroupKey, string> = {
   getStarted: 'get-started-group',
@@ -266,7 +266,7 @@ const MOBILE_ID_PREFIX = 'mobile'
 
 const lazyNavLinks = createKeyedLazy()
 
-export const sidebarView = (model: Model, h: HtmlBuilder<Message>): Html => {
+export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
   const desktopNavLinks = lazyNavLinks(DESKTOP_ID_PREFIX, computeNavLinks, [
     DESKTOP_ID_PREFIX,
     model.route,
@@ -294,7 +294,7 @@ export const sidebarView = (model: Model, h: HtmlBuilder<Message>): Html => {
   )
 }
 
-export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
+export const mobileView = (model: Model, h: HtmlBuilder<Message>): Html => {
   const mobileNavLinks = lazyNavLinks(MOBILE_ID_PREFIX, computeNavLinks, [
     MOBILE_ID_PREFIX,
     model.route,
@@ -302,12 +302,20 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
     h,
   ])
 
-  const mobileMenuContent = (
-    closeButton: Dialog.RenderInfo['closeButton'],
-  ): Html =>
+  const mobileMenuContent = ({
+    closeButton,
+    description,
+    initialFocus,
+    title,
+  }: Dialog.RenderInfo): Html =>
     h.div(
       [h.Class('flex flex-col h-full')],
       [
+        h.span([...title, h.Class('sr-only')], ['Navigation menu']),
+        h.span(
+          [...description, h.Class('sr-only')],
+          ['Browse Foldkit documentation'],
+        ),
         h.div(
           [
             h.Class(
@@ -326,7 +334,7 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
                   h.Decoding('sync'),
                   h.Class('h-6 w-auto dark:invert'),
                 ]),
-                betaTag,
+                Shared.betaTag,
               ],
             ),
             h.button(
@@ -347,7 +355,7 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
             h.Id(MOBILE_MENU_NAV_ID),
             h.Class('flex-1 overflow-y-auto'),
             h.Tabindex(-1),
-            h.Autofocus(true),
+            ...initialFocus,
           ],
           [blogSection(model.route, h), mobileNavLinks],
         ),
@@ -361,10 +369,14 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
             h.div(
               [h.Class('flex items-center justify-center gap-8')],
               [
-                iconLink(Link.github, 'GitHub', Icon.github('w-6 h-6')),
-                iconLink(Link.discord, 'Discord', Icon.discord('w-6 h-6')),
-                iconLink(Link.xSocial, 'X', Icon.xSocial('w-6 h-6')),
-                iconLink(Link.npm, 'npm', Icon.npm('w-8 h-8')),
+                Shared.iconLink(Link.github, 'GitHub', Icon.github('w-6 h-6')),
+                Shared.iconLink(
+                  Link.discord,
+                  'Discord',
+                  Icon.discord('w-6 h-6'),
+                ),
+                Shared.iconLink(Link.xSocial, 'X', Icon.xSocial('w-6 h-6')),
+                Shared.iconLink(Link.npm, 'npm', Icon.npm('w-8 h-8')),
               ],
             ),
           ],
@@ -377,20 +389,23 @@ export const mobileMenuView = (model: Model, h: HtmlBuilder<Message>): Html => {
     model: model.mobileMenuDialog,
     view: Dialog.view,
     viewInputs: {
-      toView: ({ dialog, backdrop, panel, closeButton, isVisible }) =>
+      toView: renderInfo =>
         h.dialog(
-          [...dialog, h.Class('md:hidden')],
-          isVisible
+          [...renderInfo.dialog, h.Class('md:hidden')],
+          renderInfo.isVisible
             ? [
-                h.div([...backdrop, h.Class('fixed inset-0 z-[59]')]),
+                h.div([
+                  ...renderInfo.backdrop,
+                  h.Class('fixed inset-0 z-[59]'),
+                ]),
                 h.div(
                   [
-                    ...panel,
+                    ...renderInfo.panel,
                     h.Class(
                       'fixed inset-0 z-[60] bg-cream dark:bg-gray-900 flex flex-col',
                     ),
                   ],
-                  [mobileMenuContent(closeButton)],
+                  [mobileMenuContent(renderInfo)],
                 ),
               ]
             : [],

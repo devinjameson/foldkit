@@ -1,4 +1,4 @@
-import { Context, Effect, Fiber, Layer, Option, Schema as S } from 'effect'
+import { Context, Effect, Fiber, Layer, Option, Schema } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
@@ -61,21 +61,21 @@ const Engine = ManagedResource.tag<EngineShape>()('Engine')
 type EngineServiceId = ManagedResource.ServiceOf<typeof Engine>
 
 const Message = defineMessageUnion({
-  RequestedEngine: { id: S.String },
+  RequestedEngine: { id: Schema.String },
   StoppedEngine: {},
   AcquiredEngine: {},
   ReleasedEngine: {},
-  FailedEngine: { error: S.String },
+  FailedEngine: { error: Schema.String },
   ClickedRead: {},
-  SucceededRead: { value: S.String },
+  SucceededRead: { value: Schema.String },
   FailedRead: {},
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({
-  requested: S.Option(S.String),
-  status: S.String,
-  readValue: S.String,
+const Model = Schema.Struct({
+  requested: Schema.Option(Schema.String),
+  status: Schema.String,
+  readValue: Schema.String,
 })
 type Model = typeof Model.Type
 
@@ -112,7 +112,7 @@ const update = (model: Model, message: Message) =>
   })
 
 const managedResources = make<Model, Message>()(entry => ({
-  engine: entry(S.Option(S.Struct({ id: S.String })), {
+  engine: entry(Schema.Option(Schema.Struct({ id: Schema.String })), {
     resource: Engine,
     modelToMaybeRequirements: model =>
       Option.map(model.requested, id => ({ id })),

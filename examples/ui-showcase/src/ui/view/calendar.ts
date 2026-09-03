@@ -1,11 +1,11 @@
-import { Match as M } from 'effect'
+import { Match } from 'effect'
 import { Submodel } from 'foldkit'
 import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
 
 import { Calendar } from '@foldkit/ui'
 
 import * as Icon from '../../icon'
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const containerClassName =
@@ -185,8 +185,8 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
           view: Calendar.view,
           viewInputs: {
             maybeSelectedDate: model.maybeCalendarBasicDemoSelectedDate,
-            toView: M.type<Calendar.CalendarAttributes>().pipe(
-              M.tagsExhaustive({
+            toView: Match.type<Calendar.CalendarAttributes>().pipe(
+              Match.tagsExhaustive({
                 Days: days => daysView(days, h),
                 Months: months => monthsView(months, h),
                 Years: years => yearsView(years, h),

@@ -1,6 +1,9 @@
 export {
   init,
+  show,
+  hide,
   update,
+  toggle,
   view,
   defaultLeaveCommand,
   Model,

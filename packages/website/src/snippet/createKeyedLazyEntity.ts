@@ -4,15 +4,17 @@ import { type HtmlBuilder, createKeyedLazy } from 'foldkit/html'
 // rendered page is the expensive part, so it belongs behind the memo.
 const postView = (
   post: Post,
-  copiedSnippets: CopiedSnippets,
+  snippetCopy: SnippetCopy.Model,
   h: HtmlBuilder<Message>,
 ) =>
-  h.article(
-    [],
-    [
-      h.h1([], [post.frontmatter.title]),
-      docPage(post.document, post.slug).view(copiedSnippets, h),
-    ],
+  BlogPostPage.view(
+    post,
+    SnippetCopy.renderer(
+      snippetCopy,
+      message => Message.GotSnippetCopyMessage({ message }),
+      h,
+    ),
+    Prose.renderHeadingLink(hash => Message.ClickedCopyLink({ hash }), h),
   )
 
 // One slot per post, keyed by the same slug the route already uses to give
@@ -23,6 +25,6 @@ const lazyPostView = createKeyedLazy()
 // Coming back to a post you already read returns its cached VNode.
 const view = (
   post: Post,
-  copiedSnippets: CopiedSnippets,
+  snippetCopy: SnippetCopy.Model,
   h: HtmlBuilder<Message>,
-) => lazyPostView(post.slug, postView, [post, copiedSnippets, h])
+) => lazyPostView(post.slug, postView, [post, snippetCopy, h])

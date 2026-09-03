@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { Array, Match as M, Option, pipe } from 'effect'
+import { Array, Match, Option, pipe } from 'effect'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, Checkbox, Input, RadioGroup } from '@foldkit/ui'
@@ -80,15 +80,15 @@ const progressSteps: ReadonlyArray<string> = [
 const stateToMaybeProgressStep = (
   state: typeof CheckoutState.Type,
 ): Option.Option<string> =>
-  M.value(state).pipe(
-    M.tags({
+  Match.value(state).pipe(
+    Match.tags({
       Cart: () => 'Bag',
       Shipping: () => 'Delivery',
       Payment: () => 'Payment',
       Review: () => 'Review',
       Cancelled: () => 'Bag',
     }),
-    M.option,
+    Match.option,
   )
 
 const currentProgressIndex = (state: typeof CheckoutState.Type): number =>
@@ -140,13 +140,13 @@ const orderPricing = (
 const stateToMaybeDiscount = (
   state: typeof CheckoutState.Type,
 ): Option.Option<typeof Discount.Type> =>
-  M.value(state).pipe(
-    M.tags({
+  Match.value(state).pipe(
+    Match.tags({
       Review: reviewState => promoToMaybeDiscount(reviewState.promo),
       Placing: placingState => placingState.maybeDiscount,
       Confirmed: confirmedState => confirmedState.maybeDiscount,
     }),
-    M.option,
+    Match.option,
     Option.flatten,
   )
 

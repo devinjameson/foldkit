@@ -104,7 +104,7 @@ const todoItemView = (
     onSome: text => editingTodoView(todo, text, h),
   })
 
-// NOTE: hot-path helper. `M.value(...).pipe(M.tagsExhaustive(...))`
+// NOTE: hot-path helper. `Match.value(...).pipe(Match.tagsExhaustive(...))`
 // constructs a fresh matcher on every call; done per todo per frame it
 // dominates view time, so this checks the tag directly.
 const maybeEditingTextFor = (

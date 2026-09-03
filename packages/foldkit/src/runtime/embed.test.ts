@@ -1,4 +1,4 @@
-import { Effect, Exit, Queue, Schema as S, Stream } from 'effect'
+import { Effect, Exit, Queue, Schema, Stream } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
@@ -12,7 +12,7 @@ import type * as Update from '../update/index.js'
 import { embed, makeApplication, makeElement } from './runtime.js'
 
 const Message = defineMessageUnion({
-  ChangedStep: { step: S.Number },
+  ChangedStep: { step: Schema.Number },
   ClickedIncrement: {},
   CompletedReportCount: {},
   CompletedTrackHost: {},
@@ -20,18 +20,18 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({ count: S.Number, step: S.Number })
+const Model = Schema.Struct({ count: Schema.Number, step: Schema.Number })
 type Model = typeof Model.Type
 
 const ports = {
   inbound: {
-    stepChanged: Port.inbound(S.NumberFromString.check(S.isFinite())),
+    stepChanged: Port.inbound(Schema.NumberFromString.check(Schema.isFinite())),
   },
-  outbound: { countChanged: Port.outbound(S.Number) },
+  outbound: { countChanged: Port.outbound(Schema.Number) },
 }
 
 const ReportCount = Command.define('ReportCount', {
-  args: { count: S.Number },
+  args: { count: Schema.Number },
   messages: [Message.CompletedReportCount],
   execute: ({ count }) =>
     Port.emit(ports.outbound.countChanged, count).pipe(
@@ -278,7 +278,7 @@ describe('embed', () => {
   })
 
   it('seeds the initial model from flags', async () => {
-    const Flags = S.Struct({ initialCount: S.Number })
+    const Flags = Schema.Struct({ initialCount: Schema.Number })
 
     const handle = embed(
       makeElement({

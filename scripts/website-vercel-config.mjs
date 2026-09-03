@@ -175,7 +175,7 @@ export const websiteVercelConfig = channel => {
       {
         src: '^/$',
         headers: {
-          Link: '</sitemap.xml>; rel="sitemap", </get-started/manifesto>; rel="about", </get-started/getting-started>; rel="help", </example-apps>; rel="related", </ai/overview>; rel="describedby", </openapi.json>; rel="service-desc"',
+          Link: '</sitemap.xml>; rel="sitemap", </get-started/why-foldkit>; rel="about", </get-started/getting-started>; rel="help", </example-apps>; rel="related", </ai/overview>; rel="describedby", </openapi.json>; rel="service-desc"',
         },
         continue: true,
       },
@@ -252,14 +252,24 @@ export const websiteVercelConfig = channel => {
         headers: { Location: '/ai/overview' },
       },
       {
-        src: '^/manifesto$',
+        src: '^/manifesto/?$',
         status: 308,
-        headers: { Location: '/get-started/manifesto' },
+        headers: { Location: '/get-started/why-foldkit' },
       },
       {
         src: '^/manifesto\\.md$',
         status: 308,
-        headers: { Location: '/get-started/manifesto.md' },
+        headers: { Location: '/get-started/why-foldkit.md' },
+      },
+      {
+        src: '^/get-started/manifesto/?$',
+        status: 308,
+        headers: { Location: '/get-started/why-foldkit' },
+      },
+      {
+        src: '^/get-started/manifesto\\.md$',
+        status: 308,
+        headers: { Location: '/get-started/why-foldkit.md' },
       },
       {
         src: '^/getting-started$',

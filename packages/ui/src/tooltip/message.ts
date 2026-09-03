@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 // MESSAGE
@@ -10,8 +10,8 @@ export const Message = defineMessageUnion({
   FocusedTrigger: {},
   BlurredTrigger: {},
   PressedEscape: {},
-  PressedPointerOnTrigger: { pointerType: S.String },
-  CompletedWaitBeforeShowing: { version: S.Number },
+  PressedPointerOnTrigger: { pointerType: Schema.String },
+  CompletedWaitBeforeShowing: { version: Schema.Number },
   CompletedAnchorTooltip: {},
 })
 

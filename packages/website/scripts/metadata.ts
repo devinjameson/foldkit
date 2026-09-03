@@ -1,4 +1,4 @@
-import { Array, Match as M, Option } from 'effect'
+import { Array, Match, Option } from 'effect'
 
 import {
   BLOG_DESCRIPTION,
@@ -56,7 +56,7 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
     section: '',
   },
   Manifesto: docs(
-    'Manifesto',
+    'Why Foldkit',
     'Why Foldkit exists and the principles behind its design.',
     'Docs',
   ),
@@ -77,7 +77,7 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
   ),
   Roadmap: docs(
     'Roadmap',
-    'The work that gates Foldkit 1.0, experimental features available today, possible directions after 1.0, and architectural decisions that will not change.',
+    'Where Foldkit is today, how it got here, the work remaining before 1.0, and the architectural promises that will not change.',
     'Docs',
   ),
   ComingFromReact: docs(
@@ -466,9 +466,9 @@ export const routeToMetadata = (
   route: AppRoute,
   resolveApiModuleName: ApiModuleNameResolver,
 ): PageMetadata =>
-  M.value(route).pipe(
-    M.withReturnType<PageMetadata>(),
-    M.tag('ApiModule', ({ moduleSlug }) => {
+  Match.value(route).pipe(
+    Match.withReturnType<PageMetadata>(),
+    Match.tag('ApiModule', ({ moduleSlug }) => {
       const moduleName = resolveApiModuleName(moduleSlug)
       return docs(
         moduleName,
@@ -476,7 +476,7 @@ export const routeToMetadata = (
         'API Reference',
       )
     }),
-    M.tag('BlogPost', ({ postSlug }) => {
+    Match.tag('BlogPost', ({ postSlug }) => {
       const { frontmatter } = Option.getOrThrowWith(
         Array.findFirst(blogPosts, ({ slug }) => slug === postSlug),
         () =>
@@ -486,7 +486,7 @@ export const routeToMetadata = (
       )
       return docs(frontmatter.title, frontmatter.description, BLOG_SECTION)
     }),
-    M.tag('ExampleDetail', ({ exampleSlug }) => {
+    Match.tag('ExampleDetail', ({ exampleSlug }) => {
       const example = Option.getOrThrowWith(
         findBySlug(exampleSlug),
         () =>
@@ -496,7 +496,7 @@ export const routeToMetadata = (
       )
       return docs(example.title, example.description, 'Examples')
     }),
-    M.tag('Playground', ({ exampleSlug }) => {
+    Match.tag('Playground', ({ exampleSlug }) => {
       const example = Option.getOrThrowWith(
         findBySlug(exampleSlug),
         () =>
@@ -510,5 +510,5 @@ export const routeToMetadata = (
         'Playground',
       )
     }),
-    M.orElse(({ _tag }) => METADATA_BY_TAG[_tag]),
+    Match.orElse(({ _tag }) => METADATA_BY_TAG[_tag]),
   )

@@ -1,4 +1,4 @@
-import { Array, Option, Order, Record, String as String_, pipe } from 'effect'
+import { Array, Option, Order, Record, String, pipe } from 'effect'
 
 import { type ExampleMeta } from '../src/page/example/meta'
 import { type BlogPostEntry } from './blogPosts'
@@ -119,7 +119,7 @@ export const buildSectionsIndex = (
 ): unknown => {
   const sections = pipe(
     entries,
-    Array.filter(entry => String_.isNonEmpty(entry.metadata.section)),
+    Array.filter(entry => String.isNonEmpty(entry.metadata.section)),
     Array.groupBy(entry => entry.metadata.section),
     Record.toEntries,
     Array.sortBy(Order.mapInput(sectionOrder, ([section]) => section)),

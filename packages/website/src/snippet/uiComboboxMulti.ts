@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Array, Match as M, Option, Schema as S } from 'effect'
+import { Array, Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import { type HtmlBuilder, childAttributes } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -9,7 +9,7 @@ import { evo } from 'foldkit/struct'
 
 import { Combobox } from '@foldkit/ui'
 
-const City = S.Literals(['Johannesburg', 'Kyiv', 'Oxford', 'Wellington'])
+const City = Schema.Literals(['Johannesburg', 'Kyiv', 'Oxford', 'Wellington'])
 type City = typeof City.Type
 
 // Declare a typed multi-select Combobox once at module scope:
@@ -18,8 +18,8 @@ const CitiesCombobox = Combobox.Multi.create<City>()
 // Add a field to your Model for the Combobox.Multi Submodel, plus a field
 // for the selected values your app actually cares about. Using the `City`
 // Schema keeps the field literal-typed end to end:
-const Model = S.Struct({
-  selectedCities: S.Array(City),
+const Model = Schema.Struct({
+  selectedCities: Schema.Array(City),
   comboboxMulti: Combobox.Multi.Model,
   // ...your other fields
 })
@@ -44,22 +44,22 @@ const Message = defineMessageUnion({
 // comboboxes, so this combobox keeps its selection there and the fold stays
 // exhaustive. Each arm returns an Update.Step over the parent Model, which
 // already has the next Combobox Model written back:
-const foldComboboxMultiOutMessage = M.type<Combobox.OutMessage<City>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          selectedCities: () =>
-            Array.contains(model.selectedCities, value)
-              ? Array.filter(model.selectedCities, city => city !== value)
-              : Array.append(model.selectedCities, value),
-        }),
+const foldComboboxMultiOutMessage = Combobox.OutMessage.match<
+  Update.Step<Model, Message>,
+  Combobox.OutMessage<City>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        selectedCities: selectedCities =>
+          Array.contains(selectedCities, value)
+            ? Array.filter(selectedCities, city => city !== value)
+            : Array.append(selectedCities, value),
       }),
-    ClearedSelection: () => model => ({ model }),
-  }),
-)
+    }),
+  ClearedSelection: () => model => ({ model }),
+})
 
 // Update.foldChild wires the child into the parent: it delegates keyboard
 // navigation, typeahead, and open/close to CitiesCombobox.update, writes the

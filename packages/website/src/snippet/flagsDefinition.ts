@@ -1,22 +1,21 @@
-import { Effect, Option, Schema as S } from 'effect'
+import { Effect, Option, Schema } from 'effect'
 import { KeyValueStore } from 'effect/unstable/persistence'
 
 import { BrowserKeyValueStore } from '@effect/platform-browser'
 
-const Todo = S.Struct({
-  id: S.String,
-  text: S.String,
-  completed: S.Boolean,
+const Todo = Schema.Struct({
+  id: Schema.String,
+  text: Schema.String,
+  completed: Schema.Boolean,
 })
 
-const Todos = S.Array(Todo)
+const Todos = Schema.Array(Todo)
 
-const TodosJsonString = S.fromJsonString(S.toCodecJson(Todos))
+const TodosJsonString = Schema.fromJsonString(Schema.toCodecJson(Todos))
 
-const Flags = S.Struct({
-  todos: S.Option(Todos),
+const Flags = Schema.Struct({
+  todos: Schema.Option(Todos),
 })
-
 type Flags = typeof Flags.Type
 
 const flags: Effect.Effect<Flags> = Effect.gen(function* () {
@@ -25,7 +24,7 @@ const flags: Effect.Effect<Flags> = Effect.gen(function* () {
     Option.fromNullishOr(yield* store.get('todos')),
   )
 
-  const decodeTodos = S.decodeEffect(TodosJsonString)
+  const decodeTodos = Schema.decodeEffect(TodosJsonString)
   const todos = yield* decodeTodos(todosJson)
 
   return Flags.make({ todos: Option.some(todos) })

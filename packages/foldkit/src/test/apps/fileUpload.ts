@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 
 import { File } from '../../file/index.js'
 import type { Html, HtmlBuilder } from '../../html/index.js'
@@ -16,7 +16,7 @@ export const initialModel: Model = { receivedFiles: [] }
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  ReceivedFiles: { files: S.Array(File) },
+  ReceivedFiles: { files: Schema.Array(File) },
 })
 
 export type Message = typeof Message.Type

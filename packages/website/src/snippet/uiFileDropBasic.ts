@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option, Schema as S } from 'effect'
+import { Array, Option, Schema } from 'effect'
 import { File, Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -10,9 +10,9 @@ import { evo } from 'foldkit/struct'
 import { FileDrop } from '@foldkit/ui'
 
 // Add the FileDrop Submodel to your Model, plus a list of accepted files:
-const Model = S.Struct({
+const Model = Schema.Struct({
   uploader: FileDrop.Model,
-  uploadedFiles: S.Array(File.File),
+  uploadedFiles: Schema.Array(File.File),
   // ...your other fields
 })
 
@@ -34,21 +34,20 @@ const Message = defineMessageUnion({
 // drop or input change) into your own Model. Each arm returns an Update.Step
 // over the parent Model, which already has the next FileDrop Model written
 // back:
-const foldFileDropOutMessage = M.type<FileDrop.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    ReceivedFiles:
-      ({ files }) =>
-      model => ({
-        model: evo(model, {
-          uploadedFiles: () => [...model.uploadedFiles, ...files],
-        }),
+const foldFileDropOutMessage = FileDrop.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ReceivedFiles:
+    ({ files }) =>
+    model => ({
+      model: evo(model, {
+        uploadedFiles: Array.appendAll(files),
       }),
-    // Fires when something is dropped but no files came through (e.g.
-    // a drag of text or a URL). Ignore, or show a hint to the user.
-    RejectedNonFiles: () => model => ({ model }),
-  }),
-)
+    }),
+  // Fires when something is dropped but no files came through (e.g.
+  // a drag of text or a URL). Ignore, or show a hint to the user.
+  RejectedNonFiles: () => model => ({ model }),
+})
 
 // Update.foldChild wires the child into the parent: it runs FileDrop.update,
 // writes the next FileDrop Model back, maps the Submodel's Commands into your

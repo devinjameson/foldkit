@@ -1,4 +1,4 @@
-import { Duration, Option, flow } from 'effect'
+import { Duration, Option } from 'effect'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
 
@@ -22,7 +22,7 @@ const resolveShowAsStale = Story.Command.resolve(
 
 const givenHidden = Story.given(init({ id: 'test' }))
 
-const givenHoveredOpen = flow(
+const givenHoveredOpen = Story.steps(
   givenHidden,
   Story.message(Message.EnteredTrigger()),
   Story.Command.resolve(
@@ -31,7 +31,7 @@ const givenHoveredOpen = flow(
   ),
 )
 
-const givenFocusedOpen = flow(
+const givenFocusedOpen = Story.steps(
   givenHidden,
   Story.message(Message.FocusedTrigger()),
 )

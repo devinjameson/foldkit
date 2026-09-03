@@ -1,7 +1,14 @@
 import { Option } from 'effect'
-import { type ESTree } from 'effect-oxlint'
+import { type ESTree, type Reference } from 'effect-oxlint'
 
-import { isIdentifier, isObjectExpression, isStringLiteral } from './guards.ts'
+import {
+  isIdentifier,
+  isObjectExpression,
+  isStringLiteral,
+  resolveFoldkitApiPath,
+  resolveImportedPath,
+  staticPropertyName,
+} from './guards.ts'
 
 const foldkitMessageModule = 'foldkit/message'
 
@@ -10,24 +17,6 @@ export type MessageCase = Readonly<{
   nameNode: ESTree.Node
   fields: ESTree.ObjectExpression
 }>
-
-const staticPropertyName = (
-  property: ESTree.ObjectPropertyKind,
-): Option.Option<Readonly<{ name: string; node: ESTree.Node }>> => {
-  if (property.type !== 'Property') {
-    return Option.none()
-  }
-
-  if (!property.computed && isIdentifier(property.key)) {
-    return Option.some({ name: property.key.name, node: property.key })
-  }
-
-  if (isStringLiteral(property.key)) {
-    return Option.some({ name: property.key.value, node: property.key })
-  }
-
-  return Option.none()
-}
 
 export const recordFoldkitMessageUnionBindings = (
   bindings: Set<string>,
@@ -60,11 +49,32 @@ export const recordFoldkitMessageUnionBindings = (
   }
 }
 
+export const isFoldkitMessageUnionCall = (
+  node: ESTree.CallExpression,
+  bindings: ReadonlySet<string>,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
+): boolean => {
+  if (references === undefined) {
+    return isIdentifier(node.callee) && bindings.has(node.callee.name)
+  }
+
+  return Option.exists(resolveFoldkitApiPath(references, node.callee), path => {
+    const [namespace, helperName, extraMember] = path
+
+    return (
+      namespace === 'Message' &&
+      helperName === 'defineMessageUnion' &&
+      extraMember === undefined
+    )
+  })
+}
+
 export const messageCases = (
   node: ESTree.CallExpression,
   bindings: ReadonlySet<string>,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
 ): ReadonlyArray<MessageCase> => {
-  if (!isIdentifier(node.callee) || !bindings.has(node.callee.name)) {
+  if (!isFoldkitMessageUnionCall(node, bindings, references)) {
     return []
   }
 
@@ -74,19 +84,19 @@ export const messageCases = (
   }
 
   return casesByTag.properties.flatMap(property => {
+    if (property.type !== 'Property') {
+      return []
+    }
+
     const maybeName = staticPropertyName(property)
-    if (
-      property.type !== 'Property' ||
-      Option.isNone(maybeName) ||
-      !isObjectExpression(property.value)
-    ) {
+    if (Option.isNone(maybeName) || !isObjectExpression(property.value)) {
       return []
     }
 
     return [
       {
-        name: maybeName.value.name,
-        nameNode: maybeName.value.node,
+        name: maybeName.value,
+        nameNode: property.key,
         fields: property.value,
       },
     ]
@@ -102,3 +112,61 @@ export const hasMessagePayloadProperty = (
       (isIdentifier(property.key, 'message') ||
         (isStringLiteral(property.key) && property.key.value === 'message')),
   )
+
+const containsImportedMessageReference = (
+  node: unknown,
+  references: WeakMap<ESTree.Node, Reference>,
+  visited: WeakSet<object>,
+): boolean => {
+  if (typeof node !== 'object' || node === null || visited.has(node)) {
+    return false
+  }
+
+  visited.add(node)
+  if (
+    Option.exists(resolveImportedPath(references, node), path => {
+      const [messageName] = path.members.slice(-1)
+
+      return messageName === 'Message'
+    })
+  ) {
+    return true
+  }
+
+  return Object.entries(node).some(
+    ([key, value]) =>
+      key !== 'parent' &&
+      (Array.isArray(value)
+        ? value.some(element =>
+            containsImportedMessageReference(element, references, visited),
+          )
+        : containsImportedMessageReference(value, references, visited)),
+  )
+}
+
+export const hasSubmodelMessagePayload = (
+  fields: ESTree.ObjectExpression,
+  references: WeakMap<ESTree.Node, Reference> | undefined,
+): boolean => {
+  if (references === undefined) {
+    return hasMessagePayloadProperty(fields)
+  }
+
+  return fields.properties.some(property => {
+    if (
+      property.type !== 'Property' ||
+      !(
+        isIdentifier(property.key, 'message') ||
+        (isStringLiteral(property.key) && property.key.value === 'message')
+      )
+    ) {
+      return false
+    }
+
+    return containsImportedMessageReference(
+      property.value,
+      references,
+      new WeakSet(),
+    )
+  })
+}

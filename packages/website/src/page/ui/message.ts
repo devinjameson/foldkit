@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import {
@@ -20,21 +20,21 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
-import { Toast } from './toastModule'
+import { Toast } from './demo/toastModule'
 
 export const Message = defineMessageUnion({
   ClickedButtonDemo: {},
-  UpdatedInputDemoValue: { value: S.String },
-  UpdatedTextareaDemoValue: { value: S.String },
-  UpdatedFieldsetInputValue: { value: S.String },
-  UpdatedFieldsetTextareaValue: { value: S.String },
-  ToggledFieldsetCheckboxDemo: { isChecked: S.Boolean },
+  UpdatedInputDemoValue: { value: Schema.String },
+  UpdatedTextareaDemoValue: { value: Schema.String },
+  UpdatedFieldsetInputValue: { value: Schema.String },
+  UpdatedFieldsetTextareaValue: { value: Schema.String },
+  ToggledFieldsetCheckboxDemo: { isChecked: Schema.Boolean },
   GotCalendarBasicDemoMessage: { message: Calendar.Message },
   GotDatePickerBasicDemoMessage: { message: DatePicker.Message },
-  ToggledCheckboxBasicDemo: { isChecked: S.Boolean },
-  ToggledCheckboxAllDemo: { isChecked: S.Boolean },
-  ToggledCheckboxOptionADemo: { isChecked: S.Boolean },
-  ToggledCheckboxOptionBDemo: { isChecked: S.Boolean },
+  ToggledCheckboxBasicDemo: { isChecked: Schema.Boolean },
+  ToggledCheckboxAllDemo: { isChecked: Schema.Boolean },
+  ToggledCheckboxOptionADemo: { isChecked: Schema.Boolean },
+  ToggledCheckboxOptionBDemo: { isChecked: Schema.Boolean },
   GotComboboxDemoMessage: { message: Combobox.Message },
   GotComboboxPlacementLockDemoMessage: { message: Combobox.Message },
   GotComboboxNullableDemoMessage: { message: Combobox.Message },
@@ -51,7 +51,7 @@ export const Message = defineMessageUnion({
   ClickedOpenAnimatedDialog: {},
   ClickedEditFilters: {},
   ClickedOpenProjectSettings: {},
-  ToggledDisclosureDemo: { isOpen: S.Boolean },
+  ToggledDisclosureDemo: { isOpen: Schema.Boolean },
   GotListboxDemoMessage: { message: Listbox.Message },
   GotListboxMultiDemoMessage: { message: Listbox.Message },
   GotListboxGroupedDemoMessage: { message: Listbox.Message },
@@ -64,15 +64,15 @@ export const Message = defineMessageUnion({
   GotPopoverNestedChildDemoMessage: { message: Popover.Message },
   GotVerticalRadioGroupDemoMessage: { message: RadioGroup.Message },
   GotHorizontalRadioGroupDemoMessage: { message: RadioGroup.Message },
-  UpdatedSelectDemoValue: { value: S.String },
+  UpdatedSelectDemoValue: { value: Schema.String },
   GotSliderRatingDemoMessage: { message: Slider.Message },
   GotSliderVolumeDemoMessage: { message: Slider.Message },
-  ToggledSwitchDemo: { isChecked: S.Boolean },
+  ToggledSwitchDemo: { isChecked: Schema.Boolean },
   GotHorizontalTabsDemoMessage: { message: Tabs.Message },
   GotVerticalTabsDemoMessage: { message: Tabs.Message },
   GotDragAndDropDemoMessage: { message: DragAndDrop.Message },
   GotFileDropBasicDemoMessage: { message: FileDrop.Message },
-  ClickedRemoveFileDropDemoFile: { fileIndex: S.Number },
+  ClickedRemoveFileDropDemoFile: { fileIndex: Schema.Number },
   GotToastDemoMessage: { message: Toast.Message },
   ClickedShowInfoToast: {},
   ClickedShowSuccessToast: {},
@@ -84,10 +84,10 @@ export const Message = defineMessageUnion({
   GotHoverIntentMenuDemoMessage: { message: HoverIntent.Message },
   ClickedHoverIntentMenuItem: {},
   GotAnimationDemoMessage: { message: Animation.Message },
+  ClickedToggleAnimationDemo: {},
   GotVirtualListDemoMessage: { message: VirtualList.Message },
   ClickedVirtualListScrollToMiddle: {},
   GotVirtualListVariableDemoMessage: { message: VirtualList.Message },
   ClickedVirtualListVariableScrollToMiddle: {},
 })
-
 export type Message = typeof Message.Type

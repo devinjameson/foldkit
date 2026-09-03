@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import { ApiData } from './model'
@@ -6,11 +6,10 @@ import { ApiData } from './model'
 export const Message = defineMessageUnion({
   RequestedApiData: {},
   SucceededLoadApiData: { apiData: ApiData },
-  FailedLoadApiData: { error: S.String },
+  FailedLoadApiData: { error: Schema.String },
   ToggledSignature: {
-    id: S.String,
-    isOpen: S.Boolean,
+    id: Schema.String,
+    isOpen: Schema.Boolean,
   },
 })
-
 export type Message = typeof Message.Type

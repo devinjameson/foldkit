@@ -3,10 +3,10 @@ import {
   DateTime,
   Duration,
   Effect,
-  Match as M,
+  Match,
   Option,
   Queue,
-  Schema as S,
+  Schema,
   Stream,
   String,
 } from 'effect'
@@ -33,10 +33,10 @@ const getZonedTime = DateTime.now.pipe(
 
 // MODEL
 
-const ChatMessage = S.Struct({
-  text: S.String,
-  zoned: S.DateTimeZoned,
-  isSent: S.Boolean,
+const ChatMessage = Schema.Struct({
+  text: Schema.String,
+  zoned: Schema.DateTimeZoned,
+  isSent: Schema.Boolean,
 })
 
 type ChatMessage = typeof ChatMessage.Type
@@ -48,14 +48,14 @@ export const ConnectionState = defineTaggedUnion({
   Disconnected: {},
   Connecting: {},
   Connected: {},
-  Error: { error: S.String },
+  Error: { error: Schema.String },
 })
 export type ConnectionState = typeof ConnectionState.Type
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   connection: ConnectionState,
-  messages: S.Array(ChatMessage),
-  messageInput: S.String,
+  messages: Schema.Array(ChatMessage),
+  messageInput: Schema.String,
 })
 
 export type Model = typeof Model.Type
@@ -66,15 +66,15 @@ export const Message = defineMessageUnion({
   ClickedConnect: {},
   Connected: {},
   Disconnected: {},
-  FailedConnect: { error: S.String },
-  UpdatedMessageInput: { value: S.String },
+  FailedConnect: { error: Schema.String },
+  UpdatedMessageInput: { value: Schema.String },
   SubmittedMessage: {},
-  SucceededSendMessage: { text: S.String },
-  ReceivedMessage: { text: S.String },
+  SucceededSendMessage: { text: Schema.String },
+  ReceivedMessage: { text: Schema.String },
   TimestampedMessage: {
-    text: S.String,
-    zoned: S.DateTimeZoned,
-    isSent: S.Boolean,
+    text: Schema.String,
+    zoned: Schema.DateTimeZoned,
+    isSent: Schema.Boolean,
   },
 })
 
@@ -124,15 +124,15 @@ export const update = (model: Model, message: Message) =>
         return { model }
       }
 
-      return M.value(model.connection).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.tag('Connected', () => ({
+      return Match.value(model.connection).pipe(
+        Match.withReturnType<UpdateReturn>(),
+        Match.tag('Connected', () => ({
           model: evo(model, {
             messageInput: () => '',
           }),
           commands: [SendMessage({ text: trimmedMessage })],
         })),
-        M.orElse(() => ({ model })),
+        Match.orElse(() => ({ model })),
       )
     },
 
@@ -170,7 +170,7 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
 // COMMAND
 
 export const TimestampSentMessage = Command.define('TimestampSentMessage', {
-  args: { text: S.String },
+  args: { text: Schema.String },
   messages: [Message.TimestampedMessage],
   execute: ({ text }) =>
     getZonedTime.pipe(
@@ -183,7 +183,7 @@ export const TimestampSentMessage = Command.define('TimestampSentMessage', {
 export const TimestampReceivedMessage = Command.define(
   'TimestampReceivedMessage',
   {
-    args: { text: S.String },
+    args: { text: Schema.String },
     messages: [Message.TimestampedMessage],
     execute: ({ text }) =>
       getZonedTime.pipe(
@@ -195,7 +195,7 @@ export const TimestampReceivedMessage = Command.define(
 )
 
 export const SendMessage = Command.define('SendMessage', {
-  args: { text: S.String },
+  args: { text: Schema.String },
   messages: [Message.SucceededSendMessage, Message.FailedConnect],
   execute: ({ text }) =>
     ChatSocket.get.pipe(
@@ -215,13 +215,13 @@ export const SendMessage = Command.define('SendMessage', {
 
 export const managedResources = ManagedResource.make<Model, Message>()(
   entry => ({
-    chatSocket: entry(S.Option(S.Null), {
+    chatSocket: entry(Schema.Option(Schema.Null), {
       resource: ChatSocket,
       modelToMaybeRequirements: model =>
-        M.value(model.connection).pipe(
-          M.tag('Connecting', () => Option.some(null)),
-          M.tag('Connected', () => Option.some(null)),
-          M.orElse(() => Option.none()),
+        Match.value(model.connection).pipe(
+          Match.tag('Connecting', () => Option.some(null)),
+          Match.tag('Connected', () => Option.some(null)),
+          Match.orElse(() => Option.none()),
         ),
       acquire: () =>
         Effect.callback<WebSocket, Error>(resume => {
@@ -313,7 +313,7 @@ export const subscriptions = Subscription.make<
   ChatSocketService
 >()(entry => ({
   isConnected: entry(
-    { isConnected: S.Boolean },
+    { isConnected: Schema.Boolean },
     {
       modelToDependencies: model => ({
         isConnected: model.connection._tag === 'Connected',

@@ -6,7 +6,7 @@ import {
   Function,
   Option,
   Queue,
-  Schema as S,
+  Schema,
   Stream,
   String,
 } from 'effect'
@@ -34,32 +34,32 @@ const GEOLOCATION_TIMEOUT_MS = 10_000
 
 // MODEL
 
-const Bounds = S.Struct({
-  west: S.Number,
-  south: S.Number,
-  east: S.Number,
-  north: S.Number,
+const Bounds = Schema.Struct({
+  west: Schema.Number,
+  south: Schema.Number,
+  east: Schema.Number,
+  north: Schema.Number,
 })
 type Bounds = typeof Bounds.Type
 
-const LngLat = S.Struct({ lng: S.Number, lat: S.Number })
+const LngLat = Schema.Struct({ lng: Schema.Number, lat: Schema.Number })
 type LngLat = typeof LngLat.Type
 
 export const GeolocateState = defineTaggedUnion({
   Idle: {},
   Locating: {},
-  Failed: { reason: S.String },
+  Failed: { reason: Schema.String },
 })
 export type GeolocateState = typeof GeolocateState.Type
 
-export const Model = S.Struct({
-  locations: S.Array(Location),
-  searchQuery: S.String,
-  maybeMapHostId: S.Option(S.String),
-  maybeMapError: S.Option(S.String),
-  maybeBounds: S.Option(Bounds),
-  maybeSelectedLocationId: S.Option(S.String),
-  maybeUserLocation: S.Option(LngLat),
+export const Model = Schema.Struct({
+  locations: Schema.Array(Location),
+  searchQuery: Schema.String,
+  maybeMapHostId: Schema.Option(Schema.String),
+  maybeMapError: Schema.Option(Schema.String),
+  maybeBounds: Schema.Option(Bounds),
+  maybeSelectedLocationId: Schema.Option(Schema.String),
+  maybeUserLocation: Schema.Option(LngLat),
   geolocateState: GeolocateState,
 })
 export type Model = typeof Model.Type
@@ -67,21 +67,21 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  SucceededMountMap: { hostId: S.String },
-  FailedMountMap: { reason: S.String },
+  SucceededMountMap: { hostId: Schema.String },
+  FailedMountMap: { reason: Schema.String },
   MovedMap: { bounds: Bounds },
-  ClickedMarker: { locationId: S.String },
-  ClickedLocation: { locationId: S.String },
-  UpdatedSearchQuery: { value: S.String },
+  ClickedMarker: { locationId: Schema.String },
+  ClickedLocation: { locationId: Schema.String },
+  UpdatedSearchQuery: { value: Schema.String },
   ClickedFindMe: {},
   DismissedGeolocate: {},
   SucceededGeolocate: {
-    lng: S.Number,
-    lat: S.Number,
+    lng: Schema.Number,
+    lat: Schema.Number,
   },
-  FailedGeolocate: { reason: S.String },
+  FailedGeolocate: { reason: Schema.String },
   SucceededFlyTo: {},
-  FailedFlyTo: { reason: S.String },
+  FailedFlyTo: { reason: Schema.String },
   CompletedFocusSearchInput: {},
   CompletedLockBodyScroll: {},
   CompletedUnlockBodyScroll: {},
@@ -115,10 +115,10 @@ const flyToMap = (
 
 export const FlyTo = Command.define('FlyTo', {
   args: {
-    maybeHostId: S.Option(S.String),
-    lng: S.Number,
-    lat: S.Number,
-    zoom: S.Number,
+    maybeHostId: Schema.Option(Schema.String),
+    lng: Schema.Number,
+    lat: Schema.Number,
+    zoom: Schema.Number,
   },
   messages: [Message.SucceededFlyTo, Message.FailedFlyTo],
   execute: ({ maybeHostId, lng, lat, zoom }) =>
@@ -310,7 +310,34 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
 
 // MAP MOUNT
 
-const mountMap = (element: Element, hostId: string) =>
+type MountedMap = Readonly<{
+  map: MapInstance
+  markerElements: ReadonlyArray<HTMLButtonElement>
+}>
+
+const applyMapViewState = (
+  { map, markerElements }: MountedMap,
+  viewState: Mount.ViewState,
+): Effect.Effect<void> =>
+  Effect.sync(() => {
+    const isLive = viewState === 'Live'
+
+    if (isLive) {
+      map.keyboard.enable()
+    } else {
+      map.keyboard.disable()
+    }
+
+    Array.forEach(markerElements, markerElement => {
+      markerElement.disabled = !isLive
+    })
+  })
+
+const mountMap = (
+  element: Element,
+  hostId: string,
+  viewStateChanges: Stream.Stream<Mount.ViewState>,
+) =>
   Effect.gen(function* () {
     if (!(element instanceof HTMLElement)) {
       return Message.FailedMountMap({
@@ -319,7 +346,7 @@ const mountMap = (element: Element, hostId: string) =>
     }
 
     return yield* Effect.gen(function* () {
-      yield* Effect.acquireRelease(
+      const mountedMap = yield* Effect.acquireRelease(
         Effect.gen(function* () {
           const maplibre = yield* Effect.tryPromise(() => import('maplibre-gl'))
           maplibre.setWorkerUrl(maplibreWorkerUrl)
@@ -330,20 +357,31 @@ const mountMap = (element: Element, hostId: string) =>
             zoom: INITIAL_MAP_ZOOM,
           })
 
-          Array.forEach(featuredLocations, ({ id, lng, lat }) => {
-            const markerElement = document.createElement('button')
-            markerElement.setAttribute('data-location-id', id)
-            markerElement.setAttribute('aria-label', `Marker: ${id}`)
-            markerElement.className = markerStyle
-            new maplibre.Marker({ element: markerElement })
-              .setLngLat([lng, lat])
-              .addTo(map)
-          })
+          const markerElements = Array.map(
+            featuredLocations,
+            ({ id, lng, lat }) => {
+              const markerElement = document.createElement('button')
+              markerElement.setAttribute('data-location-id', id)
+              markerElement.setAttribute('aria-label', `Marker: ${id}`)
+              markerElement.className = markerStyle
+              new maplibre.Marker({ element: markerElement })
+                .setLngLat([lng, lat])
+                .addTo(map)
+              return markerElement
+            },
+          )
 
           setMap(hostId, map)
-          return map
+          return { map, markerElements }
         }),
         () => Effect.sync(() => removeMap(hostId)),
+      )
+
+      yield* viewStateChanges.pipe(
+        Stream.runForEach(viewState =>
+          applyMapViewState(mountedMap, viewState),
+        ),
+        Effect.forkScoped,
       )
 
       return Message.SucceededMountMap({ hostId })
@@ -359,9 +397,10 @@ const mountMap = (element: Element, hostId: string) =>
   })
 
 export const MountMap = Mount.define('MountMap', {
-  args: { hostId: S.String },
+  args: { hostId: Schema.String },
   messages: [Message.SucceededMountMap, Message.FailedMountMap],
-  execute: ({ element, hostId }) => mountMap(element, hostId),
+  execute: ({ element, hostId, viewStateChanges }) =>
+    mountMap(element, hostId, viewStateChanges),
 })
 
 // SUBSCRIPTIONS
@@ -428,7 +467,7 @@ const streamMapEvents = (hostId: string) =>
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   mapEvents: entry(
-    { maybeMapHostId: S.Option(S.String) },
+    { maybeMapHostId: Schema.Option(Schema.String) },
     {
       modelToDependencies: model => ({
         maybeMapHostId: model.maybeMapHostId,

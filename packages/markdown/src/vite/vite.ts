@@ -1,4 +1,4 @@
-import { Array, Option, Schema as S, pipe } from 'effect'
+import { Array, Option, Schema, pipe } from 'effect'
 import type { Root, RootContent, Yaml } from 'mdast'
 import remarkDirective from 'remark-directive'
 import remarkFrontmatter from 'remark-frontmatter'
@@ -35,7 +35,7 @@ export type MarkdownPluginOptions = NormalizeOptions &
   }>
 
 const isSchemaStruct = (value: unknown): boolean =>
-  S.isSchema(value) && 'fields' in value
+  Schema.isSchema(value) && 'fields' in value
 
 const validateMarkdownPluginOptions = (
   options: MarkdownPluginOptions,

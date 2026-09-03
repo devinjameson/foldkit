@@ -1,4 +1,4 @@
-import { Array as Array_, Option, pipe } from 'effect'
+import { Array, Option, pipe } from 'effect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type {
@@ -42,7 +42,7 @@ const computePositionMock =
     ) => Promise<MockComputePositionReturn>
   >()
 
-const updateCallbacks: Array<() => void> = []
+const updateCallbacks: globalThis.Array<() => void> = []
 
 // NOTE: `actual` is spread so the real arrow/offset/flip/shift/size factories
 // survive and their middleware objects keep the `.name` and `.options` values
@@ -79,7 +79,7 @@ describe('anchorSetup arrow', () => {
 
   const optionsOfCall = (callIndex: number): Partial<ComputePositionConfig> =>
     pipe(
-      Array_.get(computePositionMock.mock.calls, callIndex),
+      Array.get(computePositionMock.mock.calls, callIndex),
       Option.map(([, , options]) => options),
       Option.getOrThrowWith(
         () =>
@@ -87,17 +87,17 @@ describe('anchorSetup arrow', () => {
       ),
     )
 
-  const middlewareNamesOfCall = (callIndex: number): Array<string> =>
+  const middlewareNamesOfCall = (callIndex: number): globalThis.Array<string> =>
     pipe(
       optionsOfCall(callIndex).middleware ?? [],
-      Array_.flatMap(middleware => (middleware ? [middleware.name] : [])),
+      Array.flatMap(middleware => (middleware ? [middleware.name] : [])),
     )
 
   const middlewareOfCall = (callIndex: number, name: string): Middleware =>
     pipe(
       optionsOfCall(callIndex).middleware ?? [],
-      Array_.flatMap(middleware => (middleware ? [middleware] : [])),
-      Array_.findFirst(middleware => middleware.name === name),
+      Array.flatMap(middleware => (middleware ? [middleware] : [])),
+      Array.findFirst(middleware => middleware.name === name),
       Option.getOrThrowWith(
         () =>
           new Error(`Expected ${name} middleware at call index ${callIndex}`),
@@ -273,7 +273,7 @@ describe('anchorSetup arrow', () => {
 
   const triggerUpdate = (callbackIndex: number): void => {
     const update = pipe(
-      Array_.get(updateCallbacks, callbackIndex),
+      Array.get(updateCallbacks, callbackIndex),
       Option.getOrThrowWith(
         () =>
           new Error(

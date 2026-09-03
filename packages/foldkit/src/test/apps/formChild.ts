@@ -1,13 +1,14 @@
-import { Effect, Match as M, Option, Schema as S } from 'effect'
+import { Array, Effect, Option, Schema } from 'effect'
 
 import * as Command from '../../command/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
 import * as Update from '../../update/index.js'
 
 // CHILD MODEL
 
-export const ChildModel = S.Struct({
-  status: S.Literals(['Idle', 'Submitting', 'Submitted']),
+export const ChildModel = Schema.Struct({
+  status: Schema.Literals(['Idle', 'Submitting', 'Submitted']),
 })
 export type ChildModel = typeof ChildModel.Type
 
@@ -15,7 +16,7 @@ export type ChildModel = typeof ChildModel.Type
 
 export const ChildMessage = defineMessageUnion({
   SubmittedForm: {},
-  SucceededSubmitForm: { id: S.String },
+  SucceededSubmitForm: { id: Schema.String },
   CancelledForm: {},
   CompletedResetForm: {},
 })
@@ -24,7 +25,7 @@ export type ChildMessage = typeof ChildMessage.Type
 // CHILD OUT MESSAGE
 
 export const ChildOutMessage = defineMessageUnion({
-  RequestedSave: { id: S.String },
+  RequestedSave: { id: Schema.String },
   RequestedCancel: {},
 })
 export type ChildOutMessage = typeof ChildOutMessage.Type
@@ -69,10 +70,10 @@ export const childUpdate = (_model: ChildModel, message: ChildMessage) =>
 
 // PARENT MODEL
 
-export const ParentModel = S.Struct({
+export const ParentModel = Schema.Struct({
   child: ChildModel,
-  savedIds: S.Array(S.String),
-  cancelled: S.Boolean,
+  savedIds: Schema.Array(Schema.String),
+  cancelled: Schema.Boolean,
 })
 export type ParentModel = typeof ParentModel.Type
 
@@ -94,19 +95,18 @@ export const initialParentModel: ParentModel = {
 
 // PARENT UPDATE
 
-const foldChildOutMessage = M.type<ChildOutMessage>().pipe(
-  M.withReturnType<Update.Step<ParentModel, ParentMessage>>(),
-  M.tagsExhaustive({
-    RequestedSave:
-      ({ id }) =>
-      model => ({
-        model: { ...model, savedIds: [...model.savedIds, id] },
-      }),
-    RequestedCancel: () => model => ({
-      model: { ...model, cancelled: true },
+const foldChildOutMessage = ChildOutMessage.match<
+  Update.Step<ParentModel, ParentMessage>
+>({
+  RequestedSave:
+    ({ id }) =>
+    model => ({
+      model: evo(model, { savedIds: Array.append(id) }),
     }),
+  RequestedCancel: () => model => ({
+    model: evo(model, { cancelled: () => true }),
   }),
-)
+})
 
 const foldChildUpdate = Update.foldChild({
   update: childUpdate,

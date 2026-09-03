@@ -20,9 +20,9 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
+import { Toast } from './demo/toastModule'
 import type { Message } from './message'
 import type { Model } from './model'
-import { Toast } from './toastModule'
 
 export type InitReturn = Update.Return<Model, Message>
 

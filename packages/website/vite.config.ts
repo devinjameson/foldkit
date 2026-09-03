@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, Schema as S, pipe } from 'effect'
+import { Array, Match, Option, Schema, pipe } from 'effect'
 import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { basename, extname, join, relative, resolve } from 'node:path'
@@ -213,7 +213,7 @@ const loadApiTypeDocJson = async (): Promise<TypeDocJson> => {
     ...core,
     children: [...(core.children ?? []), ...(ui.children ?? [])],
   }
-  return S.decodeUnknownSync(TypeDocJson)(merged)
+  return Schema.decodeUnknownSync(TypeDocJson)(merged)
 }
 
 const formatTypeParam =
@@ -426,12 +426,12 @@ const itemToEntries = (namedSchemas: NamedSchemas) => {
     prefix: string,
     item: TypeDocItem,
   ): ReadonlyArray<readonly [string, string]> =>
-    M.value(item.kind).pipe(
-      M.when(Kind.Function, () => fnEntries(prefix, item)),
-      M.when(Kind.TypeAlias, () => typeEntries(prefix, item)),
-      M.when(Kind.Interface, () => ifaceEntries(prefix, item)),
-      M.when(Kind.Variable, () => varEntries(prefix, item)),
-      M.orElse(() => []),
+    Match.value(item.kind).pipe(
+      Match.when(Kind.Function, () => fnEntries(prefix, item)),
+      Match.when(Kind.TypeAlias, () => typeEntries(prefix, item)),
+      Match.when(Kind.Interface, () => ifaceEntries(prefix, item)),
+      Match.when(Kind.Variable, () => varEntries(prefix, item)),
+      Match.orElse(() => []),
     )
 }
 
@@ -573,7 +573,7 @@ const parsedApiPlugin = (): Plugin => ({
 
     const json = await loadApiTypeDocJson()
     const parsed = parseTypedocJson(json)
-    const encoded = S.encodeSync(ParsedApiReference)(parsed)
+    const encoded = Schema.encodeSync(ParsedApiReference)(parsed)
 
     return `export default ${JSON.stringify(encoded)}`
   },

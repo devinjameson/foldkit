@@ -1,4 +1,4 @@
-import { Match as M, Option, Predicate } from 'effect'
+import { Match, Option, Predicate } from 'effect'
 import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
 
 // VIEW
@@ -96,9 +96,9 @@ export const view = <Message>(
   const nextOpen = !isOpen
 
   const handleKeyDown = (key: string): Option.Option<Message> =>
-    M.value(key).pipe(
-      M.whenOr('Enter', ' ', () => Option.some(onToggle(nextOpen))),
-      M.orElse(() => Option.none()),
+    Match.value(key).pipe(
+      Match.whenOr('Enter', ' ', () => Option.some(onToggle(nextOpen))),
+      Match.orElse(() => Option.none()),
     )
 
   const disabledAttributes = isDisabled

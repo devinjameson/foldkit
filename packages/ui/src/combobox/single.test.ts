@@ -1,4 +1,4 @@
-import { Option, flow } from 'effect'
+import { Option } from 'effect'
 import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
@@ -48,14 +48,14 @@ const animationEndMessage = Message.GotAnimationMessage({
 
 const givenClosed = Story.given(init({ id: 'test' }))
 
-const givenOpen = flow(
+const givenOpen = Story.steps(
   givenClosed,
   Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
 )
 
 const givenClosedAnimated = Story.given(init({ id: 'test', isAnimated: true }))
 
-const givenOpenAnimated = flow(
+const givenOpenAnimated = Story.steps(
   givenClosedAnimated,
   Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolveAll(
@@ -1064,7 +1064,7 @@ describe('Combobox', () => {
   describe('modal commands', () => {
     const givenClosedModal = Story.given(init({ id: 'test', isModal: true }))
 
-    const givenOpenModal = flow(
+    const givenOpenModal = Story.steps(
       givenClosedModal,
       Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
       Story.Command.resolveAllExact(

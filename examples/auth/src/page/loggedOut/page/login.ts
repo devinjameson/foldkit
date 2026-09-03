@@ -1,13 +1,5 @@
 import { clsx } from 'clsx'
-import {
-  Array,
-  Duration,
-  Effect,
-  Option,
-  Schema as S,
-  String,
-  pipe,
-} from 'effect'
+import { Array, Duration, Effect, Option, Schema, String, pipe } from 'effect'
 import { Command, FieldValidation, Submodel, type Update } from 'foldkit'
 import {
   Field,
@@ -29,10 +21,10 @@ import { homeRouter } from '../../../route'
 
 // MODEL
 
-export const Model = S.Struct({
-  email: Field(S.String),
-  password: Field(S.String),
-  isSubmitting: S.Boolean,
+export const Model = Schema.Struct({
+  email: Field(Schema.String),
+  password: Field(Schema.String),
+  isSubmitting: Schema.Boolean,
 })
 
 export type Model = typeof Model.Type
@@ -46,11 +38,11 @@ export const initModel = (): Model => ({
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  ChangedEmail: { value: S.String },
-  ChangedPassword: { value: S.String },
+  ChangedEmail: { value: Schema.String },
+  ChangedPassword: { value: Schema.String },
   SubmittedForm: {},
   SucceededSimulateAuthRequest: { session: Session },
-  FailedSimulateAuthRequest: { error: S.String },
+  FailedSimulateAuthRequest: { error: Schema.String },
 })
 
 export type Message = typeof Message.Type
@@ -86,7 +78,7 @@ const isFormValid = (model: Model): boolean =>
 // UPDATE
 
 export const SimulateAuthRequest = Command.define('SimulateAuthRequest', {
-  args: { email: S.String, password: S.String },
+  args: { email: Schema.String, password: Schema.String },
   messages: [
     Message.SucceededSimulateAuthRequest,
     Message.FailedSimulateAuthRequest,

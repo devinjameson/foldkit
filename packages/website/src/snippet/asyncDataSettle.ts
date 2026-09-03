@@ -7,7 +7,7 @@ const LoadAllNotes = Command.define('LoadAllNotes', {
   ),
 })
 
-M.tagsExhaustive({
+Match.tagsExhaustive({
   SettledLoadAllNotes: ({ result }) => ({
     model: evo(model, {
       allNotes: previous => AsyncData.settle(previous, result),

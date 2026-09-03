@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
@@ -7,9 +7,9 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  lastKey: S.String,
-  isShifted: S.Boolean,
+export const Model = Schema.Struct({
+  lastKey: Schema.String,
+  isShifted: Schema.Boolean,
 })
 
 export type Model = typeof Model.Type
@@ -17,8 +17,8 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  PressedKey: { key: S.String },
-  PressedShiftKey: { key: S.String },
+  PressedKey: { key: Schema.String },
+  PressedShiftKey: { key: Schema.String },
 })
 
 export type Message = typeof Message.Type

@@ -1,4 +1,4 @@
-import { Array as Array_, Function, Option, pipe } from 'effect'
+import { Array, Function, Option, pipe } from 'effect'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type {
@@ -53,7 +53,7 @@ const computePositionMock =
     ) => Promise<MockComputePositionReturn>
   >()
 
-const updateCallbacks: Array<() => void> = []
+const updateCallbacks: globalThis.Array<() => void> = []
 
 // NOTE: `actual` is spread so the real offset/flip/shift/size factories survive
 // and their middleware objects keep the `.name` values the assertions match on.
@@ -90,7 +90,7 @@ describe('anchorSetup placement locking and position ticks', () => {
 
   const optionsOfCall = (callIndex: number): Partial<ComputePositionConfig> =>
     pipe(
-      Array_.get(computePositionMock.mock.calls, callIndex),
+      Array.get(computePositionMock.mock.calls, callIndex),
       Option.map(([, , options]) => options),
       Option.getOrThrowWith(
         () =>
@@ -98,17 +98,17 @@ describe('anchorSetup placement locking and position ticks', () => {
       ),
     )
 
-  const middlewareNamesOfCall = (callIndex: number): Array<string> =>
+  const middlewareNamesOfCall = (callIndex: number): globalThis.Array<string> =>
     pipe(
       optionsOfCall(callIndex).middleware ?? [],
-      Array_.flatMap(middleware => (middleware ? [middleware.name] : [])),
+      Array.flatMap(middleware => (middleware ? [middleware.name] : [])),
     )
 
   const sizeApplyOfCall = (callIndex: number): SizeApply => {
     const middleware = pipe(
       optionsOfCall(callIndex).middleware ?? [],
-      Array_.flatMap(middleware => (middleware ? [middleware] : [])),
-      Array_.findFirst(({ name }) => name === 'size'),
+      Array.flatMap(middleware => (middleware ? [middleware] : [])),
+      Array.findFirst(({ name }) => name === 'size'),
       Option.getOrThrowWith(
         () => new Error(`Expected size middleware at call index ${callIndex}`),
       ),
@@ -124,7 +124,7 @@ describe('anchorSetup placement locking and position ticks', () => {
 
   const triggerUpdate = (callbackIndex: number): void => {
     const update = pipe(
-      Array_.get(updateCallbacks, callbackIndex),
+      Array.get(updateCallbacks, callbackIndex),
       Option.getOrThrowWith(
         () =>
           new Error(

@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import { Submodel } from 'foldkit'
 import type { ChildAttribute, Html, HtmlBuilder } from 'foldkit/html'
 
@@ -6,7 +6,7 @@ import { Calendar, DatePicker } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/popover'
 
 import * as Icon from '../../icon'
-import { UiMessage } from '../message'
+import { Message as UiMessage } from '../message'
 import type { UiModel } from '../model'
 
 const triggerClassName =
@@ -246,8 +246,8 @@ export const view = Submodel.defineView<UiModel, UiMessage>(
             panelClassName,
             backdropClassName,
             className: wrapperClassName,
-            toCalendarView: M.type<Calendar.CalendarAttributes>().pipe(
-              M.tagsExhaustive({
+            toCalendarView: Match.type<Calendar.CalendarAttributes>().pipe(
+              Match.tagsExhaustive({
                 Days: days => daysView(days, h),
                 Months: months => monthsView(months, h),
                 Years: years => yearsView(years, h),

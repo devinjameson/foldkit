@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Match as M } from 'effect'
+import { Match } from 'effect'
 import { FieldValidation } from 'foldkit'
 import { type Field } from 'foldkit/fieldValidation'
 import type { Html, HtmlBuilder } from 'foldkit/html'
@@ -50,17 +50,17 @@ export const inputField = <ParentMessage>(
                   ],
                   [config.label],
                 ),
-                ...M.value(config.field).pipe(
-                  M.tag('Validating', () => [
+                ...Match.value(config.field).pipe(
+                  Match.tag('Validating', () => [
                     h.span(
                       [h.Class('text-blue-600 text-sm animate-spin')],
                       ['◐'],
                     ),
                   ]),
-                  M.tag('Valid', () => [
+                  Match.tag('Valid', () => [
                     h.span([h.Class('text-green-600 text-sm')], ['✓']),
                   ]),
-                  M.orElse(() => []),
+                  Match.orElse(() => []),
                 ),
               ],
             ),

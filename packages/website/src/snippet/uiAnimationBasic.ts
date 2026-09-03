@@ -1,18 +1,17 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Animation } from '@foldkit/ui'
-import { Message as AnimationMessage } from '@foldkit/ui/animation'
 
 // Add a field to your Model for the Animation Submodel. Animation tracks
 // its own visibility and lifecycle state. No need for a separate flag:
-const Model = S.Struct({
+const Model = Schema.Struct({
   animation: Animation.Model,
   // ...your other fields
 })
@@ -28,6 +27,7 @@ const init = () => ({
 // Embed the Animation Message in your parent Message:
 const Message = defineMessageUnion({
   GotAnimationMessage: { message: Animation.Message },
+  ClickedToggleAnimation: {},
 })
 type Message = typeof Message.Type
 
@@ -77,29 +77,44 @@ const foldAnimation = Update.foldChild({
   foldOutMessage: foldAnimationOutMessage,
 })
 
-// In the corresponding Message.match handler, call the fold:
-GotAnimationMessage: ({ message }) => foldAnimation(model, message)
+// Programmatic child capabilities take the child Model and return its next
+// Model and Commands. foldChildStep integrates that result without exposing
+// the internal Showed or Hid Message constructors to the parent.
+const foldAnimationShow = Update.foldChildStep({
+  update: Animation.show,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
+})
 
-// Inside your view function, toggle visibility by dispatching
-// AnimationMessage.Showed() or AnimationMessage.Hid() wrapped in your parent
-// Message. model.animation.isShowing is your
-// source of truth for whether content is currently visible. The Animation
-// view wraps your content. Data attributes drive the CSS transitions or
-// keyframe animations defined in className:
+const foldAnimationHide = Update.foldChildStep({
+  update: Animation.hide,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
+})
+
+// In the corresponding Message.match handlers, route child Messages through
+// the regular fold and parent-owned actions through the child capabilities:
+GotAnimationMessage: ({ message }) => foldAnimation(model, message)
+ClickedToggleAnimation: () =>
+  model.animation.isShowing
+    ? foldAnimationHide(model)
+    : foldAnimationShow(model)
+
+// Inside your view function, dispatch a parent-owned fact. The parent update
+// invokes the child capability. model.animation.isShowing is your source of
+// truth for whether content is currently visible. The Animation view wraps
+// your content. Data attributes drive the CSS transitions or keyframe
+// animations defined in className:
 const view = (h: HtmlBuilder<Message>) =>
   h.div(
     [],
     [
       h.button(
-        [
-          h.OnClick(
-            Message.GotAnimationMessage({
-              message: model.animation.isShowing
-                ? AnimationMessage.Hid()
-                : AnimationMessage.Showed(),
-            }),
-          ),
-        ],
+        [h.OnClick(Message.ClickedToggleAnimation())],
         [model.animation.isShowing ? 'Hide' : 'Show'],
       ),
       h.submodel({

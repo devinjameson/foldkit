@@ -3,8 +3,8 @@ import { Array, Option } from 'effect'
 import { type Html, type HtmlBuilder } from 'foldkit/html'
 
 import { Icon } from '../icon'
-import { type TableOfContentsEntry } from '../main'
 import { Message } from '../message'
+import { type TableOfContentsEntry } from '../tableOfContentsEntry'
 
 const tableOfContentsEntryView = (
   entry: TableOfContentsEntry,
@@ -40,7 +40,7 @@ const tableOfContentsEntryView = (
     ],
   )
 
-export const tableOfContentsView = (
+export const view = (
   entries: ReadonlyArray<TableOfContentsEntry>,
   maybeActiveSectionId: Option.Option<string>,
   h: HtmlBuilder<Message>,
@@ -82,7 +82,7 @@ export const tableOfContentsView = (
     ],
   )
 
-export const mobileTableOfContentsView = (
+export const mobileView = (
   entries: ReadonlyArray<TableOfContentsEntry>,
   maybeActiveSectionId: Option.Option<string>,
   isOpen: boolean,

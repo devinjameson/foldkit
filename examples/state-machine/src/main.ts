@@ -2,10 +2,10 @@ import {
   Array,
   Duration,
   Effect,
-  Match as M,
+  Match,
   Number,
   Option,
-  Schema as S,
+  Schema,
   String,
   flow,
   pipe,
@@ -21,9 +21,9 @@ import { RadioGroup } from '@foldkit/ui'
 
 // MODEL
 
-export const Discount = S.Struct({
-  code: S.String,
-  percentOff: S.Number,
+export const Discount = Schema.Struct({
+  code: Schema.String,
+  percentOff: Schema.Number,
 })
 
 export const Promo = defineTaggedUnion({
@@ -33,31 +33,34 @@ export const Promo = defineTaggedUnion({
 })
 
 export const CheckoutState = defineTaggedUnion({
-  Cart: { isShippingRequired: S.Boolean },
-  Shipping: { isShippingRequired: S.Boolean },
+  Cart: { isShippingRequired: Schema.Boolean },
+  Shipping: { isShippingRequired: Schema.Boolean },
   Payment: {
-    isPaymentMethodSelected: S.Boolean,
-    isShippingRequired: S.Boolean,
+    isPaymentMethodSelected: Schema.Boolean,
+    isShippingRequired: Schema.Boolean,
   },
   Review: {
-    isPaymentMethodSelected: S.Boolean,
-    isShippingRequired: S.Boolean,
-    isTermsAccepted: S.Boolean,
+    isPaymentMethodSelected: Schema.Boolean,
+    isShippingRequired: Schema.Boolean,
+    isTermsAccepted: Schema.Boolean,
     promo: Promo,
-    promoCodeInput: S.String,
+    promoCodeInput: Schema.String,
   },
-  Placing: { isShippingRequired: S.Boolean, maybeDiscount: S.Option(Discount) },
+  Placing: {
+    isShippingRequired: Schema.Boolean,
+    maybeDiscount: Schema.Option(Discount),
+  },
   Confirmed: {
-    isShippingRequired: S.Boolean,
-    maybeDiscount: S.Option(Discount),
-    orderId: S.String,
+    isShippingRequired: Schema.Boolean,
+    maybeDiscount: Schema.Option(Discount),
+    orderId: Schema.String,
   },
-  Cancelled: { isShippingRequired: S.Boolean },
+  Cancelled: { isShippingRequired: Schema.Boolean },
 })
 
-export const TransitionLogEntry = S.Struct({
-  id: S.Number,
-  summary: S.String,
+export const TransitionLogEntry = Schema.Struct({
+  id: Schema.Number,
+  summary: Schema.String,
 })
 export type TransitionLogEntry = typeof TransitionLogEntry.Type
 
@@ -76,11 +79,11 @@ export const editionName = (isShippingRequired: boolean): string =>
 
 export const EditionRadioGroup = RadioGroup.create()
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   checkout: CheckoutState,
   editionRadioGroup: RadioGroup.Model,
-  transitionLog: S.Array(TransitionLogEntry),
-  nextTransitionLogId: S.Number,
+  transitionLog: Schema.Array(TransitionLogEntry),
+  nextTransitionLogId: Schema.Number,
 })
 export type Model = typeof Model.Type
 
@@ -92,13 +95,13 @@ export const Message = defineMessageUnion({
   ClickedCancel: {},
   ClickedPlaceOrder: {},
   ClickedStartOver: {},
-  ToggledPaymentMethod: { isSelected: S.Boolean },
-  SelectedEdition: { isShippingRequired: S.Boolean },
+  ToggledPaymentMethod: { isSelected: Schema.Boolean },
+  SelectedEdition: { isShippingRequired: Schema.Boolean },
   GotEditionRadioGroupMessage: { message: RadioGroup.Message },
-  ToggledTermsAccepted: { isAccepted: S.Boolean },
-  UpdatedPromoCode: { value: S.String },
+  ToggledTermsAccepted: { isAccepted: Schema.Boolean },
+  UpdatedPromoCode: { value: Schema.String },
   SubmittedPromoCode: {},
-  SucceededPlaceOrder: { orderId: S.String },
+  SucceededPlaceOrder: { orderId: Schema.String },
 })
 
 export type Message = typeof Message.Type
@@ -108,7 +111,7 @@ export type Message = typeof Message.Type
 const PLACE_ORDER_DELAY = Duration.seconds(1)
 
 export const PlaceOrder = Command.define('PlaceOrder', {
-  args: { isShippingRequired: S.Boolean },
+  args: { isShippingRequired: Schema.Boolean },
   messages: [Message.SucceededPlaceOrder],
   execute: ({ isShippingRequired }) =>
     Effect.gen(function* () {
@@ -129,9 +132,9 @@ const PROMO_DISCOUNTS: ReadonlyArray<typeof Discount.Type> = [
 export const promoToMaybeDiscount = (
   promo: typeof Promo.Type,
 ): Option.Option<typeof Discount.Type> =>
-  M.value(promo).pipe(
-    M.tags({ AppliedPromo: appliedPromo => appliedPromo.discount }),
-    M.option,
+  Match.value(promo).pipe(
+    Match.tags({ AppliedPromo: appliedPromo => appliedPromo.discount }),
+    Match.option,
   )
 
 export const isReviewReady = (
@@ -161,170 +164,184 @@ export const checkoutMachine = Machine.define({
   states: {
     Cart: {
       on: {
-        SelectedEdition: to('Cart', ({ state, message }) =>
-          evo(state, { isShippingRequired: () => message.isShippingRequired }),
-        ),
+        SelectedEdition: to('Cart', ({ state, message }) => ({
+          model: evo(state, {
+            isShippingRequired: () => message.isShippingRequired,
+          }),
+        })),
         ClickedContinue: [
           when(
             state => state.isShippingRequired,
             'Shipping',
-            ({ state }) =>
-              CheckoutState.Shipping({
+            ({ state }) => ({
+              model: CheckoutState.Shipping({
                 isShippingRequired: state.isShippingRequired,
               }),
+            }),
           ),
           otherwise(
-            to('Payment', ({ state }) =>
-              CheckoutState.Payment({
+            to('Payment', ({ state }) => ({
+              model: CheckoutState.Payment({
                 isPaymentMethodSelected: false,
                 isShippingRequired: state.isShippingRequired,
               }),
-            ),
+            })),
           ),
         ],
-        ClickedCancel: to('Cancelled', ({ state }) =>
-          CheckoutState.Cancelled({
+        ClickedCancel: to('Cancelled', ({ state }) => ({
+          model: CheckoutState.Cancelled({
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
+        })),
       },
     },
     Shipping: {
       on: {
-        ClickedContinue: to('Payment', ({ state }) =>
-          CheckoutState.Payment({
+        ClickedContinue: to('Payment', ({ state }) => ({
+          model: CheckoutState.Payment({
             isPaymentMethodSelected: false,
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
-        ClickedBack: to('Cart', ({ state }) =>
-          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
-        ),
-        ClickedCancel: to('Cancelled', ({ state }) =>
-          CheckoutState.Cancelled({
+        })),
+        ClickedBack: to('Cart', ({ state }) => ({
+          model: CheckoutState.Cart({
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
+        })),
+        ClickedCancel: to('Cancelled', ({ state }) => ({
+          model: CheckoutState.Cancelled({
+            isShippingRequired: state.isShippingRequired,
+          }),
+        })),
       },
     },
     Payment: {
       on: {
-        ToggledPaymentMethod: to('Payment', ({ state, message }) =>
-          evo(state, { isPaymentMethodSelected: () => message.isSelected }),
-        ),
-        ClickedContinue: to('Review', ({ state }) =>
-          CheckoutState.Review({
+        ToggledPaymentMethod: to('Payment', ({ state, message }) => ({
+          model: evo(state, {
+            isPaymentMethodSelected: () => message.isSelected,
+          }),
+        })),
+        ClickedContinue: to('Review', ({ state }) => ({
+          model: CheckoutState.Review({
             isPaymentMethodSelected: state.isPaymentMethodSelected,
             isShippingRequired: state.isShippingRequired,
             isTermsAccepted: false,
             promo: Promo.NoPromo(),
             promoCodeInput: '',
           }),
-        ),
+        })),
         ClickedBack: [
           when(
             state => state.isShippingRequired,
             'Shipping',
-            ({ state }) =>
-              CheckoutState.Shipping({
+            ({ state }) => ({
+              model: CheckoutState.Shipping({
                 isShippingRequired: state.isShippingRequired,
               }),
+            }),
           ),
           otherwise(
-            to('Cart', ({ state }) =>
-              CheckoutState.Cart({
+            to('Cart', ({ state }) => ({
+              model: CheckoutState.Cart({
                 isShippingRequired: state.isShippingRequired,
               }),
-            ),
+            })),
           ),
         ],
-        ClickedCancel: to('Cancelled', ({ state }) =>
-          CheckoutState.Cancelled({
+        ClickedCancel: to('Cancelled', ({ state }) => ({
+          model: CheckoutState.Cancelled({
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
+        })),
       },
     },
     Review: {
       on: {
-        ToggledPaymentMethod: to('Review', ({ state, message }) =>
-          evo(state, { isPaymentMethodSelected: () => message.isSelected }),
-        ),
-        ToggledTermsAccepted: to('Review', ({ state, message }) =>
-          evo(state, { isTermsAccepted: () => message.isAccepted }),
-        ),
-        UpdatedPromoCode: to('Review', ({ state, message }) =>
-          evo(state, {
+        ToggledPaymentMethod: to('Review', ({ state, message }) => ({
+          model: evo(state, {
+            isPaymentMethodSelected: () => message.isSelected,
+          }),
+        })),
+        ToggledTermsAccepted: to('Review', ({ state, message }) => ({
+          model: evo(state, { isTermsAccepted: () => message.isAccepted }),
+        })),
+        UpdatedPromoCode: to('Review', ({ state, message }) => ({
+          model: evo(state, {
             promoCodeInput: () => message.value,
             promo: currentPromo =>
               currentPromo._tag === 'RejectedPromo'
                 ? Promo.NoPromo()
                 : currentPromo,
           }),
-        ),
+        })),
         SubmittedPromoCode: [
           when(
             reviewToMaybeDiscount,
             'Review',
-            ({ state, guardValue: discount }) =>
-              evo(state, { promo: () => Promo.AppliedPromo({ discount }) }),
+            ({ state, guardValue: discount }) => ({
+              model: evo(state, {
+                promo: () => Promo.AppliedPromo({ discount }),
+              }),
+            }),
           ),
           otherwise(
-            to('Review', ({ state }) =>
-              evo(state, { promo: () => Promo.RejectedPromo() }),
-            ),
+            to('Review', ({ state }) => ({
+              model: evo(state, { promo: () => Promo.RejectedPromo() }),
+            })),
           ),
         ],
         ClickedPlaceOrder: [
-          when(
-            isReviewReady,
-            'Placing',
-            ({ state }) =>
-              CheckoutState.Placing({
-                isShippingRequired: state.isShippingRequired,
-                maybeDiscount: promoToMaybeDiscount(state.promo),
-              }),
-            ({ state }) => [
+          when(isReviewReady, 'Placing', ({ state }) => ({
+            model: CheckoutState.Placing({
+              isShippingRequired: state.isShippingRequired,
+              maybeDiscount: promoToMaybeDiscount(state.promo),
+            }),
+            commands: [
               PlaceOrder({ isShippingRequired: state.isShippingRequired }),
             ],
-          ),
+          })),
         ],
-        ClickedBack: to('Payment', ({ state }) =>
-          CheckoutState.Payment({
+        ClickedBack: to('Payment', ({ state }) => ({
+          model: CheckoutState.Payment({
             isPaymentMethodSelected: state.isPaymentMethodSelected,
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
-        ClickedCancel: to('Cancelled', ({ state }) =>
-          CheckoutState.Cancelled({
+        })),
+        ClickedCancel: to('Cancelled', ({ state }) => ({
+          model: CheckoutState.Cancelled({
             isShippingRequired: state.isShippingRequired,
           }),
-        ),
+        })),
       },
     },
     Placing: {
       on: {
-        SucceededPlaceOrder: to('Confirmed', ({ state, message }) =>
-          CheckoutState.Confirmed({
+        SucceededPlaceOrder: to('Confirmed', ({ state, message }) => ({
+          model: CheckoutState.Confirmed({
             isShippingRequired: state.isShippingRequired,
             maybeDiscount: state.maybeDiscount,
             orderId: message.orderId,
           }),
-        ),
+        })),
       },
     },
     Confirmed: {
       on: {
-        ClickedStartOver: to('Cart', ({ state }) =>
-          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
-        ),
+        ClickedStartOver: to('Cart', ({ state }) => ({
+          model: CheckoutState.Cart({
+            isShippingRequired: state.isShippingRequired,
+          }),
+        })),
       },
     },
     Cancelled: {
       on: {
-        ClickedStartOver: to('Cart', ({ state }) =>
-          CheckoutState.Cart({ isShippingRequired: state.isShippingRequired }),
-        ),
+        ClickedStartOver: to('Cart', ({ state }) => ({
+          model: CheckoutState.Cart({
+            isShippingRequired: state.isShippingRequired,
+          }),
+        })),
       },
     },
   },
@@ -352,8 +369,8 @@ export const TRANSITION_LOG_LIMIT = 20
 const resultToTransitionSummary = (
   result: Machine.TransitionResult<typeof CheckoutState.Type, Message>,
 ): string =>
-  M.value(result).pipe(
-    M.tagsExhaustive({
+  Match.value(result).pipe(
+    Match.tagsExhaustive({
       Transitioned: ({ from, messageTag, target }) =>
         `${from} -> ${target} on ${messageTag}`,
       Ignored: ({ messageTag, stateTag }) =>
@@ -368,8 +385,8 @@ const stepMachine =
 
     const { state: nextCheckout } = result
 
-    const transitionCommands = M.value(result).pipe(
-      M.tagsExhaustive({
+    const transitionCommands = Match.value(result).pipe(
+      Match.tagsExhaustive({
         Transitioned: ({ commands }) => commands,
         Ignored: () => [],
       }),
@@ -393,17 +410,16 @@ const stepMachine =
     }
   }
 
-const foldEditionRadioGroupOutMessage = M.type<RadioGroup.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected: ({ value }) =>
-      stepMachine(
-        Message.SelectedEdition({
-          isShippingRequired: value === HARDCOVER_EDITION,
-        }),
-      ),
-  }),
-)
+const foldEditionRadioGroupOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected: ({ value }) =>
+    stepMachine(
+      Message.SelectedEdition({
+        isShippingRequired: value === HARDCOVER_EDITION,
+      }),
+    ),
+})
 
 const foldEditionRadioGroup = Update.foldChild({
   update: EditionRadioGroup.update,
@@ -415,12 +431,12 @@ const foldEditionRadioGroup = Update.foldChild({
 })
 
 export const update = (model: Model, message: Message) =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tag('GotEditionRadioGroupMessage', ({ message }) =>
+  Match.value(message).pipe(
+    Match.withReturnType<UpdateReturn>(),
+    Match.tag('GotEditionRadioGroupMessage', ({ message }) =>
       foldEditionRadioGroup(model, message),
     ),
-    M.tag(
+    Match.tag(
       'ClickedContinue',
       'ClickedBack',
       'ClickedCancel',
@@ -434,5 +450,5 @@ export const update = (model: Model, message: Message) =>
       'SucceededPlaceOrder',
       () => stepMachine(message)(model),
     ),
-    M.exhaustive,
+    Match.exhaustive,
   )

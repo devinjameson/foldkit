@@ -1,4 +1,4 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 import { Settings } from './settings'
 
@@ -7,6 +7,6 @@ import { Settings } from './settings'
 const Message = defineMessageUnion({
   GotSettingsMessage: {
   message: Settings.Message,
-  timestamp: S.Number,
+  timestamp: Schema.Number,
 },
 })

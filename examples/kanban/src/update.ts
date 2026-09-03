@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, String, pipe } from 'effect'
+import { Array, Match, Option, String, pipe } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -42,9 +42,9 @@ const announceKeyboardDrag = (
   model: Model,
   nextDragAndDrop: DragAndDrop.Model,
 ): string =>
-  M.value(nextDragAndDrop.dragState).pipe(
-    M.withReturnType<string>(),
-    M.tag('KeyboardDragging', nextState => {
+  Match.value(nextDragAndDrop.dragState).pipe(
+    Match.withReturnType<string>(),
+    Match.tag('KeyboardDragging', nextState => {
       const wasIdle = model.dragAndDrop.dragState._tag === 'Idle'
       if (wasIdle) {
         const title = findCardTitle(model.columns, nextState.itemId)
@@ -70,7 +70,7 @@ const announceKeyboardDrag = (
 
       return model.announcement
     }),
-    M.orElse(() => model.announcement),
+    Match.orElse(() => model.announcement),
   )
 
 const screenReaderTextForDrop = (

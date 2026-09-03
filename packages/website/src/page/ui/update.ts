@@ -1,4 +1,4 @@
-import { Array, Match as M, Number, Option, pipe } from 'effect'
+import { Array, Number, Option, pipe } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -21,9 +21,17 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
-import { CityCombobox, CityMultiCombobox } from './combobox'
-import { CharacterListbox, ItemListbox, ItemMultiListbox } from './listbox'
-import { DemoMenu, type MenuItem } from './menu'
+import { CityCombobox, CityMultiCombobox } from './demo/combobox'
+import { CharacterListbox, ItemListbox, ItemMultiListbox } from './demo/listbox'
+import { DemoMenu, type MenuItem } from './demo/menu'
+import { PlanRadioGroup } from './demo/radioGroup'
+import { DemoTabs } from './demo/tabs'
+import { Toast } from './demo/toastModule'
+import {
+  ROW_COUNT as VIRTUAL_LIST_ROW_COUNT,
+  variableActivities,
+  variableRowHeightPx,
+} from './demo/virtualList'
 import { Message } from './message'
 import type { Model } from './model'
 import type {
@@ -34,14 +42,6 @@ import type {
   ListboxItem,
   Plan,
 } from './model'
-import { PlanRadioGroup } from './radioGroup'
-import { DemoTabs } from './tabs'
-import { Toast } from './toastModule'
-import {
-  ROW_COUNT as VIRTUAL_LIST_ROW_COUNT,
-  variableActivities,
-  variableRowHeightPx,
-} from './virtualList'
 
 // REORDER
 
@@ -88,42 +88,39 @@ export type UpdateReturn = Update.Return<Model, Message>
 
 // CHILD FOLDS
 
-const foldDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldDialogOutMessage = Dialog.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
-const foldMenuOutMessage = M.type<Menu.OutMessage<MenuItem>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected: () => model => ({ model }),
-  }),
-)
+const foldMenuOutMessage = Menu.OutMessage.match<
+  Update.Step<Model, Message>,
+  Menu.OutMessage<MenuItem>
+>({
+  Selected: () => model => ({ model }),
+})
 
-const foldPopoverOutMessage = M.type<Popover.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldPopoverOutMessage = Popover.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
-const foldCalendarBasicDemoOutMessage = M.type<Calendar.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, {
-          maybeCalendarBasicDemoSelectedDate: () => Option.some(date),
-        }),
+const foldCalendarBasicDemoOutMessage = Calendar.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  SelectedDate:
+    ({ date }) =>
+    model => ({
+      model: evo(model, {
+        maybeCalendarBasicDemoSelectedDate: () => Option.some(date),
       }),
-    ChangedViewMonth: () => model => ({ model }),
-  }),
-)
+    }),
+  ChangedViewMonth: () => model => ({ model }),
+})
 
 const foldCalendarBasicDemo = Update.foldChild({
   update: Calendar.update,
@@ -134,24 +131,23 @@ const foldCalendarBasicDemo = Update.foldChild({
   foldOutMessage: foldCalendarBasicDemoOutMessage,
 })
 
-const foldDatePickerBasicDemoOutMessage = M.type<DatePicker.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, {
-          maybeDatePickerBasicDemoSelectedDate: () => Option.some(date),
-        }),
-      }),
-    ClearedDate: () => model => ({
+const foldDatePickerBasicDemoOutMessage = DatePicker.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  SelectedDate:
+    ({ date }) =>
+    model => ({
       model: evo(model, {
-        maybeDatePickerBasicDemoSelectedDate: () => Option.none(),
+        maybeDatePickerBasicDemoSelectedDate: () => Option.some(date),
       }),
     }),
-    ChangedViewMonth: () => model => ({ model }),
+  ClearedDate: () => model => ({
+    model: evo(model, {
+      maybeDatePickerBasicDemoSelectedDate: () => Option.none(),
+    }),
   }),
-)
+  ChangedViewMonth: () => model => ({ model }),
+})
 
 const foldDatePickerBasicDemo = Update.foldChild({
   update: DatePicker.update,
@@ -163,19 +159,19 @@ const foldDatePickerBasicDemo = Update.foldChild({
   foldOutMessage: foldDatePickerBasicDemoOutMessage,
 })
 
-const foldComboboxDemoOutMessage = M.type<Combobox.OutMessage<City>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeComboboxDemoSelectedCity: () => Option.some(value),
-        }),
+const foldComboboxDemoOutMessage = Combobox.OutMessage.match<
+  Update.Step<Model, Message>,
+  Combobox.OutMessage<City>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeComboboxDemoSelectedCity: () => Option.some(value),
       }),
-    ClearedSelection: () => model => ({ model }),
-  }),
-)
+    }),
+  ClearedSelection: () => model => ({ model }),
+})
 
 const foldComboboxDemo = Update.foldChild({
   update: CityCombobox.update,
@@ -186,21 +182,19 @@ const foldComboboxDemo = Update.foldChild({
   foldOutMessage: foldComboboxDemoOutMessage,
 })
 
-const foldComboboxPlacementLockDemoOutMessage = M.type<
+const foldComboboxPlacementLockDemoOutMessage = Combobox.OutMessage.match<
+  Update.Step<Model, Message>,
   Combobox.OutMessage<City>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeComboboxPlacementLockDemoSelectedCity: () => Option.some(value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeComboboxPlacementLockDemoSelectedCity: () => Option.some(value),
       }),
-    ClearedSelection: () => model => ({ model }),
-  }),
-)
+    }),
+  ClearedSelection: () => model => ({ model }),
+})
 
 const foldComboboxPlacementLockDemo = Update.foldChild({
   update: CityCombobox.update,
@@ -214,28 +208,27 @@ const foldComboboxPlacementLockDemo = Update.foldChild({
   foldOutMessage: foldComboboxPlacementLockDemoOutMessage,
 })
 
-const foldComboboxNullableDemoOutMessage = M.type<
+const foldComboboxNullableDemoOutMessage = Combobox.OutMessage.match<
+  Update.Step<Model, Message>,
   Combobox.OutMessage<City>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeComboboxNullableDemoSelectedCity: () =>
-            Option.contains(model.maybeComboboxNullableDemoSelectedCity, value)
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeComboboxNullableDemoSelectedCity:
+          maybeComboboxNullableDemoSelectedCity =>
+            Option.contains(maybeComboboxNullableDemoSelectedCity, value)
               ? Option.none()
               : Option.some(value),
-        }),
-      }),
-    ClearedSelection: () => model => ({
-      model: evo(model, {
-        maybeComboboxNullableDemoSelectedCity: () => Option.none(),
       }),
     }),
+  ClearedSelection: () => model => ({
+    model: evo(model, {
+      maybeComboboxNullableDemoSelectedCity: () => Option.none(),
+    }),
   }),
-)
+})
 
 const foldComboboxNullableDemo = Update.foldChild({
   update: CityCombobox.update,
@@ -247,27 +240,25 @@ const foldComboboxNullableDemo = Update.foldChild({
   foldOutMessage: foldComboboxNullableDemoOutMessage,
 })
 
-const foldComboboxMultiDemoOutMessage = M.type<
+const foldComboboxMultiDemoOutMessage = Combobox.OutMessage.match<
+  Update.Step<Model, Message>,
   Combobox.OutMessage<City>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          comboboxMultiDemoSelectedCities: () =>
-            Array.contains(model.comboboxMultiDemoSelectedCities, value)
-              ? Array.filter(
-                  model.comboboxMultiDemoSelectedCities,
-                  city => city !== value,
-                )
-              : Array.append(model.comboboxMultiDemoSelectedCities, value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        comboboxMultiDemoSelectedCities: comboboxMultiDemoSelectedCities =>
+          Array.contains(comboboxMultiDemoSelectedCities, value)
+            ? Array.filter(
+                comboboxMultiDemoSelectedCities,
+                city => city !== value,
+              )
+            : Array.append(comboboxMultiDemoSelectedCities, value),
       }),
-    ClearedSelection: () => model => ({ model }),
-  }),
-)
+    }),
+  ClearedSelection: () => model => ({ model }),
+})
 
 const foldComboboxMultiDemo = Update.foldChild({
   update: CityMultiCombobox.update,
@@ -278,21 +269,19 @@ const foldComboboxMultiDemo = Update.foldChild({
   foldOutMessage: foldComboboxMultiDemoOutMessage,
 })
 
-const foldComboboxSelectOnFocusDemoOutMessage = M.type<
+const foldComboboxSelectOnFocusDemoOutMessage = Combobox.OutMessage.match<
+  Update.Step<Model, Message>,
   Combobox.OutMessage<City>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeComboboxSelectOnFocusDemoSelectedCity: () => Option.some(value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeComboboxSelectOnFocusDemoSelectedCity: () => Option.some(value),
       }),
-    ClearedSelection: () => model => ({ model }),
-  }),
-)
+    }),
+  ClearedSelection: () => model => ({ model }),
+})
 
 const foldComboboxSelectOnFocusDemo = Update.foldChild({
   update: CityCombobox.update,
@@ -385,21 +374,19 @@ const foldOverlayDialogDemoOpen = Update.foldChildStep({
   foldOutMessage: foldDialogOutMessage,
 })
 
-const foldOverlayComboboxDemoOutMessage = M.type<
+const foldOverlayComboboxDemoOutMessage = Combobox.OutMessage.match<
+  Update.Step<Model, Message>,
   Combobox.OutMessage<City>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeOverlayComboboxDemoSelectedCity: () => Option.some(value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeOverlayComboboxDemoSelectedCity: () => Option.some(value),
       }),
-    ClearedSelection: () => model => ({ model }),
-  }),
-)
+    }),
+  ClearedSelection: () => model => ({ model }),
+})
 
 const foldOverlayComboboxDemo = Update.foldChild({
   update: CityCombobox.update,
@@ -468,20 +455,18 @@ const foldNestedDialogChildDemoOpen = Update.foldChildStep({
   foldOutMessage: foldDialogOutMessage,
 })
 
-const foldListboxDemoOutMessage = M.type<
+const foldListboxDemoOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>,
   Listbox.OutMessage<ListboxItem>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeListboxDemoSelectedItem: () => Option.some(value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeListboxDemoSelectedItem: () => Option.some(value),
       }),
-  }),
-)
+    }),
+})
 
 const foldListboxDemo = Update.foldChild({
   update: ItemListbox.update,
@@ -492,31 +477,24 @@ const foldListboxDemo = Update.foldChild({
   foldOutMessage: foldListboxDemoOutMessage,
 })
 
-const foldListboxMultiDemoOutMessage = M.type<
+const foldListboxMultiDemoOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>,
   Listbox.OutMessage<ListboxItem>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => {
-        const nextListboxMultiDemoSelectedItems: ReadonlyArray<ListboxItem> =
-          Array.contains(model.listboxMultiDemoSelectedItems, value)
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        listboxMultiDemoSelectedItems: listboxMultiDemoSelectedItems =>
+          Array.contains(listboxMultiDemoSelectedItems, value)
             ? Array.filter(
-                model.listboxMultiDemoSelectedItems,
+                listboxMultiDemoSelectedItems,
                 item => item !== value,
               )
-            : Array.append(model.listboxMultiDemoSelectedItems, value)
-
-        return {
-          model: evo(model, {
-            listboxMultiDemoSelectedItems: () =>
-              nextListboxMultiDemoSelectedItems,
-          }),
-        }
-      },
-  }),
-)
+            : Array.append(listboxMultiDemoSelectedItems, value),
+      }),
+    }),
+})
 
 const foldListboxMultiDemo = Update.foldChild({
   update: ItemMultiListbox.update,
@@ -527,18 +505,17 @@ const foldListboxMultiDemo = Update.foldChild({
   foldOutMessage: foldListboxMultiDemoOutMessage,
 })
 
-const foldListboxGroupedDemoOutMessage = M.type<Listbox.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          maybeListboxGroupedDemoSelectedItem: () => Option.some(value),
-        }),
+const foldListboxGroupedDemoOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        maybeListboxGroupedDemoSelectedItem: () => Option.some(value),
       }),
-  }),
-)
+    }),
+})
 
 const foldListboxGroupedDemo = Update.foldChild({
   update: CharacterListbox.update,
@@ -615,14 +592,13 @@ const foldPopoverNestedChildDemo = Update.foldChild({
   foldOutMessage: foldPopoverOutMessage,
 })
 
-const foldSliderRatingDemoOutMessage = M.type<Slider.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    ChangedValue:
-      ({ value }) =>
-      model => ({ model: evo(model, { sliderRatingValue: () => value }) }),
-  }),
-)
+const foldSliderRatingDemoOutMessage = Slider.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedValue:
+    ({ value }) =>
+    model => ({ model: evo(model, { sliderRatingValue: () => value }) }),
+})
 
 const foldSliderRatingDemo = Update.foldChild({
   update: Slider.update,
@@ -633,14 +609,13 @@ const foldSliderRatingDemo = Update.foldChild({
   foldOutMessage: foldSliderRatingDemoOutMessage,
 })
 
-const foldSliderVolumeDemoOutMessage = M.type<Slider.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    ChangedValue:
-      ({ value }) =>
-      model => ({ model: evo(model, { sliderVolumeValue: () => value }) }),
-  }),
-)
+const foldSliderVolumeDemoOutMessage = Slider.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedValue:
+    ({ value }) =>
+    model => ({ model: evo(model, { sliderVolumeValue: () => value }) }),
+})
 
 const foldSliderVolumeDemo = Update.foldChild({
   update: Slider.update,
@@ -651,16 +626,14 @@ const foldSliderVolumeDemo = Update.foldChild({
   foldOutMessage: foldSliderVolumeDemoOutMessage,
 })
 
-const foldHorizontalTabsDemoOutMessage = M.type<
+const foldHorizontalTabsDemoOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>,
   Tabs.OutMessage<DemoTab>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { horizontalTabsDemoTab: () => value }) }),
-  }),
-)
+>({
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { horizontalTabsDemoTab: () => value }) }),
+})
 
 const foldHorizontalTabsDemo = Update.foldChild({
   update: DemoTabs.update,
@@ -671,14 +644,14 @@ const foldHorizontalTabsDemo = Update.foldChild({
   foldOutMessage: foldHorizontalTabsDemoOutMessage,
 })
 
-const foldVerticalTabsDemoOutMessage = M.type<Tabs.OutMessage<DemoTab>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { verticalTabsDemoTab: () => value }) }),
-  }),
-)
+const foldVerticalTabsDemoOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>,
+  Tabs.OutMessage<DemoTab>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { verticalTabsDemoTab: () => value }) }),
+})
 
 const foldVerticalTabsDemo = Update.foldChild({
   update: DemoTabs.update,
@@ -689,13 +662,12 @@ const foldVerticalTabsDemo = Update.foldChild({
   foldOutMessage: foldVerticalTabsDemoOutMessage,
 })
 
-const foldTooltipOutMessage = M.type<Tooltip.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Shown: () => model => ({ model }),
-    Hidden: () => model => ({ model }),
-  }),
-)
+const foldTooltipOutMessage = Tooltip.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Shown: () => model => ({ model }),
+  Hidden: () => model => ({ model }),
+})
 
 const foldTooltipDemo = Update.foldChild({
   update: Tooltip.update,
@@ -706,13 +678,12 @@ const foldTooltipDemo = Update.foldChild({
   foldOutMessage: foldTooltipOutMessage,
 })
 
-const foldHoverIntentOutMessage = M.type<HoverIntent.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldHoverIntentOutMessage = HoverIntent.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
 const foldHoverIntentCardDemo = Update.foldChild({
   update: HoverIntent.update,
@@ -753,18 +724,17 @@ const foldHoverIntentMenuDemoClose = Update.foldChildStep({
   foldOutMessage: foldHoverIntentOutMessage,
 })
 
-const foldToastDemoOutMessage = M.type<typeof Toast.OutMessage.Type>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    DismissedToast:
-      ({ payload }) =>
-      model => ({
-        model: evo(model, {
-          maybeLastDismissedToastTitle: () => Option.some(payload.title),
-        }),
+const foldToastDemoOutMessage = Toast.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  DismissedToast:
+    ({ payload }) =>
+    model => ({
+      model: evo(model, {
+        maybeLastDismissedToastTitle: () => Option.some(payload.title),
       }),
-  }),
-)
+    }),
+})
 
 const readToastDemo = (model: Model): Option.Option<typeof Toast.Model.Type> =>
   Option.some(model.toastDemo)
@@ -824,22 +794,34 @@ const foldAnimationDemo = Update.foldChild({
   foldOutMessage: foldAnimationDemoOutMessage,
 })
 
-const foldFileDropBasicDemoOutMessage = M.type<FileDrop.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    ReceivedFiles:
-      ({ files }) =>
-      model => ({
-        model: evo(model, {
-          fileDropBasicDemoFiles: () => [
-            ...model.fileDropBasicDemoFiles,
-            ...files,
-          ],
-        }),
+const foldAnimationDemoShow = Update.foldChildStep({
+  update: Animation.show,
+  read: (model: Model) => Option.some(model.animationDemo),
+  write: (model, nextAnimationDemo) =>
+    evo(model, { animationDemo: () => nextAnimationDemo }),
+  toParentMessage: message => Message.GotAnimationDemoMessage({ message }),
+})
+
+const foldAnimationDemoHide = Update.foldChildStep({
+  update: Animation.hide,
+  read: (model: Model) => Option.some(model.animationDemo),
+  write: (model, nextAnimationDemo) =>
+    evo(model, { animationDemo: () => nextAnimationDemo }),
+  toParentMessage: message => Message.GotAnimationDemoMessage({ message }),
+})
+
+const foldFileDropBasicDemoOutMessage = FileDrop.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ReceivedFiles:
+    ({ files }) =>
+    model => ({
+      model: evo(model, {
+        fileDropBasicDemoFiles: Array.appendAll(files),
       }),
-    RejectedNonFiles: () => model => ({ model }),
-  }),
-)
+    }),
+  RejectedNonFiles: () => model => ({ model }),
+})
 
 const foldFileDropBasicDemo = Update.foldChild({
   update: FileDrop.update,
@@ -850,26 +832,25 @@ const foldFileDropBasicDemo = Update.foldChild({
   foldOutMessage: foldFileDropBasicDemoOutMessage,
 })
 
-const foldDragAndDropDemoOutMessage = M.type<DragAndDrop.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Reordered:
-      ({ itemId, fromContainerId, toContainerId, toIndex }) =>
-      model => ({
-        model: evo(model, {
-          dragAndDropDemoColumns: () =>
-            reorderColumns(
-              model.dragAndDropDemoColumns,
-              itemId,
-              fromContainerId,
-              toContainerId,
-              toIndex,
-            ),
-        }),
+const foldDragAndDropDemoOutMessage = DragAndDrop.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Reordered:
+    ({ itemId, fromContainerId, toContainerId, toIndex }) =>
+    model => ({
+      model: evo(model, {
+        dragAndDropDemoColumns: dragAndDropDemoColumns =>
+          reorderColumns(
+            dragAndDropDemoColumns,
+            itemId,
+            fromContainerId,
+            toContainerId,
+            toIndex,
+          ),
       }),
-    Cancelled: () => model => ({ model }),
-  }),
-)
+    }),
+  Cancelled: () => model => ({ model }),
+})
 
 const foldDragAndDropDemo = Update.foldChild({
   update: DragAndDrop.update,
@@ -922,20 +903,18 @@ const foldVirtualListVariableDemoScrollToIndex = Update.foldChild({
 
 // UPDATE
 
-const foldVerticalRadioGroupDemoOutMessage = M.type<
+const foldVerticalRadioGroupDemoOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<Plan>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          verticalRadioGroupDemoValue: () => Option.some(value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        verticalRadioGroupDemoValue: () => Option.some(value),
       }),
-  }),
-)
+    }),
+})
 
 const foldVerticalRadioGroupDemo = Update.foldChild({
   update: PlanRadioGroup.update,
@@ -947,20 +926,18 @@ const foldVerticalRadioGroupDemo = Update.foldChild({
   foldOutMessage: foldVerticalRadioGroupDemoOutMessage,
 })
 
-const foldHorizontalRadioGroupDemoOutMessage = M.type<
+const foldHorizontalRadioGroupDemoOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<Plan>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, {
-          horizontalRadioGroupDemoValue: () => Option.some(value),
-        }),
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, {
+        horizontalRadioGroupDemoValue: () => Option.some(value),
       }),
-  }),
-)
+    }),
+})
 
 const foldHorizontalRadioGroupDemo = Update.foldChild({
   update: PlanRadioGroup.update,
@@ -1178,6 +1155,11 @@ export const update = (model: Model, message: Message) =>
     ClickedDismissAllToasts: () => foldToastDemoDismissAll(model),
 
     GotAnimationDemoMessage: ({ message }) => foldAnimationDemo(model, message),
+
+    ClickedToggleAnimationDemo: () =>
+      model.animationDemo.isShowing
+        ? foldAnimationDemoHide(model)
+        : foldAnimationDemoShow(model),
 
     GotFileDropBasicDemoMessage: ({ message }) =>
       foldFileDropBasicDemo(model, message),

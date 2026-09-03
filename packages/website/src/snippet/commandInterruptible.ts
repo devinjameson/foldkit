@@ -1,23 +1,23 @@
-import { Array, Effect, Schema as S } from 'effect'
+import { Array, Effect, Schema } from 'effect'
 import { Command, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 const Message = defineMessageUnion({
-  ClickedCancelUpload: { uploadId: S.Number },
-  SucceededUploadFile: { uploadId: S.Number },
-  FailedUploadFile: { uploadId: S.Number },
+  ClickedCancelUpload: { uploadId: Schema.Number },
+  SucceededUploadFile: { uploadId: Schema.Number },
+  FailedUploadFile: { uploadId: Schema.Number },
   CompletedCancelUploadFile: {
-    uploadId: S.Number,
+    uploadId: Schema.Number,
     outcome: Command.Interruptible.Outcome,
   },
 })
 
-const UploadKey = S.Struct({ uploadId: S.Number })
+const UploadKey = Schema.Struct({ uploadId: Schema.Number })
 type UploadKey = typeof UploadKey.Type
 
 const UploadFile = Command.define('UploadFile', {
-  args: { ...UploadKey.fields, file: S.instanceOf(File) },
+  args: { ...UploadKey.fields, file: Schema.instanceOf(File) },
   messages: [Message.SucceededUploadFile, Message.FailedUploadFile],
   // The key function maps args to what distinguishes invocations. Foldkit
   // prefixes the Command name automatically, so the full key for upload 7

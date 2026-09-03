@@ -1,5 +1,5 @@
 import { Option, pipe } from 'effect'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, expectTypeOf, test } from 'vitest'
 
 import {
   type HtmlBuilder,
@@ -2719,6 +2719,17 @@ describe('Scene.Subscription.emit', () => {
     )
   })
 
+  test('requires the Message to belong to the tested update', () => {
+    expectTypeOf(() =>
+      Scene.scene(
+        { update: counterUpdate, view: counterView },
+        Scene.given(counterInitialModel),
+        // @ts-expect-error CompletedAction is not a Counter Message
+        Scene.Subscription.emit(LogoutButtonMessage.CompletedAction()),
+      ),
+    ).toBeFunction()
+  })
+
   test('Commands produced by an emitted Message become pending', () => {
     Scene.scene(
       { update: counterUpdate, view: counterView },
@@ -3101,14 +3112,48 @@ describe('Scene OutMessage assertions', () => {
   test('expectOutMessage fails with expected and actual values when the OutMessage is wrong', () => {
     expect(() =>
       Scene.scene(
-        { update: logoutUpdate, view: logoutView },
-        Scene.given(logoutInitialModel),
-        Scene.click(Scene.role('button', { name: 'Log out' })),
-        Scene.expectOutMessage(LogoutButtonMessage.CompletedAction()),
+        { update: multipleOutMessagesUpdate, view: multipleOutMessagesView },
+        Scene.given(interactionInitialModel),
+        Scene.Subscription.emit(InteractionMessage.ClickedExpand()),
+        Scene.expectOutMessage(InteractionOutMessage.RequestedSelection()),
       ),
     ).toThrow(
-      `Expected OutMessage:\n\n    ${JSON.stringify(LogoutButtonMessage.CompletedAction())}\n\nBut got:\n\n    ${JSON.stringify(OutMessage.RequestedLogout())}`,
+      `Expected OutMessage:\n\n    ${JSON.stringify(InteractionOutMessage.RequestedSelection())}\n\nBut got:\n\n    ${JSON.stringify(InteractionOutMessage.RequestedExpand())}`,
     )
+  })
+
+  test('requires expected OutMessages to belong to the tested update', () => {
+    expectTypeOf(() =>
+      Scene.scene(
+        // @ts-expect-error CompletedAction is not an Interaction OutMessage
+        { update: multipleOutMessagesUpdate, view: multipleOutMessagesView },
+        Scene.given(interactionInitialModel),
+        Scene.expectOutMessage(LogoutButtonMessage.CompletedAction()),
+      ),
+    ).toBeFunction()
+
+    expectTypeOf(() =>
+      Scene.scene(
+        // @ts-expect-error CompletedAction is not an Interaction OutMessage
+        { update: multipleOutMessagesUpdate, view: multipleOutMessagesView },
+        Scene.given(interactionInitialModel),
+        Scene.expectOutMessages(
+          InteractionOutMessage.RequestedExpand(),
+          LogoutButtonMessage.CompletedAction(),
+        ),
+      ),
+    ).toBeFunction()
+  })
+
+  test('rejects an OutMessage assertion when update cannot emit one', () => {
+    expectTypeOf(() =>
+      Scene.scene(
+        { update: counterUpdate, view: counterView },
+        Scene.given(counterInitialModel),
+        // @ts-expect-error counter update cannot emit an OutMessage
+        Scene.expectOutMessage(OutMessage.RequestedLogout()),
+      ),
+    ).toBeFunction()
   })
 
   test('expectNoOutMessage fails when an OutMessage is present', () => {

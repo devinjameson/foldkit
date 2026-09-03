@@ -1,4 +1,4 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -8,10 +8,10 @@ import * as Command from './index.js'
 import { __CurrentRegistry, __makeRegistry } from './interruptible/index.js'
 
 const Message = defineMessageUnion({
-  CompletedRunTask: { taskId: S.Number },
+  CompletedRunTask: { taskId: Schema.Number },
   CompletedReadBrowserGlobal: {},
   CompletedMeasureElement: {},
-  CompletedSaveDraft: { draftId: S.Number },
+  CompletedSaveDraft: { draftId: Schema.Number },
   CompletedDoWork: {},
 })
 
@@ -20,7 +20,7 @@ describe('Command.define defers its execute body', () => {
     let bodyRunCount = 0
 
     const RunTask = Command.define('RunTask', {
-      args: { taskId: S.Number },
+      args: { taskId: Schema.Number },
       messages: [Message.CompletedRunTask],
       execute: ({ taskId }) => {
         bodyRunCount = bodyRunCount + 1
@@ -41,7 +41,7 @@ describe('Command.define defers its execute body', () => {
     let bodyRunCount = 0
 
     const ReadBrowserGlobal = Command.define('ReadBrowserGlobal', {
-      args: { id: S.String },
+      args: { id: Schema.String },
       messages: [Message.CompletedReadBrowserGlobal],
       execute: () => {
         bodyRunCount = bodyRunCount + 1
@@ -56,7 +56,7 @@ describe('Command.define defers its execute body', () => {
 
   it('surfaces a throwing body as an effect failure rather than a construction throw', () => {
     const MeasureElement = Command.define('MeasureElement', {
-      args: { id: S.String },
+      args: { id: Schema.String },
       messages: [Message.CompletedMeasureElement],
       execute: () => {
         throw new Error('reads a browser global')
@@ -73,7 +73,7 @@ describe('Command.define defers its execute body', () => {
     let bodyRunCount = 0
 
     const SaveDraft = Command.define('SaveDraft', {
-      args: { draftId: S.Number },
+      args: { draftId: Schema.Number },
       messages: [Message.CompletedSaveDraft],
       interrupt: {
         keyFields: ['draftId'],

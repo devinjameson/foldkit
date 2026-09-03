@@ -178,7 +178,7 @@ const suspendExecute = (
  * @example With args
  * ```ts
  * const FetchWeather = Command.define('FetchWeather', {
- *   args: { zipCode: S.String },
+ *   args: { zipCode: Schema.String },
  *   messages: [SucceededFetchWeather, FailedFetchWeather],
  *   execute: ({ zipCode }) => Effect.gen(function* () { ... }),
  * })
@@ -189,7 +189,7 @@ const suspendExecute = (
  * @example Interruptible, keyed by the Command name
  * ```ts
  * const SaveDraft = Command.define('SaveDraft', {
- *   args: { draftId: S.String, body: S.String },
+ *   args: { draftId: Schema.String, body: Schema.String },
  *   messages: [SucceededSaveDraft, FailedSaveDraft],
  *   interrupt: true,
  *   execute: ({ draftId, body }) => Effect.gen(function* () { ... }),
@@ -202,7 +202,7 @@ const suspendExecute = (
  * @example Interruptible, keyed by args
  * ```ts
  * const UploadFile = Command.define('UploadFile', {
- *   args: { uploadId: S.Number, file: S.instanceOf(File) },
+ *   args: { uploadId: Schema.Number, file: Schema.instanceOf(File) },
  *   messages: [SucceededUploadFile, FailedUploadFile],
  *   interrupt: {
  *     keyFields: ['uploadId'],

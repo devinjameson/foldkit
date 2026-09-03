@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { type Html, type HtmlBuilder } from 'foldkit/html'
 import { defineTaggedUnion } from 'foldkit/schema'
 
 export const State = defineTaggedUnion({
-  Loading: { previewUrl: S.String },
-  Loaded: { previewUrl: S.String },
+  Loading: { previewUrl: Schema.String },
+  Loaded: { previewUrl: Schema.String },
 })
 export type State = typeof State.Type
 

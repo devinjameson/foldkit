@@ -1,4 +1,4 @@
-import { Effect, Fiber, Number, Schema as S } from 'effect'
+import { Effect, Fiber, Number, Schema } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TextDirection, __htmlBuilder } from '../html/index.js'
@@ -17,7 +17,7 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({ label: S.String })
+const Model = Schema.Struct({ label: Schema.String })
 type Model = typeof Model.Type
 
 const h = __htmlBuilder<Message>()
@@ -28,10 +28,10 @@ const update = (model: Model, message: Message) =>
     ClickedBump: () => ({ model: { label: 'world' } }),
   })
 
-const LocaleModel = S.Struct({
-  lang: S.String,
+const LocaleModel = Schema.Struct({
+  lang: Schema.String,
   dir: TextDirection,
-  revision: S.Number,
+  revision: Schema.Number,
 })
 type LocaleModel = typeof LocaleModel.Type
 
@@ -186,7 +186,7 @@ describe('makeElement', () => {
   })
 
   it('seeds the initial model from flags', async () => {
-    const Flags = S.Struct({ initialLabel: S.String })
+    const Flags = Schema.Struct({ initialLabel: Schema.String })
 
     const element = makeElement({
       Model,

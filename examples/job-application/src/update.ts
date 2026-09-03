@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, pipe } from 'effect'
+import { Array, Option, pipe } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -87,14 +87,14 @@ const foldAttachments = Update.foldChild({
   toParentMessage: message => Message.GotAttachmentsMessage({ message }),
 })
 
-const foldStepMenuOutMessage = M.type<Menu.OutMessage<Step.Step>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { currentStep: () => value }) }),
-  }),
-)
+const foldStepMenuOutMessage = Menu.OutMessage.match<
+  Update.Step<Model, Message>,
+  Menu.OutMessage<Step.Step>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { currentStep: () => value }) }),
+})
 
 const foldStepMenu = Update.foldChild({
   update: StepMenu.update,
@@ -104,14 +104,14 @@ const foldStepMenu = Update.foldChild({
   foldOutMessage: foldStepMenuOutMessage,
 })
 
-const foldStepTabsOutMessage = M.type<Tabs.OutMessage<Step.Step>>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { currentStep: () => value }) }),
-  }),
-)
+const foldStepTabsOutMessage = Tabs.OutMessage.match<
+  Update.Step<Model, Message>,
+  Tabs.OutMessage<Step.Step>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { currentStep: () => value }) }),
+})
 
 const foldStepTabs = Update.foldChild({
   update: StepTabs.update,

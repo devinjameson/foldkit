@@ -1,4 +1,4 @@
-import { Effect, Equivalence, Queue, Schema as S, Stream } from 'effect'
+import { Effect, Equivalence, Queue, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
@@ -7,18 +7,17 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({
-  isDragging: S.Boolean,
-  clientY: S.Number,
+const Model = Schema.Struct({
+  isDragging: Schema.Boolean,
+  clientY: Schema.Number,
 })
-
 type Model = typeof Model.Type
 
 const subscriptions = Subscription.make<Model, Message>()(entry => ({
   autoScroll: entry(
     {
-      isDragging: S.Boolean,
-      clientY: S.Number,
+      isDragging: Schema.Boolean,
+      clientY: Schema.Number,
     },
     {
       modelToDependencies: model => ({

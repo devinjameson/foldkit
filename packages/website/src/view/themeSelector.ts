@@ -5,7 +5,7 @@ import { Html, type HtmlBuilder } from 'foldkit/html'
 import { Icon } from '../icon'
 import { Message, type ThemePreference } from '../message'
 
-export const themeSelector = (
+export const view = (
   maybeActivePreference: Option.Option<ThemePreference>,
   h: HtmlBuilder<Message>,
 ): Html =>

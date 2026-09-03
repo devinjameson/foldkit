@@ -1,4 +1,4 @@
-import { Number, Schema as S } from 'effect'
+import { Number, Schema } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
@@ -8,7 +8,7 @@ import type * as Update from '../../update/index.js'
 
 // MODEL
 
-const ContextMenuSource = S.Literals(['Direct', 'Inner', 'Outer'])
+const ContextMenuSource = Schema.Literals(['Direct', 'Inner', 'Outer'])
 
 const ContextMenuState = defineTaggedUnion({
   Closed: {},
@@ -16,9 +16,9 @@ const ContextMenuState = defineTaggedUnion({
 })
 type ContextMenuState = typeof ContextMenuState.Type
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   contextMenu: ContextMenuState,
-  openCount: S.Number,
+  openCount: Schema.Number,
 })
 export type Model = typeof Model.Type
 

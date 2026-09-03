@@ -61,7 +61,7 @@ Commands describe one-shot work that produces one result. Subscriptions describe
 
 `Subscription.make<Model, Message>()` receives a function that builds a named record of entries. Each call to `entry` takes two arguments:
 
-- A field map defining the dependency Schema, in the same shape passed to `S.Struct`.
+- A field map defining the dependency Schema, in the same shape passed to `Schema.Struct`.
 - An object containing `modelToDependencies` and `dependenciesToStream`.
 
 `modelToDependencies` extracts the values that control the entry. `dependenciesToStream` creates its Stream. Foldkit compares the extracted record structurally by default, so unrelated Model updates do not restart the timer.

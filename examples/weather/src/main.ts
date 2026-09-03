@@ -1,4 +1,4 @@
-import { Array, Effect, Match as M, Option, Schema as S, String } from 'effect'
+import { Array, Effect, Match, Option, Schema, String } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
 import { AsyncData, Command, Http, Runtime, type Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
@@ -9,21 +9,21 @@ import { Button, Input } from '@foldkit/ui'
 
 // MODEL
 
-export const WeatherData = S.Struct({
-  zipCode: S.String,
-  temperature: S.Number,
-  description: S.String,
-  humidity: S.Number,
-  windSpeed: S.Number,
-  locationName: S.String,
-  region: S.String,
+export const WeatherData = Schema.Struct({
+  zipCode: Schema.String,
+  temperature: Schema.Number,
+  description: Schema.String,
+  humidity: Schema.Number,
+  windSpeed: Schema.Number,
+  locationName: Schema.String,
+  region: Schema.String,
 })
 export type WeatherData = typeof WeatherData.Type
 
-export const WeatherAsyncData = AsyncData.Schema(WeatherData, S.String)
+export const WeatherAsyncData = AsyncData.Schema(WeatherData, Schema.String)
 
-export const Model = S.Struct({
-  zipCodeInput: S.String,
+export const Model = Schema.Struct({
+  zipCodeInput: Schema.String,
   weather: WeatherAsyncData.schema,
 })
 export type Model = typeof Model.Type
@@ -31,10 +31,10 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedZipCodeInput: { value: S.String },
+  UpdatedZipCodeInput: { value: Schema.String },
   SubmittedWeatherForm: {},
   SucceededFetchWeather: { weather: WeatherData },
-  FailedFetchWeather: { error: S.String },
+  FailedFetchWeather: { error: Schema.String },
 })
 
 export type Message = typeof Message.Type
@@ -86,39 +86,39 @@ export const init: Runtime.ApplicationInit<Model, Message> = () => ({
 const GEOCODING_API = 'https://geocoding-api.open-meteo.com/v1/search'
 const WEATHER_API = 'https://api.open-meteo.com/v1/forecast'
 
-const GeocodingResult = S.Struct({
-  name: S.String,
-  latitude: S.Number,
-  longitude: S.Number,
-  admin1: S.OptionFromOptional(S.String),
+const GeocodingResult = Schema.Struct({
+  name: Schema.String,
+  latitude: Schema.Number,
+  longitude: Schema.Number,
+  admin1: Schema.OptionFromOptional(Schema.String),
 })
 
-const GeocodingResponse = S.Struct({
-  results: S.OptionFromOptional(S.Array(GeocodingResult)),
+const GeocodingResponse = Schema.Struct({
+  results: Schema.OptionFromOptional(Schema.Array(GeocodingResult)),
 })
 
-const WeatherResponse = S.Struct({
-  current: S.Struct({
-    temperature_2m: S.Number,
-    relative_humidity_2m: S.Number,
-    wind_speed_10m: S.Number,
-    weather_code: S.Number,
+const WeatherResponse = Schema.Struct({
+  current: Schema.Struct({
+    temperature_2m: Schema.Number,
+    relative_humidity_2m: Schema.Number,
+    wind_speed_10m: Schema.Number,
+    weather_code: Schema.Number,
   }),
 })
 
 const weatherCodeToDescription = (code: number): string =>
-  M.value(code).pipe(
-    M.when(0, () => 'Clear sky'),
-    M.whenOr(1, 2, 3, () => 'Partly cloudy'),
-    M.whenOr(45, 48, () => 'Foggy'),
-    M.whenOr(51, 53, 55, () => 'Drizzle'),
-    M.whenOr(61, 63, 65, () => 'Rain'),
-    M.whenOr(66, 67, () => 'Freezing rain'),
-    M.whenOr(71, 73, 75, 77, () => 'Snow'),
-    M.whenOr(80, 81, 82, () => 'Rain showers'),
-    M.whenOr(85, 86, () => 'Snow showers'),
-    M.whenOr(95, 96, 99, () => 'Thunderstorm'),
-    M.orElse(() => 'Unknown'),
+  Match.value(code).pipe(
+    Match.when(0, () => 'Clear sky'),
+    Match.whenOr(1, 2, 3, () => 'Partly cloudy'),
+    Match.whenOr(45, 48, () => 'Foggy'),
+    Match.whenOr(51, 53, 55, () => 'Drizzle'),
+    Match.whenOr(61, 63, 65, () => 'Rain'),
+    Match.whenOr(66, 67, () => 'Freezing rain'),
+    Match.whenOr(71, 73, 75, 77, () => 'Snow'),
+    Match.whenOr(80, 81, 82, () => 'Rain showers'),
+    Match.whenOr(85, 86, () => 'Snow showers'),
+    Match.whenOr(95, 96, 99, () => 'Thunderstorm'),
+    Match.orElse(() => 'Unknown'),
   )
 
 export const fetchWeatherEffect = (zipCode: string) =>
@@ -147,7 +147,7 @@ export const fetchWeatherEffect = (zipCode: string) =>
       )
     }
 
-    const geocodeData = yield* S.decodeUnknownEffect(GeocodingResponse)(
+    const geocodeData = yield* Schema.decodeUnknownEffect(GeocodingResponse)(
       yield* geocodeResponse.json,
     )
 
@@ -180,7 +180,7 @@ export const fetchWeatherEffect = (zipCode: string) =>
       )
     }
 
-    const weatherData = yield* S.decodeUnknownEffect(WeatherResponse)(
+    const weatherData = yield* Schema.decodeUnknownEffect(WeatherResponse)(
       yield* weatherResponse.json,
     )
 
@@ -205,7 +205,7 @@ export const fetchWeatherEffect = (zipCode: string) =>
   )
 
 export const FetchWeather = Command.define('FetchWeather', {
-  args: { zipCode: S.String },
+  args: { zipCode: Schema.String },
   messages: [Message.SucceededFetchWeather, Message.FailedFetchWeather],
   execute: ({ zipCode }) =>
     Effect.provide(fetchWeatherEffect(zipCode), Http.layer),

@@ -2,9 +2,9 @@ import {
   Context,
   Duration,
   Effect,
-  Match as M,
+  Match,
   Option,
-  Schema as S,
+  Schema,
   Stream,
 } from 'effect'
 import { describe, expect, expectTypeOf, it } from 'vitest'
@@ -22,15 +22,15 @@ import { define, otherwise, to, when } from './machine.js'
 const RemoteData = defineTaggedUnion({
   Idle: {},
   Loading: {},
-  Error: { error: S.String },
-  Ok: { data: S.String },
+  Error: { error: Schema.String },
+  Ok: { data: Schema.String },
 })
 type RemoteData = typeof RemoteData.Type
 
 const RemoteDataMessage = defineMessageUnion({
   ClickedFetch: {},
-  SucceededFetch: { data: S.String },
-  FailedFetch: { error: S.String },
+  SucceededFetch: { data: Schema.String },
+  FailedFetch: { error: Schema.String },
   ClickedRetry: {},
 })
 type RemoteDataMessage = typeof RemoteDataMessage.Type
@@ -43,27 +43,27 @@ const remoteDataMachine = define({
   states: {
     Idle: {
       on: {
-        ClickedFetch: to('Loading', () => RemoteData.Loading()),
+        ClickedFetch: to('Loading', () => ({ model: RemoteData.Loading() })),
       },
     },
     Loading: {
       on: {
-        SucceededFetch: to('Ok', ({ message }) =>
-          RemoteData.Ok({ data: message.data }),
-        ),
-        FailedFetch: to('Error', ({ message }) =>
-          RemoteData.Error({ error: message.error }),
-        ),
+        SucceededFetch: to('Ok', ({ message }) => ({
+          model: RemoteData.Ok({ data: message.data }),
+        })),
+        FailedFetch: to('Error', ({ message }) => ({
+          model: RemoteData.Error({ error: message.error }),
+        })),
       },
     },
     Error: {
       on: {
-        ClickedRetry: to('Loading', () => RemoteData.Loading()),
+        ClickedRetry: to('Loading', () => ({ model: RemoteData.Loading() })),
       },
     },
     Ok: {
       on: {
-        ClickedFetch: to('Loading', () => RemoteData.Loading()),
+        ClickedFetch: to('Loading', () => ({ model: RemoteData.Loading() })),
       },
     },
   },
@@ -79,10 +79,10 @@ const backoffDelayMillis = (attemptCount: number): number =>
 
 const ConnectionState = defineTaggedUnion({
   Disconnected: {},
-  Connecting: { attemptCount: S.Number },
-  Connected: { sessionId: S.String },
-  Reconnecting: { attemptCount: S.Number, delayMillis: S.Number },
-  Failed: { attemptCount: S.Number, reason: S.String },
+  Connecting: { attemptCount: Schema.Number },
+  Connected: { sessionId: Schema.String },
+  Reconnecting: { attemptCount: Schema.Number, delayMillis: Schema.Number },
+  Failed: { attemptCount: Schema.Number, reason: Schema.String },
   Suspended: {},
 })
 type ConnectionState = typeof ConnectionState.Type
@@ -90,9 +90,9 @@ type ConnectionState = typeof ConnectionState.Type
 const ConnectionMessage = defineMessageUnion({
   ClickedConnect: {},
   ClickedDisconnect: {},
-  SocketOpened: { sessionId: S.String },
-  SocketErrored: { reason: S.String },
-  SocketClosed: { reason: S.String },
+  SocketOpened: { sessionId: Schema.String },
+  SocketErrored: { reason: Schema.String },
+  SocketClosed: { reason: Schema.String },
   TimedOutBackoff: {},
   ReleasedSocket: {},
   CompletedLogTransition: {},
@@ -123,7 +123,7 @@ const connectingToMaybeNextAttempt = (
     : Option.none()
 
 const LogTransition = Command.define('LogTransition', {
-  args: { description: S.String },
+  args: { description: Schema.String },
   messages: [ConnectionMessage.CompletedLogTransition],
   execute: () => Effect.succeed(ConnectionMessage.CompletedLogTransition()),
 })
@@ -136,79 +136,108 @@ const connectionMachine = define({
   states: {
     Disconnected: {
       on: {
-        ClickedConnect: to('Connecting', () =>
-          ConnectionState.Connecting({ attemptCount: 1 }),
-        ),
+        ClickedConnect: to('Connecting', () => ({
+          model: ConnectionState.Connecting({ attemptCount: 1 }),
+        })),
       },
     },
     Connecting: {
       on: {
-        SocketOpened: to(
-          'Connected',
-          ({ message }) =>
-            ConnectionState.Connected({ sessionId: message.sessionId }),
-          ({ message }) => [
+        SocketOpened: to('Connected', ({ message }) => ({
+          model: ConnectionState.Connected({
+            sessionId: message.sessionId,
+          }),
+          commands: [
             LogTransition({
               description: `Opened session ${message.sessionId}`,
             }),
           ],
-        ),
+        })),
         SocketErrored: [
           when(
             connectingToMaybeBackoff,
             'Reconnecting',
-            ({ state, guardValue }) =>
-              ConnectionState.Reconnecting({
+            ({ state, guardValue }) => ({
+              model: ConnectionState.Reconnecting({
                 attemptCount: state.attemptCount,
                 delayMillis: guardValue.delayMillis,
               }),
+            }),
           ),
           otherwise(
-            to('Failed', ({ state, message }) =>
-              ConnectionState.Failed({
+            to('Failed', ({ state, message }) => ({
+              model: ConnectionState.Failed({
                 attemptCount: state.attemptCount,
                 reason: message.reason,
               }),
-            ),
+            })),
           ),
         ],
       },
     },
     Connected: {
       on: {
-        SocketClosed: to('Reconnecting', () =>
-          ConnectionState.Reconnecting({
+        SocketClosed: to('Reconnecting', () => ({
+          model: ConnectionState.Reconnecting({
             attemptCount: 1,
             delayMillis: backoffDelayMillis(1),
           }),
-        ),
-        ClickedDisconnect: to('Disconnected', () =>
-          ConnectionState.Disconnected(),
-        ),
+        })),
+        ClickedDisconnect: to('Disconnected', () => ({
+          model: ConnectionState.Disconnected(),
+        })),
       },
     },
     Reconnecting: {
       on: {
-        TimedOutBackoff: to('Connecting', ({ state }) =>
-          ConnectionState.Connecting({ attemptCount: state.attemptCount + 1 }),
-        ),
-        ClickedDisconnect: to('Disconnected', () =>
-          ConnectionState.Disconnected(),
-        ),
+        TimedOutBackoff: to('Connecting', ({ state }) => ({
+          model: ConnectionState.Connecting({
+            attemptCount: state.attemptCount + 1,
+          }),
+        })),
+        ClickedDisconnect: to('Disconnected', () => ({
+          model: ConnectionState.Disconnected(),
+        })),
       },
     },
     Failed: {
       on: {
-        ClickedConnect: to('Connecting', () =>
-          ConnectionState.Connecting({ attemptCount: 1 }),
-        ),
+        ClickedConnect: to('Connecting', () => ({
+          model: ConnectionState.Connecting({ attemptCount: 1 }),
+        })),
       },
     },
     Suspended: {
       on: {
-        ClickedConnect: to('Connecting', () =>
-          ConnectionState.Connecting({ attemptCount: 1 }),
-        ),
+        ClickedConnect: to('Connecting', () => ({
+          model: ConnectionState.Connecting({ attemptCount: 1 }),
+        })),
+      },
+    },
+  },
+})
+
+const extraRootsMachine = define({
+  state: ConnectionState,
+  message: ConnectionMessage,
+})({
+  initial: ConnectionState.Disconnected(),
+  states: {
+    Disconnected: {
+      on: {
+        ClickedConnect: to('Connecting', () => ({
+          model: ConnectionState.Connecting({ attemptCount: 1 }),
+        })),
+      },
+    },
+    Suspended: {
+      on: {
+        SocketErrored: to('Failed', ({ message }) => ({
+          model: ConnectionState.Failed({
+            attemptCount: MAX_CONNECT_ATTEMPTS,
+            reason: message.reason,
+          }),
+        })),
       },
     },
   },
@@ -216,9 +245,9 @@ const connectionMachine = define({
 
 // INTEGRATION
 
-const AppModel = S.Struct({
+const AppModel = Schema.Struct({
   connection: ConnectionState,
-  isDebugPanelOpen: S.Boolean,
+  isDebugPanelOpen: Schema.Boolean,
 })
 type AppModel = typeof AppModel.Type
 
@@ -261,12 +290,12 @@ const Socket = ManagedResource.tag<WebSocket>()('Socket')
 
 const managedResources = ManagedResource.make<AppModel, ConnectionMessage>()(
   entry => ({
-    socket: entry(S.Option(S.Null), {
+    socket: entry(Schema.Option(Schema.Null), {
       resource: Socket,
       modelToMaybeRequirements: model =>
-        M.value(model.connection).pipe(
-          M.tag('Connecting', 'Connected', () => Option.some(null)),
-          M.orElse(() => Option.none()),
+        Match.value(model.connection).pipe(
+          Match.tag('Connecting', 'Connected', () => Option.some(null)),
+          Match.orElse(() => Option.none()),
         ),
       acquire: () =>
         Effect.callback<WebSocket, string>(resume => {
@@ -294,14 +323,14 @@ const managedResources = ManagedResource.make<AppModel, ConnectionMessage>()(
 const subscriptions = Subscription.make<AppModel, ConnectionMessage>()(
   entry => ({
     backoffTimer: entry(
-      { maybeDelayMillis: S.Option(S.Number) },
+      { maybeDelayMillis: Schema.Option(Schema.Number) },
       {
         modelToDependencies: model => ({
-          maybeDelayMillis: M.value(model.connection).pipe(
-            M.tag('Reconnecting', ({ delayMillis }) =>
+          maybeDelayMillis: Match.value(model.connection).pipe(
+            Match.tag('Reconnecting', ({ delayMillis }) =>
               Option.some(delayMillis),
             ),
-            M.orElse(() => Option.none()),
+            Match.orElse(() => Option.none()),
           ),
         }),
         dependenciesToStream: ({ maybeDelayMillis }) =>
@@ -338,10 +367,12 @@ const narrowingMachine = define({
               const sourceTag: 'Connecting' = guardValue.sourceTag
               const messageTag: 'SocketErrored' = guardValue.messageTag
 
-              return ConnectionState.Failed({
-                attemptCount: state.attemptCount,
-                reason: `${sourceTag} ${messageTag} ${message.reason}`,
-              })
+              return {
+                model: ConnectionState.Failed({
+                  attemptCount: state.attemptCount,
+                  reason: `${sourceTag} ${messageTag} ${message.reason}`,
+                }),
+              }
             },
           ),
         ],
@@ -362,11 +393,12 @@ const guardValueMachine = define({
           when(
             connectingToMaybeNextAttempt,
             'Reconnecting',
-            ({ state, guardValue }) =>
-              ConnectionState.Reconnecting({
+            ({ state, guardValue }) => ({
+              model: ConnectionState.Reconnecting({
                 attemptCount: guardValue.nextAttemptCount,
                 delayMillis: backoffDelayMillis(state.attemptCount),
               }),
+            }),
           ),
         ],
       },
@@ -386,19 +418,20 @@ const booleanGuardMachine = define({
           when(
             state => state.attemptCount < MAX_CONNECT_ATTEMPTS,
             'Reconnecting',
-            ({ state }) =>
-              ConnectionState.Reconnecting({
+            ({ state }) => ({
+              model: ConnectionState.Reconnecting({
                 attemptCount: state.attemptCount,
                 delayMillis: backoffDelayMillis(state.attemptCount),
               }),
+            }),
           ),
           otherwise(
-            to('Failed', ({ state, message }) =>
-              ConnectionState.Failed({
+            to('Failed', ({ state, message }) => ({
+              model: ConnectionState.Failed({
                 attemptCount: state.attemptCount,
                 reason: message.reason,
               }),
-            ),
+            })),
           ),
         ],
       },
@@ -414,8 +447,8 @@ const wrongVariantMachine = define({
   states: {
     Idle: {
       on: {
-        // @ts-expect-error the build function must return the RemoteData.Loading variant named by the target tag
-        ClickedFetch: to('Loading', () => RemoteData.Idle()),
+        // @ts-expect-error the handler's model must be the RemoteData.Loading variant named by the target tag
+        ClickedFetch: to('Loading', () => ({ model: RemoteData.Idle() })),
       },
     },
   },
@@ -430,7 +463,7 @@ const wrongTargetTagMachine = define({
     Idle: {
       on: {
         // @ts-expect-error 'Loadingg' is not a state tag
-        ClickedFetch: to('Loadingg', () => RemoteData.Loading()),
+        ClickedFetch: to('Loadingg', () => ({ model: RemoteData.Loading() })),
       },
     },
   },
@@ -458,7 +491,7 @@ const unknownMessageTagMachine = define({
     Idle: {
       on: {
         // @ts-expect-error 'ClickedFetchh' is not a Message tag
-        ClickedFetchh: to('Loading', () => RemoteData.Loading()),
+        ClickedFetchh: to('Loading', () => ({ model: RemoteData.Loading() })),
       },
     },
   },
@@ -473,11 +506,11 @@ const shadowedGuardMachine = define({
     Idle: {
       on: {
         ClickedFetch: [
-          otherwise(to('Loading', () => RemoteData.Loading())),
+          otherwise(to('Loading', () => ({ model: RemoteData.Loading() }))),
           when(
             (_state, message) => Option.some(message),
             'Ok',
-            () => RemoteData.Ok({ data: 'unreachable' }),
+            () => ({ model: RemoteData.Ok({ data: 'unreachable' }) }),
           ),
         ],
       },
@@ -485,10 +518,79 @@ const shadowedGuardMachine = define({
   },
 })
 
-const PlainIdle = S.Struct({ _tag: S.Literal('PlainIdle') })
-const PlainActive = S.Struct({ _tag: S.Literal('PlainActive') })
+const shadowedUnderUnreachableSourceMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Error: {
+      on: {
+        ClickedRetry: [
+          otherwise(to('Loading', () => ({ model: RemoteData.Loading() }))),
+          when(
+            (_state, message) => Option.some(message),
+            'Ok',
+            () => ({ model: RemoteData.Ok({ data: 'unreachable' }) }),
+          ),
+        ],
+      },
+    },
+  },
+})
 
-const PlainState = S.Union([PlainIdle, PlainActive])
+const DelimiterCollisionState = defineTaggedUnion({
+  'A|B': {},
+  A: {},
+  Target0: {},
+  Target1: {},
+})
+
+const DelimiterCollisionMessage = defineMessageUnion({
+  C: {},
+  'B|C': {},
+})
+
+const delimiterCollisionMachine = define({
+  state: DelimiterCollisionState,
+  message: DelimiterCollisionMessage,
+})({
+  initial: DelimiterCollisionState.A(),
+  states: {
+    'A|B': {
+      on: {
+        C: [
+          otherwise(
+            to('Target0', () => ({
+              model: DelimiterCollisionState.Target0(),
+            })),
+          ),
+        ],
+      },
+    },
+    A: {
+      on: {
+        'B|C': [
+          when(
+            () => false,
+            'Target0',
+            () => ({ model: DelimiterCollisionState.Target0() }),
+          ),
+          when(
+            () => true,
+            'Target1',
+            () => ({ model: DelimiterCollisionState.Target1() }),
+          ),
+        ],
+      },
+    },
+  },
+})
+
+const PlainIdle = Schema.Struct({ _tag: Schema.Literal('PlainIdle') })
+const PlainActive = Schema.Struct({ _tag: Schema.Literal('PlainActive') })
+
+const PlainState = Schema.Union([PlainIdle, PlainActive])
 type PlainState = typeof PlainState.Type
 
 const plainTagMachine = define({
@@ -499,11 +601,57 @@ const plainTagMachine = define({
   states: {
     PlainIdle: {
       on: {
-        ClickedFetch: to('PlainActive', () => ({ _tag: 'PlainActive' })),
+        ClickedFetch: to('PlainActive', () => ({
+          model: { _tag: 'PlainActive' },
+        })),
       },
     },
   },
 })
+
+const NestedState = defineTaggedUnion({
+  NestedIdle: {},
+  NestedLoading: {},
+  NestedError: { error: Schema.String },
+  NestedOk: { data: Schema.String },
+})
+const NestedSettled = NestedState.subset(['NestedError', 'NestedOk'])
+const NestedActive = Schema.Union([NestedState.NestedLoading, NestedSettled])
+const NestedStateSchema = Schema.Union([NestedState.NestedIdle, NestedActive])
+type NestedStateSchema = typeof NestedStateSchema.Type
+
+const nestedUnionMachine = define({
+  state: NestedStateSchema,
+  message: RemoteDataMessage,
+})({
+  initial: NestedState.NestedIdle(),
+  states: {
+    NestedIdle: {
+      on: {
+        ClickedFetch: to('NestedLoading', () => ({
+          model: NestedState.NestedLoading(),
+        })),
+      },
+    },
+    NestedLoading: {
+      on: {
+        SucceededFetch: to('NestedOk', ({ message }) => ({
+          model: NestedState.NestedOk({ data: message.data }),
+        })),
+      },
+    },
+    NestedOk: {
+      on: {
+        ClickedRetry: to('NestedIdle', () => ({
+          model: NestedState.NestedIdle(),
+        })),
+      },
+    },
+  },
+})
+
+const UntaggedMember = Schema.Struct({ _tag: Schema.String })
+const UntaggedState = Schema.Union([PlainIdle, UntaggedMember])
 
 // REQUIREMENTS
 
@@ -532,8 +680,8 @@ type SubmitState = typeof SubmitState.Type
 
 const SubmitMessage = defineMessageUnion({
   ClickedSubmit: {},
-  SucceededPresign: { url: S.String },
-  SucceededPersist: { id: S.String },
+  SucceededPresign: { url: Schema.String },
+  SucceededPersist: { id: Schema.String },
 })
 type SubmitMessage = typeof SubmitMessage.Type
 
@@ -563,11 +711,10 @@ const inferredRequirementsMachine = define({
   states: {
     Idle: {
       on: {
-        ClickedSubmit: to(
-          'Presigning',
-          () => SubmitState.Presigning(),
-          () => [Presign()],
-        ),
+        ClickedSubmit: to('Presigning', () => ({
+          model: SubmitState.Presigning(),
+          commands: [Presign()],
+        })),
       },
     },
   },
@@ -585,10 +732,12 @@ const inferredGuardRequirementsMachine = define({
           when(
             () => true,
             'Presigning',
-            () => SubmitState.Presigning(),
-            () => [Presign()],
+            () => ({
+              model: SubmitState.Presigning(),
+              commands: [Presign()],
+            }),
           ),
-          otherwise(to('Idle', () => SubmitState.Idle())),
+          otherwise(to('Idle', () => ({ model: SubmitState.Idle() }))),
         ],
       },
     },
@@ -607,14 +756,13 @@ const inferredOtherwiseRequirementsMachine = define({
           when(
             () => false,
             'Submitted',
-            () => SubmitState.Submitted(),
+            () => ({ model: SubmitState.Submitted() }),
           ),
           otherwise(
-            to(
-              'Presigning',
-              () => SubmitState.Presigning(),
-              () => [Presign()],
-            ),
+            to('Presigning', () => ({
+              model: SubmitState.Presigning(),
+              commands: [Presign()],
+            })),
           ),
         ],
       },
@@ -630,11 +778,10 @@ const explicitRequirementsMachine = define({
   states: {
     Idle: {
       on: {
-        ClickedSubmit: to(
-          'Presigning',
-          () => SubmitState.Presigning(),
-          () => [Presign()],
-        ),
+        ClickedSubmit: to('Presigning', () => ({
+          model: SubmitState.Presigning(),
+          commands: [Presign()],
+        })),
       },
     },
     Presigning: {
@@ -643,16 +790,20 @@ const explicitRequirementsMachine = define({
           when(
             () => true,
             'Persisting',
-            () => SubmitState.Persisting(),
-            () => [Persist()],
+            () => ({
+              model: SubmitState.Persisting(),
+              commands: [Persist()],
+            }),
           ),
-          otherwise(to('Idle', () => SubmitState.Idle())),
+          otherwise(to('Idle', () => ({ model: SubmitState.Idle() }))),
         ],
       },
     },
     Persisting: {
       on: {
-        SucceededPersist: to('Submitted', () => SubmitState.Submitted()),
+        SucceededPersist: to('Submitted', () => ({
+          model: SubmitState.Submitted(),
+        })),
       },
     },
   },
@@ -714,6 +865,7 @@ describe('remote data machine', () => {
       stateTag: 'Idle',
       messageTag: 'ClickedRetry',
       state: RemoteData.Idle(),
+      reason: 'NotApplicable',
     })
 
     const ignoredRetry = remoteDataMachine.transition(
@@ -858,6 +1010,7 @@ describe('connection machine', () => {
       stateTag: 'Disconnected',
       messageTag: 'TimedOutBackoff',
       state: ConnectionState.Disconnected(),
+      reason: 'NotApplicable',
     })
   })
 
@@ -886,6 +1039,44 @@ describe('connection machine', () => {
         reason: 'UnreachableSource',
       },
     ])
+  })
+
+  it('clears the Suspended findings when Suspended is an extra walk root', () => {
+    expect(connectionMachine.unreachableStates(['Suspended'])).toEqual([])
+    expect(connectionMachine.deadTransitions(['Suspended'])).toEqual([])
+  })
+
+  it('adds extra roots to the walk without dropping initial as a root', () => {
+    expect(extraRootsMachine.reachableFrom('Disconnected')).toEqual(
+      new Set(['Disconnected', 'Connecting']),
+    )
+    expect(extraRootsMachine.reachableFrom('Suspended')).toEqual(
+      new Set(['Suspended', 'Failed']),
+    )
+
+    expect(extraRootsMachine.unreachableStates()).toEqual([
+      'Connected',
+      'Reconnecting',
+      'Failed',
+      'Suspended',
+    ])
+    expect(extraRootsMachine.unreachableStates(['Suspended'])).toEqual([
+      'Connected',
+      'Reconnecting',
+    ])
+
+    expect(extraRootsMachine.deadTransitions()).toEqual([
+      {
+        edge: {
+          from: 'Suspended',
+          messageTag: 'SocketErrored',
+          target: 'Failed',
+          guard: { _tag: 'Unguarded' },
+        },
+        reason: 'UnreachableSource',
+      },
+    ])
+    expect(extraRootsMachine.deadTransitions(['Suspended'])).toEqual([])
   })
 
   it('emits a Mermaid state diagram with guard labels', () => {
@@ -950,6 +1141,7 @@ describe('guard lists', () => {
       stateTag: 'Connecting',
       messageTag: 'SocketErrored',
       state: atLimit,
+      reason: 'GuardsFellThrough',
     })
 
     const declinedSocketError = guardValueMachine.transition(
@@ -957,6 +1149,74 @@ describe('guard lists', () => {
       ConnectionMessage.SocketErrored({ reason: 'boom' }),
     )
     expect(declinedSocketError).toEqual({ model: atLimit })
+  })
+})
+
+describe('ignored reasons', () => {
+  it('reports a message that appears in no state entry as OutOfAlphabet', () => {
+    const result = connectionMachine.step(
+      ConnectionState.Disconnected(),
+      ConnectionMessage.CompletedLogTransition(),
+    )
+    expect(result).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Disconnected',
+      messageTag: 'CompletedLogTransition',
+      state: ConnectionState.Disconnected(),
+      reason: 'OutOfAlphabet',
+    })
+  })
+
+  it('reports a state with no table entry as NotApplicable when the message is in the alphabet', () => {
+    const result = narrowingMachine.step(
+      ConnectionState.Disconnected(),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
+    )
+    expect(result).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Disconnected',
+      messageTag: 'SocketErrored',
+      state: ConnectionState.Disconnected(),
+      reason: 'NotApplicable',
+    })
+  })
+
+  it('includes a declared empty guard list in the message alphabet', () => {
+    const emptyGuardListMachine = define({
+      state: ConnectionState,
+      message: ConnectionMessage,
+    })({
+      initial: ConnectionState.Disconnected(),
+      states: {
+        Connecting: {
+          on: { SocketErrored: [] },
+        },
+      },
+    })
+
+    const notApplicable = emptyGuardListMachine.step(
+      ConnectionState.Disconnected(),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
+    )
+    expect(notApplicable).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Disconnected',
+      messageTag: 'SocketErrored',
+      state: ConnectionState.Disconnected(),
+      reason: 'NotApplicable',
+    })
+
+    const guardsFellThrough = emptyGuardListMachine.step(
+      ConnectionState.Connecting({ attemptCount: 1 }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
+    )
+    expect(guardsFellThrough).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Connecting',
+      messageTag: 'SocketErrored',
+      state: ConnectionState.Connecting({ attemptCount: 1 }),
+      reason: 'GuardsFellThrough',
+    })
   })
 })
 
@@ -969,6 +1229,49 @@ describe('state tag extraction', () => {
       RemoteDataMessage.ClickedFetch(),
     )
     expect(fetchClick.model).toStrictEqual({ _tag: 'PlainActive' })
+  })
+
+  it('flattens nested state unions into depth-first tag order', () => {
+    expect(nestedUnionMachine.initial).toStrictEqual(NestedState.NestedIdle())
+    expect(nestedUnionMachine.stateTags).toEqual([
+      'NestedIdle',
+      'NestedLoading',
+      'NestedError',
+      'NestedOk',
+    ])
+  })
+
+  it('transitions into and out of a nested union member', () => {
+    const fetchClick = nestedUnionMachine.transition(
+      NestedState.NestedIdle(),
+      RemoteDataMessage.ClickedFetch(),
+    )
+    expect(fetchClick.model).toStrictEqual(NestedState.NestedLoading())
+
+    const fetchSuccess = nestedUnionMachine.transition(
+      NestedState.NestedLoading(),
+      RemoteDataMessage.SucceededFetch({ data: 'payload' }),
+    )
+    expect(fetchSuccess.model).toStrictEqual(
+      NestedState.NestedOk({ data: 'payload' }),
+    )
+
+    const fetchRetry = nestedUnionMachine.transition(
+      NestedState.NestedOk({ data: 'payload' }),
+      RemoteDataMessage.ClickedRetry(),
+    )
+    expect(fetchRetry.model).toStrictEqual(NestedState.NestedIdle())
+  })
+
+  it('throws when a member is neither a nested union nor a Struct with a literal _tag', () => {
+    expect(() =>
+      define({ state: UntaggedState, message: RemoteDataMessage })({
+        initial: { _tag: 'PlainIdle' },
+        states: {},
+      }),
+    ).toThrow(
+      'Machine.define: every member of the state union Schema must be a Struct with a literal _tag field',
+    )
   })
 })
 
@@ -1014,6 +1317,60 @@ describe('type-level guarantees', () => {
           guard: { _tag: 'When', position: 1 },
         },
         reason: 'ShadowedByOtherwise',
+      },
+    ])
+  })
+
+  it('does not walk through guards listed after otherwise', () => {
+    expect(shadowedGuardMachine.reachableFrom('Idle')).toEqual(
+      new Set(['Idle', 'Loading']),
+    )
+    expect(shadowedGuardMachine.unreachableStates()).toEqual(['Error', 'Ok'])
+  })
+
+  it('reports a shadowed edge under an unreachable source once', () => {
+    expect(shadowedUnderUnreachableSourceMachine.deadTransitions()).toEqual([
+      {
+        edge: {
+          from: 'Error',
+          messageTag: 'ClickedRetry',
+          target: 'Loading',
+          guard: { _tag: 'Otherwise', position: 0 },
+        },
+        reason: 'UnreachableSource',
+      },
+      {
+        edge: {
+          from: 'Error',
+          messageTag: 'ClickedRetry',
+          target: 'Ok',
+          guard: { _tag: 'When', position: 1 },
+        },
+        reason: 'ShadowedByOtherwise',
+      },
+    ])
+  })
+
+  it('keeps source and message tags distinct when they contain delimiters', () => {
+    const result = delimiterCollisionMachine.step(
+      DelimiterCollisionState.A(),
+      DelimiterCollisionMessage['B|C'](),
+    )
+
+    expect(result._tag).toBe('Transitioned')
+    expect(result.state).toStrictEqual(DelimiterCollisionState.Target1())
+    expect(delimiterCollisionMachine.reachableFrom('A')).toEqual(
+      new Set(['A', 'Target0', 'Target1']),
+    )
+    expect(delimiterCollisionMachine.deadTransitions()).toEqual([
+      {
+        edge: {
+          from: 'A|B',
+          messageTag: 'C',
+          target: 'Target0',
+          guard: { _tag: 'Otherwise', position: 0 },
+        },
+        reason: 'UnreachableSource',
       },
     ])
   })

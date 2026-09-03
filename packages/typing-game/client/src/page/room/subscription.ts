@@ -1,4 +1,4 @@
-import { Cause, Effect, Option, Schema as S, Stream } from 'effect'
+import { Cause, Effect, Option, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 
 import { capturedKeyDownStream } from '../../keyboard'
@@ -10,8 +10,8 @@ export const subscriptions = Subscription.make<Model, Message, RoomsClient>()(
   entry => ({
     roomStream: entry(
       {
-        maybeRoomStream: S.Option(
-          S.Struct({ roomId: S.String, playerId: S.String }),
+        maybeRoomStream: Schema.Option(
+          Schema.Struct({ roomId: Schema.String, playerId: Schema.String }),
         ),
       },
       {
@@ -48,7 +48,7 @@ export const subscriptions = Subscription.make<Model, Message, RoomsClient>()(
     ),
 
     roomKeyboard: entry(
-      { shouldCaptureKeyboard: S.Boolean },
+      { shouldCaptureKeyboard: Schema.Boolean },
       {
         modelToDependencies: model => ({
           shouldCaptureKeyboard: capturesKeyboard(model),

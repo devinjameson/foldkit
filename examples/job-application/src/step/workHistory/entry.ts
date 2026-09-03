@@ -1,4 +1,4 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import { CalendarDate } from 'foldkit/calendar'
 import {
@@ -31,28 +31,28 @@ const validateTitle = validate(titleRules)
 
 // MODEL
 
-export const Model = S.Struct({
-  id: S.String,
-  company: Field(S.String),
-  title: Field(S.String),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  company: Field(Schema.String),
+  title: Field(Schema.String),
   startDate: DatePicker.Model,
-  maybeStartDate: S.Option(CalendarDate),
+  maybeStartDate: Schema.Option(CalendarDate),
   endDate: DatePicker.Model,
-  maybeEndDate: S.Option(CalendarDate),
-  isCurrentlyEmployed: S.Boolean,
-  description: S.String,
+  maybeEndDate: Schema.Option(CalendarDate),
+  isCurrentlyEmployed: Schema.Boolean,
+  description: Schema.String,
 })
 export type Model = typeof Model.Type
 
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedCompany: { value: S.String },
-  UpdatedTitle: { value: S.String },
+  UpdatedCompany: { value: Schema.String },
+  UpdatedTitle: { value: Schema.String },
   GotStartDateMessage: { message: DatePicker.Message },
   GotEndDateMessage: { message: DatePicker.Message },
-  ToggledCurrentlyEmployed: { isChecked: S.Boolean },
-  UpdatedDescription: { value: S.String },
+  ToggledCurrentlyEmployed: { isChecked: Schema.Boolean },
+  UpdatedDescription: { value: Schema.String },
   ClickedRemoveSelf: {},
 })
 
@@ -84,26 +84,25 @@ export const init = (entryId: string, today: CalendarDate): Model => ({
 
 // UPDATE
 
-const foldStartDateOutMessage = M.type<DatePicker.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    ChangedViewMonth: () => model => ({ model }),
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, {
-          maybeStartDate: () => Option.some(date),
-          endDate: DatePicker.reflectMinDate(Option.some(date)),
-        }),
-      }),
-    ClearedDate: () => model => ({
+const foldStartDateOutMessage = DatePicker.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedViewMonth: () => model => ({ model }),
+  SelectedDate:
+    ({ date }) =>
+    model => ({
       model: evo(model, {
-        maybeStartDate: () => Option.none(),
-        endDate: DatePicker.reflectMinDate(Option.none()),
+        maybeStartDate: () => Option.some(date),
+        endDate: DatePicker.reflectMinDate(Option.some(date)),
       }),
     }),
+  ClearedDate: () => model => ({
+    model: evo(model, {
+      maybeStartDate: () => Option.none(),
+      endDate: DatePicker.reflectMinDate(Option.none()),
+    }),
   }),
-)
+})
 
 const foldStartDate = Update.foldChild({
   update: DatePicker.update,
@@ -114,26 +113,25 @@ const foldStartDate = Update.foldChild({
   foldOutMessage: foldStartDateOutMessage,
 })
 
-const foldEndDateOutMessage = M.type<DatePicker.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    ChangedViewMonth: () => model => ({ model }),
-    SelectedDate:
-      ({ date }) =>
-      model => ({
-        model: evo(model, {
-          maybeEndDate: () => Option.some(date),
-          startDate: DatePicker.reflectMaxDate(Option.some(date)),
-        }),
-      }),
-    ClearedDate: () => model => ({
+const foldEndDateOutMessage = DatePicker.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  ChangedViewMonth: () => model => ({ model }),
+  SelectedDate:
+    ({ date }) =>
+    model => ({
       model: evo(model, {
-        maybeEndDate: () => Option.none(),
-        startDate: DatePicker.reflectMaxDate(Option.none()),
+        maybeEndDate: () => Option.some(date),
+        startDate: DatePicker.reflectMaxDate(Option.some(date)),
       }),
     }),
+  ClearedDate: () => model => ({
+    model: evo(model, {
+      maybeEndDate: () => Option.none(),
+      startDate: DatePicker.reflectMaxDate(Option.none()),
+    }),
   }),
-)
+})
 
 const foldEndDate = Update.foldChild({
   update: DatePicker.update,

@@ -1,4 +1,4 @@
-import { Option, flow } from 'effect'
+import { Option } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
@@ -33,7 +33,7 @@ const acknowledgeBackdrop = Scene.Mount.resolve(
 
 const givenClosed = Story.given(init({ id: 'test' }))
 
-const givenOpenMulti = flow(
+const givenOpenMulti = Story.steps(
   givenClosed,
   Story.message(Message.Opened({ maybeActiveItemIndex: Option.some(0) })),
   Story.Command.resolve(FocusItems, Message.CompletedFocusItems()),

@@ -1,4 +1,4 @@
-import { Effect, Match as M, Option, Schema as S, pipe } from 'effect'
+import { Effect, Match, Option, Schema, pipe } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
 import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
@@ -10,14 +10,11 @@ import * as Update from 'foldkit/update'
 // NOTE: Animation imports are split across schema + update to avoid a circular
 // dependency: animation → html → runtime → devtools → dialog → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
-import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-  OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
+import * as Animation from '../animation/schema.js'
 import {
   defaultLeaveCommand as animationDefaultLeaveCommand,
+  hide as animationHide,
+  show as animationShow,
   update as animationUpdate,
 } from '../animation/update.js'
 import { idSelector } from '../internal/selectors.js'
@@ -25,12 +22,12 @@ import { idSelector } from '../internal/selectors.js'
 // MODEL
 
 /** Schema for the dialog component's state, tracking its unique ID, open/closed status, animation support, and animation lifecycle phase. */
-export const Model = S.Struct({
-  id: S.String,
-  isOpen: S.Boolean,
-  isAnimated: S.Boolean,
-  animation: AnimationModel,
-  maybeFocusSelector: S.Option(S.String),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  isOpen: Schema.Boolean,
+  isAnimated: Schema.Boolean,
+  animation: Animation.Model,
+  maybeFocusSelector: Schema.Option(Schema.String),
 })
 
 export type Model = typeof Model.Type
@@ -46,7 +43,7 @@ export const Message = defineMessageUnion({
   CompletedCloseDialog: {},
   Unmounted: {},
   CompletedReleaseDialogResources: {},
-  GotAnimationMessage: { message: AnimationMessage },
+  GotAnimationMessage: { message: Animation.Message },
 })
 
 export type RequestedOpen = typeof Message.RequestedOpen.Type
@@ -100,7 +97,7 @@ export const init = (config: InitConfig): Model => ({
   id: config.id,
   isOpen: config.isOpen ?? false,
   isAnimated: config.isAnimated ?? false,
-  animation: animationInit({
+  animation: Animation.init({
     id: `${config.id}-panel`,
     ...(config.isOpen !== undefined ? { isShowing: config.isOpen } : {}),
   }),
@@ -132,7 +129,7 @@ type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
  *  this close, the dialog would render open with no lock and no focus trap.
  *  The lock is also released if the Command is interrupted while it waits. */
 export const ShowDialog = Command.define('ShowDialog', {
-  args: { id: S.String, focusSelector: S.String },
+  args: { id: Schema.String, focusSelector: Schema.String },
   messages: [Message.SucceededShowDialog, Message.FailedShowDialog],
   execute: ({ id, focusSelector }) =>
     Dom.lockScroll.pipe(
@@ -155,7 +152,7 @@ export const ShowDialog = Command.define('ShowDialog', {
  *  releases the scroll lock, focus trap, return focus, and stack entry if the
  *  dialog still holds them. */
 export const CloseDialog = Command.define('CloseDialog', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedCloseDialog],
   execute: ({ id }) =>
     Dom.closeDialog(dialogSelector(id)).pipe(
@@ -172,7 +169,7 @@ export const CloseDialog = Command.define('CloseDialog', {
  *  purposeful close. Idempotent: a no-op if the dialog already released its
  *  resources through `CloseDialog`. */
 export const ReleaseDialogResources = Command.define('ReleaseDialogResources', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedReleaseDialogResources],
   execute: ({ id }) =>
     Dom.releaseDialogResources(id).pipe(
@@ -191,17 +188,17 @@ const isOpenOrAnimating = (model: Model): boolean =>
 const resetToClosed = (model: Model): Model =>
   evo(model, {
     isOpen: () => false,
-    animation: () => animationInit({ id: `${model.id}-panel` }),
+    animation: () => Animation.init({ id: `${model.id}-panel` }),
   })
 
-const wrapAnimationMessage = (message: AnimationMessage): Message =>
+const wrapAnimationMessage = (message: Animation.Message): Message =>
   Message.GotAnimationMessage({ message })
 
 const foldAnimationOutMessage: (
-  outMessage: AnimationOutMessage,
-  context: Update.FoldContext<AnimationMessage, Message>,
+  outMessage: Animation.OutMessage,
+  context: Update.FoldContext<Animation.Message, Message>,
 ) => Update.Step<Model, Message> = (outMessage, { liftCommand }) =>
-  AnimationOutMessage.match<Update.Step<Model, Message>>(outMessage, {
+  Animation.OutMessage.match<Update.Step<Model, Message>>(outMessage, {
     StartedLeaveAnimating: () => model => ({
       model,
       commands: [liftCommand(animationDefaultLeaveCommand(model.animation))],
@@ -219,6 +216,22 @@ const foldAnimation = Update.foldChild({
     evo(model, { animation: () => nextAnimation }),
   toParentMessage: wrapAnimationMessage,
   foldOutMessage: foldAnimationOutMessage,
+})
+
+const foldAnimationShow = Update.foldChildStep({
+  update: animationShow,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: wrapAnimationMessage,
+})
+
+const foldAnimationHide = Update.foldChildStep({
+  update: animationHide,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: wrapAnimationMessage,
 })
 
 /** Processes a Dialog Message and returns the next Model and optional Commands. */
@@ -240,7 +253,7 @@ export const update = (model: Model, message: Message) =>
       const dialogOpen: Update.Return<Model, Message> = model.isAnimated
         ? Update.combine(model, [
             stepModel => ({ model: stepModel, commands }),
-            foldAnimation(AnimationMessage.Showed()),
+            foldAnimationShow,
             stepModel => ({
               model: evo(stepModel, { isOpen: () => true }),
             }),
@@ -263,7 +276,7 @@ export const update = (model: Model, message: Message) =>
           stepModel => ({
             model: evo(stepModel, { isOpen: () => false }),
           }),
-          foldAnimation(AnimationMessage.Hid()),
+          foldAnimationHide,
         ])
 
         return wasOpen
@@ -419,26 +432,26 @@ export const view = defineView<Model, Message, ViewInputs>(
 
     const isVisible = isOpen || isLeaving(model)
 
-    const animationAttributes = M.value(transitionState).pipe(
-      M.when('EnterStart', () => [
+    const animationAttributes = Match.value(transitionState).pipe(
+      Match.when('EnterStart', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('EnterAnimating', () => [
+      Match.when('EnterAnimating', () => [
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveStart', () => [
+      Match.when('LeaveStart', () => [
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveAnimating', () => [
+      Match.when('LeaveAnimating', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.orElse(() => []),
+      Match.orElse(() => []),
     )
 
     const dialogAttributes = [

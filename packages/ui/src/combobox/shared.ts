@@ -1,12 +1,4 @@
-import {
-  Array,
-  Effect,
-  Match as M,
-  Option,
-  Predicate,
-  Schema as S,
-  pipe,
-} from 'effect'
+import { Array, Effect, Match, Option, Predicate, Schema, pipe } from 'effect'
 import * as Command from 'foldkit/command'
 import * as Dom from 'foldkit/dom'
 import type { ChildAttribute, Html } from 'foldkit/html'
@@ -24,13 +16,12 @@ import {
 // NOTE: Animation imports are split across schema + update to avoid a circular
 // dependency: animation → html → runtime → devtools → combobox → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
+import * as Animation from '../animation/schema.js'
 import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-  type OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
-import { update as animationUpdate } from '../animation/update.js'
+  hide as animationHide,
+  show as animationShow,
+  update as animationUpdate,
+} from '../animation/update.js'
 import { groupContiguous } from '../group.js'
 import * as OptionExt from '../internal/optionExtensions.js'
 import { idSelector } from '../internal/selectors.js'
@@ -41,24 +32,24 @@ export { groupContiguous }
 // MODEL
 
 /** Schema for the activation trigger: whether the user interacted via mouse or keyboard. */
-export const ActivationTrigger = S.Literals(['Pointer', 'Keyboard'])
+export const ActivationTrigger = Schema.Literals(['Pointer', 'Keyboard'])
 export type ActivationTrigger = typeof ActivationTrigger.Type
 
-/** Schema fields shared by all combobox variants (single-select and multi-select). Spread into each variant's `S.Struct` to avoid duplicating field definitions. */
-export const BaseModel = S.Struct({
-  id: S.String,
-  isOpen: S.Boolean,
-  isAnimated: S.Boolean,
-  isModal: S.Boolean,
-  nullable: S.Boolean,
-  immediate: S.Boolean,
-  selectInputOnFocus: S.Boolean,
-  animation: AnimationModel,
-  maybeActiveItemIndex: S.Option(S.Number),
+/** Schema fields shared by all combobox variants (single-select and multi-select). Spread into each variant's `Schema.Struct` to avoid duplicating field definitions. */
+export const BaseModel = Schema.Struct({
+  id: Schema.String,
+  isOpen: Schema.Boolean,
+  isAnimated: Schema.Boolean,
+  isModal: Schema.Boolean,
+  nullable: Schema.Boolean,
+  immediate: Schema.Boolean,
+  selectInputOnFocus: Schema.Boolean,
+  animation: Animation.Model,
+  maybeActiveItemIndex: Schema.Option(Schema.Number),
   activationTrigger: ActivationTrigger,
-  inputValue: S.String,
-  maybeLastPointerPosition: S.Option(
-    S.Struct({ screenX: S.Number, screenY: S.Number }),
+  inputValue: Schema.String,
+  maybeLastPointerPosition: Schema.Option(
+    Schema.Struct({ screenX: Schema.Number, screenY: Schema.Number }),
   ),
 })
 export type BaseModel = typeof BaseModel.Type
@@ -87,7 +78,7 @@ export const baseInit = (config: BaseInitConfig): BaseModel => ({
   nullable: config.nullable ?? false,
   immediate: config.immediate ?? false,
   selectInputOnFocus: config.selectInputOnFocus ?? false,
-  animation: animationInit({ id: `${config.id}-items` }),
+  animation: Animation.init({ id: `${config.id}-items` }),
   maybeActiveItemIndex: Option.none(),
   activationTrigger: 'Keyboard',
   inputValue: '',
@@ -98,32 +89,34 @@ export const baseInit = (config: BaseInitConfig): BaseModel => ({
 
 /** Union of all messages the combobox component can produce. */
 export const Message = defineMessageUnion({
-  Opened: { maybeActiveItemIndex: S.Option(S.Number) },
+  Opened: { maybeActiveItemIndex: Schema.Option(Schema.Number) },
   Closed: {
-    restingInputValue: S.String,
-    isClearable: S.Boolean,
+    restingInputValue: Schema.String,
+    isClearable: Schema.Boolean,
   },
   BlurredInput: {
-    restingInputValue: S.String,
-    isClearable: S.Boolean,
+    restingInputValue: Schema.String,
+    isClearable: Schema.Boolean,
   },
   ActivatedItem: {
-    index: S.Number,
+    index: Schema.Number,
     activationTrigger: ActivationTrigger,
-    maybeImmediateSelection: S.Option(S.Struct({ item: S.String })),
+    maybeImmediateSelection: Schema.Option(
+      Schema.Struct({ item: Schema.String }),
+    ),
   },
   DeactivatedItem: {},
   SelectedItem: {
-    item: S.String,
-    displayText: S.String,
-    wasSelected: S.Boolean,
+    item: Schema.String,
+    displayText: Schema.String,
+    wasSelected: Schema.Boolean,
   },
   MovedPointerOverItem: {
-    index: S.Number,
-    screenX: S.Number,
-    screenY: S.Number,
+    index: Schema.Number,
+    screenX: Schema.Number,
+    screenY: Schema.Number,
   },
-  RequestedItemClick: { index: S.Number },
+  RequestedItemClick: { index: Schema.Number },
   SuppressedItemCommit: {},
   CompletedLockScroll: {},
   CompletedUnlockScroll: {},
@@ -136,11 +129,11 @@ export const Message = defineMessageUnion({
   CompletedAttachComboboxPreventBlur: {},
   CompletedAttachComboboxSelectOnFocus: {},
   CompletedPortalComboboxBackdrop: {},
-  GotAnimationMessage: { message: AnimationMessage },
-  UpdatedInputValue: { value: S.String },
+  GotAnimationMessage: { message: Animation.Message },
+  UpdatedInputValue: { value: Schema.String },
   PressedToggleButton: {
-    restingInputValue: S.String,
-    isClearable: S.Boolean,
+    restingInputValue: Schema.String,
+    isClearable: Schema.Boolean,
   },
 })
 
@@ -177,7 +170,7 @@ export type ClearedSelection = typeof OutMessage.ClearedSelection.Type
 
 /** Union of out-messages the combobox component can produce. The parent folds `Selected` into the selection it owns and clears that selection on `ClearedSelection`. */
 export const OutMessage = defineMessageUnion({
-  Selected: { value: S.String },
+  Selected: { value: Schema.String },
   ClearedSelection: {},
 })
 
@@ -245,7 +238,7 @@ export const UnlockScroll = Command.define('UnlockScroll', {
 })
 /** Marks all elements outside the combobox as inert for modal behavior. */
 export const InertOthers = Command.define('InertOthers', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedInertOthers],
   execute: ({ id }) =>
     Dom.inertOthers(id, [inputWrapperSelector(id), itemsSelector(id)]).pipe(
@@ -254,14 +247,14 @@ export const InertOthers = Command.define('InertOthers', {
 })
 /** Removes the inert attribute from elements outside the combobox. */
 export const RestoreInert = Command.define('RestoreInert', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedRestoreInert],
   execute: ({ id }) =>
     Dom.restoreInert(id).pipe(Effect.as(Message.CompletedRestoreInert())),
 })
 /** Moves focus to the combobox input after selection or close. */
 export const FocusInput = Command.define('FocusInput', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedFocusInput],
   execute: ({ id }) =>
     Dom.focus(inputSelector(id)).pipe(
@@ -271,7 +264,7 @@ export const FocusInput = Command.define('FocusInput', {
 })
 /** Scrolls the active combobox item into view after keyboard navigation. */
 export const ScrollIntoView = Command.define('ScrollIntoView', {
-  args: { id: S.String, index: S.Number },
+  args: { id: Schema.String, index: Schema.Number },
   messages: [Message.CompletedScrollIntoView],
   execute: ({ id, index }) =>
     Dom.scrollIntoView(itemSelector(id, index)).pipe(
@@ -281,7 +274,7 @@ export const ScrollIntoView = Command.define('ScrollIntoView', {
 })
 /** Programmatically clicks the active combobox item's DOM element. */
 export const ClickItem = Command.define('ClickItem', {
-  args: { id: S.String, index: S.Number },
+  args: { id: Schema.String, index: Schema.Number },
   messages: [Message.CompletedClickItem],
   execute: ({ id, index }) =>
     Dom.clickElement(itemSelector(id, index)).pipe(
@@ -293,21 +286,21 @@ export const ClickItem = Command.define('ClickItem', {
 export const DetectMovementOrAnimationEnd = Command.define(
   'DetectMovementOrAnimationEnd',
   {
-    args: { id: S.String },
+    args: { id: Schema.String },
     messages: [Message.GotAnimationMessage],
     execute: ({ id }) =>
       Effect.raceFirst(
         Dom.detectElementMovement(inputWrapperSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
         Dom.waitForAnimationSettled(itemsSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
@@ -339,16 +332,15 @@ export const makeUpdate = <Model extends BaseModel>(
   type PlainUpdateReturn = Update.Return<Model, Message>
   type UpdateReturn = Update.ReturnWithOutMessage<Model, Message, OutMessage>
 
-  const foldAnimationOutMessage = M.type<AnimationOutMessage>().pipe(
-    M.withReturnType<Update.Step<Model, Message>>(),
-    M.tagsExhaustive({
-      StartedLeaveAnimating: () => model => ({
-        model,
-        commands: [DetectMovementOrAnimationEnd({ id: model.id })],
-      }),
-      TransitionedOut: () => model => ({ model }),
+  const foldAnimationOutMessage = Animation.OutMessage.match<
+    Update.Step<Model, Message>
+  >({
+    StartedLeaveAnimating: () => model => ({
+      model,
+      commands: [DetectMovementOrAnimationEnd({ id: model.id })],
     }),
-  )
+    TransitionedOut: () => model => ({ model }),
+  })
 
   const foldAnimation = Update.foldChild({
     update: animationUpdate,
@@ -357,6 +349,22 @@ export const makeUpdate = <Model extends BaseModel>(
       constrainedEvo(model, { animation: () => nextAnimation }),
     toParentMessage: message => Message.GotAnimationMessage({ message }),
     foldOutMessage: foldAnimationOutMessage,
+  })
+
+  const foldAnimationShow = Update.foldChildStep({
+    update: animationShow,
+    read: (model: Model) => Option.some(model.animation),
+    write: (model, nextAnimation) =>
+      constrainedEvo(model, { animation: () => nextAnimation }),
+    toParentMessage: message => Message.GotAnimationMessage({ message }),
+  })
+
+  const foldAnimationHide = Update.foldChildStep({
+    update: animationHide,
+    read: (model: Model) => Option.some(model.animation),
+    write: (model, nextAnimation) =>
+      constrainedEvo(model, { animation: () => nextAnimation }),
+    toParentMessage: message => Message.GotAnimationMessage({ message }),
   })
 
   const internalUpdate = (model: Model, message: Message): UpdateReturn => {
@@ -395,7 +403,7 @@ export const makeUpdate = <Model extends BaseModel>(
           nextModel,
           Update.combine([
             stepModel => ({ model: stepModel, commands }),
-            foldAnimation(AnimationMessage.Hid()),
+            foldAnimationHide,
           ]),
           Update.withOutMessage(outMessage),
         )
@@ -411,7 +419,7 @@ export const makeUpdate = <Model extends BaseModel>(
             model: stepModel,
             commands: Array.getSomes([maybeLockScroll, maybeInertOthers]),
           }),
-          foldAnimation(AnimationMessage.Showed()),
+          foldAnimationShow,
           stepModel => ({
             model: constrainedEvo(stepModel, { isOpen: () => true }),
           }),
@@ -441,7 +449,7 @@ export const makeUpdate = <Model extends BaseModel>(
           comboboxClose.model,
           Update.combine([
             stepModel => ({ model: stepModel, commands }),
-            foldAnimation(AnimationMessage.Hid()),
+            foldAnimationHide,
           ]),
           Update.withOutMessage(comboboxClose.outMessage),
         )
@@ -638,7 +646,7 @@ export const makeUpdate = <Model extends BaseModel>(
  *  Scene tests can call
  *  `Scene.Mount.resolve(AnchorCombobox, CompletedAnchorCombobox())`. */
 export const AnchorCombobox = Mount.define('AnchorCombobox', {
-  args: { buttonId: S.String, anchor: AnchorConfig },
+  args: { buttonId: Schema.String, anchor: AnchorConfig },
   messages: [Message.CompletedAnchorCombobox],
   execute: ({ element, buttonId, anchor }) =>
     Effect.gen(function* () {
@@ -917,26 +925,26 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
 
       const animationAttributes: ReadonlyArray<
         ReturnType<typeof h.DataAttribute>
-      > = M.value(transitionState).pipe(
-        M.when('EnterStart', () => [
+      > = Match.value(transitionState).pipe(
+        Match.when('EnterStart', () => [
           h.DataAttribute('closed', ''),
           h.DataAttribute('enter', ''),
           h.DataAttribute('transition', ''),
         ]),
-        M.when('EnterAnimating', () => [
+        Match.when('EnterAnimating', () => [
           h.DataAttribute('enter', ''),
           h.DataAttribute('transition', ''),
         ]),
-        M.when('LeaveStart', () => [
+        Match.when('LeaveStart', () => [
           h.DataAttribute('leave', ''),
           h.DataAttribute('transition', ''),
         ]),
-        M.when('LeaveAnimating', () => [
+        Match.when('LeaveAnimating', () => [
           h.DataAttribute('closed', ''),
           h.DataAttribute('leave', ''),
           h.DataAttribute('transition', ''),
         ]),
-        M.orElse(() => []),
+        Match.orElse(() => []),
       )
 
       const isDisabledAtIndex = (index: number): boolean =>
@@ -994,8 +1002,8 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
       }
 
       const handleInputKeyDown = (key: string): Option.Option<Message> =>
-        M.value(key).pipe(
-          M.when('ArrowDown', () => {
+        Match.value(key).pipe(
+          Match.when('ArrowDown', () => {
             if (!isOpen) {
               return Option.some(
                 Message.Opened({
@@ -1012,7 +1020,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               }),
             )
           }),
-          M.when('ArrowUp', () => {
+          Match.when('ArrowUp', () => {
             if (!isOpen) {
               return Option.some(
                 Message.Opened({
@@ -1029,13 +1037,13 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               }),
             )
           }),
-          M.when('Enter', () => {
+          Match.when('Enter', () => {
             if (!isOpen) {
               return Option.none()
             }
             return resolveCommitMessage()
           }),
-          M.when('Escape', () => {
+          Match.when('Escape', () => {
             if (!isOpen) {
               return Option.none()
             }
@@ -1043,7 +1051,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               Message.Closed({ restingInputValue, isClearable: !isReadOnly }),
             )
           }),
-          M.whenOr('Home', 'End', () => {
+          Match.whenOr('Home', 'End', () => {
             if (!isOpen) {
               return Option.none()
             }
@@ -1056,7 +1064,7 @@ export const makeView = <Model extends BaseModel>(behavior: ViewBehavior) => {
               }),
             )
           }),
-          M.orElse(() => Option.none()),
+          Match.orElse(() => Option.none()),
         )
 
       const maybeActiveDescendant = Option.match(maybeActiveItemIndex, {

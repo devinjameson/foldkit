@@ -1,17 +1,16 @@
-import { Match as M, Option } from 'effect'
+import { Option } from 'effect'
 import { Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
-const foldLoginOutMessage = M.type<Login.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
+const foldLoginOutMessage = Login.OutMessage.match<Update.Step<Model, Message>>(
+  {
     SucceededLogin:
       ({ sessionId }) =>
       () => ({
         model: LoggedIn({ sessionId }),
         commands: [SaveSession(sessionId)],
       }),
-  }),
+  },
 )
 
 const foldLogin = Update.foldChild({

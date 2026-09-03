@@ -1,4 +1,4 @@
-import { Option, flow } from 'effect'
+import { Option } from 'effect'
 import * as Story from 'foldkit/story'
 import { expect } from 'vitest'
 
@@ -24,11 +24,14 @@ const animationEndMessage = Message.GotAnimationMessage({
 
 const givenClosed = Story.given(init({ id: 'test' }))
 
-const givenOpen = flow(givenClosed, Story.message(Message.RequestedOpen()))
+const givenOpen = Story.steps(
+  givenClosed,
+  Story.message(Message.RequestedOpen()),
+)
 
 const givenClosedAnimated = Story.given(init({ id: 'test', isAnimated: true }))
 
-const givenOpenAnimated = flow(
+const givenOpenAnimated = Story.steps(
   givenClosedAnimated,
   Story.message(Message.RequestedOpen()),
   Story.Command.resolveAll(
@@ -573,7 +576,7 @@ describe('Popover', () => {
   describe('modal commands', () => {
     const givenClosedModal = Story.given(init({ id: 'test', isModal: true }))
 
-    const givenOpenModal = flow(
+    const givenOpenModal = Story.steps(
       givenClosedModal,
       Story.message(Message.RequestedOpen()),
       Story.Command.resolveAll(

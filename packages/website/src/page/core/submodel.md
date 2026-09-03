@@ -256,11 +256,11 @@ Inside a Submodel there are two frames, with opposite defaults:
 
 The child view normally builds child handlers. A slot callback normally builds parent handlers.
 
-A shared helper may need the parent builder. For example: a copy button inside a documentation Submodel dispatches an app-level Message. Let the parent build that renderer and pass it through a top-level `viewInputs` callback.
+A shared helper may belong to a sibling Submodel or the parent itself. For example: documentation pages render a shared SnippetCopy Submodel and heading links owned by the application shell. Let the parent build those renderers and pass them through top-level `viewInputs` callbacks.
 
 ::Snippet{name="submodelSharedRenderers" label="shared renderers"}
 
-The callback runs in the parent's boundary, so its Message reaches the parent update without a child wrapper.
+The callbacks run in the parent's boundary. The heading link reaches the parent update directly, while each snippet button establishes its own child boundary and produces `GotSnippetCopyMessage` for the parent to fold.
 
 Thread `h` through view functions. Never store it in module state. A stored builder can outlive its render boundary and fail when a handler dispatches.
 

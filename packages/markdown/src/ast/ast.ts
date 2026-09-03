@@ -1,4 +1,4 @@
-import { Function, Option, Predicate, Schema as S } from 'effect'
+import { Function, Option, Predicate, Schema } from 'effect'
 import type { Array, SchemaAST } from 'effect'
 import { taggedStruct } from 'foldkit/schema'
 
@@ -80,23 +80,23 @@ export type InlineEncoded =
     }>
 
 /** Schema for {@link Text}. */
-export const Text = taggedStruct('Text', { value: S.String })
+export const Text = taggedStruct('Text', { value: Schema.String })
 
 /** Schema for {@link InlineCode}. */
-export const InlineCode = taggedStruct('InlineCode', { value: S.String })
+export const InlineCode = taggedStruct('InlineCode', { value: Schema.String })
 
 /** Schema for {@link HardBreak}. */
 export const HardBreak = taggedStruct('HardBreak')
 
 // NOTE: Manual type definitions and the explicit annotation are required
 // because TypeScript cannot infer types for self-recursive schemas built
-// through S.suspend. Deriving the member types from their schemas instead
+// through Schema.suspend. Deriving the member types from their schemas instead
 // (`type Emphasis = typeof Emphasis.Type`) recreates the circularity through
 // the union alias and fails with TS2456, so the unions and their members stay
 // hand-written.
 /** Schema for {@link Inline}. */
-export const Inline: S.Codec<Inline, InlineEncoded> = S.suspend(() =>
-  S.Union([
+export const Inline: Schema.Codec<Inline, InlineEncoded> = Schema.suspend(() =>
+  Schema.Union([
     Text,
     InlineCode,
     HardBreak,
@@ -109,38 +109,44 @@ export const Inline: S.Codec<Inline, InlineEncoded> = S.suspend(() =>
 )
 
 /** Schema for {@link Emphasis}. */
-export const Emphasis = taggedStruct('Emphasis', { content: S.Array(Inline) })
+export const Emphasis = taggedStruct('Emphasis', {
+  content: Schema.Array(Inline),
+})
 
 /** Schema for {@link Strong}. */
-export const Strong = taggedStruct('Strong', { content: S.Array(Inline) })
+export const Strong = taggedStruct('Strong', { content: Schema.Array(Inline) })
 
 /** Schema for {@link Strikethrough}. */
 export const Strikethrough = taggedStruct('Strikethrough', {
-  content: S.Array(Inline),
+  content: Schema.Array(Inline),
 })
 
 /** Schema for {@link Link}. */
 export const Link = taggedStruct('Link', {
-  url: S.String,
-  maybeTitle: S.OptionFromNullishOr(S.String, { onNoneEncoding: null }),
-  content: S.Array(Inline),
+  url: Schema.String,
+  maybeTitle: Schema.OptionFromNullishOr(Schema.String, {
+    onNoneEncoding: null,
+  }),
+  content: Schema.Array(Inline),
 })
 
 /** Schema for {@link Image}. */
 export const Image = taggedStruct('Image', {
-  url: S.String,
-  alt: S.String,
-  maybeTitle: S.OptionFromNullishOr(S.String, { onNoneEncoding: null }),
+  url: Schema.String,
+  alt: Schema.String,
+  maybeTitle: Schema.OptionFromNullishOr(Schema.String, {
+    onNoneEncoding: null,
+  }),
 })
 
 // BLOCK
 
 /** Heading depth, `1` through `6`. */
-export const HeadingLevel = S.Literals([1, 2, 3, 4, 5, 6])
+export const HeadingLevel = Schema.Literals([1, 2, 3, 4, 5, 6])
 export type HeadingLevel = typeof HeadingLevel.Type
 
 /** Column alignment of a table, from the delimiter row of the source. */
-export const Alignment = S.Literals(['None', 'Left', 'Center', 'Right'])
+export const Alignment = Schema.Literals(['None', 'Left', 'Center', 'Right'])
 export type Alignment = typeof Alignment.Type
 
 /** Section heading. */
@@ -285,13 +291,13 @@ export type BlockEncoded =
 
 // NOTE: Manual type definitions and the explicit annotation are required
 // because TypeScript cannot infer types for self-recursive schemas built
-// through S.suspend. Deriving the member types from their schemas instead
+// through Schema.suspend. Deriving the member types from their schemas instead
 // (`type Emphasis = typeof Emphasis.Type`) recreates the circularity through
 // the union alias and fails with TS2456, so the unions and their members stay
 // hand-written.
 /** Schema for {@link Block}. */
-export const Block: S.Codec<Block, BlockEncoded> = S.suspend(() =>
-  S.Union([
+export const Block: Schema.Codec<Block, BlockEncoded> = Schema.suspend(() =>
+  Schema.Union([
     Heading,
     Paragraph,
     CodeBlock,
@@ -306,65 +312,81 @@ export const Block: S.Codec<Block, BlockEncoded> = S.suspend(() =>
 /** Schema for {@link Heading}. */
 export const Heading = taggedStruct('Heading', {
   level: HeadingLevel,
-  content: S.Array(Inline),
+  content: Schema.Array(Inline),
 })
 
 /** Schema for {@link Paragraph}. */
-export const Paragraph = taggedStruct('Paragraph', { content: S.Array(Inline) })
+export const Paragraph = taggedStruct('Paragraph', {
+  content: Schema.Array(Inline),
+})
 
 /** Schema for {@link CodeBlock}. */
 export const CodeBlock = taggedStruct('CodeBlock', {
-  maybeLanguage: S.OptionFromNullishOr(S.String, { onNoneEncoding: null }),
-  maybeMeta: S.OptionFromNullishOr(S.String, { onNoneEncoding: null }),
-  value: S.String,
+  maybeLanguage: Schema.OptionFromNullishOr(Schema.String, {
+    onNoneEncoding: null,
+  }),
+  maybeMeta: Schema.OptionFromNullishOr(Schema.String, {
+    onNoneEncoding: null,
+  }),
+  value: Schema.String,
 })
 
 /** Schema for {@link ListItem}. */
-export const ListItem = taggedStruct('ListItem', { blocks: S.Array(Block) })
+export const ListItem = taggedStruct('ListItem', {
+  blocks: Schema.Array(Block),
+})
 
 /** Schema for {@link List}. */
 export const List = taggedStruct('List', {
-  isOrdered: S.Boolean,
-  maybeStartNumber: S.OptionFromNullishOr(S.Number, { onNoneEncoding: null }),
-  items: S.NonEmptyArray(ListItem),
+  isOrdered: Schema.Boolean,
+  maybeStartNumber: Schema.OptionFromNullishOr(Schema.Number, {
+    onNoneEncoding: null,
+  }),
+  items: Schema.NonEmptyArray(ListItem),
 })
 
 /** Schema for {@link Blockquote}. */
-export const Blockquote = taggedStruct('Blockquote', { blocks: S.Array(Block) })
+export const Blockquote = taggedStruct('Blockquote', {
+  blocks: Schema.Array(Block),
+})
 
 /** Schema for {@link ThematicBreak}. */
 export const ThematicBreak = taggedStruct('ThematicBreak')
 
 /** Schema for {@link TableCell}. */
-export const TableCell = taggedStruct('TableCell', { content: S.Array(Inline) })
+export const TableCell = taggedStruct('TableCell', {
+  content: Schema.Array(Inline),
+})
 
 /** Schema for {@link TableRow}. */
-export const TableRow = taggedStruct('TableRow', { cells: S.Array(TableCell) })
+export const TableRow = taggedStruct('TableRow', {
+  cells: Schema.Array(TableCell),
+})
 
 /** Schema for {@link Table}. */
 export const Table = taggedStruct('Table', {
-  alignments: S.Array(Alignment),
+  alignments: Schema.Array(Alignment),
   headerRow: TableRow,
-  bodyRows: S.Array(TableRow),
+  bodyRows: Schema.Array(TableRow),
 })
 
 /** Schema for {@link Island}. */
 export const Island = taggedStruct('Island', {
-  name: S.String,
-  attributes: S.Record(S.String, S.String),
-  blocks: S.Array(Block),
+  name: Schema.String,
+  attributes: Schema.Record(Schema.String, Schema.String),
+  blocks: Schema.Array(Block),
 })
 
 // DOCUMENT
 
 /** A compiled markdown document: the block sequence of one source file. */
-export const MarkdownDocument = S.Struct({ blocks: S.Array(Block) })
+export const MarkdownDocument = Schema.Struct({ blocks: Schema.Array(Block) })
 export type MarkdownDocument = typeof MarkdownDocument.Type
 
 /** The wire form of {@link MarkdownDocument}. */
 export type MarkdownDocumentEncoded = typeof MarkdownDocument.Encoded
 
-const decodeDocumentUncached = S.decodeUnknownSync(MarkdownDocument)
+const decodeDocumentUncached = Schema.decodeUnknownSync(MarkdownDocument)
 
 const documentByWire = new WeakMap<object, MarkdownDocument>()
 
@@ -402,4 +424,4 @@ export const decodeDocument = (
 }
 
 /** Encodes a {@link MarkdownDocument} into its JSON-safe wire form. */
-export const encodeDocument = S.encodeSync(MarkdownDocument)
+export const encodeDocument = Schema.encodeSync(MarkdownDocument)

@@ -1,4 +1,4 @@
-import { Option, String as String_ } from 'effect'
+import { Option, String } from 'effect'
 
 import { serializedStylePropertyName } from '../domReflection.js'
 import type { VNode } from '../vdom.js'
@@ -181,7 +181,7 @@ export const sceneMatchers = {
               `Expected element to have style ${name}="${expectedValue}" but the style is not present.`,
           }),
           onSome: actualValue => {
-            const actual = String(actualValue)
+            const actual = globalThis.String(actualValue)
             return {
               pass: actual === expectedValue,
               message: () =>
@@ -324,8 +324,8 @@ export const sceneMatchers = {
       onSome: vnode => {
         const childCount = (vnode.children ?? []).length
         const text = textContent(vnode)
-        const pass = String_.isEmpty(text) && childCount === 0
-        const actual: string = String_.isNonEmpty(text)
+        const pass = String.isEmpty(text) && childCount === 0
+        const actual: string = String.isNonEmpty(text)
           ? `received text "${text}"`
           : `received ${childCount} child(ren)`
         return {

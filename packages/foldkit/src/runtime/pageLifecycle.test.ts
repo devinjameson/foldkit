@@ -1,4 +1,4 @@
-import { Number, Schema as S } from 'effect'
+import { Number, Schema } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { type Document, __htmlBuilder } from '../html/index.js'
@@ -12,7 +12,7 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 
-const Model = S.Struct({ count: S.Number })
+const Model = Schema.Struct({ count: Schema.Number })
 type Model = typeof Model.Type
 
 const update = (model: Model, message: Message) =>

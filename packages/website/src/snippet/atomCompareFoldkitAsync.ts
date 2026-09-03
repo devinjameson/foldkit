@@ -1,4 +1,4 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import { AsyncData, Command, type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
@@ -10,7 +10,7 @@ import { Api } from './api'
 // union, so there is no hand-rolled loading/failure/stale union to maintain.
 const UserAsyncData = AsyncData.Schema(User, ApiError)
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   user: UserAsyncData.schema,
 })
 type Model = typeof Model.Type

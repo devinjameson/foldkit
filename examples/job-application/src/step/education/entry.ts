@@ -1,4 +1,4 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import {
   Field,
@@ -35,14 +35,14 @@ const validateFieldOfStudy = validate(fieldOfStudyRules)
 
 // MODEL
 
-export const Model = S.Struct({
-  id: S.String,
-  school: Field(S.String),
-  degree: Field(S.String),
-  fieldOfStudy: Field(S.String),
-  maybeGraduationYear: S.Option(S.String),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  school: Field(Schema.String),
+  degree: Field(Schema.String),
+  fieldOfStudy: Field(Schema.String),
+  maybeGraduationYear: Schema.Option(Schema.String),
   graduationYearListbox: Listbox.Model,
-  isCurrentlyEnrolled: S.Boolean,
+  isCurrentlyEnrolled: Schema.Boolean,
 })
 export type Model = typeof Model.Type
 
@@ -51,11 +51,11 @@ const GraduationYearListbox = Listbox.create<string>()
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedSchool: { value: S.String },
-  UpdatedDegree: { value: S.String },
-  UpdatedFieldOfStudy: { value: S.String },
+  UpdatedSchool: { value: Schema.String },
+  UpdatedDegree: { value: Schema.String },
+  UpdatedFieldOfStudy: { value: Schema.String },
   GotGraduationYearListboxMessage: { message: Listbox.Message },
-  ToggledCurrentlyEnrolled: { isChecked: S.Boolean },
+  ToggledCurrentlyEnrolled: { isChecked: Schema.Boolean },
   ClickedRemoveSelf: {},
 })
 
@@ -87,16 +87,15 @@ export const init = (entryId: string): Model => ({
 
 // UPDATE
 
-const foldGraduationYearListboxOutMessage = M.type<Listbox.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({
-        model: evo(model, { maybeGraduationYear: () => Option.some(value) }),
-      }),
-  }),
-)
+const foldGraduationYearListboxOutMessage = Listbox.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Selected:
+    ({ value }) =>
+    model => ({
+      model: evo(model, { maybeGraduationYear: () => Option.some(value) }),
+    }),
+})
 
 const foldGraduationYearListbox = Update.foldChild({
   update: GraduationYearListbox.update,

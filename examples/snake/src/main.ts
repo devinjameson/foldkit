@@ -1,12 +1,4 @@
-import {
-  Array,
-  Duration,
-  Effect,
-  Match as M,
-  Schema as S,
-  Stream,
-  pipe,
-} from 'effect'
+import { Array, Duration, Effect, Match, Schema, Stream, pipe } from 'effect'
 import { Command, Runtime, Subscription, type Update } from 'foldkit'
 import { Document, Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -17,7 +9,7 @@ import { Apple, Direction, Position, Snake } from './domain'
 
 // MODEL
 
-export const GameState = S.Literals([
+export const GameState = Schema.Literals([
   'NotStarted',
   'Playing',
   'Paused',
@@ -25,14 +17,14 @@ export const GameState = S.Literals([
 ])
 export type GameState = typeof GameState.Type
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   snake: Snake.Snake,
   apple: Position.Position,
   direction: Direction.Direction,
   nextDirection: Direction.Direction,
   gameState: GameState,
-  points: S.Number,
-  highScore: S.Number,
+  points: Schema.Number,
+  highScore: Schema.Number,
 })
 export type Model = typeof Model.Type
 
@@ -40,7 +32,7 @@ export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   TickedClock: {},
-  PressedKey: { key: S.String },
+  PressedKey: { key: Schema.String },
   PausedGame: {},
   RestartedGame: {},
   CompletedGenerateApplePosition: { position: Position.Position },
@@ -74,9 +66,9 @@ type UpdateReturn = Update.Return<Model, Message>
 export const update = (model: Model, message: Message) =>
   Message.match<UpdateReturn>(message, {
     PressedKey: ({ key }) =>
-      M.value(key).pipe(
-        M.withReturnType<UpdateReturn>(),
-        M.whenOr(
+      Match.value(key).pipe(
+        Match.withReturnType<UpdateReturn>(),
+        Match.whenOr(
           'ArrowUp',
           'ArrowDown',
           'ArrowLeft',
@@ -86,13 +78,13 @@ export const update = (model: Model, message: Message) =>
           's',
           'd',
           moveKey => {
-            const nextDirection = M.value(moveKey).pipe(
-              M.withReturnType<Direction.Direction>(),
-              M.whenOr('ArrowUp', 'w', () => 'Up'),
-              M.whenOr('ArrowDown', 's', () => 'Down'),
-              M.whenOr('ArrowLeft', 'a', () => 'Left'),
-              M.whenOr('ArrowRight', 'd', () => 'Right'),
-              M.exhaustive,
+            const nextDirection = Match.value(moveKey).pipe(
+              Match.withReturnType<Direction.Direction>(),
+              Match.whenOr('ArrowUp', 'w', () => 'Up'),
+              Match.whenOr('ArrowDown', 's', () => 'Down'),
+              Match.whenOr('ArrowLeft', 'a', () => 'Left'),
+              Match.whenOr('ArrowRight', 'd', () => 'Right'),
+              Match.exhaustive,
             )
 
             if (model.gameState === 'Playing') {
@@ -106,14 +98,14 @@ export const update = (model: Model, message: Message) =>
             }
           },
         ),
-        M.when(' ', () => {
-          const nextGameState = M.value(model.gameState).pipe(
-            M.withReturnType<GameState>(),
-            M.when('NotStarted', () => 'Playing'),
-            M.when('Playing', () => 'Paused'),
-            M.when('Paused', () => 'Playing'),
-            M.when('GameOver', () => 'GameOver'),
-            M.exhaustive,
+        Match.when(' ', () => {
+          const nextGameState = Match.value(model.gameState).pipe(
+            Match.withReturnType<GameState>(),
+            Match.when('NotStarted', () => 'Playing'),
+            Match.when('Playing', () => 'Paused'),
+            Match.when('Paused', () => 'Playing'),
+            Match.when('GameOver', () => 'GameOver'),
+            Match.exhaustive,
           )
           return {
             model: evo(model, {
@@ -121,7 +113,7 @@ export const update = (model: Model, message: Message) =>
             }),
           }
         }),
-        M.when('r', () => {
+        Match.when('r', () => {
           const nextSnake = Snake.create(GAME.INITIAL_POSITION)
 
           return {
@@ -135,7 +127,7 @@ export const update = (model: Model, message: Message) =>
             commands: [GenerateApplePosition({ snake: nextSnake })],
           }
         }),
-        M.orElse(() => ({ model })),
+        Match.orElse(() => ({ model })),
       ),
 
     TickedClock: () => {
@@ -229,8 +221,8 @@ export const GenerateApplePosition = Command.define('GenerateApplePosition', {
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   gameClock: entry(
     {
-      isPlaying: S.Boolean,
-      interval: S.Number,
+      isPlaying: Schema.Boolean,
+      interval: Schema.Number,
     },
     {
       modelToDependencies: model => ({
@@ -272,11 +264,11 @@ const cellClass = (x: number, y: number, model: Model): string => {
   )
   const isApple = Position.equivalence({ x, y }, model.apple)
 
-  return M.value({ isSnakeHead, isSnakeTail, isApple }).pipe(
-    M.when({ isSnakeHead: true }, () => 'bg-green-700'),
-    M.when({ isSnakeTail: true }, () => 'bg-green-500'),
-    M.when({ isApple: true }, () => 'bg-red-500'),
-    M.orElse(() => 'bg-gray-800'),
+  return Match.value({ isSnakeHead, isSnakeTail, isApple }).pipe(
+    Match.when({ isSnakeHead: true }, () => 'bg-green-700'),
+    Match.when({ isSnakeTail: true }, () => 'bg-green-500'),
+    Match.when({ isApple: true }, () => 'bg-red-500'),
+    Match.orElse(() => 'bg-gray-800'),
   )
 }
 
@@ -294,12 +286,12 @@ const gridView = (model: Model, h: HtmlBuilder<Message>): Html =>
   )
 
 const gameStateView = (gameState: GameState): string =>
-  M.value(gameState).pipe(
-    M.when('NotStarted', () => 'Press SPACE to start'),
-    M.when('Playing', () => 'Playing - SPACE to pause'),
-    M.when('Paused', () => 'Paused - SPACE to continue'),
-    M.when('GameOver', () => 'Game Over - Press R to restart'),
-    M.exhaustive,
+  Match.value(gameState).pipe(
+    Match.when('NotStarted', () => 'Press SPACE to start'),
+    Match.when('Playing', () => 'Playing - SPACE to pause'),
+    Match.when('Paused', () => 'Paused - SPACE to continue'),
+    Match.when('GameOver', () => 'Game Over - Press R to restart'),
+    Match.exhaustive,
   )
 
 const instructionsView = (h: HtmlBuilder<Message>): Html =>

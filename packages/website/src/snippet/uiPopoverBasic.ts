@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -10,7 +10,7 @@ import { evo } from 'foldkit/struct'
 import { Popover } from '@foldkit/ui'
 
 // Add a field to your Model for the Popover Submodel:
-const Model = S.Struct({
+const Model = Schema.Struct({
   popover: Popover.Model,
   // ...your other fields
 })
@@ -33,19 +33,18 @@ const Message = defineMessageUnion({
 // other UI, or clear ephemeral state on close. Each arm returns an
 // Update.Step over the parent Model, which already has the next Popover Model
 // written back:
-const foldPopoverOutMessage = M.type<Popover.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    // The child has emitted `Opened`. In this arm the parent can update its
-    // own state or dispatch its own Commands, for example lazy-load panel
-    // content, log analytics, or trigger a downstream Command.
-    Opened: () => model => ({ model }),
-    // The child has emitted `Closed`. In this arm the parent can update its
-    // own state or dispatch its own Commands, for example persist a draft,
-    // clear ephemeral state, or trigger a downstream Command.
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldPopoverOutMessage = Popover.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  // The child has emitted `Opened`. In this arm the parent can update its
+  // own state or dispatch its own Commands, for example lazy-load panel
+  // content, log analytics, or trigger a downstream Command.
+  Opened: () => model => ({ model }),
+  // The child has emitted `Closed`. In this arm the parent can update its
+  // own state or dispatch its own Commands, for example persist a draft,
+  // clear ephemeral state, or trigger a downstream Command.
+  Closed: () => model => ({ model }),
+})
 
 // Update.foldChild wires the child into the parent: it runs Popover.update,
 // writes the next Popover Model back, maps the Submodel's Commands into your

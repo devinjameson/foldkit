@@ -2,11 +2,11 @@ import {
   Array,
   Effect,
   Equal,
-  Match as M,
+  Match,
   Option,
   Predicate,
-  Schema as S,
-  String as Str,
+  Schema,
+  String,
   pipe,
 } from 'effect'
 import * as Command from 'foldkit/command'
@@ -26,13 +26,12 @@ import {
 // NOTE: Animation imports are split across schema + update to avoid a circular
 // dependency: animation → html → runtime → devtools → menu → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
+import * as Animation from '../animation/schema.js'
 import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-  type OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
-import { update as animationUpdate } from '../animation/update.js'
+  hide as animationHide,
+  show as animationShow,
+  update as animationUpdate,
+} from '../animation/update.js'
 import { groupContiguous } from '../group.js'
 import * as OptionExt from '../internal/optionExtensions.js'
 import { idSelector } from '../internal/selectors.js'
@@ -46,31 +45,31 @@ import { resolveTypeaheadMatch } from '../typeahead.js'
 // MODEL
 
 /** Schema for the activation trigger: whether the user interacted via mouse or keyboard. */
-export const ActivationTrigger = S.Literals(['Pointer', 'Keyboard'])
+export const ActivationTrigger = Schema.Literals(['Pointer', 'Keyboard'])
 export type ActivationTrigger = typeof ActivationTrigger.Type
 
-const PointerOrigin = S.Struct({
-  screenX: S.Number,
-  screenY: S.Number,
-  timeStamp: S.Number,
+const PointerOrigin = Schema.Struct({
+  screenX: Schema.Number,
+  screenY: Schema.Number,
+  timeStamp: Schema.Number,
 })
 
 /** Schema for the menu component's state, tracking open/closed status, active item, activation trigger, and typeahead search. */
-export const Model = S.Struct({
-  id: S.String,
-  isOpen: S.Boolean,
-  isAnimated: S.Boolean,
-  isModal: S.Boolean,
-  animation: AnimationModel,
-  maybeActiveItemIndex: S.Option(S.Number),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  isOpen: Schema.Boolean,
+  isAnimated: Schema.Boolean,
+  isModal: Schema.Boolean,
+  animation: Animation.Model,
+  maybeActiveItemIndex: Schema.Option(Schema.Number),
   activationTrigger: ActivationTrigger,
-  searchQuery: S.String,
-  searchVersion: S.Number,
-  maybeLastPointerPosition: S.Option(
-    S.Struct({ screenX: S.Number, screenY: S.Number }),
+  searchQuery: Schema.String,
+  searchVersion: Schema.Number,
+  maybeLastPointerPosition: Schema.Option(
+    Schema.Struct({ screenX: Schema.Number, screenY: Schema.Number }),
   ),
-  maybeLastButtonPointerType: S.Option(S.String),
-  maybePointerOrigin: S.Option(PointerOrigin),
+  maybeLastButtonPointerType: Schema.Option(Schema.String),
+  maybePointerOrigin: Schema.Option(PointerOrigin),
 })
 
 export type Model = typeof Model.Type
@@ -79,19 +78,22 @@ export type Model = typeof Model.Type
 
 /** Union of all messages the menu component can produce. */
 export const Message = defineMessageUnion({
-  Opened: { maybeActiveItemIndex: S.Option(S.Number) },
+  Opened: { maybeActiveItemIndex: Schema.Option(Schema.Number) },
   Closed: {},
   BlurredItems: {},
-  ActivatedItem: { index: S.Number, activationTrigger: ActivationTrigger },
+  ActivatedItem: { index: Schema.Number, activationTrigger: ActivationTrigger },
   DeactivatedItem: {},
-  SelectedItem: { index: S.Number, item: S.String },
-  RequestedItemClick: { index: S.Number },
-  Searched: { key: S.String, maybeTargetIndex: S.Option(S.Number) },
-  CompletedDelayClearSearch: { version: S.Number },
+  SelectedItem: { index: Schema.Number, item: Schema.String },
+  RequestedItemClick: { index: Schema.Number },
+  Searched: {
+    key: Schema.String,
+    maybeTargetIndex: Schema.Option(Schema.Number),
+  },
+  CompletedDelayClearSearch: { version: Schema.Number },
   MovedPointerOverItem: {
-    index: S.Number,
-    screenX: S.Number,
-    screenY: S.Number,
+    index: Schema.Number,
+    screenX: Schema.Number,
+    screenY: Schema.Number,
   },
   CompletedFocusItems: {},
   CompletedFocusButton: {},
@@ -105,18 +107,18 @@ export const Message = defineMessageUnion({
   SuppressedSpaceScroll: {},
   CompletedAnchorMenu: {},
   CompletedPortalMenuBackdrop: {},
-  GotAnimationMessage: { message: AnimationMessage },
+  GotAnimationMessage: { message: Animation.Message },
   PressedPointerOnButton: {
-    pointerType: S.String,
-    button: S.Number,
-    screenX: S.Number,
-    screenY: S.Number,
-    timeStamp: S.Number,
+    pointerType: Schema.String,
+    button: Schema.Number,
+    screenX: Schema.Number,
+    screenY: Schema.Number,
+    timeStamp: Schema.Number,
   },
   ReleasedPointerOnItems: {
-    screenX: S.Number,
-    screenY: S.Number,
-    timeStamp: S.Number,
+    screenX: Schema.Number,
+    screenY: Schema.Number,
+    timeStamp: Schema.Number,
   },
 })
 
@@ -127,7 +129,7 @@ export type Message = typeof Message.Type
 /** Union of OutMessages the menu component can produce. The parent's
  *  `Update.foldChild` config handles them through `foldOutMessage`. */
 export const OutMessage = defineMessageUnion({
-  Selected: { value: S.String, index: S.Number },
+  Selected: { value: Schema.String, index: Schema.Number },
 })
 
 export type Selected<Value extends string = string> = Readonly<{
@@ -177,7 +179,7 @@ export const init = (config: InitConfig): Model => ({
   isOpen: false,
   isAnimated: config.isAnimated ?? false,
   isModal: config.isModal ?? false,
-  animation: animationInit({ id: `${config.id}-items` }),
+  animation: Animation.init({ id: `${config.id}-items` }),
   maybeActiveItemIndex: Option.none(),
   activationTrigger: 'Keyboard',
   searchQuery: '',
@@ -225,7 +227,7 @@ export const UnlockScroll = Command.define('UnlockScroll', {
 })
 /** Marks all elements outside the menu as inert for modal behavior. */
 export const InertOthers = Command.define('InertOthers', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedInertOthers],
   execute: ({ id }) =>
     Dom.inertOthers(id, [buttonSelector(id), itemsSelector(id)]).pipe(
@@ -234,14 +236,14 @@ export const InertOthers = Command.define('InertOthers', {
 })
 /** Removes the inert attribute from elements outside the menu. */
 export const RestoreInert = Command.define('RestoreInert', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedRestoreInert],
   execute: ({ id }) =>
     Dom.restoreInert(id).pipe(Effect.as(Message.CompletedRestoreInert())),
 })
 /** Moves focus to the menu items container after opening. */
 export const FocusItems = Command.define('FocusItems', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedFocusItems],
   execute: ({ id }) =>
     Dom.focus(itemsSelector(id)).pipe(
@@ -251,7 +253,7 @@ export const FocusItems = Command.define('FocusItems', {
 })
 /** Moves focus back to the menu button after closing. */
 export const FocusButton = Command.define('FocusButton', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedFocusButton],
   execute: ({ id }) =>
     Dom.focus(buttonSelector(id)).pipe(
@@ -261,7 +263,7 @@ export const FocusButton = Command.define('FocusButton', {
 })
 /** Scrolls the active menu item into view after keyboard navigation. */
 export const ScrollIntoView = Command.define('ScrollIntoView', {
-  args: { id: S.String, index: S.Number },
+  args: { id: Schema.String, index: Schema.Number },
   messages: [Message.CompletedScrollIntoView],
   execute: ({ id, index }) =>
     Dom.scrollIntoView(itemSelector(id, index)).pipe(
@@ -271,7 +273,7 @@ export const ScrollIntoView = Command.define('ScrollIntoView', {
 })
 /** Programmatically clicks the active menu item's DOM element. */
 export const ClickItem = Command.define('ClickItem', {
-  args: { id: S.String, index: S.Number },
+  args: { id: Schema.String, index: Schema.Number },
   messages: [Message.CompletedClickItem],
   execute: ({ id, index }) =>
     Dom.clickElement(itemSelector(id, index)).pipe(
@@ -281,7 +283,7 @@ export const ClickItem = Command.define('ClickItem', {
 })
 /** Waits for the typeahead search debounce period before clearing the query. */
 export const DelayClearSearch = Command.define('DelayClearSearch', {
-  args: { version: S.Number },
+  args: { version: Schema.Number },
   messages: [Message.CompletedDelayClearSearch],
   execute: ({ version }) =>
     Effect.sleep(SEARCH_DEBOUNCE_MILLISECONDS).pipe(
@@ -292,21 +294,21 @@ export const DelayClearSearch = Command.define('DelayClearSearch', {
 export const DetectMovementOrAnimationEnd = Command.define(
   'DetectMovementOrAnimationEnd',
   {
-    args: { id: S.String },
+    args: { id: Schema.String },
     messages: [Message.GotAnimationMessage],
     execute: ({ id }) =>
       Effect.raceFirst(
         Dom.detectElementMovement(buttonSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
         Dom.waitForAnimationSettled(itemsSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
@@ -314,16 +316,15 @@ export const DetectMovementOrAnimationEnd = Command.define(
   },
 )
 
-const foldAnimationOutMessage = M.type<AnimationOutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    StartedLeaveAnimating: () => model => ({
-      model,
-      commands: [DetectMovementOrAnimationEnd({ id: model.id })],
-    }),
-    TransitionedOut: () => model => ({ model }),
+const foldAnimationOutMessage = Animation.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  StartedLeaveAnimating: () => model => ({
+    model,
+    commands: [DetectMovementOrAnimationEnd({ id: model.id })],
   }),
-)
+  TransitionedOut: () => model => ({ model }),
+})
 
 const foldAnimation = Update.foldChild({
   update: animationUpdate,
@@ -332,6 +333,22 @@ const foldAnimation = Update.foldChild({
     evo(model, { animation: () => nextAnimation }),
   toParentMessage: message => Message.GotAnimationMessage({ message }),
   foldOutMessage: foldAnimationOutMessage,
+})
+
+const foldAnimationShow = Update.foldChildStep({
+  update: animationShow,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
+})
+
+const foldAnimationHide = Update.foldChildStep({
+  update: animationHide,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
 })
 
 /** Processes a Menu Message and returns the next Model, optional Commands, and
@@ -368,7 +385,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       return Update.combine(baseModel, [
         stepModel => ({ model: stepModel, commands: openCommands }),
-        foldAnimation(AnimationMessage.Showed()),
+        foldAnimationShow,
         stepModel => ({
           model: evo(stepModel, { isOpen: () => true }),
         }),
@@ -394,7 +411,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       return Update.combine(closed, [
         stepModel => ({ model: stepModel, commands }),
-        foldAnimation(AnimationMessage.Hid()),
+        foldAnimationHide,
       ])
     }
 
@@ -614,7 +631,7 @@ export const update = (model: Model, message: Message) => {
  *  Exposed so Scene tests can call
  *  `Scene.Mount.resolve(AnchorMenu, Message.CompletedAnchorMenu())`. */
 export const AnchorMenu = Mount.define('AnchorMenu', {
-  args: { buttonId: S.String, anchor: AnchorConfig },
+  args: { buttonId: Schema.String, anchor: AnchorConfig },
   messages: [Message.CompletedAnchorMenu],
   execute: ({ element, buttonId, anchor }) =>
     Effect.gen(function* () {
@@ -782,26 +799,26 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
 
     const animationAttributes: ReadonlyArray<
       ReturnType<typeof h.DataAttribute>
-    > = M.value(transitionState).pipe(
-      M.when('EnterStart', () => [
+    > = Match.value(transitionState).pipe(
+      Match.when('EnterStart', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('EnterAnimating', () => [
+      Match.when('EnterAnimating', () => [
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveStart', () => [
+      Match.when('LeaveStart', () => [
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveAnimating', () => [
+      Match.when('LeaveAnimating', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.orElse(() => []),
+      Match.orElse(() => []),
     )
 
     const isDisabled = (index: number): boolean =>
@@ -829,22 +846,22 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
         return handleItemsKeyDown(key)
       }
 
-      return M.value(key).pipe(
-        M.whenOr('Enter', ' ', 'ArrowDown', () =>
+      return Match.value(key).pipe(
+        Match.whenOr('Enter', ' ', 'ArrowDown', () =>
           Option.some(
             Message.Opened({
               maybeActiveItemIndex: Option.some(firstEnabledIndex),
             }),
           ),
         ),
-        M.when('ArrowUp', () =>
+        Match.when('ArrowUp', () =>
           Option.some(
             Message.Opened({
               maybeActiveItemIndex: Option.some(lastEnabledIndex),
             }),
           ),
         ),
-        M.orElse(() => Option.none()),
+        Match.orElse(() => Option.none()),
       )
     }
 
@@ -899,27 +916,27 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
         maybeActiveItemIndex,
         isDisabled,
         itemToSearchText,
-        Str.isNonEmpty(searchQuery),
+        String.isNonEmpty(searchQuery),
       )
       return Option.some(Message.Searched({ key, maybeTargetIndex }))
     }
 
     const handleItemsKeyDown = (key: string): Option.Option<Message> =>
-      M.value(key).pipe(
-        M.when('Escape', () => Option.some(Message.Closed())),
-        M.when('Enter', () =>
+      Match.value(key).pipe(
+        Match.when('Escape', () => Option.some(Message.Closed())),
+        Match.when('Enter', () =>
           Option.map(maybeActiveItemIndex, index =>
             Message.RequestedItemClick({ index }),
           ),
         ),
-        M.when(' ', () =>
-          Str.isNonEmpty(searchQuery)
+        Match.when(' ', () =>
+          String.isNonEmpty(searchQuery)
             ? searchForKey(' ')
             : Option.map(maybeActiveItemIndex, index =>
                 Message.RequestedItemClick({ index }),
               ),
         ),
-        M.whenOr(
+        Match.whenOr(
           'ArrowDown',
           'ArrowUp',
           'Home',
@@ -934,8 +951,8 @@ const menuViewImpl = defineView<Model, Message, ViewInputs<string>>(
               }),
             ),
         ),
-        M.when(isPrintableKey, () => searchForKey(key)),
-        M.orElse(() => Option.none()),
+        Match.when(isPrintableKey, () => searchForKey(key)),
+        Match.orElse(() => Option.none()),
       )
 
     const handleItemsPointerUp = (

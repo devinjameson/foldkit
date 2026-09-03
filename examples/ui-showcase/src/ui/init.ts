@@ -20,7 +20,7 @@ import {
   VirtualList,
 } from '@foldkit/ui'
 
-import type { UiMessage } from './message'
+import type { Message as UiMessage } from './message'
 import type { UiModel } from './model'
 import { Toast } from './toast'
 
@@ -173,7 +173,6 @@ export const uiInit = (today: Calendar.CalendarDate): InitReturn => ({
       showDelay: 0,
     }),
     animationDemo: Animation.init({ id: 'animation-demo' }),
-    isAnimationDemoShowing: false,
     virtualListDemo: VirtualList.init({
       id: 'virtual-list-demo',
       rowHeightPx: 56,

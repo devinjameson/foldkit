@@ -1,4 +1,4 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 import { Command, Dom } from 'foldkit'
 
 import { ROOM_ID_INPUT_ID, USERNAME_INPUT_ID } from '../../constant'
@@ -6,7 +6,7 @@ import { RoomsClient } from '../../rpc'
 import { Message } from './message'
 
 export const CreateRoom = Command.define('CreateRoom', {
-  args: { username: S.String },
+  args: { username: Schema.String },
   messages: [Message.SucceededCreateRoom, Message.FailedCreateRoom],
   execute: ({ username }) =>
     Effect.gen(function* () {
@@ -21,7 +21,7 @@ export const CreateRoom = Command.define('CreateRoom', {
 })
 
 export const JoinRoom = Command.define('JoinRoom', {
-  args: { username: S.String, roomId: S.String },
+  args: { username: Schema.String, roomId: Schema.String },
   messages: [Message.SucceededJoinRoom, Message.FailedJoinRoom],
   execute: ({ username, roomId }) =>
     Effect.gen(function* () {

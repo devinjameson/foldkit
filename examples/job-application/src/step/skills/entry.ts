@@ -1,4 +1,4 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import {
   Field,
@@ -32,9 +32,9 @@ export const proficiencyRadioGroupId = (entryId: string): string =>
 export const ProficiencyRadioGroup =
   RadioGroup.create<ProficiencyLevel.ProficiencyLevel>()
 
-export const Model = S.Struct({
-  id: S.String,
-  name: Field(S.String),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  name: Field(Schema.String),
   proficiency: ProficiencyLevel.ProficiencyLevel,
   proficiencyRadioGroup: RadioGroup.Model,
 })
@@ -43,7 +43,7 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedName: { value: S.String },
+  UpdatedName: { value: Schema.String },
   GotProficiencyRadioGroupMessage: { message: RadioGroup.Message },
   ClickedRemoveSelf: {},
 })
@@ -73,16 +73,14 @@ export const init = (entryId: string): Model => ({
 
 // UPDATE
 
-const foldProficiencyRadioGroupOutMessage = M.type<
+const foldProficiencyRadioGroupOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<ProficiencyLevel.ProficiencyLevel>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected:
-      ({ value }) =>
-      model => ({ model: evo(model, { proficiency: () => value }) }),
-  }),
-)
+>({
+  Selected:
+    ({ value }) =>
+    model => ({ model: evo(model, { proficiency: () => value }) }),
+})
 
 const foldProficiencyRadioGroup = Update.foldChild({
   update: ProficiencyRadioGroup.update,

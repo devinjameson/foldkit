@@ -1,21 +1,30 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { Calendar } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest } from 'foldkit/navigation'
 import { Url } from 'foldkit/url'
 
-import { Dialog, Menu, Tabs } from '@foldkit/ui'
+import { Dialog } from '@foldkit/ui'
 
-import * as Page from './page'
+import {
+  ApiReference,
+  ComingFromReact,
+  Core,
+  Example,
+  Home,
+  Playground,
+  Ui,
+} from './page'
 import * as Search from './search'
 import { GroupKey, SidebarState } from './sidebarStorage'
+import * as SnippetCopy from './snippetCopy'
 
 // THEME
 
-export const ThemePreference = S.Literals(['Dark', 'Light', 'System'])
+export const ThemePreference = Schema.Literals(['Dark', 'Light', 'System'])
 export type ThemePreference = typeof ThemePreference.Type
 
-export const ResolvedTheme = S.Literals(['Dark', 'Light'])
+export const ResolvedTheme = Schema.Literals(['Dark', 'Light'])
 export type ResolvedTheme = typeof ResolvedTheme.Type
 
 // MESSAGE
@@ -23,6 +32,7 @@ export type ResolvedTheme = typeof ResolvedTheme.Type
 export const Message = defineMessageUnion({
   CompletedNavigateInternal: {},
   CompletedLoadExternal: {},
+  CompletedLoadPlayground: {},
   CompletedInjectAnalytics: {},
   CompletedInjectSpeedInsights: {},
   CompletedScrollToTop: {},
@@ -31,12 +41,12 @@ export const Message = defineMessageUnion({
   CompletedSaveThemePreference: {},
   CompletedSaveSidebarState: {},
   CompletedLoadBrowserEnvironment: {
-    maybeThemePreference: S.Option(ThemePreference),
-    maybeSidebarState: S.Option(SidebarState),
+    maybeThemePreference: Schema.Option(ThemePreference),
+    maybeSidebarState: Schema.Option(SidebarState),
     systemTheme: ResolvedTheme,
-    isNarrowViewport: S.Boolean,
-    isChromium: S.Boolean,
-    currentYear: S.Number,
+    isNarrowViewport: Schema.Boolean,
+    isChromium: Schema.Boolean,
+    currentYear: Schema.Number,
     today: Calendar.CalendarDate,
   },
   CompletedScrollSidebarActiveLinkIntoView: {},
@@ -45,31 +55,26 @@ export const Message = defineMessageUnion({
   FailedCopyLink: {},
   ClickedLink: { request: UrlRequest },
   ChangedUrl: { url: Url },
-  ClickedCopySnippet: { text: S.String },
-  ClickedCopyLink: { hash: S.String },
-  SucceededCopySnippet: { text: S.String },
-  FailedCopySnippet: {},
-  CompletedWaitBeforeHidingCopiedIndicator: { text: S.String },
+  ClickedCopyLink: { hash: Schema.String },
   GotMobileMenuDialogMessage: { message: Dialog.Message },
   ClickedOpenMobileMenu: {},
-  ToggledMobileTableOfContents: { isOpen: S.Boolean },
-  ClickedMobileTableOfContentsLink: { sectionId: S.String },
-  ChangedActiveSection: { sectionId: S.String },
+  ClickedOpenSearch: {},
+  PressedSearchShortcut: {},
+  ToggledMobileTableOfContents: { isOpen: Schema.Boolean },
+  ClickedMobileTableOfContentsLink: { sectionId: Schema.String },
+  ChangedActiveSection: { sectionId: Schema.String },
   SelectedThemePreference: { preference: ThemePreference },
   ChangedSystemTheme: { theme: ResolvedTheme },
-  ChangedViewportWidth: { isNarrow: S.Boolean },
-  ToggledAiHeading: {},
-  GotDemoTabsMessage: { message: Tabs.Message },
-  GotPlaygroundMenuMessage: { message: Menu.Message },
-  GotPlaygroundMessage: { message: Page.Playground.Message },
-  GotAsyncCounterDemoMessage: { message: Page.AsyncCounterDemo.Message },
-  GotNotePlayerDemoMessage: { message: Page.NotePlayerDemo.Message },
-  GotComingFromReactMessage: { message: Page.ComingFromReact.Message },
-  GotApiReferenceMessage: { message: Page.ApiReference.Message },
-  GotUiPageMessage: { message: Page.UiPages.Message },
-  ToggledSidebarGroup: { key: GroupKey, isOpen: S.Boolean },
-  GotExampleDetailMessage: { message: Page.Example.ExampleDetail.Message },
+  ChangedViewportWidth: { isNarrow: Schema.Boolean },
+  GotHomeMessage: { message: Home.Message },
+  GotSnippetCopyMessage: { message: SnippetCopy.Message },
+  GotCoreSubmodelPageMessage: { message: Core.SubmodelPage.Message },
+  GotPlaygroundMessage: { message: Playground.Message },
+  GotComingFromReactMessage: { message: ComingFromReact.Message },
+  GotApiReferenceMessage: { message: ApiReference.Message },
+  GotUiPageMessage: { message: Ui.Message },
+  ToggledSidebarGroup: { key: GroupKey, isOpen: Schema.Boolean },
+  GotExampleDetailMessage: { message: Example.ExampleDetail.Message },
   GotSearchMessage: { message: Search.Message },
-  ToggledMapMessagesUnderHood: { isOpen: S.Boolean },
 })
 export type Message = typeof Message.Type

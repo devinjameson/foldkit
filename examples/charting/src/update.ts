@@ -1,4 +1,4 @@
-import { Array, Match as M, Option, Result, pipe } from 'effect'
+import { Array, Option, Result, pipe } from 'effect'
 import { AsyncData, Command, Update } from 'foldkit'
 import { evo } from 'foldkit/struct'
 
@@ -70,14 +70,12 @@ const selectedControl =
     }
   }
 
-const foldChartModeRadioGroupOutMessage = M.type<
+const foldChartModeRadioGroupOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<ChartMode>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected: ({ value }) => selectedControl(evo({ chartMode: () => value })),
-  }),
-)
+>({
+  Selected: ({ value }) => selectedControl(evo({ chartMode: () => value })),
+})
 
 const foldChartModeRadioGroup = Update.foldChild({
   update: ChartModeRadioGroup.update,
@@ -89,14 +87,12 @@ const foldChartModeRadioGroup = Update.foldChild({
   foldOutMessage: foldChartModeRadioGroupOutMessage,
 })
 
-const foldPeriodRadioGroupOutMessage = M.type<
+const foldPeriodRadioGroupOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<Period>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected: ({ value }) => selectedControl(evo({ period: () => value })),
-  }),
-)
+>({
+  Selected: ({ value }) => selectedControl(evo({ period: () => value })),
+})
 
 const foldPeriodRadioGroup = Update.foldChild({
   update: PeriodRadioGroup.update,
@@ -107,15 +103,13 @@ const foldPeriodRadioGroup = Update.foldChild({
   foldOutMessage: foldPeriodRadioGroupOutMessage,
 })
 
-const foldPackageRadioGroupOutMessage = M.type<
+const foldPackageRadioGroupOutMessage = RadioGroup.OutMessage.match<
+  Update.Step<Model, Message>,
   RadioGroup.OutMessage<PackageId>
->().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Selected: ({ value }) =>
-      selectedControl(evo({ selectedPackageId: () => value })),
-  }),
-)
+>({
+  Selected: ({ value }) =>
+    selectedControl(evo({ selectedPackageId: () => value })),
+})
 
 const foldPackageRadioGroup = Update.foldChild({
   update: PackageRadioGroup.update,

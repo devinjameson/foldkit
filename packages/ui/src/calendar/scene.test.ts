@@ -1,4 +1,4 @@
-import { Match as M, Option } from 'effect'
+import { Match, Option } from 'effect'
 import * as Calendar from 'foldkit/calendar'
 import { inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
@@ -19,8 +19,8 @@ const today = Calendar.make(2026, 4, 13)
  * can query them. Pattern-matches on `_tag` so each viewMode renders the
  * appropriate grid (days, months, years). */
 const testToView = (attrs: CalendarAttributes) =>
-  M.value(attrs).pipe(
-    M.tagsExhaustive({
+  Match.value(attrs).pipe(
+    Match.tagsExhaustive({
       Days: days =>
         ih.div(days.root, [
           ih.div(

@@ -82,8 +82,8 @@ Configuration object passed to `Textarea.view()`.
 
 Attribute groups provided to the `toView` callback.
 
-| Name          | Type                                | Default | Description                                                                                          |
-| ------------- | ----------------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
-| `textarea`    | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto the `<textarea>` element. Includes id, rows, value, ARIA attributes, and event handlers. |
-| `label`       | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto the `<label>` element. Includes a for attribute linking to the textarea id.              |
-| `description` | `ReadonlyArray<Attribute<Message>>` | —       | Spread onto a description element. Includes an id that the textarea references via aria-describedby. |
+| Name          | Type                                        | Default | Description                                                                                          |
+| ------------- | ------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `textarea`    | `ReadonlyArray<TextareaAttribute<Message>>` | —       | Spread onto the `<textarea>` element. Includes id, rows, value, ARIA attributes, and event handlers. |
+| `label`       | `ReadonlyArray<Attribute<Message>>`         | —       | Spread onto the `<label>` element. Includes a for attribute linking to the textarea id.              |
+| `description` | `ReadonlyArray<Attribute<Message>>`         | —       | Spread onto a description element. Includes an id that the textarea references via aria-describedby. |

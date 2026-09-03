@@ -1,54 +1,78 @@
-import { Match as M, Option } from 'effect'
-import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
+import { Match, Option } from 'effect'
+import {
+  Html,
+  type HtmlBuilder,
+  createKeyedLazy,
+  inertHtml as ih,
+} from 'foldkit/html'
 
-import { type Model } from '../main'
-import { type Message } from '../message'
-import * as Page from '../page'
-import { type BlogPostRoute, type BlogRoute, homeRouter } from '../route'
+import { Shared } from '../component'
 import {
   docsFooterView,
   docsHeaderView,
   searchSubmodelView,
   searchWeight,
-} from './docs'
-import { skipNavLink } from './shared'
-import { mobileMenuView } from './sidebar'
+} from '../layout/docs'
+import { Message } from '../message'
+import { type Model } from '../model'
+import { Blog, NotFound } from '../page'
+import * as Prose from '../prose'
+import { type BlogPostRoute, type BlogRoute, homeRouter } from '../route'
+import * as SnippetCopy from '../snippetCopy'
+import * as Sidebar from './sidebar'
 
 const PagefindBody = ih.DataAttribute('pagefind-body', '')
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 
+const postView = (
+  post: Blog.BlogPost,
+  snippetCopy: SnippetCopy.Model,
+  h: HtmlBuilder<Message>,
+): Html =>
+  Blog.BlogPostPage.view(
+    post,
+    SnippetCopy.renderer(
+      snippetCopy,
+      message => Message.GotSnippetCopyMessage({ message }),
+      h,
+    ),
+    Prose.renderHeadingLink(hash => Message.ClickedCopyLink({ hash }), h),
+  )
+
+const lazyPostView = createKeyedLazy()
+
 // VIEW
 
-export const blogView = (
+export const view = (
   model: Model,
   blogRoute: BlogRoute | BlogPostRoute,
   h: HtmlBuilder<Message>,
 ): Html => {
-  const content = M.value(blogRoute).pipe(
-    M.withReturnType<Html>(),
-    M.tagsExhaustive({
-      Blog: () => Page.Blog.BlogIndex.view(),
+  const content = Match.value(blogRoute).pipe(
+    Match.withReturnType<Html>(),
+    Match.tagsExhaustive({
+      Blog: () => Blog.BlogIndex.view(),
       BlogPost: ({ postSlug }) =>
-        Option.match(Page.Blog.findPostBySlug(postSlug), {
-          onNone: () => Page.NotFound.view(postSlug, homeRouter()),
+        Option.match(Blog.findPostBySlug(postSlug), {
+          onNone: () => NotFound.view(postSlug, homeRouter()),
           onSome: post =>
-            Page.Blog.BlogPostPage.view(post, model.copiedSnippets, h),
+            lazyPostView(post.slug, postView, [post, model.snippetCopy, h]),
         }),
     }),
   )
 
-  const contentKey = M.value(blogRoute).pipe(
-    M.tag('BlogPost', ({ postSlug }) => `BlogPost-${postSlug}`),
-    M.orElse(({ _tag }) => _tag),
+  const contentKey = Match.value(blogRoute).pipe(
+    Match.tag('BlogPost', ({ postSlug }) => `BlogPost-${postSlug}`),
+    Match.orElse(({ _tag }) => _tag),
   )
 
   return h.div(
     [h.Class('flex flex-col min-h-screen')],
     [
-      skipNavLink,
+      Shared.skipNavLink,
       docsHeaderView(model, h),
       searchSubmodelView(model, h),
-      mobileMenuView(model, h),
+      Sidebar.mobileView(model, h),
       h.main(
         [
           h.Id('main-content'),

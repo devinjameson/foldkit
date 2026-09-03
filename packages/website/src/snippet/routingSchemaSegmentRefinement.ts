@@ -1,4 +1,4 @@
-import { Schema as S, pipe } from 'effect'
+import { Schema, pipe } from 'effect'
 import { Route } from 'foldkit'
 import { defineRouteUnion, literal, schemaSegment, slash } from 'foldkit/route'
 
@@ -7,8 +7,8 @@ import { defineRouteUnion, literal, schemaSegment, slash } from 'foldkit/route'
 // model carries a ProductId distinct from any other string.
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const ProductId = S.String.check(S.isPattern(UUID_PATTERN)).pipe(
-  S.brand('ProductId'),
+const ProductId = Schema.String.check(Schema.isPattern(UUID_PATTERN)).pipe(
+  Schema.brand('ProductId'),
 )
 type ProductId = typeof ProductId.Type
 

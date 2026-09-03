@@ -1,10 +1,10 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 // TRANSITION STATE
 
 /** Schema for the animation lifecycle state, tracking enter/leave phases. */
-export const TransitionState = S.Literals([
+export const TransitionState = Schema.Literals([
   'Idle',
   'EnterStart',
   'EnterAnimating',
@@ -16,9 +16,9 @@ export type TransitionState = typeof TransitionState.Type
 // MODEL
 
 /** Schema for the animation component's state, tracking its unique ID, visibility intent, and lifecycle phase. */
-export const Model = S.Struct({
-  id: S.String,
-  isShowing: S.Boolean,
+export const Model = Schema.Struct({
+  id: Schema.String,
+  isShowing: Schema.Boolean,
   transitionState: TransitionState,
 })
 

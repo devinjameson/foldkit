@@ -1,23 +1,14 @@
-import {
-  DateTime,
-  Effect,
-  Option,
-  Record as Record_,
-  Schema as S,
-} from 'effect'
+import { DateTime, Effect, Option, Record, Schema } from 'effect'
 import { Calendar } from 'foldkit'
 import { Server } from 'foldkit/experimental'
 import { fromString as urlFromString } from 'foldkit/url'
 
 import { deployment } from './deployment'
 import { Flags, init, view } from './main'
-import { ParsedApiReference } from './page/apiReference/domain'
-import { type ApiData, sliceApiDataToModule } from './page/apiReference/model'
-import { exampleSlugs } from './page/example/meta'
-import { type ExampleSources, loadSourcesForSlug } from './page/example/sources'
+import { ApiReference, Example } from './page'
 import { urlToAppRoute } from './route'
 
-type SourcesBySlug = Readonly<Record<string, ExampleSources>>
+type SourcesBySlug = Readonly<globalThis.Record<string, Example.ExampleSources>>
 
 const baseFlags: Effect.Effect<typeof Flags.Type> = Effect.gen(function* () {
   const currentYear = yield* DateTime.now.pipe(
@@ -37,7 +28,7 @@ const baseFlags: Effect.Effect<typeof Flags.Type> = Effect.gen(function* () {
 // NOTE: the same data the LoadApiData and LoadExampleSources Commands import
 // lazily in the browser, loaded eagerly here so the prerendered Model carries
 // full page content instead of the Commands' loading states.
-const loadApiData: Effect.Effect<ApiData> = Effect.map(
+const loadApiData: Effect.Effect<ApiReference.ApiData> = Effect.map(
   Effect.promise(() =>
     Promise.all([
       import('virtual:parsed-api'),
@@ -45,7 +36,9 @@ const loadApiData: Effect.Effect<ApiData> = Effect.map(
     ]),
   ),
   ([parsedApiModule, highlightsModule]) => ({
-    parsedApi: S.decodeUnknownSync(ParsedApiReference)(parsedApiModule.default),
+    parsedApi: Schema.decodeUnknownSync(ApiReference.ParsedApiReference)(
+      parsedApiModule.default,
+    ),
     highlights: highlightsModule.default,
   }),
 )
@@ -53,20 +46,20 @@ const loadApiData: Effect.Effect<ApiData> = Effect.map(
 const loadAllExampleSources: Effect.Effect<SourcesBySlug> = Effect.map(
   Effect.promise(() =>
     Promise.all(
-      exampleSlugs.map(
-        async (slug): Promise<readonly [string, ExampleSources]> => [
+      Example.exampleSlugs.map(
+        async (slug): Promise<readonly [string, Example.ExampleSources]> => [
           slug,
-          await loadSourcesForSlug(slug),
+          await Example.loadSourcesForSlug(slug),
         ],
       ),
     ),
   ),
-  Record_.fromEntries,
+  Record.fromEntries,
 )
 
 const flagsForRequest = (
   baseFlags: typeof Flags.Type,
-  apiData: ApiData,
+  apiData: ApiReference.ApiData,
   sourcesBySlug: SourcesBySlug,
   request: Request,
 ): typeof Flags.Type => {
@@ -84,7 +77,7 @@ const flagsForRequest = (
       candidate => candidate._tag === 'ApiModule',
     ).pipe(
       Option.flatMap(({ moduleSlug }) =>
-        sliceApiDataToModule(apiData, moduleSlug),
+        ApiReference.sliceApiDataToModule(apiData, moduleSlug),
       ),
     ),
     maybeExampleSources: Option.liftPredicate(
@@ -92,14 +85,14 @@ const flagsForRequest = (
       candidate => candidate._tag === 'ExampleDetail',
     ).pipe(
       Option.flatMap(({ exampleSlug }) =>
-        Record_.get(sourcesBySlug, exampleSlug),
+        Record.get(sourcesBySlug, exampleSlug),
       ),
     ),
   })
 }
 
 type RenderContext = Readonly<{
-  apiData: ApiData
+  apiData: ApiReference.ApiData
   sourcesBySlug: SourcesBySlug
   baseFlags: typeof Flags.Type
 }>

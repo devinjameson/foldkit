@@ -1,4 +1,4 @@
-import { Array, Crypto, Effect, Match as M, Schema as S } from 'effect'
+import { Array, Crypto, Effect, Schema } from 'effect'
 import { Calendar, Command, Update } from 'foldkit'
 import { type CalendarDate } from 'foldkit/calendar'
 import { defineMessageUnion } from 'foldkit/message'
@@ -10,8 +10,8 @@ import * as Entry from './entry'
 
 // MODEL
 
-export const Model = S.Struct({
-  entries: S.Array(Entry.Model),
+export const Model = Schema.Struct({
+  entries: Schema.Array(Entry.Model),
   today: Calendar.CalendarDate,
 })
 export type Model = typeof Model.Type
@@ -20,11 +20,11 @@ export type Model = typeof Model.Type
 
 export const Message = defineMessageUnion({
   ClickedAddEntry: {},
-  SucceededGenerateEntryId: { entryId: S.String },
+  SucceededGenerateEntryId: { entryId: Schema.String },
   FailedGenerateEntryId: {},
-  RemovedEntry: { entryId: S.String },
+  RemovedEntry: { entryId: Schema.String },
   GotEntryMessage: {
-    entryId: S.String,
+    entryId: Schema.String,
     message: Entry.Message,
   },
 })
@@ -57,16 +57,13 @@ export const GenerateEntryId = Command.define('GenerateEntryId', {
 const foldEntryOutMessage: (
   entryId: string,
 ) => (outMessage: Entry.OutMessage) => Update.Step<Model, Message> = entryId =>
-  M.type<Entry.OutMessage>().pipe(
-    M.withReturnType<Update.Step<Model, Message>>(),
-    M.tagsExhaustive({
-      Removed: () => model => ({
-        model: evo(model, {
-          entries: Array.filter(entry => entry.id !== entryId),
-        }),
+  Entry.OutMessage.match<Update.Step<Model, Message>>({
+    Removed: () => model => ({
+      model: evo(model, {
+        entries: Array.filter(entry => entry.id !== entryId),
       }),
     }),
-  )
+  })
 
 const foldEntry = (entryId: string) =>
   Update.foldChild({

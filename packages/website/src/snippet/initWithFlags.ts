@@ -1,15 +1,15 @@
-import { Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import type { Runtime } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
-const Model = S.Struct({
-  count: S.Number,
-  startingCount: S.Option(S.Number),
+const Model = Schema.Struct({
+  count: Schema.Number,
+  startingCount: Schema.Option(Schema.Number),
 })
 type Model = typeof Model.Type
 
-const Flags = S.Struct({
-  savedCount: S.Option(S.Number),
+const Flags = Schema.Struct({
+  savedCount: Schema.Option(Schema.Number),
 })
 type Flags = typeof Flags.Type
 

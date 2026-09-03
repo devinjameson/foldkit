@@ -2,10 +2,10 @@ import {
   Array,
   Effect,
   Equal,
-  Match as M,
+  Match,
   Option,
   Predicate,
-  Schema as S,
+  Schema,
   pipe,
 } from 'effect'
 import * as Command from 'foldkit/command'
@@ -25,27 +25,26 @@ import {
 // NOTE: Animation imports are split across schema + update to avoid a circular
 // dependency: animation → html → runtime → devtools → popover → animation.
 // The barrel (../animation) imports from html, which starts the cycle.
+import * as Animation from '../animation/schema.js'
 import {
-  Message as AnimationMessage,
-  Model as AnimationModel,
-  type OutMessage as AnimationOutMessage,
-  init as animationInit,
-} from '../animation/schema.js'
-import { update as animationUpdate } from '../animation/update.js'
+  hide as animationHide,
+  show as animationShow,
+  update as animationUpdate,
+} from '../animation/update.js'
 import * as OptionExt from '../internal/optionExtensions.js'
 import { idSelector } from '../internal/selectors.js'
 
 // MODEL
 
 /** Schema for the popover component's state, tracking open/closed status and animation lifecycle. */
-export const Model = S.Struct({
-  id: S.String,
-  isOpen: S.Boolean,
-  isAnimated: S.Boolean,
-  isModal: S.Boolean,
-  contentFocus: S.Boolean,
-  animation: AnimationModel,
-  maybeLastButtonPointerType: S.Option(S.String),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  isOpen: Schema.Boolean,
+  isAnimated: Schema.Boolean,
+  isModal: Schema.Boolean,
+  contentFocus: Schema.Boolean,
+  animation: Animation.Model,
+  maybeLastButtonPointerType: Schema.Option(Schema.String),
 })
 
 export type Model = typeof Model.Type
@@ -58,8 +57,8 @@ export const Message = defineMessageUnion({
   RequestedClose: {},
   BlurredPanel: {},
   PressedPointerOnButton: {
-    pointerType: S.String,
-    button: S.Number,
+    pointerType: Schema.String,
+    button: Schema.Number,
   },
   CompletedFocusPanel: {},
   CompletedFocusButton: {},
@@ -71,7 +70,7 @@ export const Message = defineMessageUnion({
   SuppressedSpaceScroll: {},
   CompletedAnchorPopover: {},
   CompletedPortalPopoverBackdrop: {},
-  GotAnimationMessage: { message: AnimationMessage },
+  GotAnimationMessage: { message: Animation.Message },
 })
 
 export type RequestedOpen = typeof Message.RequestedOpen.Type
@@ -116,7 +115,7 @@ export const init = (config: InitConfig): Model => ({
   isAnimated: config.isAnimated ?? false,
   isModal: config.isModal ?? false,
   contentFocus: config.contentFocus ?? false,
-  animation: animationInit({ id: `${config.id}-panel` }),
+  animation: Animation.init({ id: `${config.id}-panel` }),
   maybeLastButtonPointerType: Option.none(),
 })
 
@@ -157,7 +156,7 @@ export const UnlockScroll = Command.define('UnlockScroll', {
 })
 /** Marks all elements outside the popover as inert for modal behavior. */
 export const InertOthers = Command.define('InertOthers', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedInertOthers],
   execute: ({ id }) =>
     Dom.inertOthers(id, [buttonSelector(id), panelSelector(id)]).pipe(
@@ -166,14 +165,14 @@ export const InertOthers = Command.define('InertOthers', {
 })
 /** Removes the inert attribute from elements outside the popover. */
 export const RestoreInert = Command.define('RestoreInert', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedRestoreInert],
   execute: ({ id }) =>
     Dom.restoreInert(id).pipe(Effect.as(Message.CompletedRestoreInert())),
 })
 /** Moves focus to the popover panel after opening. */
 export const FocusPanel = Command.define('FocusPanel', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedFocusPanel],
   execute: ({ id }) =>
     Dom.focus(panelSelector(id)).pipe(
@@ -183,7 +182,7 @@ export const FocusPanel = Command.define('FocusPanel', {
 })
 /** Moves focus back to the popover button after closing. */
 export const FocusButton = Command.define('FocusButton', {
-  args: { id: S.String },
+  args: { id: Schema.String },
   messages: [Message.CompletedFocusButton],
   execute: ({ id }) =>
     Dom.focus(buttonSelector(id)).pipe(
@@ -195,21 +194,21 @@ export const FocusButton = Command.define('FocusButton', {
 export const DetectMovementOrAnimationEnd = Command.define(
   'DetectMovementOrAnimationEnd',
   {
-    args: { id: S.String },
+    args: { id: Schema.String },
     messages: [Message.GotAnimationMessage],
     execute: ({ id }) =>
       Effect.raceFirst(
         Dom.detectElementMovement(buttonSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
         Dom.waitForAnimationSettled(panelSelector(id)).pipe(
           Effect.as(
             Message.GotAnimationMessage({
-              message: AnimationMessage.EndedAnimation(),
+              message: Animation.Message.EndedAnimation(),
             }),
           ),
         ),
@@ -217,16 +216,15 @@ export const DetectMovementOrAnimationEnd = Command.define(
   },
 )
 
-const foldAnimationOutMessage = M.type<AnimationOutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    StartedLeaveAnimating: () => model => ({
-      model,
-      commands: [DetectMovementOrAnimationEnd({ id: model.id })],
-    }),
-    TransitionedOut: () => model => ({ model }),
+const foldAnimationOutMessage = Animation.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  StartedLeaveAnimating: () => model => ({
+    model,
+    commands: [DetectMovementOrAnimationEnd({ id: model.id })],
   }),
-)
+  TransitionedOut: () => model => ({ model }),
+})
 
 const foldAnimation = Update.foldChild({
   update: animationUpdate,
@@ -235,6 +233,22 @@ const foldAnimation = Update.foldChild({
     evo(model, { animation: () => nextAnimation }),
   toParentMessage: message => Message.GotAnimationMessage({ message }),
   foldOutMessage: foldAnimationOutMessage,
+})
+
+const foldAnimationShow = Update.foldChildStep({
+  update: animationShow,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
+})
+
+const foldAnimationHide = Update.foldChildStep({
+  update: animationHide,
+  read: (model: Model) => Option.some(model.animation),
+  write: (model, nextAnimation) =>
+    evo(model, { animation: () => nextAnimation }),
+  toParentMessage: message => Message.GotAnimationMessage({ message }),
 })
 
 /** Processes a Popover Message and returns the next Model, optional Commands,
@@ -270,7 +284,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       const popoverOpen = Update.combine(baseModel, [
         stepModel => ({ model: stepModel, commands: openCommands }),
-        foldAnimation(AnimationMessage.Showed()),
+        foldAnimationShow,
         stepModel => ({
           model: evo(stepModel, { isOpen: () => true }),
         }),
@@ -298,7 +312,7 @@ export const update = (model: Model, message: Message) => {
     if (model.isAnimated) {
       return Update.combine(closed, [
         stepModel => ({ model: stepModel, commands }),
-        foldAnimation(AnimationMessage.Hid()),
+        foldAnimationHide,
       ])
     }
 
@@ -382,11 +396,11 @@ export const update = (model: Model, message: Message) => {
  *  to acknowledge the mount produced by the rendered panel. */
 export const AnchorPopover = Mount.define('AnchorPopover', {
   args: {
-    buttonId: S.String,
+    buttonId: Schema.String,
     anchor: AnchorConfig,
-    focusSelector: S.optional(S.String),
-    arrowId: S.optional(S.String),
-    arrowPadding: S.optional(S.Number),
+    focusSelector: Schema.optional(Schema.String),
+    arrowId: Schema.optional(Schema.String),
+    arrowPadding: Schema.optional(Schema.Number),
   },
   messages: [Message.CompletedAnchorPopover],
   execute: ({
@@ -504,41 +518,41 @@ export const view = defineView<Model, Message, ViewInputs>(
       transitionState === 'LeaveStart' || transitionState === 'LeaveAnimating'
     const isVisible = isOpen || isLeaving
 
-    const animationAttributes = M.value(transitionState).pipe(
-      M.when('EnterStart', () => [
+    const animationAttributes = Match.value(transitionState).pipe(
+      Match.when('EnterStart', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('EnterAnimating', () => [
+      Match.when('EnterAnimating', () => [
         h.DataAttribute('enter', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveStart', () => [
+      Match.when('LeaveStart', () => [
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.when('LeaveAnimating', () => [
+      Match.when('LeaveAnimating', () => [
         h.DataAttribute('closed', ''),
         h.DataAttribute('leave', ''),
         h.DataAttribute('transition', ''),
       ]),
-      M.orElse(() => []),
+      Match.orElse(() => []),
     )
 
     const handleButtonKeyDown = (
       key: string,
     ): Option.Option<RequestedOpen | RequestedClose> =>
-      M.value(key).pipe(
-        M.whenOr('Enter', ' ', 'ArrowDown', () =>
+      Match.value(key).pipe(
+        Match.whenOr('Enter', ' ', 'ArrowDown', () =>
           Option.some(
             isOpen ? Message.RequestedClose() : Message.RequestedOpen(),
           ),
         ),
-        M.when('Escape', () =>
+        Match.when('Escape', () =>
           OptionExt.when(isOpen, Message.RequestedClose()),
         ),
-        M.orElse(() => Option.none()),
+        Match.orElse(() => Option.none()),
       )
 
     const handleButtonPointerDown = (
@@ -569,9 +583,9 @@ export const view = defineView<Model, Message, ViewInputs>(
       OptionExt.when(key === ' ', Message.SuppressedSpaceScroll())
 
     const handlePanelKeyDown = (key: string): Option.Option<RequestedClose> =>
-      M.value(key).pipe(
-        M.when('Escape', () => Option.some(Message.RequestedClose())),
-        M.orElse(() => Option.none()),
+      Match.value(key).pipe(
+        Match.when('Escape', () => Option.some(Message.RequestedClose())),
+        Match.orElse(() => Option.none()),
       )
 
     const resolveButtonLabel = () => {

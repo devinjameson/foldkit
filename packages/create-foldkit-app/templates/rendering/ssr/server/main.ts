@@ -1,4 +1,4 @@
-import { Config, Effect, FileSystem, Layer, Match as M, Option } from 'effect'
+import { Config, Effect, FileSystem, Layer, Match, Option } from 'effect'
 import {
   Headers as HttpHeaders,
   HttpServer,
@@ -88,12 +88,12 @@ const requestKind = ({
   method,
   url,
 }: HttpServerRequest.HttpServerRequest): RequestKind =>
-  M.value(method).pipe(
-    M.withReturnType<RequestKind>(),
-    M.whenOr('GET', 'HEAD', () =>
+  Match.value(method).pipe(
+    Match.withReturnType<RequestKind>(),
+    Match.whenOr('GET', 'HEAD', () =>
       Server.resolvesToIndexHtml(url) ? 'Render' : 'StaticOrRender',
     ),
-    M.orElse(() =>
+    Match.orElse(() =>
       Server.isHostSettledMethod(method) ? 'HostSettled' : 'Render',
     ),
   )
@@ -138,21 +138,21 @@ const makeHandler = Effect.gen(function* () {
   ) =>
     staticFiles.pipe(
       Effect.catchIf(isRouteNotFound, () =>
-        M.value(
+        Match.value(
           Server.classifyRequest(
             request.url,
             request.headers['sec-fetch-dest'],
           ),
         ).pipe(
-          M.when('PathAsset', () =>
+          Match.when('PathAsset', () =>
             Effect.succeed(HttpServerResponse.empty({ status: 404 })),
           ),
-          M.when('DestinationAsset', () =>
+          Match.when('DestinationAsset', () =>
             Effect.succeed(
               withNegotiatedVary(HttpServerResponse.empty({ status: 404 })),
             ),
           ),
-          M.when('Page', () =>
+          Match.when('Page', () =>
             Server.acceptsHtml(request.headers['accept'])
               ? renderRequest(request, template, requestUrl).pipe(
                   Effect.map(withNegotiatedVary),
@@ -161,7 +161,7 @@ const makeHandler = Effect.gen(function* () {
                   withNegotiatedVary(HttpServerResponse.empty({ status: 404 })),
                 ),
           ),
-          M.exhaustive,
+          Match.exhaustive,
         ),
       ),
     )
@@ -175,15 +175,15 @@ const makeHandler = Effect.gen(function* () {
     const normalizedRequest = request.modify({
       url: `${resolved.pathname}${resolved.search}`,
     })
-    const response = M.value(requestKind(normalizedRequest)).pipe(
-      M.when('Render', () =>
+    const response = Match.value(requestKind(normalizedRequest)).pipe(
+      Match.when('Render', () =>
         renderRequest(normalizedRequest, template, requestUrl),
       ),
-      M.when('StaticOrRender', () =>
+      Match.when('StaticOrRender', () =>
         serveStaticOrRender(normalizedRequest, requestUrl),
       ),
-      M.when('HostSettled', () => Effect.succeed(hostSettledResponse())),
-      M.exhaustive,
+      Match.when('HostSettled', () => Effect.succeed(hostSettledResponse())),
+      Match.exhaustive,
     )
     return Effect.provideService(
       response,

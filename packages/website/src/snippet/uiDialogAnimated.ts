@@ -1,7 +1,7 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Match as M, Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import { Update } from 'foldkit'
 import type { HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
@@ -10,7 +10,7 @@ import { evo } from 'foldkit/struct'
 import { Dialog } from '@foldkit/ui'
 
 // Add a field to your Model for the Dialog Submodel:
-const Model = S.Struct({
+const Model = Schema.Struct({
   dialog: Dialog.Model,
   // ...your other fields
 })
@@ -32,13 +32,12 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 
-const foldDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldDialogOutMessage = Dialog.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
 const foldDialog = Update.foldChild({
   update: Dialog.update,

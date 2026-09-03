@@ -53,7 +53,7 @@ CompletedItemsFocus
 ```ts
 // RIGHT: the Message is named from the Command that caused it
 Command.define('DetermineStartTime', {
-  args: { elapsedMs: S.Number },
+  args: { elapsedMs: Schema.Number },
   messages: [Message.CompletedDetermineStartTime],
   execute: ({ elapsedMs }) =>
     Clock.currentTimeMillis.pipe(
@@ -63,14 +63,14 @@ Command.define('DetermineStartTime', {
     ),
 })
 Command.define('GenerateCardId', {
-  args: { columnId: S.String },
+  args: { columnId: Schema.String },
   messages: [Message.CompletedGenerateCardId],
   execute: ({ columnId }) =>
-    Effect.uuid.pipe(
-      Effect.map(cardId =>
-        Message.CompletedGenerateCardId({ cardId, columnId }),
-      ),
-    ),
+    Effect.gen(function* () {
+      const crypto = yield* Crypto.Crypto
+      const cardId = yield* Effect.orDie(crypto.randomUUIDv4)
+      return Message.CompletedGenerateCardId({ cardId, columnId })
+    }).pipe(Effect.provide(BrowserCrypto.layer)),
 })
 Command.define('SaveTodos', {
   args: { todos: Todos },
@@ -101,7 +101,7 @@ Every `Succeeded*` must have a corresponding `Failed*`:
 ```ts
 const Message = defineMessageUnion({
   SucceededFetchWeather: { weather: Weather },
-  FailedFetchWeather: { error: S.String },
+  FailedFetchWeather: { error: Schema.String },
 })
 ```
 
@@ -119,7 +119,7 @@ const Message = defineMessageUnion({
 
 ### Schemas
 
-- Capitalized string literals: `S.Literals(['Horizontal', 'Vertical'])` not `S.Literals(['horizontal', 'vertical'])`
+- Capitalized string literals: `Schema.Literals(['Horizontal', 'Vertical'])` not `Schema.Literals(['horizontal', 'vertical'])`
 - Capitalized namespace imports: `import * as ShoppingCart from './shoppingCart'`
 - `Array<T>` or `ReadonlyArray<T>`, never `T[]`
 
@@ -148,7 +148,7 @@ pipe(
 
 ```ts
 // Model fields
-maybeError: S.Option(S.String) // not error: S.String with '' as none
+maybeError: Schema.Option(Schema.String) // not error: Schema.String with '' as none
 
 // Conditional rendering (inside a view function, with its builder `h` in scope)
 Option.match(model.maybeError, {
@@ -204,10 +204,10 @@ Array.take(items, count)              // not .slice(0, n)
 
 **`Array.match` is the one that works on a Model.** Both `isArrayEmpty` and
 `isArrayNonEmpty` take a mutable `Array<A>`, so neither accepts the
-`ReadonlyArray` that `S.Array(...)` decodes to:
+`ReadonlyArray` that `Schema.Array(...)` decodes to:
 
 ```ts
-const Model = S.Struct({ items: S.Array(S.String) })
+const Model = Schema.Struct({ items: Schema.Array(Schema.String) })
 
 Array.isArrayEmpty(model.items)
 // Argument of type 'readonly string[]' is not assignable to
@@ -251,7 +251,9 @@ Effect.gen(function* () {
   return Message.SucceededFetchWeather({ data })
 }).pipe(
   Effect.catch(error =>
-    Effect.succeed(Message.FailedFetchWeather({ error: String(error) })),
+    Effect.succeed(
+      Message.FailedFetchWeather({ error: globalThis.String(error) }),
+    ),
   ),
   FetchWeather,
 )
@@ -408,7 +410,7 @@ domain at the call site in a way that `ClickedSubmit()` does not.
 const Timer = defineTaggedUnion({
   Work: {},
   Idle: {},
-  Paused: { remainingMs: S.Number },
+  Paused: { remainingMs: Schema.Number },
 })
 const Message = defineMessageUnion({ ClickedSubmit: {} })
 
@@ -435,21 +437,21 @@ Use tagged unions, not booleans or nullable fields:
 
 ```ts
 // WRONG
-const Model = S.Struct({
-  isLoading: S.Boolean,
-  hasError: S.Boolean,
-  data: S.Option(Data),
+const Model = Schema.Struct({
+  isLoading: Schema.Boolean,
+  hasError: Schema.Boolean,
+  data: Schema.Option(Data),
 })
 
 // RIGHT
 const FetchState = defineTaggedUnion({
   Idle: {},
   Loading: {},
-  Error: { error: S.String },
+  Error: { error: Schema.String },
   Ok: { data: Data },
 })
 
-const Model = S.Struct({
+const Model = Schema.Struct({
   fetchState: FetchState,
 })
 ```
@@ -462,9 +464,9 @@ const Model = S.Struct({
 For **remote data**, don't write that union at all. `AsyncData` ships it, with two states hand-rolled versions always miss:
 
 ```ts
-const DataAsyncData = AsyncData.Schema(Data, S.String)
+const DataAsyncData = AsyncData.Schema(Data, Schema.String)
 
-const Model = S.Struct({
+const Model = Schema.Struct({
   data: DataAsyncData.schema,
 })
 ```
@@ -478,7 +480,7 @@ const ValidationState = defineTaggedUnion({
   NotValidated: {},
   Validating: {},
   Valid: {},
-  Invalid: { error: S.String },
+  Invalid: { error: Schema.String },
 })
 ```
 
@@ -486,9 +488,9 @@ For multi-step flows:
 
 ```ts
 const SignupStep = defineTaggedUnion({
-  EnterEmail: { email: S.String },
-  EnterPassword: { email: S.String, password: S.String },
-  Confirming: { email: S.String },
+  EnterEmail: { email: Schema.String },
+  EnterPassword: { email: Schema.String, password: Schema.String },
+  Confirming: { email: Schema.String },
 })
 ```
 
@@ -549,12 +551,12 @@ import clsx from 'clsx'
 import {
   Array,
   Effect,
-  Match as M,
+  Match,
   Number,
   Option,
-  Schema as S,
+  Schema,
   Stream,
-  String as String_,
+  String,
   pipe,
 } from 'effect'
 import { HttpClient, HttpClientRequest } from 'effect/unstable/http'
@@ -614,9 +616,9 @@ Notes:
 
 - Only import what you actually use in the file. The lint pass catches unused imports.
 - Module-by-module reminders, for example: `Calendar` for `Calendar.CalendarDate`, `Calendar.today.local`, `Calendar.make`, `Calendar.addDays` etc., paired with the `Calendar` or `DatePicker` component from `@foldkit/ui` (the component and the `foldkit` date module share the name `Calendar`; they are different things). `Dom` for DOM-side-effect helpers (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.closeDialog`, `Dom.lockScroll`, `Dom.unlockScroll`, `Dom.waitForAnimationSettled`, etc.). `File` for file upload primitives paired with `FileDrop` from `@foldkit/ui`. `foldkit/fieldValidation` for form validation.
-- For time, randomness, UUIDs, or delays, use Effect's built-ins directly rather than reaching for a Foldkit module: `Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Effect.sleep(Duration.millis(...))`.
-- When an Effect module name collides with a global, alias the Effect import with a trailing underscore: `String as String_`, `Array as Array_`, `Number as Number_`.
-- `Message.match` is the exhaustive matcher on a union returned by `defineMessageUnion()`. `Match as M` is Effect's Match module for other tagged unions, partial matching, fallbacks, and handlers shared by several tags.
+- For time, randomness, or delays, use Effect's built-ins directly rather than reaching for a Foldkit module: `Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.sleep(Duration.millis(...))`. For UUIDs, use the `Crypto.Crypto` service's `randomUUIDv4` Effect with a platform Crypto layer (`BrowserCrypto.layer` from `@effect/platform-browser`).
+- Import Effect modules by their PascalCase names. When an Effect module name collides with a JavaScript or TypeScript global, qualify the global through `globalThis`, such as `globalThis.String`, `globalThis.Array`, or `globalThis.Record`. When an existing local or public binding must retain the module name, give the Effect import an explicit `Effect` prefix, such as `Order as EffectOrder`.
+- `Message.match` is the exhaustive matcher on a union returned by `defineMessageUnion()`. `Match` is Effect's Match module for other tagged unions, partial matching, fallbacks, and handlers shared by several tags.
 - **UI components live in a separate package.** Import them by name from `@foldkit/ui`: `import { Dialog, DatePicker, FileDrop, Toast, Tooltip } from '@foldkit/ui'`. Deep imports (`@foldkit/ui/dialog`) work too. There is no `Ui` export on the `foldkit` package, so `Ui.Dialog.view` does not resolve.
 - **`empty` and `keyed` are properties on `h`**, the builder every view receives as its last parameter. They are not top-level exports of `foldkit/html`, so they never belong in that import list. Same for `h.submodel`.
 - `AsyncData` for remote data state, `Update` for the update return type and the `combine` / `refresh` combinators, `Http` for the `layer` that provides `HttpClient` to a Command.

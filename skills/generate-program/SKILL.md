@@ -22,7 +22,7 @@ Before writing any code, analyze the description to identify:
 8. **Date handling**: birthdays, deadlines, scheduling → `Calendar` module + `DatePicker` or `Calendar` from `@foldkit/ui`
 9. **File handling**: uploads, attachments, images → `File` module + `FileDrop` from `@foldkit/ui`
 10. **Remote data**: anything fetched, cached, refreshed, or revalidated → the `AsyncData` module (see Phase 4). Don't hand-roll a loading/error union
-11. **Multi-state flows**: a described process that moves through several named steps with rules about which step follows which (checkout, onboarding, multi-step approval, a connection lifecycle) → consider the `Machine` module (`foldkit/experimental`). Writing the transitions as a table lets `unreachableStates()` and `deadTransitions()` find missing or unreachable steps. Present it as an experimental option and let the user choose. For a flow with only two or three states, use `defineTaggedUnion` and one `match`. `repos/foldkit/examples/state-machine/` is the reference
+11. **Multi-state flows**: a described process that moves through several named steps with rules about which step follows which (checkout, onboarding, multi-step approval, a connection lifecycle) → consider the `Machine` module (`foldkit/experimental`). Writing the transitions as a table lets `unreachableStates()` and `deadTransitions()` inspect reachability through the declared Edges from `initial` and any caller-supplied extra roots. The analysis cannot see state changes made outside the Machine, so pass restored, deep-linked, hydrated, and other externally entered states as extra roots before treating its findings as application defects. Present it as an experimental option and let the user choose. For a flow with only two or three states, use `defineTaggedUnion` and one `match`. `repos/foldkit/examples/state-machine/` is the reference
 12. **Host embedding**: the program runs inside another app ("a widget in our React app", "embed this in an existing page", "the host needs to control it") → `Runtime.makeElement` plus the `Runtime.embed` lifecycle handle, with Flags for initial data and Ports for ongoing communication in both directions. `repos/foldkit/examples/embedding/` is the canonical reference: a plain TypeScript host driving a Foldkit widget end to end
 
 Present this analysis to the user before proceeding.
@@ -241,7 +241,7 @@ For Tier 4+ apps (routing, domain modules, multiple entities, submodels) produce
 The sketch has five parts. Emit them inline in the conversation, get confirmation, THEN scaffold:
 
 1. **File tree**: the exact paths you will create. Match Phase 3's organization.
-2. **Model shape**: the top-level `S.Struct` fields and their types. Not the full schema, just the shape.
+2. **Model shape**: the top-level `Schema.Struct` fields and their types. Not the full schema, just the shape.
 3. **Message list**: every Message you plan to define, grouped by category (clicks, inputs, commands, out-messages).
 4. **Route list**: if routing, every `defineRouteUnion` variant with its params and the path it maps to.
 5. **Domain operations**: for each file in `domain/`, the operations it will expose (`Link.byNewest`, `Link.filterByTag`, etc.).
@@ -307,12 +307,14 @@ After scaffolding, offer to vendor Foldkit in as a git subtree so future AI sess
 git init          # if not already a git repo
 git add .
 git commit -m "chore: initial commit"
-git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash
+git subtree add --prefix=repos/foldkit https://github.com/foldkit/foldkit.git "foldkit@$(node -p "require('./node_modules/foldkit/package.json').version")" --squash
 ```
+
+The `foldkit@<version>` tag pins the subtree to the release the scaffold just installed, so the vendored source, examples, and docs match the APIs the app compiles against. Vendoring `main` instead can hand future sessions examples and APIs from a release the app has not installed. A canary install (`x.y.z-canary.<commit>`) has no tag; pin to the full hash of the commit its version names instead, which GitHub expands at `https://github.com/foldkit/foldkit/commit/<commit>`.
 
 This is optional but strongly recommended. The scaffolded `AGENTS.md` includes a `subtree_prompted: false` line that agents check on future sessions. If the subtree is absent and this flag is false, the agent offers to add it. Handling it up front here means the user's next AI session already has full context. If the user declines, update the line to `subtree_prompted: true` so they aren't asked again.
 
-To refresh the subtree later: `git subtree pull --prefix=repos/foldkit https://github.com/foldkit/foldkit.git main --squash`.
+To re-pin the subtree after a Foldkit package upgrade, run the same command with `pull` in place of `add`.
 
 ### Replace the scaffold
 
@@ -345,7 +347,7 @@ For each Foldkit module you plan to use, read the `.d.ts` at the paths below. Re
 <project>/node_modules/foldkit/dist/command/index.d.ts  # Command.define: config object with args/messages/interrupt/execute. Command.mapMessages for parent<-child mapping
 <project>/node_modules/foldkit/dist/asyncData/public.d.ts # AsyncData: Idle/Loading/Refreshing/Failure/Stale/Success + Schema, match, isPending, hasData, revalidate
 <project>/node_modules/foldkit/dist/http/public.d.ts     # Http.layer: provide it to Commands that use HttpClient
-<project>/node_modules/foldkit/dist/dom/index.d.ts      # focus, advanceFocus, scrollIntoView, showDialog, closeDialog, clickElement, lockScroll, unlockScroll, inertOthers, restoreInert, detectElementMovement, waitForAnimationSettled. For time/random/uuid/delay use Effect's Clock, Random, Effect.uuid, Effect.sleep + Duration directly.
+<project>/node_modules/foldkit/dist/dom/index.d.ts      # focus, advanceFocus, scrollIntoView, showDialog, closeDialog, clickElement, lockScroll, unlockScroll, inertOthers, restoreInert, detectElementMovement, waitForAnimationSettled. For time/random/delay use Effect's Clock, Random, Effect.sleep + Duration directly. For UUIDs use Crypto.Crypto's randomUUIDv4 with BrowserCrypto.layer.
 
 # If using subscriptions
 <project>/node_modules/foldkit/dist/subscription/index.d.ts # Subscription.make<Model, Message>, Subscription.lift, Subscription.aggregate
@@ -377,7 +379,7 @@ If a path above doesn't resolve, list the package's `dist/` and find the module.
 For each symbol you'll call, write one line:
 
 ```text
-h: HtmlBuilder<Message> (view parameter, supplied by the runtime): { div, input (VOID), textarea, button, Class, Href, For, Id, Role, OnClick(Message), OnInput(value=>Message), OnBlur(Message), OnSubmit(Message), keyed, empty, submodel, ... }
+h: HtmlBuilder<Message> (view parameter, supplied by the runtime): { div, input (VOID), textarea (VALUE-ONLY), button, Class, Href, For, Id, Role, OnClick(Message), OnInput(value=>Message), OnBlur(Message), OnSubmit(Message), keyed, empty, submodel, ... }
 Route.mapTo(schema)(parser): curried
 pushUrl(path): Effect<void>  // NOT fallible, no Effect.ignore needed
 urlToString(url: Url): string
@@ -393,7 +395,7 @@ Command.define(name, { args, messages, execute }): every input is a named field.
   `execute` binds at DEFINITION and receives the decoded args object directly, so
   you destructure the fields themselves; the call site passes args:
   const Fetch = Command.define('Fetch', {
-    args: { id: S.String },
+    args: { id: Schema.String },
     messages: [Ok, Err],
     execute: ({ id }) => ...,
   })
@@ -409,8 +411,8 @@ Field (schema): NotValidated | Validating | Valid | Invalid(errors: NonEmpty<Rul
 
 Record these in the crib and keep them visible while generating:
 
-- **`input` and `br` and other void elements take ONLY attributes**: `input([...])`, never `input([...], [])`. `textarea` and `button` DO take children.
-- **The children argument is optional on every other element.** Omit it when there are none: `div([Class('divider')])`, not `div([Class('divider')], [])`. Attributes stay required, so `div([])` is how an element with neither is written. `keyed` is the same: `h.keyed('li')(key, [attrs])`, not `h.keyed('li')(key, [attrs], [])`.
+- **`input` and `br` and other void elements take ONLY attributes**: `input([...])`, never `input([...], [])`. `textarea` also takes attributes only; set its content with `h.Value(text)`, never children or `h.InnerHTML`. `button` takes children.
+- **The children argument is optional on elements that accept children.** Omit it when there are none: `div([Class('divider')])`, not `div([Class('divider')], [])`. Attributes stay required, so `div([])` is how an element with neither is written. `keyed` follows the element: `h.keyed('li')(key, [attrs])`, not `h.keyed('li')(key, [attrs], [])`; use `h.keyed('textarea')(key, [h.Value(text)])` without children.
 - **`UrlRequest` tags are `Internal` and `External`**, not `InternalUrl` / `ExternalUrl`.
 - **`OnClick` and `OnSubmit` take a Message directly**, not a `() => Message`. Only `OnInput` takes `(value) => Message` because it needs the input value.
 - **`keyed`, `empty` are properties on the builder `h`** the view receives as its last parameter. They are not top-level exports of `foldkit/html`.
@@ -426,12 +428,12 @@ Record these in the crib and keep them visible while generating:
 - **UI components come from `@foldkit/ui`, not from a `Ui` namespace on `foldkit`.** `import { Dialog, Input } from '@foldkit/ui'`, then `Dialog.view(...)`. There is no `Ui` export on the `foldkit` package.
 - **`HttpClient` and `HttpClientRequest` come from `effect/unstable/http`**, not `@effect/platform`. Provide the client to the Command's Effect with `Effect.provide(effect, Http.layer)`, where `Http` is imported from `foldkit`. `@effect/platform-browser` is a different thing, used for `BrowserKeyValueStore` and `BrowserCrypto`.
 - **Use `Update.foldChild` or `Update.foldChildStep` for a child Submodel result.** The fold lifts the child's Commands through `toParentMessage`. Use `Command.mapMessages` directly only for lower-level helpers or independent init results.
-- **Inline a one-use update return type.** Use `Message.match<Update.Return<Model, Message>>` when the matcher is its only use. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses the type. The match generic constrains the whole update, so omit a redundant return annotation. Constrain a domain union match inside a handler the same way, through its own `match` generic (`Submission.match<UpdateReturn>(submission, { ... })`); `M.withReturnType<UpdateReturn>()` is only for Effect `Match` (partial matches, or unions without their own `match`).
+- **Inline a one-use update return type.** Use `Message.match<Update.Return<Model, Message>>` when the matcher is its only use. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses the type. The match generic constrains the whole update, so omit a redundant return annotation. Constrain a domain union match inside a handler the same way, through its own `match` generic (`Submission.match<UpdateReturn>(submission, { ... })`); `Match.withReturnType<UpdateReturn>()` is only for Effect `Match` (partial matches, or unions without their own `match`).
 - **Preserve the plain-return OutMessage guard.** Use `Update.Return<Model, Message>` when an update cannot emit an OutMessage. It prevents a result containing an OutMessage from entering code that would keep only its Model and Commands. A result with no `outMessage` can still be used where `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is expected. The missing field means that update emitted no OutMessage. A hand-written plain-return type must preserve the `outMessage?: never` field.
 - **Omit only statically empty Commands.** A producer with statically no Commands omits `commands`. A producer with a computed collection returns it without checking whether it is empty. Never write `commands: []`.
 - **Keep update-like results together.** Bind each result to a value named after the operation and use dot access. Use a trailing underscore such as `init_` when the operation name collides with the function. Do not destructure or rename `model`, `commands`, or `outMessage`. Name a child fold's `write` parameter after the next child Model, such as `nextSettings`. Pass optional Commands directly to `Command.mapMessages`; use `result.commands ?? []` only when the next operation requires a concrete array. Dot access keeps the operation and all of its returned fields visible together but does not prevent someone from ignoring `outMessage`.
 - **Use the update combinators for their full patterns.** Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel` when combining several. When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` for an existing plain return or a value with the type `OutMessage | undefined`: pipe an existing return into the helper, and pass a new result literal first. Use `Update.foldChild` or `Update.foldChildStep` for child results. Add `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. For partial forwarding, match every child variant and return `undefined` for the variants that stop here. Omit `toParentOutMessage` when every variant stops here. `foldOutMessage` still handles each variant locally, including variants that continue upward. Never add `toParentOutMessage: () => undefined`.
-- **Branch on a Model array with `Array.match`, not the predicates.** `Array.isArrayEmpty` and `Array.isArrayNonEmpty` (note the names: not `isEmptyArray` / `isNonEmptyArray`) take a mutable `Array<A>`, so neither compiles against the `ReadonlyArray` an `S.Array(...)` field decodes to. `Array.match` takes `ReadonlyArray` and is what the exemplars use.
+- **Branch on a Model array with `Array.match`, not the predicates.** `Array.isArrayEmpty` and `Array.isArrayNonEmpty` (note the names: not `isEmptyArray` / `isNonEmptyArray`) take a mutable `Array<A>`, so neither compiles against the `ReadonlyArray` an `Schema.Array(...)` field decodes to. `Array.match` takes `ReadonlyArray` and is what the exemplars use.
 - **`empty` and `keyed` are properties on `h`**, so they are never in the `foldkit/html` import list. Import the types (`import type { Document, Html, HtmlBuilder } from 'foldkit/html'`) and reach for `h.empty` / `h.keyed` off the view's builder.
 
 ## Phase 4: Generate the App
@@ -440,11 +442,11 @@ Generate files following the architecture and conventions guides exactly. Write 
 
 ### Model
 
-- Define as `S.Struct` with Effect Schema types
+- Define as `Schema.Struct` with Effect Schema types
 - Use discriminated unions for state: `Idle | Loading | Error | Ok`, never booleans for multi-valued state
 - Use `Option` for fields that may be absent. Never empty strings or null
 - Prefix Option-typed fields with `maybe`: `maybeCurrentUser`, `maybeError`
-- For remote data, use the `AsyncData` module rather than hand-rolling a union. `AsyncData.Schema(WeatherData, S.String)` returns `{ schema, Idle, Loading, Refreshing, Failure, Stale, Success }`; put `schema` in the Model and build values with the constructors. The `Refreshing` and `Stale` states are the point: they let a reload keep the current data on screen, and a failed reload keep it rather than discarding it. `repos/foldkit/examples/weather/src/main.ts` is the canonical use. Read `AsyncData.match`'s signature before calling it: the handlers take bare values (`onSuccess: data => ...`, `onFailure: error => ...`), except `onStale`, which takes `{ error, data }`
+- For remote data, use the `AsyncData` module rather than hand-rolling a union. `AsyncData.Schema(WeatherData, Schema.String)` returns `{ schema, Idle, Loading, Refreshing, Failure, Stale, Success }`; put `schema` in the Model and build values with the constructors. The `Refreshing` and `Stale` states are the point: they let a reload keep the current data on screen, and a failed reload keep it rather than discarding it. `repos/foldkit/examples/weather/src/main.ts` is the canonical use. Read `AsyncData.match`'s signature before calling it: the handlers take bare values (`onSuccess: data => ...`, `onFailure: error => ...`), except `onStale`, which takes `{ error, data }`
 - For non-remote multi-valued state (form steps, editor modes, connection phases), declare the whole union with `defineTaggedUnion()`. See Discriminated Unions for State in [conventions.md](conventions.md)
 - For apps with multiple domain entities referenced across modules, extract shared schemas into `src/domain/` (e.g., `domain/product.ts`, `domain/session.ts`). See the shopping-cart and auth examples for this pattern, and read `${CLAUDE_SKILL_DIR}/../../packages/website/src/page/projectOrganization.ts` for guidance on when and how to structure domain modules
 
@@ -455,9 +457,9 @@ Declare the Message union and its type together:
 ```ts
 export const Message = defineMessageUnion({
   ClickedSubmit: {},
-  UpdatedEmail: { value: S.String },
+  UpdatedEmail: { value: Schema.String },
   SucceededLogin: { user: User },
-  FailedLogin: { error: S.String },
+  FailedLogin: { error: Schema.String },
   CompletedFocusInput: {},
 })
 export type Message = typeof Message.Type
@@ -470,7 +472,7 @@ Keep each case's payload object on one line when it fits. Let Prettier wrap payl
 Name messages by category:
 
 - `Clicked*`: button/link clicks
-- `Updated*`: input value changes (with `{ value: S.String }`) and external state updates from subscriptions (`UpdatedRoom`, `UpdatedPlayerProgress`)
+- `Updated*`: input value changes (with `{ value: Schema.String }`) and external state updates from subscriptions (`UpdatedRoom`, `UpdatedPlayerProgress`)
 - `Submitted*`: form submissions
 - `Succeeded*` / `Failed*`: paired, for commands that can meaningfully fail
 - `Completed*`: every other Command result, named from the Command (verb+object: `CompletedFocusInput`, `CompletedGenerateCardId`)
@@ -499,7 +501,7 @@ Every message must carry meaning. No `NoOp`.
 
 ### Update
 
-- Use `Message.match<Update.Return<Model, Message>>(message, {...})` when the return type appears only at that matcher. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses it. `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart. A hand-written plain-return type is equivalent only when it includes `outMessage?: never`. Never switch. Keep Effect `Match` for other tagged unions, partial matches with fallbacks, and handlers shared across several tags
+- Use `Message.match<Update.Return<Model, Message>>(message, {...})` when the return type appears only at that matcher. Create an `UpdateReturn` alias when another matcher, helper, or exported signature reuses it. `Update.ReturnWithOutMessage<Model, Message, OutMessage>` is the Submodel counterpart. Match an OutMessage exhaustively through its owning union's `match`; pass a structurally refined OutMessage type as the second generic when a generic child narrows the Schema-backed payload type. A hand-written plain-return type is equivalent only when it includes `outMessage?: never`. Never switch. Keep Effect `Match` for other tagged unions, partial matches with fallbacks, and handlers shared across several tags
 - Omit `commands` when an update, init, boot, or component helper statically creates no Commands. Return a computed Commands collection directly without checking whether it is empty. Never write the literal `commands: []`
 - When composing an update, init, boot, or component helper result, bind the whole result to a value named after the operation and use dot access. Use a trailing underscore such as `init_` when the name collides with the function. Do not destructure or rename `model`, `commands`, or `outMessage`. Name a child fold's `write` parameter after the next child Model. Pass optional Commands directly to `Command.mapMessages`, and use `result.commands ?? []` only where the next operation requires a concrete array. Dot access keeps the operation and all of its returned fields visible together but does not prevent someone from ignoring `outMessage`. Use `Update.foldChild` or `Update.foldChildStep` instead of manually unpacking a child result
 - Use `Update.combine` when a later Step should receive the Model produced by an earlier Step. It takes two or more Steps. Do not wrap one Step in `Update.combine`; call that operation directly. Name an inline Step parameter `stepModel` when combining several. When the OutMessage is already known while constructing a new result, include it directly. Use `Update.withOutMessage` for an existing plain return or a value with the type `OutMessage | undefined`: pipe an existing return into the helper, and pass a new result literal first. Add `toParentOutMessage` only when at least one child OutMessage should continue to the current Submodel's parent. For partial forwarding, match every child variant and return `undefined` for the variants that stop here. Omit `toParentOutMessage` when every variant stops here. `foldOutMessage` still handles each variant locally, including variants that continue upward
@@ -512,18 +514,18 @@ Every message must carry meaning. No `NoOp`.
 
 ### Commands
 
-- Define Command identities with `Command.define`, whose second argument is a config object: `args` (optional) declares the args Schema, `messages` lists every Message the Command can produce, and `execute` holds the Effect. With args the shape is `Command.define('Fetch', { args: { id: S.String }, messages: [Message.SucceededFetch, Message.FailedFetch], execute: ({ id }) => Effect })`: `execute` binds at definition and receives the args, and the update returns `Fetch({ id })`
+- Define Command identities with `Command.define`, whose second argument is a config object: `args` (optional) declares the args Schema, `messages` lists every Message the Command can produce, and `execute` holds the Effect. With args the shape is `Command.define('Fetch', { args: { id: Schema.String }, messages: [Message.SucceededFetch, Message.FailedFetch], execute: ({ id }) => Effect })`: `execute` binds at definition and receives the args, and the update returns `Fetch({ id })`
 - To make a Command interruptible, add `interrupt`. `interrupt: true` keys every invocation by the Command name; `interrupt: { keyFields, toKey }` selects the args that identify an invocation and derives its key so concurrent invocations can be cancelled independently. The selected fields become the args required by the Definition's `Interrupt` constructor
 - Always assign definitions to PascalCase constants. Never inline in pipe chains
 - Definitions live where they're produced, colocated with the update function
 - Let TypeScript infer return types. No explicit `Command<typeof A>` annotations
 - Use `Effect.gen` for multi-step async
-- Always `Effect.catch(() => Effect.succeed(Message.FailedX(...)))` for fallible Effects. Commands never throw. **Exception:** if the Effect is infallible at the type level (`Clock.currentTimeMillis`, `Effect.uuid`, `Random.nextIntBetween`, etc.), no `catch` is needed and no `Failed*` Message is needed. Follow the types: if there's no error channel, there's nothing to catch.
+- Always `Effect.catch(() => Effect.succeed(Message.FailedX(...)))` for fallible Effects. Commands never throw. **Exception:** if the Effect is infallible at the type level (`Clock.currentTimeMillis`, `Random.nextIntBetween`, etc.), no `catch` is needed and no `Failed*` Message is needed. Follow the types: if there's no error channel, there's nothing to catch.
 - Use `Effect.provide` for services
 - Factory functions named by action: `fetchWeather`, not `fetchWeatherCommand`
 - Name each Command for the effect its `execute` body performs, not the later Model transition caused when update handles its result. A timer that only waits before update starts a dismissal is `WaitBeforeDismissal`, not `DismissAfter`
 - Commands that can't meaningfully fail return `Completed*` Messages named from the Command, payload-carrying ones included: `DetermineStartTime` → `CompletedDetermineStartTime`, not `DeterminedStartTime`
-- Use Foldkit's `Dom` module for DOM operations (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.lockScroll`, etc.) and Effect built-ins for everything else (`Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.uuid`, `Effect.sleep(Duration.millis(...))`). See DOM and Effect Helpers in [architecture.md](architecture.md)
+- Use Foldkit's `Dom` module for DOM operations (`Dom.focus`, `Dom.scrollIntoView`, `Dom.showDialog`, `Dom.lockScroll`, etc.) and Effect built-ins for everything else (`Clock.currentTimeMillis`, `Random.nextIntBetween`, `Effect.sleep(Duration.millis(...))`). For UUIDs, use the `Crypto.Crypto` service's `randomUUIDv4` with a platform Crypto layer. See DOM and Effect Helpers in [architecture.md](architecture.md)
 - For HTTP requests, use `HttpClient` and `HttpClientRequest` from `effect/unstable/http`, and provide the client with `Effect.provide(effect, Http.layer)` where `Http` comes from `foldkit`. See `examples/weather/src/main.ts` for the pattern
 - Let `Update.foldChild` or `Update.foldChildStep` re-tag a child Submodel's Commands through `toParentMessage`. Use `Command.mapMessages` directly only for lower-level helpers or independent init results
 
@@ -553,14 +555,14 @@ const emailRules = makeRules({
   rules: [Rule.email('Please enter a valid email address')],
 })
 
-const Model = S.Struct({
-  name: Field(S.String),
-  email: Field(S.String),
+const Model = Schema.Struct({
+  name: Field(Schema.String),
+  email: Field(Schema.String),
   // ...
 })
 ```
 
-`Field(valueSchema)` builds a tagged union: `NotValidated | Validating | Valid | Invalid`. The value Schema should match what the control actually holds as the user edits, not the type you parse it into: `Field(S.String)` for text inputs, `Field(S.Array(S.String))` for a multi-select. A checkbox's boolean usually stays plain `S.Boolean` in the Model unless it needs the validation lifecycle. Rules stay separate in `makeRules`. Use `validate(rules)(value)` in update handlers to transition a field, and gate submission with `allValid([[state, rules], ...])`, which gates one field value type per call (combine calls with `&&` across types). Omit `required` from `makeRules` to make a field optional.
+`Field(valueSchema)` builds a tagged union: `NotValidated | Validating | Valid | Invalid`. The value Schema should match what the control actually holds as the user edits, not the type you parse it into: `Field(Schema.String)` for text inputs, `Field(Schema.Array(Schema.String))` for a multi-select. A checkbox's boolean usually stays plain `Schema.Boolean` in the Model unless it needs the validation lifecycle. Rules stay separate in `makeRules`. Use `validate(rules)(value)` in update handlers to transition a field, and gate submission with `allValid([[state, rules], ...])`, which gates one field value type per call (combine calls with `&&` across types). Omit `required` from `makeRules` to make a field optional.
 
 Canonical reference: `${CLAUDE_SKILL_DIR}/../../examples/form/src/main.ts` (async email uniqueness check with version-based cancellation) and `${CLAUDE_SKILL_DIR}/../../examples/job-application/src/step/` (validated multi-step forms across submodels).
 
@@ -604,7 +606,7 @@ For file uploads (resumes, images, attachments):
 ### Routes (if multi-page)
 
 - Use bidirectional parser: `defineRouteUnion()`, `string()`, `int()`, `literal()`, `slash()`, `Route.mapTo()`, `Route.oneOf()`
-- Declare every route in one `defineRouteUnion({ Home: {}, NewLink: {}, NotFound: { path: S.String } })` named `AppRoute`. Keep each variant on that namespace: `AppRoute.Home`. Do not destructure variants or repeat the old `HomeRoute` suffix.
+- Declare every route in one `defineRouteUnion({ Home: {}, NewLink: {}, NotFound: { path: Schema.String } })` named `AppRoute`. Keep each variant on that namespace: `AppRoute.Home`. Do not destructure variants or repeat the old `HomeRoute` suffix.
 - When a Model or Schema accepts only part of `AppRoute`, use `AppRoute.subset(['Home', 'Person'])`. It includes only the tags named in the call. There is no `omit`, because an exclusion list would silently accept every Route added later. Export `type PersonRoute = typeof AppRoute.Person.Type` beside the union when a module needs one variant's type.
 - Build each route as a Router: `const homeRouter = pipe(Route.root, Route.mapTo(AppRoute.Home))`. **Routers are callable**: `homeRouter()` returns `'/'`, `tagFilterRouter({ tag: 'foo' })` returns `'/tag/foo'`. This is the print side of the bidirectional parser.
 - **Never hand-construct paths with template strings.** `Href(homeRouter())` not `Href('/')`. `pushUrl(newLinkRouter())` not `pushUrl('/new')`. `Href(tagFilterRouter({ tag: tagName }))` not ``Href(`/tag/${encodeURIComponent(tagName)}`)``. The router handles encoding and keeps the URL shape in one place so a refactor changes one file, not every call site.
@@ -614,7 +616,7 @@ For file uploads (resumes, images, attachments):
 
 ### Subscriptions (if real-time)
 
-- Define with `Subscription.make<Model, Message>()(entry => ({ key: entry(fields, callbacks) }))`. The builder callback receives an `entry(fields, callbacks)` helper. `fields` is the bare field map (no `S.Struct` wrap), `callbacks` carries `modelToDependencies`, `dependenciesToStream`, and optional `equivalence`
+- Define with `Subscription.make<Model, Message>()(entry => ({ key: entry(fields, callbacks) }))`. The builder callback receives an `entry(fields, callbacks)` helper. `fields` is the bare field map (no `Schema.Struct` wrap), `callbacks` carries `modelToDependencies`, `dependenciesToStream`, and optional `equivalence`
 - `modelToDependencies` extracts Subscription parameters from Model
 - `dependenciesToStream` builds `Stream<Message>` from dependencies
 - Subscriptions auto-start/stop based on Model state. Never manually managed
@@ -623,11 +625,11 @@ For file uploads (resumes, images, attachments):
 
 ### Managed Resources (if stateful runtime handles)
 
-- Define with `ManagedResource.make<Model, Message>()(entry => ({ key: entry(requirementsSchema, config) }))`. `requirementsSchema` is the positional first argument (usually `S.Option(...)`); `config` carries the `resource` tag, `modelToMaybeRequirements`, the `acquire`/`release` Effects, and the `onAcquired`/`onReleased`/`onAcquireError` Messages
+- Define with `ManagedResource.make<Model, Message>()(entry => ({ key: entry(requirementsSchema, config) }))`. `requirementsSchema` is the positional first argument (usually `Schema.Option(...)`); `config` carries the `resource` tag, `modelToMaybeRequirements`, the `acquire`/`release` Effects, and the `onAcquired`/`onReleased`/`onAcquireError` Messages
 - `modelToMaybeRequirements` returns `Option.some(params)` to acquire (or re-acquire when params change) and `Option.none()` to release. Resources auto-acquire/release on Model state, like Subscriptions
-- For a resource with no params, use `S.Option(S.Null)` and return `Option.some(null)`
+- For a resource with no params, use `Schema.Option(Schema.Null)` and return `Option.some(null)`
 - Read the service union with `ManagedResource.ServicesOf<typeof managedResources>`
-- To embed a child Submodel's resources, use `ManagedResource.lift(childRecord)<Parent, Parent>({ toChildModel, toParentMessage })` (its `toChildModel` returns `Option<ChildModel>`, so lifted requirements must be `S.Option`-wrapped). Combine records with `ManagedResource.aggregate<Model, Message>()(...records)`
+- To embed a child Submodel's resources, use `ManagedResource.lift(childRecord)<Parent, Parent>({ toChildModel, toParentMessage })` (its `toChildModel` returns `Option<ChildModel>`, so lifted requirements must be `Schema.Option`-wrapped). Combine records with `ManagedResource.aggregate<Model, Message>()(...records)`
 - App-lifetime handles go in `resources`, not here; there is no `persistent`
 
 ## Phase 4.5: Self-check before verification
@@ -665,7 +667,7 @@ Run **format first** because it rewrites files; running it last would leave tsc/
 Each catches different classes of issue:
 
 - **Format** rewrites spacing, indentation, trailing commas, and line wrapping to project style. Not a "check"; a normalizer. Generated code rarely matches Prettier's exact formatting by accident; without this step, every `git commit` produces a cascade of formatting-only diffs.
-- **Lint** catches unused imports, unused variables, and style-rule violations. Easy to miss because generated code often imports a symbol "for completeness" that turns out not to be referenced (e.g. importing `NotValidated`, `Invalid` from fieldValidation when they're only used as string literals inside `M.tag` keys). `tsc` doesn't flag these.
+- **Lint** catches unused imports, unused variables, and style-rule violations. Easy to miss because generated code often imports a symbol "for completeness" that turns out not to be referenced (e.g. importing `NotValidated`, `Invalid` from fieldValidation when they're only used as string literals inside `Match.tag` keys). `tsc` doesn't flag these.
 - **Typecheck** catches API misuse, wrong parameter shapes, missing required props, and structural type errors. Doesn't catch unused imports.
 - **Tests** catch behavioral regressions. Don't catch either of the above.
 

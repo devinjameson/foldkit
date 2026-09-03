@@ -105,7 +105,7 @@ type EntryBrand<Model, Message> = {
 
 /**
  * The requirements value the runtime hands to `acquire`. When the requirements
- * schema is wrapped in `S.Option`, the runtime unwraps the `Some` before
+ * schema is wrapped in `Schema.Option`, the runtime unwraps the `Some` before
  * calling `acquire`, so the parameter is the inner type.
  */
 type AcquireParams<Requirements> =
@@ -165,7 +165,7 @@ export type ServicesOf<Resources> = {
  * on the config literal) lets TypeScript fully resolve the requirements type
  * before contextually typing `modelToMaybeRequirements` and `acquire`, so
  * destructuring patterns are inferred correctly even when the schema uses
- * transforms like `S.Option`.
+ * transforms like `Schema.Option`.
  *
  * The `onAcquired` field is typed as `OnAcquired` intersected with the
  * concrete `(value: Value) => Message` signature: the concrete member keeps
@@ -239,7 +239,7 @@ export type EntryBuilder<Model, Message> = <
  * - `modelToMaybeRequirements` — Extracts requirements from the model.
  *   `Option.none()` means "release", `Option.some(params)` means
  *   "acquire/re-acquire if params changed". For resources with no
- *   parameters, use `S.Option(S.Null)` and return `Option.some(null)`.
+ *   parameters, use `Schema.Option(Schema.Null)` and return `Option.some(null)`.
  * - `acquire` — Creates the resource from the unwrapped params. The returned
  *   Effect should fail when acquisition fails: errors in the error channel
  *   flow to `onAcquireError` as a message instead of crashing the runtime.
@@ -265,7 +265,7 @@ export type EntryBuilder<Model, Message> = <
  * const CameraStream = ManagedResource.tag<MediaStream>()('CameraStream')
  *
  * const managedResources = ManagedResource.make<Model, Message>()(entry => ({
- *   camera: entry(S.Option(S.Struct({ facingMode: S.String })), {
+ *   camera: entry(Schema.Option(Schema.Struct({ facingMode: Schema.String })), {
  *     resource: CameraStream,
  *     modelToMaybeRequirements: model =>
  *       pipe(
@@ -337,7 +337,7 @@ type ChildMessageOf<Resources> =
  * `Option.none()` to release), and a child Submodel that owns a managed
  * resource is itself something that mounts and unmounts. A missing child is
  * just another `None` and flows through the same acquire/release channel, so
- * each lifted entry's requirements must be `S.Option`-wrapped.
+ * each lifted entry's requirements must be `Schema.Option`-wrapped.
  */
 export const lift =
   <

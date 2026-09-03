@@ -7,7 +7,7 @@ import {
   Match,
   Option,
   Order,
-  Schema as S,
+  Schema,
   Scope,
   SubscriptionRef,
   pipe,
@@ -76,10 +76,10 @@ const generateConnectionId = (): string =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 
 const tryDeriveJsonSchemaDocument = (
-  schema: S.Codec<any, any>,
+  schema: Schema.Codec<any, any>,
 ): Option.Option<unknown> => {
   try {
-    return Option.some(S.toJsonSchemaDocument(schema))
+    return Option.some(Schema.toJsonSchemaDocument(schema))
   } catch (error) {
     console.warn(
       '[foldkit:devTools] Failed to derive JSON Schema from Message Schema; foldkit_get_message_schema will return None.',
@@ -127,20 +127,23 @@ export const startWebSocketBridge = (
   store: DevToolsStore,
   hot: Hot,
   dispatch: (message: unknown) => Effect.Effect<void>,
-  maybeMessageSchema: Option.Option<S.Codec<any, any>>,
+  maybeMessageSchema: Option.Option<Schema.Codec<any, any>>,
 ): Effect.Effect<void, never, Scope.Scope> =>
   Effect.gen(function* () {
     const connectionId = generateConnectionId()
     const capturedContext = yield* Effect.context<never>()
 
-    const maybeDispatchSchema = Option.map(maybeMessageSchema, S.toCodecJson)
+    const maybeDispatchSchema = Option.map(
+      maybeMessageSchema,
+      Schema.toCodecJson,
+    )
     const maybeJsonSchemaDocument = Option.flatMap(
       maybeMessageSchema,
       tryDeriveJsonSchemaDocument,
     )
 
-    const encodeEventFrame = S.encodeUnknownSync(EventFrame)
-    const encodeResponseFrame = S.encodeUnknownSync(ResponseFrame)
+    const encodeEventFrame = Schema.encodeUnknownSync(EventFrame)
+    const encodeResponseFrame = Schema.encodeUnknownSync(ResponseFrame)
 
     const sendEvent = (event: Event): void => {
       hot.send(
@@ -183,7 +186,7 @@ export const startWebSocketBridge = (
       })
 
     const handleRequestFrame = (frame: unknown): void => {
-      const decoded = S.decodeUnknownExit(RequestFrame)(frame)
+      const decoded = Schema.decodeUnknownExit(RequestFrame)(frame)
       Exit.match(decoded, {
         onFailure: error => {
           console.warn('[foldkit:devTools] malformed request frame', error)
@@ -391,7 +394,7 @@ const formatInvalidMessageReason = (error: unknown, message: unknown): string =>
 export const dispatchRequest = (
   store: DevToolsStore,
   dispatch: (message: unknown) => Effect.Effect<void>,
-  maybeDispatchSchema: Option.Option<S.Codec<any, any>>,
+  maybeDispatchSchema: Option.Option<Schema.Codec<any, any>>,
   maybeJsonSchemaDocument: Option.Option<unknown>,
   request: Request,
 ): Effect.Effect<Response> =>
@@ -622,7 +625,7 @@ export const dispatchRequest = (
         onSome: dispatchSchema =>
           Effect.gen(function* () {
             const decodedMessage =
-              yield* S.decodeUnknownEffect(dispatchSchema)(message)
+              yield* Schema.decodeUnknownEffect(dispatchSchema)(message)
             const stateBefore = yield* SubscriptionRef.get(store.stateRef)
             const acceptedAtIndex = nextEntryIndex(stateBefore)
             yield* dispatch(decodedMessage)
@@ -651,7 +654,7 @@ export const dispatchRequest = (
         onNone: () => Effect.succeed(missingMessageSchemaResponse),
         onSome: dispatchSchema =>
           Effect.gen(function* () {
-            const decodeMessage = S.decodeUnknownEffect(dispatchSchema)
+            const decodeMessage = Schema.decodeUnknownEffect(dispatchSchema)
             const decodedMessages = yield* Effect.forEach(
               messages,
               (message, position) =>

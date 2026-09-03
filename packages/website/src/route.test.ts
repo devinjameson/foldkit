@@ -46,6 +46,10 @@ describe('route table', () => {
       expect(parsed._tag).toBe(expectedTag(name))
     },
   )
+
+  test('builds the Why Foldkit page at its renamed URL', () => {
+    expect(Route.manifestoRouter()).toBe('/get-started/why-foldkit')
+  })
 })
 
 describe('blog routes', () => {
@@ -83,27 +87,78 @@ describe('blog routes', () => {
 
 describe('section predicates', () => {
   const cases: ReadonlyArray<
-    readonly [string, Route.AppRoute, boolean, boolean]
+    Readonly<{
+      name: string
+      route: Route.AppRoute
+      isDocsSection: boolean
+      isBlog: boolean
+      isSearch: boolean
+    }>
   > = [
-    ['GettingStarted', Route.AppRoute.GettingStarted(), true, false],
-    ['CoreArchitecture', Route.AppRoute.CoreArchitecture(), true, false],
-    ['Home', Route.AppRoute.Home(), false, false],
-    ['Newsletter', Route.AppRoute.Newsletter(), false, false],
-    ['NotFound', Route.AppRoute.NotFound({ path: '/missing' }), false, false],
-    ['Blog', Route.AppRoute.Blog(), false, true],
-    [
-      'BlogPost',
-      Route.AppRoute.BlogPost({ postSlug: 'some-post' }),
-      false,
-      true,
-    ],
+    {
+      name: 'GettingStarted',
+      route: Route.AppRoute.GettingStarted(),
+      isDocsSection: true,
+      isBlog: false,
+      isSearch: true,
+    },
+    {
+      name: 'CoreArchitecture',
+      route: Route.AppRoute.CoreArchitecture(),
+      isDocsSection: true,
+      isBlog: false,
+      isSearch: true,
+    },
+    {
+      name: 'Home',
+      route: Route.AppRoute.Home(),
+      isDocsSection: false,
+      isBlog: false,
+      isSearch: false,
+    },
+    {
+      name: 'Newsletter',
+      route: Route.AppRoute.Newsletter(),
+      isDocsSection: false,
+      isBlog: false,
+      isSearch: false,
+    },
+    {
+      name: 'Playground',
+      route: Route.AppRoute.Playground({ exampleSlug: 'counter' }),
+      isDocsSection: false,
+      isBlog: false,
+      isSearch: false,
+    },
+    {
+      name: 'NotFound',
+      route: Route.AppRoute.NotFound({ path: '/missing' }),
+      isDocsSection: false,
+      isBlog: false,
+      isSearch: true,
+    },
+    {
+      name: 'Blog',
+      route: Route.AppRoute.Blog(),
+      isDocsSection: false,
+      isBlog: true,
+      isSearch: true,
+    },
+    {
+      name: 'BlogPost',
+      route: Route.AppRoute.BlogPost({ postSlug: 'some-post' }),
+      isDocsSection: false,
+      isBlog: true,
+      isSearch: true,
+    },
   ]
 
   test.each(cases)(
-    '%s: isDocsSectionRoute %s, isBlogRoute %s',
-    (_name, route, isDocsSection, isBlog) => {
+    '$name: isDocsSectionRoute $isDocsSection, isBlogRoute $isBlog, isSearchRoute $isSearch',
+    ({ route, isDocsSection, isBlog, isSearch }) => {
       expect(Route.isDocsSectionRoute(route)).toBe(isDocsSection)
       expect(Route.isBlogRoute(route)).toBe(isBlog)
+      expect(Route.isSearchRoute(route)).toBe(isSearch)
     },
   )
 })

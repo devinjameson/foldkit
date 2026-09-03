@@ -1,4 +1,4 @@
-import { Duration, Effect, Schema as S, Stream } from 'effect'
+import { Duration, Effect, Schema, Stream } from 'effect'
 import { Subscription } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 
@@ -13,18 +13,17 @@ type Message = typeof Message.Type
 
 // MODEL
 
-const Model = S.Struct({
-  count: S.Number,
-  isAutoCounting: S.Boolean,
+const Model = Schema.Struct({
+  count: Schema.Number,
+  isAutoCounting: Schema.Boolean,
 })
-
 type Model = typeof Model.Type
 
 // SUBSCRIPTION
 
 const subscriptions = Subscription.make<Model, Message>()(entry => ({
   tick: entry(
-    { isAutoCounting: S.Boolean },
+    { isAutoCounting: Schema.Boolean },
     {
       modelToDependencies: model => ({
         isAutoCounting: model.isAutoCounting,

@@ -1,4 +1,4 @@
-import { Match as M, Option, Schema as S } from 'effect'
+import { Option, Schema } from 'effect'
 import type { Html, HtmlBuilder } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
@@ -8,8 +8,8 @@ import * as Dialog from '../../dialog/index.js'
 
 // MODEL
 
-export const Model = S.Struct({
-  isEnabled: S.Boolean,
+export const Model = Schema.Struct({
+  isEnabled: Schema.Boolean,
   dialog: Dialog.Model,
 })
 export type Model = typeof Model.Type
@@ -32,13 +32,12 @@ export const initialModel: Model = {
 
 // UPDATE
 
-const foldDialogOutMessage = M.type<Dialog.OutMessage>().pipe(
-  M.withReturnType<Update.Step<Model, Message>>(),
-  M.tagsExhaustive({
-    Opened: () => model => ({ model }),
-    Closed: () => model => ({ model }),
-  }),
-)
+const foldDialogOutMessage = Dialog.OutMessage.match<
+  Update.Step<Model, Message>
+>({
+  Opened: () => model => ({ model }),
+  Closed: () => model => ({ model }),
+})
 
 const foldDialog = Update.foldChild({
   update: Dialog.update,

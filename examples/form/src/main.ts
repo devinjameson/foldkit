@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Array, Duration, Effect, Random, Schema as S } from 'effect'
+import { Array, Duration, Effect, Random, Schema } from 'effect'
 import { Command, FieldValidation, Runtime, type Update } from 'foldkit'
 import {
   Field,
@@ -33,16 +33,16 @@ const emailRules = makeRules({
 const Submission = defineTaggedUnion({
   NotSubmitted: {},
   Submitting: {},
-  SubmitSuccess: { confirmationText: S.String },
-  SubmitError: { error: S.String },
+  SubmitSuccess: { confirmationText: Schema.String },
+  SubmitError: { error: Schema.String },
 })
 
 type Submission = typeof Submission.Type
 
-export const Model = S.Struct({
-  name: Field(S.String),
-  email: Field(S.String),
-  messageText: Field(S.String),
+export const Model = Schema.Struct({
+  name: Field(Schema.String),
+  email: Field(Schema.String),
+  messageText: Field(Schema.String),
   submission: Submission,
 })
 export type Model = typeof Model.Type
@@ -50,12 +50,12 @@ export type Model = typeof Model.Type
 // MESSAGE
 
 export const Message = defineMessageUnion({
-  UpdatedName: { value: S.String },
-  UpdatedEmail: { value: S.String },
-  CompletedValidateEmail: { field: Field(S.String) },
-  UpdatedMessageText: { value: S.String },
+  UpdatedName: { value: Schema.String },
+  UpdatedEmail: { value: Schema.String },
+  CompletedValidateEmail: { field: Field(Schema.String) },
+  UpdatedMessageText: { value: Schema.String },
   ClickedFormSubmit: {},
-  SucceededSubmitForm: { name: S.String },
+  SucceededSubmitForm: { name: Schema.String },
   FailedSubmitForm: {},
 })
 
@@ -89,7 +89,7 @@ const isEmailOnWaitlist = (email: string): Effect.Effect<boolean> =>
   })
 
 export const ValidateEmail = Command.define('ValidateEmail', {
-  args: { email: S.String },
+  args: { email: Schema.String },
   messages: [Message.CompletedValidateEmail],
   execute: ({ email }) =>
     Effect.gen(function* () {
@@ -212,7 +212,11 @@ export const update = (model: Model, message: Message) =>
 const FAKE_API_DELAY_MS = 500
 
 export const SubmitForm = Command.define('SubmitForm', {
-  args: { name: S.String, email: S.String, messageText: S.String },
+  args: {
+    name: Schema.String,
+    email: Schema.String,
+    messageText: Schema.String,
+  },
   messages: [Message.SucceededSubmitForm, Message.FailedSubmitForm],
   execute: ({ name }) =>
     Effect.gen(function* () {

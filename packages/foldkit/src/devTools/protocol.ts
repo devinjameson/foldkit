@@ -1,55 +1,55 @@
-import { Effect, Schema as S } from 'effect'
+import { Effect, Schema } from 'effect'
 
 import { defineTaggedUnion } from '../schema/index.js'
 
 // SHARED
 
 /** A serialized Command produced during a Message dispatch (or `init`). `args` is `Some` when the Command's definition declared an args record, and carries the runtime values used to construct the Command instance. */
-export const SerializedCommand = S.Struct({
-  name: S.String,
-  args: S.OptionFromNullOr(S.Record(S.String, S.Unknown)),
+export const SerializedCommand = Schema.Struct({
+  name: Schema.String,
+  args: Schema.OptionFromNullOr(Schema.Record(Schema.String, Schema.Unknown)),
 })
 /** A serialized Command suitable for transmission over the WS protocol. */
 export type SerializedCommand = typeof SerializedCommand.Type
 
 /** A serialized Mount lifecycle event (start or end). `args` is `Some` when the Mount's definition declared an args record, and carries the runtime values used to construct the MountAction instance. */
-export const SerializedMount = S.Struct({
-  name: S.String,
-  args: S.OptionFromNullOr(S.Record(S.String, S.Unknown)),
+export const SerializedMount = Schema.Struct({
+  name: Schema.String,
+  args: Schema.OptionFromNullOr(Schema.Record(Schema.String, Schema.Unknown)),
 })
 /** A serialized Mount lifecycle event suitable for transmission over the WS protocol. */
 export type SerializedMount = typeof SerializedMount.Type
 
 /** A serialized history entry as it appears on the wire. `submodelPath` lists `Got<Child>Message` wrapper tags from outer to inner when the entry came up through a Submodel chain; `maybeLeafTag` is `Some` with the innermost child Message tag when one exists. `mountStarts` lists Mounts that fired during the render after this Message; `mountEnds` lists Mounts whose elements were unmounted during that render. The Messages dispatched by mount Effects appear as their own entries elsewhere in history. */
-export const SerializedEntry = S.Struct({
-  index: S.Number,
-  tag: S.String,
-  message: S.Unknown,
-  commands: S.Array(SerializedCommand),
-  mountStarts: S.Array(SerializedMount),
-  mountEnds: S.Array(SerializedMount),
-  timestamp: S.Number,
-  isModelChanged: S.Boolean,
-  changedPaths: S.Array(S.String),
-  affectedPaths: S.Array(S.String),
-  submodelPath: S.Array(S.String),
-  maybeLeafTag: S.OptionFromNullOr(S.String),
+export const SerializedEntry = Schema.Struct({
+  index: Schema.Number,
+  tag: Schema.String,
+  message: Schema.Unknown,
+  commands: Schema.Array(SerializedCommand),
+  mountStarts: Schema.Array(SerializedMount),
+  mountEnds: Schema.Array(SerializedMount),
+  timestamp: Schema.Number,
+  isModelChanged: Schema.Boolean,
+  changedPaths: Schema.Array(Schema.String),
+  affectedPaths: Schema.Array(Schema.String),
+  submodelPath: Schema.Array(Schema.String),
+  maybeLeafTag: Schema.OptionFromNullOr(Schema.String),
 })
 /** A serialized history entry suitable for transmission over the WS protocol. */
 export type SerializedEntry = typeof SerializedEntry.Type
 
 /** Metadata about a single keyframe. The index identifies the point in history where the runtime can replay back to. */
-export const KeyframeInfo = S.Struct({
-  index: S.Number,
+export const KeyframeInfo = Schema.Struct({
+  index: Schema.Number,
 })
 /** Metadata about a single keyframe. */
 export type KeyframeInfo = typeof KeyframeInfo.Type
 
 /** Metadata about a connected browser runtime. */
-export const RuntimeInfo = S.Struct({
-  connectionId: S.String,
-  url: S.String,
-  title: S.String,
+export const RuntimeInfo = Schema.Struct({
+  connectionId: Schema.String,
+  url: Schema.String,
+  title: Schema.String,
 })
 /** Metadata about a connected browser runtime. */
 export type RuntimeInfo = typeof RuntimeInfo.Type
@@ -64,41 +64,49 @@ export const MAX_DISPATCH_BATCH_SIZE = 100
  * runtime. */
 export const Request = defineTaggedUnion({
   RequestGetModel: {
-    maybePath: S.OptionFromNullOr(S.String),
-    expand: S.Boolean,
+    maybePath: Schema.OptionFromNullOr(Schema.String),
+    expand: Schema.Boolean,
   },
   RequestGetModelAt: {
-    index: S.Number,
-    maybePath: S.OptionFromNullOr(S.String),
-    expand: S.Boolean,
+    index: Schema.Number,
+    maybePath: Schema.OptionFromNullOr(Schema.String),
+    expand: Schema.Boolean,
   },
   RequestListMessages: {
-    limit: S.Number,
-    maybeSinceIndex: S.OptionFromNullOr(S.Number),
-    maybeChangedPathsMatch: S.OptionFromNullOr(S.Array(S.String)).pipe(
-      S.withDecodingDefault(Effect.succeed(null)),
+    limit: Schema.Number,
+    maybeSinceIndex: Schema.OptionFromNullOr(Schema.Number),
+    maybeChangedPathsMatch: Schema.OptionFromNullOr(
+      Schema.Array(Schema.String),
+    ).pipe(Schema.withDecodingDefault(Effect.succeed(null))),
+    fromEnd: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(false)),
     ),
-    fromEnd: S.Boolean.pipe(S.withDecodingDefault(Effect.succeed(false))),
   },
   RequestCountMessagesByTag: {
-    maybeSinceIndex: S.OptionFromNullOr(S.Number),
-    maybeChangedPathsMatch: S.OptionFromNullOr(S.Array(S.String)),
+    maybeSinceIndex: Schema.OptionFromNullOr(Schema.Number),
+    maybeChangedPathsMatch: Schema.OptionFromNullOr(
+      Schema.Array(Schema.String),
+    ),
   },
   RequestDiffModels: {
-    fromIndex: S.Number,
-    toIndex: S.Number,
-    maybeChangedPathsMatch: S.OptionFromNullOr(S.Array(S.String)),
+    fromIndex: Schema.Number,
+    toIndex: Schema.Number,
+    maybeChangedPathsMatch: Schema.OptionFromNullOr(
+      Schema.Array(Schema.String),
+    ),
   },
-  RequestGetMessage: { index: S.Number },
+  RequestGetMessage: { index: Schema.Number },
   RequestListKeyframes: {},
-  RequestReplayToKeyframe: { keyframeIndex: S.Number },
+  RequestReplayToKeyframe: { keyframeIndex: Schema.Number },
   RequestResume: {},
-  RequestDispatchMessage: { message: S.Unknown },
-  RequestDispatchMessages: { messages: S.Array(S.Unknown) },
+  RequestDispatchMessage: { message: Schema.Unknown },
+  RequestDispatchMessages: { messages: Schema.Array(Schema.Unknown) },
   RequestListRuntimes: {},
   RequestGetInit: {},
   RequestGetRuntimeState: {},
-  RequestGetMessageSchema: { maybeVariantTag: S.OptionFromNullOr(S.String) },
+  RequestGetMessageSchema: {
+    maybeVariantTag: Schema.OptionFromNullOr(Schema.String),
+  },
 })
 /** A request from the MCP server. */
 export type Request = typeof Request.Type
@@ -106,9 +114,9 @@ export type Request = typeof Request.Type
 // RESPONSE
 
 /** One row of a Message-tag histogram. */
-export const MessageTagCount = S.Struct({
-  tag: S.String,
-  count: S.Number,
+export const MessageTagCount = Schema.Struct({
+  tag: Schema.String,
+  count: Schema.Number,
 })
 /** One row of a Message-tag histogram. */
 export type MessageTagCount = typeof MessageTagCount.Type
@@ -118,14 +126,14 @@ export type MessageTagCount = typeof MessageTagCount.Type
  * keeps a missing path distinct from a path whose value is `null`. */
 export const DiffValue = defineTaggedUnion({
   Absent: {},
-  Present: { value: S.Unknown },
+  Present: { value: Schema.Unknown },
 })
 /** The value on one side of a Model diff path. */
 export type DiffValue = typeof DiffValue.Type
 
 /** One changed path in a Model diff. `before` is the value at `fromIndex`, `after` the value at `toIndex`. */
-export const ModelDiffChange = S.Struct({
-  path: S.String,
+export const ModelDiffChange = Schema.Struct({
+  path: Schema.String,
   before: DiffValue,
   after: DiffValue,
 })
@@ -133,17 +141,17 @@ export const ModelDiffChange = S.Struct({
 export type ModelDiffChange = typeof ModelDiffChange.Type
 
 /** One variant entry in a `MessageSchemaIndex`. `payloadFields` lists the variant's payload property names (excluding `_tag`); `unionFields` lists the subset of those properties whose schemas are themselves `_tag`-discriminated unions. A Submodel-wrapper variant always shows up with `unionFields: ['message']`, but the same flag also catches plain tagged-union value types like `UrlRequest = Internal | External`. Either way, the agent will need to pick a variant when filling these fields. */
-export const MessageSchemaIndexEntry = S.Struct({
-  tag: S.String,
-  payloadFields: S.Array(S.String),
-  unionFields: S.Array(S.String),
+export const MessageSchemaIndexEntry = Schema.Struct({
+  tag: Schema.String,
+  payloadFields: Schema.Array(Schema.String),
+  unionFields: Schema.Array(Schema.String),
 })
 /** One variant entry in a `MessageSchemaIndex`. */
 export type MessageSchemaIndexEntry = typeof MessageSchemaIndexEntry.Type
 
 /** A flat directory of every top-level Message variant the runtime accepts, designed to fit in an agent context regardless of Message-union size. Use the tag names to make a follow-up `RequestGetMessageSchema` with `maybeVariantTag` set to fetch the full JSON Schema for one variant. */
-export const MessageSchemaIndex = S.Struct({
-  variants: S.Array(MessageSchemaIndexEntry),
+export const MessageSchemaIndex = Schema.Struct({
+  variants: Schema.Array(MessageSchemaIndexEntry),
 })
 /** A flat directory of every top-level Message variant. */
 export type MessageSchemaIndex = typeof MessageSchemaIndex.Type
@@ -152,53 +160,57 @@ export type MessageSchemaIndex = typeof MessageSchemaIndex.Type
  * index of Message variants or the JSON Schema document for one variant. */
 export const MessageSchemaResult = defineTaggedUnion({
   MessageSchemaIndexResult: { index: MessageSchemaIndex },
-  MessageSchemaDocumentResult: { document: S.Unknown },
+  MessageSchemaDocumentResult: { document: Schema.Unknown },
 })
 /** The result of requesting the app's Message Schema. */
 export type MessageSchemaResult = typeof MessageSchemaResult.Type
 
 /** A response replying to a Request. */
 export const Response = defineTaggedUnion({
-  ResponseModel: { value: S.Unknown, atPath: S.String, summarized: S.Boolean },
+  ResponseModel: {
+    value: Schema.Unknown,
+    atPath: Schema.String,
+    summarized: Schema.Boolean,
+  },
   ResponseMessages: {
-    entries: S.Array(SerializedEntry),
-    maybeNextIndex: S.OptionFromNullOr(S.Number),
+    entries: Schema.Array(SerializedEntry),
+    maybeNextIndex: Schema.OptionFromNullOr(Schema.Number),
   },
   ResponseMessage: { entry: SerializedEntry },
   ResponseMessageCounts: {
-    counts: S.Array(MessageTagCount),
-    totalCount: S.Number,
-    scannedFromIndex: S.Number,
-    scannedToIndex: S.Number,
+    counts: Schema.Array(MessageTagCount),
+    totalCount: Schema.Number,
+    scannedFromIndex: Schema.Number,
+    scannedToIndex: Schema.Number,
   },
   ResponseModelDiff: {
-    fromIndex: S.Number,
-    toIndex: S.Number,
-    changes: S.Array(ModelDiffChange),
+    fromIndex: Schema.Number,
+    toIndex: Schema.Number,
+    changes: Schema.Array(ModelDiffChange),
   },
-  ResponseKeyframes: { keyframes: S.Array(KeyframeInfo) },
-  ResponseReplayed: { model: S.Unknown },
+  ResponseKeyframes: { keyframes: Schema.Array(KeyframeInfo) },
+  ResponseReplayed: { model: Schema.Unknown },
   ResponseResumed: {},
-  ResponseDispatched: { acceptedAtIndex: S.Number },
-  ResponseDispatchedBatch: { acceptedAtIndices: S.Array(S.Number) },
-  ResponseRuntimes: { runtimes: S.Array(RuntimeInfo) },
+  ResponseDispatched: { acceptedAtIndex: Schema.Number },
+  ResponseDispatchedBatch: { acceptedAtIndices: Schema.Array(Schema.Number) },
+  ResponseRuntimes: { runtimes: Schema.Array(RuntimeInfo) },
   ResponseInit: {
-    maybeModel: S.OptionFromNullOr(S.Unknown),
-    commands: S.Array(SerializedCommand),
-    mountStarts: S.Array(SerializedMount),
+    maybeModel: Schema.OptionFromNullOr(Schema.Unknown),
+    commands: Schema.Array(SerializedCommand),
+    mountStarts: Schema.Array(SerializedMount),
   },
   ResponseRuntimeState: {
-    currentIndex: S.Number,
-    startIndex: S.Number,
-    totalEntries: S.Number,
-    isPaused: S.Boolean,
-    maybePausedAtIndex: S.OptionFromNullOr(S.Number),
-    hasInitModel: S.Boolean,
+    currentIndex: Schema.Number,
+    startIndex: Schema.Number,
+    totalEntries: Schema.Number,
+    isPaused: Schema.Boolean,
+    maybePausedAtIndex: Schema.OptionFromNullOr(Schema.Number),
+    hasInitModel: Schema.Boolean,
   },
   ResponseMessageSchema: {
-    maybeResult: S.OptionFromNullOr(MessageSchemaResult),
+    maybeResult: Schema.OptionFromNullOr(MessageSchemaResult),
   },
-  ResponseError: { reason: S.String },
+  ResponseError: { reason: Schema.String },
 })
 /** A response replying to a Request. */
 export type Response = typeof Response.Type
@@ -208,7 +220,7 @@ export type Response = typeof Response.Type
 /** A runtime lifecycle event used by the Vite plugin to track which browser tabs are connected. Not forwarded to MCP clients. */
 export const Event = defineTaggedUnion({
   EventConnected: { runtime: RuntimeInfo },
-  EventDisconnected: { connectionId: S.String },
+  EventDisconnected: { connectionId: Schema.String },
 })
 /** A runtime lifecycle event. */
 export type Event = typeof Event.Type
@@ -216,25 +228,25 @@ export type Event = typeof Event.Type
 // FRAME
 
 /** A wire frame carrying a Request from the MCP server. The id is opaque, used only by the MCP server to correlate the matching Response. The maybeConnectionId routes the request to a specific runtime when present. */
-export const RequestFrame = S.Struct({
-  id: S.String,
-  maybeConnectionId: S.OptionFromNullOr(S.String),
+export const RequestFrame = Schema.Struct({
+  id: Schema.String,
+  maybeConnectionId: Schema.OptionFromNullOr(Schema.String),
   request: Request,
 })
 /** A wire frame carrying a Request from the MCP server. */
 export type RequestFrame = typeof RequestFrame.Type
 
 /** A wire frame carrying a Response, correlated to a Request by id. */
-export const ResponseFrame = S.Struct({
-  id: S.String,
+export const ResponseFrame = Schema.Struct({
+  id: Schema.String,
   response: Response,
 })
 /** A wire frame carrying a Response, correlated to a Request by id. */
 export type ResponseFrame = typeof ResponseFrame.Type
 
 /** A wire frame carrying a runtime lifecycle event from the bridge to the Vite plugin. */
-export const EventFrame = S.Struct({
-  maybeConnectionId: S.OptionFromNullOr(S.String),
+export const EventFrame = Schema.Struct({
+  maybeConnectionId: Schema.OptionFromNullOr(Schema.String),
   event: Event,
 })
 /** A wire frame carrying a runtime lifecycle event. */

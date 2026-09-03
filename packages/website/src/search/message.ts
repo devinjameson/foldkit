@@ -1,31 +1,28 @@
-import { Schema as S } from 'effect'
+import { Schema } from 'effect'
 import { defineMessageUnion } from 'foldkit/message'
 
 import { Dialog } from '@foldkit/ui'
 
-export const SearchResult = S.Struct({
-  url: S.String,
-  title: S.String,
-  excerpt: S.String,
-  section: S.String,
-  kind: S.String,
+export const SearchResult = Schema.Struct({
+  url: Schema.String,
+  title: Schema.String,
+  excerpt: Schema.String,
+  section: Schema.String,
+  kind: Schema.String,
 })
 
 export const Message = defineMessageUnion({
-  UpdatedSearchQuery: { query: S.String },
+  UpdatedSearchQuery: { query: Schema.String },
   CompletedFetchSearchResults: {
-    results: S.Array(SearchResult),
-    query: S.String,
+    results: Schema.Array(SearchResult),
+    query: Schema.String,
   },
-  SelectedSearchResult: { url: S.String },
+  SelectedSearchResult: { url: Schema.String },
   GotSearchDialogMessage: { message: Dialog.Message },
-  ClickedOpenSearch: {},
-  PressedSearchShortcut: {},
   ClearedSearchQuery: {},
   CompletedNavigateToResult: {},
   CompletedScrollToResult: {},
   CompletedFocusSearchInput: {},
-  PressedArrowKey: { direction: S.Literals(['Up', 'Down']) },
+  PressedArrowKey: { direction: Schema.Literals(['Up', 'Down']) },
 })
-
 export type Message = typeof Message.Type

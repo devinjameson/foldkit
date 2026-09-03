@@ -1,4 +1,4 @@
-import { Array as Array_, Context, Option } from 'effect'
+import { Array, Context, Option } from 'effect'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -28,10 +28,11 @@ const Message = defineMessageUnion({
 type Message = typeof Message.Type
 
 const h = __htmlBuilder<Message>()
+const unrestrictedTextarea = customElement<Message>()('textarea')
 
 describe('__hydrateVNode', () => {
   let registry: BoundaryRegistry
-  let dispatched: Array<unknown>
+  let dispatched: globalThis.Array<unknown>
   let host: HTMLDivElement
 
   const buildView = <A>(build: () => A): A => {
@@ -95,7 +96,7 @@ describe('__hydrateVNode', () => {
   // browser parser does. Complete that parser-derived state before testing
   // hydration. The SSR Playwright suite covers the same path in Chromium.
   const completeParsedSelectState = (select: HTMLSelectElement): void => {
-    const options = Array.from(select.options)
+    const options = globalThis.Array.from(select.options)
     const selectedOption = options.find(option =>
       option.hasAttribute('selected'),
     )
@@ -322,7 +323,7 @@ describe('__hydrateVNode', () => {
         ],
       )
     const root = mountServerHtml(serializeHydratable(buildView(serverView)))
-    const [serverNodeA, serverNodeB] = Array.from(
+    const [serverNodeA, serverNodeB] = globalThis.Array.from(
       root.querySelectorAll('input'),
     )
     if (
@@ -508,7 +509,7 @@ describe('__hydrateVNode', () => {
   it('runs the insert hook of a root rebuilt from a detached one', () => {
     // The replacement is a node the differ created, so its Mount runs. Reusing
     // the detached root would skip it, leaving a rebuilt root uninitialized.
-    const inserted: Array<string> = []
+    const inserted: globalThis.Array<string> = []
     const root = document.createElement('div')
     root.setAttribute('data-foldkit-build', 'build-one')
 
@@ -716,7 +717,7 @@ describe('__hydrateVNode', () => {
     const view = buildView(() => h.div([], [h.span([h.Id('inner')], ['x'])]))
     const root = mountServerHtml(serializeHydratable(view))
 
-    const inserted: Array<string> = []
+    const inserted: globalThis.Array<string> = []
     const nextVNode = buildView(() =>
       h.div([], [h.span([h.Id('inner')], ['x'])]),
     )
@@ -732,7 +733,7 @@ describe('__hydrateVNode', () => {
       throw new Error('expected the hydration view to produce a vnode')
     }
     attachInsertHook(nextVNode, 'parent')
-    const maybeChild = Array_.findFirst(
+    const maybeChild = Array.findFirst(
       nextVNode.children ?? [],
       (candidate): candidate is VNode => typeof candidate !== 'string',
     )
@@ -758,7 +759,7 @@ describe('__hydrateVNode', () => {
       ),
     )
 
-    const inserted: Array<string> = []
+    const inserted: globalThis.Array<string> = []
     const attachInsertHook = (vnode: VNode, name: string): void => {
       vnode.data ??= {}
       vnode.data.hook = {
@@ -799,7 +800,7 @@ describe('__hydrateVNode', () => {
   it('fires insert hooks in the same order as a fresh render', () => {
     // The same tree rendered from nothing is the reference order, so hydration
     // is compared against it rather than against a hand-written expectation.
-    const inserted: Array<string> = []
+    const inserted: globalThis.Array<string> = []
     const attachInsertHook = (vnode: VNode, name: string): void => {
       vnode.data ??= {}
       vnode.data.hook = {
@@ -1503,7 +1504,9 @@ describe('__hydrateVNode', () => {
   })
 
   it('does not re-notify an upgraded custom element for an unchanged typed attribute', () => {
-    const observations: Array<readonly [string | null, string | null]> = []
+    const observations: globalThis.Array<
+      readonly [string | null, string | null]
+    > = []
     class XObservedId extends HTMLElement {
       static get observedAttributes(): ReadonlyArray<string> {
         return ['id']
@@ -1534,7 +1537,9 @@ describe('__hydrateVNode', () => {
   })
 
   it('does not re-notify a custom element for an agreeing normalized global attribute', () => {
-    const observations: Array<readonly [string | null, string | null]> = []
+    const observations: globalThis.Array<
+      readonly [string | null, string | null]
+    > = []
     class XObservedDirection extends HTMLElement {
       static get observedAttributes(): ReadonlyArray<string> {
         return ['dir']
@@ -1561,7 +1566,9 @@ describe('__hydrateVNode', () => {
   })
 
   it('adopts both draggable states on a custom element without rewriting them', () => {
-    const observations: Array<readonly [string | null, string | null]> = []
+    const observations: globalThis.Array<
+      readonly [string | null, string | null]
+    > = []
     class XObservedDraggable extends HTMLElement {
       static get observedAttributes(): ReadonlyArray<string> {
         return ['draggable']
@@ -1846,7 +1853,7 @@ describe('__hydrateVNode', () => {
     element.appendChild(serverParagraph)
     expect(element.childElementCount).toBe(2)
 
-    const inserted: Array<string> = []
+    const inserted: globalThis.Array<string> = []
     const viewParagraph = snabbdomH(
       'p',
       {
@@ -2158,12 +2165,11 @@ describe('__hydrateVNode', () => {
     expect(output.querySelector('#released')?.textContent).toBe('released')
   })
 
-  it('restores browser defaults after controlled content releases to InnerHTML', () => {
+  it('restores output and select defaults after controlled content releases to InnerHTML', () => {
     const controlledView = () =>
       h.form(
         [],
         [
-          h.textarea([h.Id('released-textarea'), h.Value('controlled')]),
           h.output([h.Id('released-output'), h.Value('controlled')]),
           h.select(
             [h.Id('released-select'), h.Value('b')],
@@ -2175,10 +2181,6 @@ describe('__hydrateVNode', () => {
       h.form(
         [],
         [
-          h.textarea([
-            h.Id('released-textarea'),
-            h.InnerHTML('textarea default'),
-          ]),
           h.output([
             h.Id('released-output'),
             h.InnerHTML('<span id="output-child">output default</span>'),
@@ -2199,12 +2201,8 @@ describe('__hydrateVNode', () => {
 
     buildView(() => patch(controlled, requireVNode(releasedView())))
 
-    const textarea =
-      document.querySelector<HTMLTextAreaElement>('#released-textarea')
     const output = document.querySelector<HTMLOutputElement>('#released-output')
     const select = document.querySelector<HTMLSelectElement>('#released-select')
-    expect(textarea?.value).toBe('textarea default')
-    expect(textarea?.defaultValue).toBe('textarea default')
     expect(output?.querySelector('#output-child')?.textContent).toBe(
       'output default',
     )
@@ -2593,8 +2591,8 @@ describe('__hydrateVNode', () => {
     expect(root.getAttribute('value')).toBeNull()
   })
 
-  it('hydrates an uncontrolled textarea preserving its server content', () => {
-    const view = () => h.textarea([], ['default text'])
+  it('hydrates an internally built textarea preserving its server content', () => {
+    const view = () => unrestrictedTextarea([], ['default text'])
     const root = mountServerHtml(serializeHydratable(buildView(view)))
     if (!(root instanceof HTMLTextAreaElement)) {
       throw new Error('expected a textarea root')

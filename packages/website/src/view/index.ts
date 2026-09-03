@@ -1,4 +1,4 @@
-export * from './blog'
-export * from './docs'
-export * from './landing'
-export * from './shared'
+export * as HeaderNav from './headerNav'
+export * as Sidebar from './sidebar'
+export * as TableOfContents from './tableOfContents'
+export * as ThemeSelector from './themeSelector'
