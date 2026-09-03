@@ -20,7 +20,8 @@ A markdown file will be created in `.changeset/` - commit this with your PR.
 
 ## Version Guidelines
 
-- **patch**: Bug fixes, documentation updates, internal refactors
+- **empty**: Internal changes with no user-facing effect, such as refactors and test-only changes. Create one with `pnpm changeset add --empty`; it satisfies `changeset status` without adding a changelog entry
+- **patch**: Bug fixes, documentation updates, metadata changes
 - **minor**: New features and public breaking changes while Foldkit is pre-1.0
 - **major**: Reserved for the eventual 1.0 release and post-1.0 breaking changes
 

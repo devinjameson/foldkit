@@ -28,7 +28,8 @@ import { evo } from '../struct/index.js'
 import * as Subscription from '../subscription/subscription.js'
 import type * as Update from '../update/index.js'
 import { __setDevToolsOverlay } from './devToolsConfig.js'
-import { makeApplication, makeElement } from './runtime.js'
+import { makeApplication } from './makeApplication.js'
+import { makeElement } from './makeElement.js'
 
 const Message = defineMessageUnion({
   CompletedMountEditor: {},

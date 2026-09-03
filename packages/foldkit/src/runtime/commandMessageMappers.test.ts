@@ -5,7 +5,7 @@ import * as Command from '../command/index.js'
 import { __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import type * as Update from '../update/index.js'
-import { makeElement } from './runtime.js'
+import { makeElement } from './makeElement.js'
 
 // CHILD
 

@@ -8,7 +8,7 @@ import { make } from '../managedResource/managedResource.js'
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import type * as Update from '../update/index.js'
-import { makeElement } from './runtime.js'
+import { makeElement } from './makeElement.js'
 
 type EngineShape = Readonly<{ id: string }>
 

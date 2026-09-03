@@ -15,7 +15,9 @@ import { __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import * as Subscription from '../subscription/subscription.js'
 import type * as Update from '../update/index.js'
-import { makeApplication, makeElement, run } from './runtime.js'
+import { makeApplication } from './makeApplication.js'
+import { makeElement } from './makeElement.js'
+import { run } from './start.js'
 
 const Message = defineMessageUnion({
   ClickedReadValue: {},
