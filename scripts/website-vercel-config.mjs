@@ -282,14 +282,14 @@ export const websiteVercelConfig = channel => {
         headers: { Location: '/get-started/getting-started.md' },
       },
       {
-        src: '^/why-no-jsx$',
+        src: '^/(?:faq/)?why-no-jsx/?$',
         status: 308,
-        headers: { Location: '/faq/why-no-jsx' },
+        headers: { Location: '/get-started/why-foldkit' },
       },
       {
-        src: '^/why-no-jsx\\.md$',
+        src: '^/(?:faq/)?why-no-jsx\\.md$',
         status: 308,
-        headers: { Location: '/faq/why-no-jsx.md' },
+        headers: { Location: '/get-started/why-foldkit.md' },
       },
       {
         src: '^/what-about-ssr$',

@@ -14,7 +14,7 @@ describe('findActiveSectionKey', () => {
     ['ElmComparison', 'comparisons'],
     ['ProjectOrganization', 'patterns'],
     ['ToolingLinting', 'tooling'],
-    ['WhyNoJsx', 'faq'],
+    ['Performance', 'faq'],
     ['UiButton', 'foldkitUi'],
     ['AiOverview', 'ai'],
     ['Testing', 'testing'],

@@ -48,7 +48,6 @@ import {
   ToolingLinting,
   TypingTerminal,
   Ui,
-  WhyNoJsx,
 } from '../page'
 import * as Prose from '../prose'
 import { type DocsRoute, homeRouter } from '../route'
@@ -336,7 +335,6 @@ export const searchWeight = (tag: string): string =>
       'ReactComparison',
       'EffectAtomComparison',
       'ElmComparison',
-      'WhyNoJsx',
       'Performance',
       'Roadmap',
       String.startsWith('Testing'),
@@ -464,11 +462,6 @@ export const docsView = (
         withTableOfContents(
           Manifesto.view(renderHeadingLink),
           Manifesto.tableOfContents,
-        ),
-      WhyNoJsx: () =>
-        withTableOfContents(
-          lazyDocsContent(WhyNoJsx.view, [model.snippetCopy, h]),
-          WhyNoJsx.tableOfContents,
         ),
       Roadmap: () =>
         withTableOfContents(
