@@ -158,8 +158,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
             value,
             'Copy code to clipboard',
             config.renderCopyButton,
-            'mb-8',
-            Option.getOrUndefined(maybeLanguage),
+            { className: 'mb-8', maybeLanguage },
           ),
 
     List: (list, items) => {

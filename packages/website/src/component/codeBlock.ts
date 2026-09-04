@@ -1,4 +1,5 @@
 import { clsx } from 'clsx'
+import { Option } from 'effect'
 import { Html, inertHtml as ih } from 'foldkit/html'
 
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
@@ -12,16 +13,29 @@ export type RenderCopyButton = (
   }>,
 ) => Html
 
+const DEFAULT_COPY_BUTTON_POSITION_CLASS = 'top-2 right-2'
+
+type ViewOptions = Readonly<{
+  className?: string
+  maybeLanguage?: Option.Option<string>
+  copyButtonPositionClass?: string
+}>
+
 export const view = (
   id: string,
   code: string,
   ariaLabel: string,
   renderCopyButton: RenderCopyButton,
-  className?: string,
-  language?: string,
+  {
+    className,
+    maybeLanguage = Option.none(),
+    copyButtonPositionClass = DEFAULT_COPY_BUTTON_POSITION_CLASS,
+  }: ViewOptions = {},
 ) => {
-  const languageAttribute =
-    language === undefined ? [] : [ih.DataAttribute('language', language)]
+  const languageAttribute = Option.match(maybeLanguage, {
+    onNone: () => [],
+    onSome: language => [ih.DataAttribute('language', language)],
+  })
 
   const content = ih.pre(
     [
@@ -47,7 +61,7 @@ export const view = (
         id,
         text: code,
         ariaLabel,
-        positionClass: 'top-2 right-2',
+        positionClass: copyButtonPositionClass,
       }),
     ],
   )
@@ -69,7 +83,7 @@ export const highlightedView = (
         id,
         text: rawCode,
         ariaLabel,
-        positionClass: 'top-2 right-2',
+        positionClass: DEFAULT_COPY_BUTTON_POSITION_CLASS,
       }),
     ],
   )

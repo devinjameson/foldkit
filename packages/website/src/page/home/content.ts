@@ -226,7 +226,10 @@ const heroSection = (
                 INSTALL_COMMAND,
                 'Copy install command',
                 renderCopyButton,
-                'max-w-fit [&_pre]:text-xs [&_pre]:md:text-sm',
+                {
+                  className: 'max-w-fit [&_pre]:text-xs [&_pre]:md:text-sm',
+                  copyButtonPositionClass: 'top-1/2 -translate-y-1/2 right-2',
+                },
               ),
             ],
           ),
