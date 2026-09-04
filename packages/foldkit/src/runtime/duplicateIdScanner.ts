@@ -47,7 +47,8 @@ const warnDuplicateIds = (
 
 const DUPLICATE_ID_SCAN_INTERVAL_MS = 1000
 
-type DuplicateIdScanner = Readonly<{
+/** The coalescing scanner: `schedule` queues a scan of a root, `cancel` drops it. */
+export type DuplicateIdScanner = Readonly<{
   schedule: (root: Node | undefined) => void
   cancel: () => void
 }>
