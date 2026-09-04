@@ -11,18 +11,9 @@ import {
   Predicate,
   PubSub,
   Schema,
-  Stream,
-  SubscriptionRef,
   pipe,
 } from 'effect'
 
-import {
-  type CommandRecord,
-  type DevToolsStore,
-  type MountRecord,
-  createDevToolsStore,
-} from '../devTools/store.js'
-import { startWebSocketBridge } from '../devTools/webSocketBridge.js'
 import {
   type BoundaryRegistry,
   Document,
@@ -39,12 +30,7 @@ import {
 import { __hydrateVNode } from '../hydrate.js'
 import { FOLDKIT_APP_ATTRIBUTE } from '../hydrationMarker.js'
 import type { ManagedResources } from '../managedResource/index.js'
-import {
-  MountRuntime,
-  MountTracker,
-  ViewState,
-  liveViewStateChanges,
-} from '../mount/index.js'
+import { MountRuntime, MountTracker } from '../mount/index.js'
 import type { Ports } from '../port/index.js'
 import { RenderCommit, createCommitNotifier } from '../render/commit.js'
 import type { Subscriptions } from '../subscription/subscription.js'
@@ -66,13 +52,8 @@ import {
   renderCrashView,
 } from './crashUI.js'
 import { deepFreeze } from './deepFreeze.js'
-import {
-  type DevToolsConfig,
-  resolveDevToolsConfig,
-  resolveDevToolsKeyframeInterval,
-  resolveDevToolsMaxEntries,
-  resolveExcludeFromHistoryTags,
-} from './devToolsConfig.js'
+import type { DevToolsConfig } from './devToolsConfig.js'
+import { makeDevToolsIntegration } from './devToolsIntegration.js'
 import { Dispatch } from './dispatch.js'
 import { applyDocumentMetadata } from './documentMetadata.js'
 import { createDuplicateIdScanner } from './duplicateIdScanner.js'
@@ -134,13 +115,6 @@ type ResolvedViewTransition<Model, Message> = Readonly<{
 }>
 
 type RenderMode = 'Live' | 'Replay'
-
-const toCommandRecord = (
-  command: Readonly<{ name: string; args?: Record<string, unknown> }>,
-): CommandRecord =>
-  command.args !== undefined
-    ? { name: command.name, args: command.args }
-    : { name: command.name }
 
 /** Full runtime configuration including Model Schema, Flags, init, update, view, and optional routing/stream config. */
 export type RuntimeConfig<
@@ -423,10 +397,6 @@ export const makeRuntime = <
   const duplicateIdScanner = import.meta.hot
     ? createDuplicateIdScanner()
     : undefined
-
-  const excludeFromHistoryTags = resolveExcludeFromHistoryTags(devTools)
-  const devToolsMaxEntries = resolveDevToolsMaxEntries(devTools)
-  const devToolsKeyframeInterval = resolveDevToolsKeyframeInterval(devTools)
 
   const maybeFreezeModel = (model: Model): Model =>
     isFreezeModelActive ? deepFreeze(model) : model
@@ -804,33 +774,25 @@ export const makeRuntime = <
 
         const initModel = maybeFreezeModel(initModelRaw)
 
-        const resolvedDevTools = resolveDevToolsConfig(devTools)
-
         const modelPubSub = yield* PubSub.unbounded<Model>()
-        let currentViewState: ViewState = 'Live'
-        const maybeViewStatePubSub = Option.isSome(resolvedDevTools)
-          ? Option.some(
-              yield* PubSub.unbounded<ViewState>({
-                replay: 1,
-              }),
-            )
-          : Option.none()
-        const viewStateChanges = Option.match(maybeViewStatePubSub, {
-          onNone: () => liveViewStateChanges,
-          onSome: viewStatePubSub => {
-            PubSub.publishUnsafe(viewStatePubSub, currentViewState)
-            return Stream.fromPubSub(viewStatePubSub)
-          },
+        const {
+          mountTracker,
+          mountRuntime,
+          drainMountEvents,
+          readViewState,
+          setViewState,
+          isPausedNow,
+          installDevToolsStore,
+          resumeDevTools,
+          recordInit,
+          recordMessage,
+          attachRenderedMounts,
+        } = yield* makeDevToolsIntegration<Model, Message>({
+          devTools,
+          update,
+          maybeFreezeModel,
+          enqueueMessageEffect,
         })
-        const setViewState = (nextViewState: ViewState): void => {
-          if (nextViewState === currentViewState) {
-            return
-          }
-          currentViewState = nextViewState
-          if (Option.isSome(maybeViewStatePubSub)) {
-            PubSub.publishUnsafe(maybeViewStatePubSub.value, nextViewState)
-          }
-        }
 
         if (import.meta.hot) {
           yield* Effect.addFinalizer(() =>
@@ -1005,14 +967,6 @@ export const makeRuntime = <
 
         let maybeLastDirtyMessage = Option.none<Message>()
 
-        // NOTE: the DevTools store is installed at most once during boot and
-        // never replaced. Caching it in a closure variable avoids a
-        // `Ref.get` on every message and on every render frame (the
-        // store powers the pause check). Plain `null` rather than `Option`:
-        // the hot path only ever presence-checks it, and the check should
-        // stay a bare comparison.
-        let devToolsStore: DevToolsStore | null = null
-
         const dispatchSync = (message: unknown): void => {
           /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
           enqueueMessage(message as Message)
@@ -1023,50 +977,6 @@ export const makeRuntime = <
           enqueueMessageEffect(message as Message)
 
         const dispatch = { dispatchAsync, dispatchSync }
-
-        const mountRuntime = MountRuntime.of({
-          captureViewStateChanges: () =>
-            Stream.concat(Stream.make(currentViewState), viewStateChanges).pipe(
-              Stream.changes,
-            ),
-        })
-
-        const isPausedNow = (): boolean =>
-          devToolsStore !== null &&
-          SubscriptionRef.getUnsafe(devToolsStore.stateRef).isPaused
-
-        // NOTE: recording is gated on the DevTools store because the store
-        // is the only consumer. Without the gate every Mount start and end
-        // in a production frame would allocate a record just to be sliced
-        // and dropped.
-        const mountStartBuffer: Array<MountRecord> = []
-        const mountEndBuffer: Array<MountRecord> = []
-        const mountTracker: typeof MountTracker.Service = {
-          started: (name, args) => {
-            if (devToolsStore === null) {
-              return
-            }
-            mountStartBuffer.push(
-              args === undefined ? { name } : { name, args },
-            )
-          },
-          ended: (name, args) => {
-            if (devToolsStore === null) {
-              return
-            }
-            mountEndBuffer.push(args === undefined ? { name } : { name, args })
-          },
-        }
-        const drainMountEvents = (): Readonly<{
-          starts: ReadonlyArray<MountRecord>
-          ends: ReadonlyArray<MountRecord>
-        }> => {
-          const starts = mountStartBuffer.slice()
-          const ends = mountEndBuffer.slice()
-          mountStartBuffer.length = 0
-          mountEndBuffer.length = 0
-          return { starts, ends }
-        }
 
         // NOTE: the fork is deferred one microtask so a Command's Effect
         // never begins on the dispatching stack. Commands are facts from
@@ -1163,37 +1073,7 @@ export const makeRuntime = <
             }
           }
 
-          // NOTE: store writes go through `Effect.runFork`, not
-          // `Effect.runSync`. Both complete inline when the store's state
-          // Ref is uncontended (the always case on this path), but a
-          // DevTools fiber holding the Ref's permit across a yield would
-          // make `runSync` throw and crash the app; `runFork` parks and
-          // finishes the write when the permit frees, and the Ref's FIFO
-          // permit queue preserves write order.
-          if (devToolsStore !== null) {
-            const store = devToolsStore
-            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-            const tag = (message as { _tag: string })._tag
-            const isModelChanged = currentModel !== nextModel
-            if (!excludeFromHistoryTags.has(tag)) {
-              Effect.runFork(
-                store.recordMessage(
-                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  message as Message & { _tag: string },
-                  currentModel,
-                  nextModel,
-                  Array.map(
-                    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                    commands as ReadonlyArray<AnyCommand<Message>>,
-                    toCommandRecord,
-                  ),
-                  isModelChanged,
-                ),
-              )
-            } else if (isModelChanged) {
-              Effect.runFork(store.updateLatestModel(nextModel))
-            }
-          }
+          recordMessage(message, currentModel, nextModel, commands)
         }
 
         // NOTE: callers set `isRenderingFrame` before calling this and clear
@@ -1352,145 +1232,80 @@ export const makeRuntime = <
             Effect.provideService(MountRuntime, mountRuntime),
           )
 
-        if (Option.isSome(resolvedDevTools)) {
-          const { position, mode, maybeBanner, maybeOverlay } =
-            resolvedDevTools.value
-          // NOTE: when excludeFromHistory is active, the runtime drops
-          // excluded Messages from the recorded history. Replay walks the
-          // recorded entries forward from the nearest keyframe. With
-          // exclusion, the dropped Messages aren't in that walk, so any
-          // cumulative state they would have produced is missing from the
-          // replayed model. Setting keyframeInterval to 1 stores a full
-          // snapshot on every recorded entry, so time-travel becomes a
-          // direct lookup that reflects the real live state at the moment
-          // the entry was recorded.
-          const isExcludingMessages = excludeFromHistoryTags.size > 0
-          const store = yield* createDevToolsStore(
-            {
-              /* eslint-disable @typescript-eslint/consistent-type-assertions */
-              replay: (model, message) => {
-                const replayUpdate = update(model as Model, message as Message)
-                return maybeFreezeModel(replayUpdate.model)
-              },
-              /* eslint-enable @typescript-eslint/consistent-type-assertions */
-              // NOTE: passes `noOpDispatch` so declarative handlers and Mounts
-              // acquired by the replay cannot reach the live Model. Their
-              // fibers stay alive and can observe view-state changes while the
-              // historical view owns them. If resume reuses such an element,
-              // OnMount releases the replay acquisition before starting the
-              // live action. Also discards mount events fired during the render
-              // so they don't get attributed to the next user-initiated dispatch.
-              render: model =>
-                Effect.gen(function* () {
-                  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  const replayedModel = model as Model
-                  const previousRenderedModel = lastRenderedModel
-                  // NOTE: a Mount surviving from the live view must observe
-                  // Paused before the historical patch can expose different
-                  // DOM. Mounts inserted by that patch capture this state when
-                  // acquired, so asynchronous setup cannot skip Paused even if
-                  // it consumes the Stream only after the live view returns.
-                  setViewState('Paused')
-                  // NOTE: a transition still animating belongs to the live
-                  // state this replay is about to paint over. Left running it
-                  // animates a dead snapshot across the replayed DOM.
-                  skipPendingViewTransition()
-                  const replayRenderExit = yield* Effect.exit(
+        yield* installDevToolsStore({
+          // NOTE: passes `noOpDispatch` so declarative handlers and Mounts
+          // acquired by the replay cannot reach the live Model. Their
+          // fibers stay alive and can observe view-state changes while the
+          // historical view owns them. If resume reuses such an element,
+          // OnMount releases the replay acquisition before starting the
+          // live action. Also discards mount events fired during the render
+          // so they don't get attributed to the next user-initiated dispatch.
+          renderReplay: model =>
+            Effect.gen(function* () {
+              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+              const replayedModel = model as Model
+              const previousRenderedModel = lastRenderedModel
+              // NOTE: a Mount surviving from the live view must observe
+              // Paused before the historical patch can expose different
+              // DOM. Mounts inserted by that patch capture this state when
+              // acquired, so asynchronous setup cannot skip Paused even if
+              // it consumes the Stream only after the live view returns.
+              setViewState('Paused')
+              // NOTE: a transition still animating belongs to the live
+              // state this replay is about to paint over. Left running it
+              // animates a dead snapshot across the replayed DOM.
+              skipPendingViewTransition()
+              const replayRenderExit = yield* Effect.exit(
+                render(replayedModel, Option.none(), noOpDispatch, 'Replay'),
+              )
+              if (Exit.isFailure(replayRenderExit)) {
+                drainMountEvents()
+                if (isPausedNow()) {
+                  // NOTE: the failed patch may already have changed the
+                  // DOM. Repaint the Model at the store's previous paused
+                  // index before returning the failure. If that Model no
+                  // longer renders either, resume the store so its normal
+                  // live frame becomes the single recovery path.
+                  const rollbackExit = yield* Effect.exit(
                     render(
-                      replayedModel,
+                      previousRenderedModel,
                       Option.none(),
                       noOpDispatch,
                       'Replay',
                     ),
                   )
-                  if (Exit.isFailure(replayRenderExit)) {
-                    drainMountEvents()
-                    if (isPausedNow()) {
-                      // NOTE: the failed patch may already have changed the
-                      // DOM. Repaint the Model at the store's previous paused
-                      // index before returning the failure. If that Model no
-                      // longer renders either, resume the store so its normal
-                      // live frame becomes the single recovery path.
-                      const rollbackExit = yield* Effect.exit(
-                        render(
-                          previousRenderedModel,
-                          Option.none(),
-                          noOpDispatch,
-                          'Replay',
-                        ),
-                      )
-                      drainMountEvents()
-                      if (
-                        Exit.isFailure(rollbackExit) &&
-                        devToolsStore !== null
-                      ) {
-                        yield* devToolsStore.resume
-                      }
-                    } else {
-                      // NOTE: a failed first jump leaves the store live. Keep
-                      // Mounts Paused through the recovery patch, which
-                      // publishes Live only after the live DOM is restored.
-                      yield* Effect.sync(() => scheduleRenderFrame(true))
-                    }
-                    return yield* Effect.failCause(replayRenderExit.cause)
-                  }
                   drainMountEvents()
-                  // NOTE: a replay paints a past Model, so it owns the DOM on
-                  // screen until the next live frame. Leaving
-                  // `lastRenderedModel` on the pre-pause Model would hand the
-                  // `viewTransition` predicate a `previousModel` describing a
-                  // DOM that no longer exists, and the frame `resume`
-                  // schedules would animate the wrong direction out of the
-                  // wrong snapshot.
-                  lastRenderedModel = replayedModel
-                  // NOTE: the Message that dirtied the pre-pause frame does not
-                  // describe this repaint. Clearing it means the frame `resume`
-                  // schedules renders plainly, matching the documented rule
-                  // that time-travel never animates.
-                  maybeLastDirtyMessage = Option.none()
-                }),
-              // NOTE: `resume` calls this after a jumpTo render attached DOM
-              // listeners to `noOpDispatch`. Scheduling a frame renders the
-              // live model with live dispatch and rebinds listeners.
-              markRenderPending: Effect.sync(() => scheduleRenderFrame(true)),
-            },
-            {
-              ...(devToolsKeyframeInterval !== undefined && {
-                keyframeInterval: devToolsKeyframeInterval,
-              }),
-              ...(devToolsMaxEntries !== undefined && {
-                maxEntries: devToolsMaxEntries,
-              }),
-              // NOTE: exclusion forces keyframeInterval to 1 regardless of any
-              // configured value, since excluded Messages are never replayed
-              // and a denser interval would leave gaps in the replayed model.
-              // Spread last so it wins over `keyframeInterval` above.
-              ...(isExcludingMessages && { keyframeInterval: 1 }),
-            },
-          )
-          devToolsStore = store
-          // NOTE: init is recorded after the init render below, so the
-          // mount buffer reflects the Mounts that fired on the first paint.
-          yield* Option.match(maybeOverlay, {
-            onNone: () => Effect.void,
-            onSome: overlay => overlay(store, position, mode, maybeBanner),
-          })
-
-          if (import.meta.hot) {
-            const maybeMessageSchema =
-              devTools !== undefined && devTools !== false
-                ? Option.fromNullishOr(devTools.Message)
-                : Option.none<Schema.Codec<any, any, unknown, unknown>>()
-            yield* startWebSocketBridge(
-              store,
-              import.meta.hot,
-              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-              message => enqueueMessageEffect(message as Message),
-              /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-              maybeMessageSchema as Option.Option<Schema.Codec<any, any>>,
-            )
-          }
-        }
+                  if (Exit.isFailure(rollbackExit)) {
+                    yield* resumeDevTools
+                  }
+                } else {
+                  // NOTE: a failed first jump leaves the store live. Keep
+                  // Mounts Paused through the recovery patch, which
+                  // publishes Live only after the live DOM is restored.
+                  yield* Effect.sync(() => scheduleRenderFrame(true))
+                }
+                return yield* Effect.failCause(replayRenderExit.cause)
+              }
+              drainMountEvents()
+              // NOTE: a replay paints a past Model, so it owns the DOM on
+              // screen until the next live frame. Leaving
+              // `lastRenderedModel` on the pre-pause Model would hand the
+              // `viewTransition` predicate a `previousModel` describing a
+              // DOM that no longer exists, and the frame `resume`
+              // schedules would animate the wrong direction out of the
+              // wrong snapshot.
+              lastRenderedModel = replayedModel
+              // NOTE: the Message that dirtied the pre-pause frame does not
+              // describe this repaint. Clearing it means the frame `resume`
+              // schedules renders plainly, matching the documented rule
+              // that time-travel never animates.
+              maybeLastDirtyMessage = Option.none()
+            }),
+          // NOTE: `resume` calls this after a jumpTo render attached DOM
+          // listeners to `noOpDispatch`. Scheduling a frame renders the
+          // live model with live dispatch and rebinds listeners.
+          markRenderPending: Effect.sync(() => scheduleRenderFrame(true)),
+        })
 
         const initRenderExit = yield* Effect.exit(
           render(initModel, Option.none()),
@@ -1508,14 +1323,7 @@ export const makeRuntime = <
           yield* restorePreservedScrollPosition(runtimeId)
         }
 
-        const initMountEvents = drainMountEvents()
-        if (devToolsStore !== null) {
-          yield* devToolsStore.recordInit(
-            initModel,
-            Array.map(initCommands, toCommandRecord),
-            initMountEvents.starts,
-          )
-        }
+        yield* recordInit(initModel, initCommands)
 
         // NOTE: maybeLastDirtyMessage holds the most recent dirtying
         // Message, so slow render-phase callbacks during high-rate bursts attribute
@@ -1556,7 +1364,7 @@ export const makeRuntime = <
           // it. What this frame painted is what the next transition animates
           // away from.
           const renderedModel = liveModel
-          const isResuming = currentViewState === 'Paused'
+          const isResuming = readViewState() === 'Paused'
           if (isResuming) {
             // NOTE: Messages accumulated while a historical view owned the DOM
             // did not cause this repaint. A Message arriving during the patch
@@ -1578,15 +1386,7 @@ export const makeRuntime = <
             // NOTE: resume clears the store's pause flag before this frame.
             // Publish Live only after the live DOM has been installed.
             setViewState('Live')
-            if (devToolsStore !== null) {
-              const mountEvents = drainMountEvents()
-              Effect.runFork(
-                devToolsStore.attachRenderedMounts(
-                  mountEvents.starts,
-                  mountEvents.ends,
-                ),
-              )
-            }
+            attachRenderedMounts()
           } catch (error) {
             Effect.runFork(crashWith(Cause.die(error), maybeLastDirtyMessage))
           } finally {
@@ -1616,7 +1416,7 @@ export const makeRuntime = <
         const startFrameViewTransition = (
           resolved: ResolvedViewTransition<Model, Message>,
         ): boolean => {
-          if (currentViewState === 'Paused') {
+          if (readViewState() === 'Paused') {
             return false
           }
           if (resolved.reducedMotionQuery.matches) {
@@ -1648,7 +1448,7 @@ export const makeRuntime = <
                 return
               }
               update.didRun = true
-              // NOTE: `currentViewState` closes the resume window after the
+              // NOTE: the view state closes the resume window after the
               // store is live but before its plain frame has restored the live
               // DOM. A transition invalidated by jumpTo stays invalid forever,
               // so its callback cannot repaint inside the stale transition
@@ -1657,7 +1457,7 @@ export const makeRuntime = <
                 status.isRuntimeDisposed ||
                 status.isCrashed ||
                 isPausedNow() ||
-                currentViewState === 'Paused'
+                readViewState() === 'Paused'
               ) {
                 settlePendingCommit()
                 return
@@ -1704,7 +1504,7 @@ export const makeRuntime = <
             settlePendingCommit()
             return
           }
-          if (currentViewState === 'Paused' && !isRestoringLiveView) {
+          if (readViewState() === 'Paused' && !isRestoringLiveView) {
             settlePendingCommit()
             return
           }
