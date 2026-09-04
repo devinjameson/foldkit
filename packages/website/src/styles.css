@@ -104,11 +104,11 @@ html.dark {
   }
 
   body {
-    @apply text-base leading-relaxed font-light tracking-[0.01em] text-gray-800 dark:text-gray-200;
+    @apply text-base leading-relaxed font-normal text-gray-900 dark:text-gray-200;
   }
 
   strong {
-    font-weight: 350;
+    font-weight: 600;
   }
 
   :is(h1, h2, h3, h4).font-mono {
@@ -127,8 +127,16 @@ html.dark {
     @apply font-mono font-normal text-accent-500 dark:text-accent-400 text-sm;
   }
 
+  .list-decimal {
+    padding-left: 1.75rem;
+  }
+
+  .list-decimal li::marker {
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
   pre {
-    @apply pr-14 pl-2.75 py-4 rounded-lg overflow-x-auto border border-gray-200 dark:border-gray-700/50 font-code text-sm;
+    @apply pr-14 pl-4 py-4 rounded-lg overflow-x-auto border border-gray-200 dark:border-gray-700/50 font-code text-sm;
   }
 
   .dark .shiki {
@@ -146,27 +154,6 @@ html.dark {
 
   pre code .line {
     @apply leading-6;
-  }
-
-  pre code .line[data-line]::before {
-    content: attr(data-line);
-    @apply inline-block mr-4 text-right text-gray-500 select-none border-r border-gray-300 pr-4;
-  }
-
-  .dark pre code .line[data-line]::before {
-    border-color: #332f3b;
-  }
-
-  pre[data-line-digits='1'] code .line[data-line]::before {
-    @apply w-8;
-  }
-
-  pre[data-line-digits='2'] code .line[data-line]::before {
-    @apply w-10;
-  }
-
-  pre[data-line-digits='3'] code .line[data-line]::before {
-    @apply w-12;
   }
 
   .code-embed {
@@ -383,11 +370,6 @@ html.dark {
     border-radius: 0;
     border: none;
     overflow: visible;
-  }
-
-  .demo-code-panel pre code .line[data-line]::before,
-  .note-demo-code-panel pre code .line[data-line]::before {
-    @apply hidden;
   }
 
   .demo-code-panel pre {

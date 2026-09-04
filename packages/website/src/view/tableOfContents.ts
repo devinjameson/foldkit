@@ -122,7 +122,7 @@ export const mobileView = (
       h.summary(
         [
           h.Class(
-            'flex items-center justify-between px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden group-open:border-b group-open:border-gray-300 dark:group-open:border-gray-800',
+            'flex items-center justify-between px-6 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden group-open:border-b group-open:border-gray-300 dark:group-open:border-gray-800',
           ),
         ],
         [
@@ -181,10 +181,10 @@ export const mobileView = (
                       ),
                       h.Class(
                         clsx(
-                          'transition flex items-center justify-between py-3 px-4',
+                          'transition flex items-center justify-between py-3 px-6',
                           {
-                            'pl-8': level === 'h3',
-                            'pl-12': level === 'h4',
+                            'pl-10': level === 'h3',
+                            'pl-14': level === 'h4',
                             'text-accent-600 dark:text-accent-400': isActive,
                             'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white':
                               !isActive,

@@ -28,9 +28,9 @@ export type DocViewConfig = Readonly<{
 const linkClassName = 'link-accent font-normal'
 
 const blockquoteClassName =
-  'border-l-4 border-gray-300 dark:border-gray-700 pl-4 italic text-gray-700 dark:text-gray-300 mb-4 [&>p:last-child]:mb-0'
+  'border-l-4 border-gray-300 dark:border-gray-700 pl-4 italic text-gray-700 dark:text-gray-300 mb-5 [&>p:last-child]:mb-0'
 
-const listClassName = 'mb-8 space-y-2 [&>li>p:last-child]:mb-0'
+const listClassName = 'mb-6 space-y-2 [&>li>p:last-child]:mb-0'
 
 const diagramLanguage = 'diagram'
 
@@ -76,7 +76,7 @@ const titleAttributes = (
 export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
   return {
     Paragraph: (_paragraph, content) =>
-      ih.p([ih.Class('mb-4 leading-relaxed')], content),
+      ih.p([ih.Class('mb-5 leading-relaxed')], content),
 
     Link: (link, content) =>
       ih.a(
@@ -158,7 +158,7 @@ export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
             value,
             'Copy code to clipboard',
             config.renderCopyButton,
-            { className: 'mb-8', maybeLanguage },
+            { className: 'mb-6', maybeLanguage },
           ),
 
     List: (list, items) => {

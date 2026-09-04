@@ -76,7 +76,7 @@ export const highlightedView = (
   className?: string,
 ) =>
   ih.div(
-    [PagefindIgnore, ih.Class(clsx('relative min-w-0 mt-8', className))],
+    [PagefindIgnore, ih.Class(clsx('relative min-w-0 mt-6', className))],
     [
       content,
       renderCopyButton({

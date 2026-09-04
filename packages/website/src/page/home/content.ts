@@ -730,7 +730,7 @@ const testingSection = (renderCopyButton: CodeBlock.RenderCopyButton): Html =>
             Snippet.landingStoryTestRaw,
             'Copy Story test example to clipboard',
             renderCopyButton,
-            '',
+            'mt-8',
           ),
           CodeBlock.highlightedView(
             'home-scene-test',
@@ -741,7 +741,7 @@ const testingSection = (renderCopyButton: CodeBlock.RenderCopyButton): Html =>
             Snippet.landingSceneTestRaw,
             'Copy Scene test example to clipboard',
             renderCopyButton,
-            '',
+            'mt-8',
           ),
         ],
       ),
