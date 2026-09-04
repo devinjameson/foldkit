@@ -1,5 +1,6 @@
 import {
   Array,
+  Function,
   HashSet,
   Match,
   Option,
@@ -494,10 +495,10 @@ export type Machine<
   edges: ReadonlyArray<EdgeSummary<State, Message>>
   /** Runs one Message through the Machine as a Foldkit update. The returned
    * `Update.Return<State, Message, R>` stores the next Machine state in
-   * `model` and any transition-time Commands in `commands`, so a context-free
-   * `transition` can be passed directly to `Update.foldChild`. Use a closure
-   * around a contextual `transition`. Use `step` when code needs to distinguish
-   * a `Transitioned` result from an `Ignored` result or inspect Edge metadata.
+   * `model` and any transition-time Commands in `commands`. Use {@link fold}
+   * to read and write the Machine state inside an enclosing Model. Use `step`
+   * when code needs to distinguish a `Transitioned` result from an `Ignored`
+   * result or inspect Edge metadata.
    */
   transition: (
     state: State,
@@ -545,6 +546,113 @@ export type Machine<
   ) => ReadonlyArray<DeadTransition<State, Message>>
   toMermaid: () => string
 }>
+
+type FoldContextField<ParentModel, Context> =
+  HasMachineContext<Context> extends true
+    ? Readonly<{
+        context: (
+          model: NoInfer<ParentModel>,
+        ) => NoInfer<MachineContextArgument<Context>>
+      }>
+    : Readonly<{ context?: never }>
+
+/** The capabilities needed to fold a Machine state field into its enclosing
+ * Model. `read` returns an `Option` because the field may be absent in the
+ * current Model variant; `write` replaces it after a transition. A contextual
+ * Machine also requires `context`, which reads the current context from the
+ * enclosing Model for each transition. */
+export type FoldConfig<
+  ParentModel,
+  State extends Tagged,
+  Message extends Tagged,
+  R = never,
+  Context = NoMachineContext,
+> = Readonly<{
+  machine: Machine<State, Message, R, Context>
+  read: (model: ParentModel) => Option.Option<State>
+  write: (model: ParentModel, nextState: State) => ParentModel
+}> &
+  FoldContextField<ParentModel, Context>
+
+type AnyFoldConfig = Readonly<{
+  machine: any
+  read: (model: any) => Option.Option<any>
+  write: (model: any, nextState: any) => any
+  context?: (model: any) => any
+}>
+
+const transitionFoldedMachine = (
+  config: AnyFoldConfig,
+  model: any,
+  state: any,
+  message: any,
+): Update.Return<any, any, any> => {
+  const readContext = config.context
+
+  if (readContext !== undefined) {
+    return config.machine.transition(state, message, readContext(model))
+  } else {
+    return config.machine.transition(state, message)
+  }
+}
+
+/** Folds a Machine state field into an enclosing Model. Any transition-time
+ * Commands pass through unchanged.
+ *
+ * When `read` returns `None`, the fold returns the original Model without
+ * running a transition. For a contextual Machine, `context` is read only when
+ * the Machine state is present and is supplied to that transition.
+ *
+ * ```ts
+ * const foldUpload = Machine.fold({
+ *   machine: uploadMachine,
+ *   read: (model: Model) => Option.some(model.upload),
+ *   write: (model, nextUpload) =>
+ *     evo(model, { upload: () => nextUpload }),
+ *   context: model => model.uploadQueues,
+ * })
+ *
+ * // Data-first in update
+ * foldUpload(model, message)
+ *
+ * // Data-last in a composed update
+ * Update.combine(model, [foldUpload(message), recordUploadAttempt])
+ * ```
+ *
+ * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
+ */
+export const fold: {
+  <
+    ParentModel,
+    State extends Tagged,
+    Message extends Tagged,
+    R = never,
+    Context = NoMachineContext,
+  >(
+    config: FoldConfig<ParentModel, State, Message, R, Context>,
+  ): Update.Fold<ParentModel, Message, Message, R>
+} = (config: AnyFoldConfig) =>
+  Function.dual(2, (model: any, message: any) => {
+    const maybeState = config.read(model)
+
+    if (Option.isNone(maybeState)) {
+      return { model }
+    }
+
+    const transition = transitionFoldedMachine(
+      config,
+      model,
+      maybeState.value,
+      message,
+    )
+    const nextModel = config.write(model, transition.model)
+
+    if (transition.commands === undefined) {
+      return { model: nextModel }
+    } else {
+      return { model: nextModel, commands: transition.commands }
+    }
+  })
 
 /**
  * The Schemas a Machine is defined over: the state union and the Message
@@ -693,11 +801,9 @@ const flattenUnionMembers = (
  *
  * The Machine is not a runtime: `transition` returns an `Update.Return`, so the
  * Machine state lives in the Model and the Foldkit runtime never learns the
- * Machine exists. A context-free `transition` has the same shape as a Foldkit
- * `update` branch and can be passed directly to `Update.foldChild`. A
- * contextual Machine needs a closure that reads its context from the parent
- * Model. Messages that match no Edge leave the state unchanged; use `step`
- * when the `Ignored` outcome should be observable.
+ * Machine exists. Use {@link fold} to read and write a Machine state field in
+ * an enclosing Model. Messages that match no Edge leave the state unchanged;
+ * use `step` when the `Ignored` outcome should be observable.
  *
  * Declare a `context` Schema when transitions need a read-only view of data
  * outside the Machine state. The context is passed to guards and Edge handlers
