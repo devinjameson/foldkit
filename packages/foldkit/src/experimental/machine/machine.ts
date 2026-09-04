@@ -1,6 +1,7 @@
 import {
   Array,
   Function,
+  HashMap,
   HashSet,
   Match,
   Option,
@@ -95,7 +96,7 @@ export type EdgeInput<
  * The correlation between `target` and `handler`'s Model variant is enforced
  * by {@link to}'s signature, not by this type. Keeping this type free of the
  * target tag is what lets TypeScript infer the source state and trigger
- * Message from the transition table position.
+ * Message from the transition-map position.
  *
  * Construct with {@link to}.
  */
@@ -221,6 +222,139 @@ export type TransitionTable<
   }>
 }>
 
+const ForStatesTypeId: unique symbol = Symbol('foldkit/Machine/ForStates')
+declare const ForStatesVarianceTypeId: unique symbol
+
+type ForStatesFragment<
+  State extends Tagged,
+  Message extends Tagged,
+  R,
+  Context,
+  SourceTags extends ReadonlyArray<string> = ReadonlyArray<TagOf<State>>,
+> = Readonly<{
+  _tag: 'ForStates'
+  [ForStatesTypeId]: typeof ForStatesTypeId
+  sourceTags: SourceTags
+  on: unknown
+  readonly [ForStatesVarianceTypeId]?: Readonly<{
+    state: State
+    message: Message
+    requirements: R
+    context: Context
+  }>
+}>
+
+type SharedTransitionMap<
+  State extends Tagged,
+  Message extends Tagged,
+  SourceState extends State,
+  R,
+  Context,
+> = Readonly<{
+  [MessageTag in TagOf<Message>]?:
+    | Edge<
+        State,
+        Message,
+        SourceState,
+        Variant<Message, MessageTag>,
+        void,
+        R,
+        Context
+      >
+    | ReadonlyArray<
+        GuardedEdge<
+          State,
+          Message,
+          SourceState,
+          Variant<Message, MessageTag>,
+          R,
+          Context
+        >
+      >
+}>
+
+type RequirementsOfGuarded<Value> =
+  Value extends When<any, any, any, any, any, infer R, any>
+    ? R
+    : Value extends Otherwise<any, any, any, any, infer R, any>
+      ? R
+      : never
+
+type RequirementsOfTransition<Value> =
+  Value extends Edge<any, any, any, any, any, infer R, any>
+    ? R
+    : Value extends ReadonlyArray<infer GuardedEdge>
+      ? RequirementsOfGuarded<GuardedEdge>
+      : never
+
+type RequirementsOfTransitionMap<Transitions> = RequirementsOfTransition<
+  NonNullable<Transitions[keyof Transitions]>
+>
+
+type ForStatesBuilder<SourceTags extends Array.NonEmptyReadonlyArray<string>> =
+  Readonly<{
+    on: <
+      State extends Tagged,
+      Message extends Tagged,
+      Context,
+      R,
+      const Transitions extends SharedTransitionMap<
+        State,
+        Message,
+        Variant<State, Extract<SourceTags[number], TagOf<State>>>,
+        R,
+        Context
+      >,
+    >(
+      transitions: Exclude<SourceTags[number], TagOf<State>> extends never
+        ? Exclude<keyof Transitions, TagOf<Message>> extends never
+          ? Transitions
+          : never
+        : never,
+    ) => ForStatesFragment<
+      State,
+      Message,
+      RequirementsOfTransitionMap<Transitions>,
+      Context,
+      SourceTags
+    >
+  }>
+
+/** Selects source state tags for a shared transition map. The `on` handler's
+ * `state` is narrowed to the union of the selected variants, and its `message`
+ * is narrowed by the map key.
+ *
+ * Add the resulting fragment to a Machine definition's `shared` array. Shared
+ * transitions are defaults: a state-local transition for the same Message
+ * replaces the shared transition. Defining the same state/Message pair in two
+ * shared fragments throws when the Machine is defined.
+ *
+ * @example
+ * ```ts
+ * shared: [
+ *   forStates(['Editing', 'Reviewing']).on({
+ *     ClickedCancel: to('Cancelled', ({ state }) => ({
+ *       model: CheckoutState.Cancelled({ draftId: state.draftId }),
+ *     })),
+ *   }),
+ * ]
+ * ```
+ *
+ * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
+ */
+export const forStates: <
+  const SourceTags extends Array.NonEmptyReadonlyArray<string>,
+>(
+  sourceTags: SourceTags,
+) => ForStatesBuilder<SourceTags> = sourceTags => ({
+  on: transitions => ({
+    _tag: 'ForStates',
+    [ForStatesTypeId]: ForStatesTypeId,
+    sourceTags,
+    on: transitions,
+  }),
+})
+
 /** The transition table entry for one source state. Use this alias when
  * extracting an entry from a Machine's `states` record to preserve the source
  * state and triggering Message narrowing inside its Edges.
@@ -275,17 +409,19 @@ const makeEdge = <
 /**
  * Declares a transition Edge to the state variant named by `target`. The
  * `handler` receives an {@link EdgeInput} whose state and Message are narrowed
- * to the variants the Edge sits under in the transition table, and returns an
- * `Update.Return` record whose `model` is the target variant and whose optional
- * `commands` are transition-time effects. When the Machine declares a context,
- * the input also contains that context for the current transition.
+ * to the variants the Edge sits under in a state-local or shared transition
+ * map, and returns an `Update.Return` record whose `model` is the target
+ * variant and whose optional `commands` are transition-time effects. When the
+ * Machine declares a context, the input also contains that context for the
+ * current transition.
  *
  * The handler's `commands` field may contain Commands whose Effects need
  * services. The requirements they carry flow into the Machine's `R` through
  * {@link define}.
  *
- * Only meaningful inside a {@link TransitionTable}: the source and trigger
- * types flow in from the table position contextually.
+ * Only meaningful inside a Machine definition's state-local or shared
+ * transition map: the source and trigger types flow in from that position
+ * contextually.
  *
  * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
  */
@@ -325,7 +461,7 @@ export const to = <
  * When the Machine declares a context, the guard receives it as a third
  * parameter and its Edge handler receives it in {@link EdgeInput}. The state,
  * Message, and context parameters are `NoInfer` so they resolve from the guard
- * list's table position alone.
+ * list's transition-map position alone.
  *
  * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
  */
@@ -690,7 +826,7 @@ export const fold: {
 /**
  * The Schemas a Machine is defined over: the state union and the Message
  * union. Passed to `define`'s first stage so the type parameters are
- * fully resolved before the transition table is checked.
+ * fully resolved before the Machine definition is checked.
  */
 type MachineSchemaFields<
   State extends Tagged,
@@ -715,7 +851,9 @@ export type MachineSchemas<
     ? Readonly<{ context: ContextSchema }>
     : Readonly<{ context?: never }>)
 
-/** The Machine definition: the initial state and the transition table.
+/** The Machine definition: the initial state, shared transition defaults, and
+ * the state-local transition table. A state-local transition replaces a
+ * shared transition for the same state and Message.
  *
  * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
  */
@@ -726,6 +864,7 @@ export type MachineDefinition<
   Context = NoMachineContext,
 > = Readonly<{
   initial: State
+  shared?: ReadonlyArray<ForStatesFragment<State, Message, R, Context>>
   states: TransitionTable<State, Message, R, Context>
 }>
 
@@ -779,20 +918,150 @@ type IgnoredEdge = Readonly<{
 type EdgeSelection<State extends Tagged, Message extends Tagged, R> =
   SelectedEdge<State, Message, R> | IgnoredEdge
 
+type LooseTransition<State extends Tagged, Message extends Tagged, R> =
+  | LooseEdge<State, Message, R>
+  | ReadonlyArray<LooseGuardedEdge<State, Message, R>>
+
+type LooseTransitionMap<
+  State extends Tagged,
+  Message extends Tagged,
+  R,
+> = Readonly<Record<TagOf<Message>, LooseTransition<State, Message, R>>>
+
+type LooseStateTransitions<
+  State extends Tagged,
+  Message extends Tagged,
+  R,
+> = Readonly<{ on: LooseTransitionMap<State, Message, R> }>
+
 type LooseTable<State extends Tagged, Message extends Tagged, R> = Readonly<
-  Record<
-    TagOf<State>,
-    Readonly<{
-      on: Readonly<
-        Record<
-          TagOf<Message>,
-          | LooseEdge<State, Message, R>
-          | ReadonlyArray<LooseGuardedEdge<State, Message, R>>
-        >
-      >
-    }>
-  >
+  Record<TagOf<State>, LooseStateTransitions<State, Message, R>>
 >
+
+type LooseForStatesFragment<
+  State extends Tagged,
+  Message extends Tagged,
+  R,
+> = Readonly<{
+  sourceTags: ReadonlyArray<TagOf<State>>
+  on: LooseTransitionMap<State, Message, R>
+}>
+
+type ExpandedSharedTransitions<
+  State extends Tagged,
+  Message extends Tagged,
+  R,
+> = Readonly<{
+  states: LooseTable<State, Message, R>
+  messageTagsByState: HashMap.HashMap<
+    TagOf<State>,
+    HashSet.HashSet<TagOf<Message>>
+  >
+}>
+
+const emptyLooseRecord = <Key extends string, Value>(): Readonly<
+  Record<Key, Value>
+> => {
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  return {} as Readonly<Record<Key, Value>>
+}
+
+const addSharedTransition = <State extends Tagged, Message extends Tagged, R>(
+  explicitStates: LooseTable<State, Message, R>,
+  expanded: ExpandedSharedTransitions<State, Message, R>,
+  sourceTag: TagOf<State>,
+  messageTag: TagOf<Message>,
+  transition: LooseTransition<State, Message, R>,
+): ExpandedSharedTransitions<State, Message, R> => {
+  const sharedMessageTags = pipe(
+    HashMap.get(expanded.messageTagsByState, sourceTag),
+    Option.getOrElse(() => HashSet.empty<TagOf<Message>>()),
+  )
+
+  if (HashSet.has(sharedMessageTags, messageTag)) {
+    throw new Error(
+      `Machine.define: shared transitions overlap for state "${sourceTag}" and Message "${messageTag}"`,
+    )
+  }
+
+  const nextMessageTagsByState = pipe(
+    expanded.messageTagsByState,
+    HashMap.set(sourceTag, HashSet.add(sharedMessageTags, messageTag)),
+  )
+  const isStateLocal = pipe(
+    Record.get(explicitStates, sourceTag),
+    Option.exists(stateEntry => Record.has(stateEntry.on, messageTag)),
+  )
+
+  if (isStateLocal) {
+    return {
+      states: expanded.states,
+      messageTagsByState: nextMessageTagsByState,
+    }
+  }
+
+  const stateEntry: LooseStateTransitions<State, Message, R> = pipe(
+    Record.get(expanded.states, sourceTag),
+    Option.getOrElse(() => ({
+      on: emptyLooseRecord<
+        TagOf<Message>,
+        LooseTransition<State, Message, R>
+      >(),
+    })),
+  )
+
+  return {
+    states: pipe(
+      expanded.states,
+      Record.set(sourceTag, {
+        on: Record.set(stateEntry.on, messageTag, transition),
+      }),
+    ),
+    messageTagsByState: nextMessageTagsByState,
+  }
+}
+
+const expandSharedTransitions = <
+  State extends Tagged,
+  Message extends Tagged,
+  R,
+>(
+  explicitStates: LooseTable<State, Message, R>,
+  shared: ReadonlyArray<LooseForStatesFragment<State, Message, R>>,
+): LooseTable<State, Message, R> =>
+  pipe(
+    shared,
+    Array.reduce<
+      ExpandedSharedTransitions<State, Message, R>,
+      LooseForStatesFragment<State, Message, R>
+    >(
+      {
+        states: explicitStates,
+        messageTagsByState: HashMap.empty(),
+      },
+      (expanded, fragment) =>
+        pipe(
+          Array.dedupe(fragment.sourceTags),
+          Array.reduce(expanded, (nextExpanded, sourceTag) =>
+            pipe(
+              Record.toEntries(fragment.on),
+              Array.reduce(
+                nextExpanded,
+                (nextStateExpanded, [messageTag, transition]) =>
+                  addSharedTransition(
+                    explicitStates,
+                    nextStateExpanded,
+                    sourceTag,
+                    messageTag,
+                    transition,
+                  ),
+              ),
+            ),
+          ),
+        ),
+    ),
+    result => result.states,
+  )
 
 const isGuardList = <State extends Tagged, Message extends Tagged, R>(
   edgeOrGuardedEdges:
@@ -838,14 +1107,19 @@ const flattenUnionMembers = (
   })
 
 /**
- * Compiles a declarative transition table into a {@link Machine}.
+ * Compiles a declarative Machine definition into a {@link Machine}.
  *
  * Two stages: the first takes the state and Message union Schemas and fixes
- * the type parameters, the second takes the initial state and the transition
- * table. The split is what lets TypeScript narrow `state` and `message`
- * inside every Edge from its table position: a single-call form checks the
- * table while the type parameters are still being inferred, and the
- * narrowing collapses.
+ * the type parameters, the second takes the initial state, optional shared
+ * transition defaults, and the state-local transition table. The split is
+ * what lets TypeScript narrow `state` and `message` inside every Edge from its
+ * transition-map position: a single-call form checks the definition while the
+ * type parameters are still being inferred, and the narrowing collapses.
+ *
+ * Build shared defaults with {@link forStates}. Each fragment is expanded
+ * into the ordinary state-local table before dispatch and static analysis. A
+ * state-local transition replaces its shared default for that state and
+ * Message; overlapping shared fragments throw when the Machine is defined.
  *
  * The Machine is not a runtime: `transition` returns an `Update.Return`, so the
  * Machine state lives in the Model and the Foldkit runtime never learns the
@@ -935,11 +1209,16 @@ function defineImplementation<
     definition: MachineDefinition<State, Message, R, Context>,
   ): Machine<State, Message, R, Context> => {
     /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    const looseStates = definition.states as unknown as LooseTable<
+    const explicitStates = definition.states as unknown as LooseTable<
       State,
       Message,
       R
     >
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    const shared = (definition.shared ?? []) as ReadonlyArray<
+      LooseForStatesFragment<State, Message, R>
+    >
+    const looseStates = expandSharedTransitions(explicitStates, shared)
 
     const hasContext = Predicate.hasProperty(schemas, 'context')
     const initialTag = definition.initial._tag

@@ -161,6 +161,22 @@ export const checkoutMachine = Machine.define({
   message: Message,
 })({
   initial: CheckoutState.Cart({ isShippingRequired: true }),
+  shared: [
+    Machine.forStates(['Cart', 'Shipping', 'Payment', 'Review']).on({
+      ClickedCancel: to('Cancelled', ({ state }) => ({
+        model: CheckoutState.Cancelled({
+          isShippingRequired: state.isShippingRequired,
+        }),
+      })),
+    }),
+    Machine.forStates(['Confirmed', 'Cancelled']).on({
+      ClickedStartOver: to('Cart', ({ state }) => ({
+        model: CheckoutState.Cart({
+          isShippingRequired: state.isShippingRequired,
+        }),
+      })),
+    }),
+  ],
   states: {
     Cart: {
       on: {
@@ -188,11 +204,6 @@ export const checkoutMachine = Machine.define({
             })),
           ),
         ],
-        ClickedCancel: to('Cancelled', ({ state }) => ({
-          model: CheckoutState.Cancelled({
-            isShippingRequired: state.isShippingRequired,
-          }),
-        })),
       },
     },
     Shipping: {
@@ -205,11 +216,6 @@ export const checkoutMachine = Machine.define({
         })),
         ClickedBack: to('Cart', ({ state }) => ({
           model: CheckoutState.Cart({
-            isShippingRequired: state.isShippingRequired,
-          }),
-        })),
-        ClickedCancel: to('Cancelled', ({ state }) => ({
-          model: CheckoutState.Cancelled({
             isShippingRequired: state.isShippingRequired,
           }),
         })),
@@ -249,11 +255,6 @@ export const checkoutMachine = Machine.define({
             })),
           ),
         ],
-        ClickedCancel: to('Cancelled', ({ state }) => ({
-          model: CheckoutState.Cancelled({
-            isShippingRequired: state.isShippingRequired,
-          }),
-        })),
       },
     },
     Review: {
@@ -308,11 +309,6 @@ export const checkoutMachine = Machine.define({
             isShippingRequired: state.isShippingRequired,
           }),
         })),
-        ClickedCancel: to('Cancelled', ({ state }) => ({
-          model: CheckoutState.Cancelled({
-            isShippingRequired: state.isShippingRequired,
-          }),
-        })),
       },
     },
     Placing: {
@@ -322,24 +318,6 @@ export const checkoutMachine = Machine.define({
             isShippingRequired: state.isShippingRequired,
             maybeDiscount: state.maybeDiscount,
             orderId: message.orderId,
-          }),
-        })),
-      },
-    },
-    Confirmed: {
-      on: {
-        ClickedStartOver: to('Cart', ({ state }) => ({
-          model: CheckoutState.Cart({
-            isShippingRequired: state.isShippingRequired,
-          }),
-        })),
-      },
-    },
-    Cancelled: {
-      on: {
-        ClickedStartOver: to('Cart', ({ state }) => ({
-          model: CheckoutState.Cart({
-            isShippingRequired: state.isShippingRequired,
           }),
         })),
       },

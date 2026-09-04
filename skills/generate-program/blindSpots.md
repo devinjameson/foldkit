@@ -30,6 +30,8 @@ When the answer takes real tracing, that is the signal to reach for `Machine` (`
 
 Use `ignore()` as the final entry in an ordered guard list when the Message should intentionally produce no transition after every preceding `when` guard declines. `step()` then reports `ExplicitlyIgnored`, which keeps that deliberate outcome distinct from an accidental guard fallthrough.
 
+When identical transitions apply from several states, declare the shared default with `Machine.forStates(['First', 'Second']).on({ ... })` in the definition's `shared` array. The handler's `state` is the union of the selected variants, so only fields common to every selected state are available. A transition in a state's own `on` record replaces the shared default for that state and Message; never overlap two shared groups for the same pair.
+
 The walk cannot see state changes made outside `transition` and `step`. Pass every restored, deep-linked, hydrated, or otherwise externally entered state as an extra root before treating `UnreachableSource` findings as application defects.
 
 Recommend it when a flow has several states, guarded transitions, or edges that are easy to get wrong (checkout, onboarding, multi-step approval, connection lifecycles). `repos/foldkit/examples/state-machine/` is the reference. Don't push it on a three-state union that one exhaustive `match` already handles legibly; the table costs more than it saves there. The module is under `experimental/`, so say so when recommending it.
