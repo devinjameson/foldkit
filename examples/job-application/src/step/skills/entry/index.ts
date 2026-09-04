@@ -1,12 +1,11 @@
 export {
   Model,
   Message,
+  OutMessage,
   init,
   update,
-  GenerateEntryId,
   hasErrors,
   isComplete,
   revealErrors,
-} from './education'
-export * as Entry from './entry'
+} from './entry'
 export { view } from './view'

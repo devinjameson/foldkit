@@ -1,19 +1,48 @@
 import clsx from 'clsx'
-import { Submodel } from 'foldkit'
+import { Schema } from 'effect'
+import { Submodel, type Update } from 'foldkit'
 import type { Html } from 'foldkit/html'
+import { defineMessageUnion } from 'foldkit/message'
+import { evo } from 'foldkit/struct'
 
 import { Textarea } from '@foldkit/ui'
 
-import { CoverLetter } from '../step'
-import { Message } from '../step/coverLetter'
+// MODEL
+
+export const Model = Schema.Struct({
+  content: Schema.String,
+})
+export type Model = typeof Model.Type
+
+// MESSAGE
+
+export const Message = defineMessageUnion({
+  UpdatedContent: { value: Schema.String },
+})
+
+export type Message = typeof Message.Type
+
+// INIT
+
+export const init = (): Model => ({
+  content: '',
+})
+
+// UPDATE
+
+export const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    UpdatedContent: ({ value }) => ({
+      model: evo(model, { content: () => value }),
+    }),
+  })
+
+// VIEW
 
 const MAX_COVER_LETTER_LENGTH = 2000
 const WARNING_THRESHOLD_CHARS = 200
 
-export const coverLetterView = Submodel.defineView<
-  CoverLetter.Model,
-  CoverLetter.Message
->((model, h): Html => {
+export const view = Submodel.defineView<Model, Message>((model, h): Html => {
   const remaining = MAX_COVER_LETTER_LENGTH - model.content.length
   const isOverLimit = remaining < 0
   const isWarning = !isOverLimit && remaining <= WARNING_THRESHOLD_CHARS

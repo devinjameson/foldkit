@@ -4,30 +4,26 @@ import { type Html, type HtmlBuilder, createKeyedLazy } from 'foldkit/html'
 
 import { Button } from '@foldkit/ui'
 
-import { Education } from '../step'
-import { Message } from '../step/education'
-import { educationEntryView } from './educationEntry'
+import { Message, type Model } from './education'
+import * as Entry from './entry'
 
 const lazyEntry = createKeyedLazy()
 
 const entryView = (
-  entry: Education.Entry.Model,
+  entry: Entry.Model,
   today: CalendarDate,
-  h: HtmlBuilder<Education.Message>,
+  h: HtmlBuilder<Message>,
 ): Html =>
   h.submodel({
     slotId: entry.id,
     model: entry,
-    view: educationEntryView,
+    view: Entry.view,
     viewInputs: { today },
     toParentMessage: message =>
       Message.GotEntryMessage({ entryId: entry.id, message }),
   })
 
-export const educationView = Submodel.defineView<
-  Education.Model,
-  Education.Message
->((model, h): Html =>
+export const view = Submodel.defineView<Model, Message>((model, h): Html =>
   h.div(
     [h.Class('space-y-6')],
     [

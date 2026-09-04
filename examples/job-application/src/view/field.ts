@@ -14,7 +14,7 @@ const borderClass = (field: Field<string>): string =>
     onInvalid: () => 'border-red-500',
   })
 
-export const inputField = <ParentMessage>(
+export const input = <ParentMessage>(
   config: Readonly<{
     id: string
     label: string
@@ -90,7 +90,7 @@ export const inputField = <ParentMessage>(
     h,
   )
 
-export const checkboxField = <ParentMessage>(
+export const checkbox = <ParentMessage>(
   config: Readonly<{
     id: string
     label: string
@@ -138,7 +138,7 @@ export const checkboxField = <ParentMessage>(
     h,
   )
 
-export const textareaField = <ParentMessage>(
+export const textarea = <ParentMessage>(
   config: Readonly<{
     id: string
     label: string

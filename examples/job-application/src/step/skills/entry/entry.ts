@@ -13,8 +13,8 @@ import { evo } from 'foldkit/struct'
 
 import { RadioGroup } from '@foldkit/ui'
 
-import { ProficiencyLevel } from '../../domain'
-import { revealFieldErrors } from '../validation'
+import { ProficiencyLevel } from '../../../domain'
+import { revealFieldErrors } from '../../validation'
 
 // FIELD VALIDATION
 

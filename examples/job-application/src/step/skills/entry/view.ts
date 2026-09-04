@@ -5,20 +5,17 @@ import type { Html } from 'foldkit/html'
 
 import { Button } from '@foldkit/ui'
 
-import { ProficiencyLevel } from '../domain'
-import { Skills } from '../step'
-import { inputField } from './field'
+import { ProficiencyLevel } from '../../../domain'
+import { Field } from '../../../view'
+import { Message, type Model, ProficiencyRadioGroup } from './entry'
 
-export const skillEntryView = Submodel.defineView<
-  Skills.Entry.Model,
-  Skills.Entry.Message
->((model, h): Html => {
-  const nameView = inputField(
+export const view = Submodel.defineView<Model, Message>((model, h): Html => {
+  const nameView = Field.input(
     {
       id: `${model.id}-name`,
       label: 'Skill',
       field: model.name,
-      onInput: value => Skills.Entry.Message.UpdatedName({ value }),
+      onInput: value => Message.UpdatedName({ value }),
       placeholder: 'e.g. TypeScript, React, Effect-TS',
     },
     h,
@@ -27,7 +24,7 @@ export const skillEntryView = Submodel.defineView<
   const proficiencyView = h.submodel({
     slotId: model.proficiencyRadioGroup.id,
     model: model.proficiencyRadioGroup,
-    view: Skills.Entry.ProficiencyRadioGroup.view,
+    view: ProficiencyRadioGroup.view,
     viewInputs: {
       selectedValue: Option.some(model.proficiency),
       options: ProficiencyLevel.all,
@@ -58,7 +55,7 @@ export const skillEntryView = Submodel.defineView<
         ),
     },
     toParentMessage: message =>
-      Skills.Entry.Message.GotProficiencyRadioGroupMessage({ message }),
+      Message.GotProficiencyRadioGroupMessage({ message }),
   })
 
   return h.keyed('div')(
@@ -81,7 +78,7 @@ export const skillEntryView = Submodel.defineView<
         [
           Button.view(
             {
-              onClick: Skills.Entry.Message.ClickedRemoveSelf(),
+              onClick: Message.ClickedRemoveSelf(),
               toView: attributes =>
                 h.button(
                   [

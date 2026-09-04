@@ -1,5 +1,4 @@
-import { Calendar } from 'foldkit'
-import { Valid, Validating } from 'foldkit/fieldValidation'
+import { Validating } from 'foldkit/fieldValidation'
 import {
   Command,
   click,
@@ -12,75 +11,16 @@ import {
 } from 'foldkit/scene'
 import { describe, test } from 'vitest'
 
-import { Menu, Tabs } from '@foldkit/ui'
-import { Message as TabsMessage } from '@foldkit/ui/tabs'
+import { Tabs } from '@foldkit/ui'
 
-import { type Model, Submission } from './model'
-import {
-  Attachments,
-  CoverLetter,
-  Education,
-  PersonalInfo,
-  Skills,
-  WorkHistory,
-} from './step'
+import { completeModel, initialModel } from './main.fixture'
+import { Submission } from './model'
 import { update } from './update'
-import { view } from './view'
-
-const today = Calendar.make(2026, 4, 16)
-
-const initialModel: Model = {
-  currentStep: 'PersonalInfo',
-  personalInfo: PersonalInfo.init(today),
-  workHistory: WorkHistory.init(today, 'work-history-entry-1'),
-  education: Education.init(today, 'education-entry-1'),
-  skills: Skills.init('skills-entry-1'),
-  coverLetter: CoverLetter.init(),
-  attachments: Attachments.init(),
-  isPreviewVisible: false,
-  submission: Submission.NotSubmitted(),
-  stepMenu: Menu.init({ id: 'step-menu' }),
-  stepTabs: Tabs.init({ id: 'step-tabs' }),
-  isSubmitAttempted: false,
-}
-
-const completeModel: Model = {
-  ...initialModel,
-  personalInfo: {
-    ...initialModel.personalInfo,
-    firstName: Valid({ value: 'Jane' }),
-    lastName: Valid({ value: 'Doe' }),
-    email: Valid({ value: 'jane@example.com' }),
-  },
-  workHistory: {
-    ...initialModel.workHistory,
-    entries: initialModel.workHistory.entries.map(entry => ({
-      ...entry,
-      company: Valid({ value: 'Foldkit' }),
-      title: Valid({ value: 'Engineer' }),
-    })),
-  },
-  education: {
-    ...initialModel.education,
-    entries: initialModel.education.entries.map(entry => ({
-      ...entry,
-      school: Valid({ value: 'MIT' }),
-      degree: Valid({ value: 'BS' }),
-      fieldOfStudy: Valid({ value: 'CS' }),
-    })),
-  },
-  skills: {
-    ...initialModel.skills,
-    entries: initialModel.skills.entries.map(entry => ({
-      ...entry,
-      name: Valid({ value: 'TypeScript' }),
-    })),
-  },
-}
+import { view } from './view/view'
 
 const resolveFocusTab = Command.resolve(
   Tabs.FocusTab,
-  TabsMessage.CompletedFocusTab(),
+  Tabs.Message.CompletedFocusTab(),
 )
 
 describe('view', () => {
