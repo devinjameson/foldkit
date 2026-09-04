@@ -63,7 +63,8 @@ export type SlowThresholdOverrides = Readonly<{
   SubscriptionDependencies?: number
 }>
 
-type ResolvedSlowPhaseConfig<Context> = Readonly<{
+/** One measured phase: its budget and the callback fired when it is exceeded. */
+export type ResolvedSlowPhaseConfig<Context> = Readonly<{
   thresholdMs: number
   onSlow: (context: Context) => void
 }>

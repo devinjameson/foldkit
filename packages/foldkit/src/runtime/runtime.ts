@@ -10,8 +10,6 @@ import {
   Option,
   Predicate,
   PubSub,
-  Record,
-  Ref,
   Schema,
   Stream,
   SubscriptionRef,
@@ -40,10 +38,7 @@ import {
 } from '../html/index.js'
 import { __hydrateVNode } from '../hydrate.js'
 import { FOLDKIT_APP_ATTRIBUTE } from '../hydrationMarker.js'
-import type {
-  ManagedResourceConfig,
-  ManagedResources,
-} from '../managedResource/index.js'
+import type { ManagedResources } from '../managedResource/index.js'
 import {
   MountRuntime,
   MountTracker,
@@ -97,23 +92,21 @@ import {
   buildSkew,
   containRefusedPage,
 } from './hydrationHandoff.js'
+import { forkManagedResourceFibers } from './managedResourceFibers.js'
 import { makeMessageQueue } from './messageQueue.js'
 import { makePreserveScheduler } from './preserveScheduler.js'
-import {
-  type ManagedResourceRef,
-  makeResourceProvider,
-} from './resourceProvider.js'
+import { makeResourceProvider } from './resourceProvider.js'
 import { makeRuntimeStatus } from './runtimeStatus.js'
 import {
   type SlowConfig,
   type SlowPatchContext,
-  type SlowSubscriptionDependenciesContext,
   type SlowUpdateContext,
   type SlowViewContext,
   __resolveSlowConfig,
   measureSlowPhase,
   reportSlowPhase,
 } from './slowPhase.js'
+import { forkSubscriptionFibers } from './subscriptionFibers.js'
 import {
   type StartViewTransition,
   type ViewTransitionConfig,
@@ -1745,201 +1738,27 @@ export const makeRuntime = <
         }
 
         if (subscriptions) {
-          yield* pipe(
+          yield* forkSubscriptionFibers({
             subscriptions,
-            Record.toEntries,
-            Effect.forEach(
-              ([
-                key,
-                {
-                  dependenciesSchema,
-                  modelToDependencies,
-                  keepAliveEquivalence,
-                  dependenciesToStream,
-                },
-              ]) =>
-                Effect.gen(function* () {
-                  const equivalence =
-                    keepAliveEquivalence ??
-                    Schema.toEquivalence(dependenciesSchema)
-
-                  const [initDependencies, maybeInitDependenciesDuration] =
-                    measureSlowPhase(resolvedSlowSubscriptionDependencies, () =>
-                      modelToDependencies(initModel),
-                    )
-                  reportSlowPhase<SlowSubscriptionDependenciesContext<Model>>(
-                    resolvedSlowSubscriptionDependencies,
-                    maybeInitDependenciesDuration,
-                    (durationMs, thresholdMs) => ({
-                      _tag: 'SubscriptionDependencies',
-                      subscriptionKey: key,
-                      model: initModel,
-                      durationMs,
-                      thresholdMs,
-                    }),
-                  )
-
-                  const latestDependenciesRef =
-                    yield* Ref.make(initDependencies)
-
-                  const modelChangesStream = Stream.fromPubSub(
-                    modelPubSub,
-                  ).pipe(
-                    // NOTE: Ref.set runs upstream of Stream.changesWith on
-                    // every model change, so readDependencies() returns
-                    // current values even when the equivalence filter
-                    // doesn't emit. Moving this into a tap after
-                    // changesWith would silently break subscribers whose
-                    // dependencies are equivalence-stable across model
-                    // changes.
-                    Stream.mapEffect(model =>
-                      Effect.gen(function* () {
-                        const [dependencies, maybeDependenciesDuration] =
-                          measureSlowPhase(
-                            resolvedSlowSubscriptionDependencies,
-                            () => modelToDependencies(model),
-                          )
-
-                        reportSlowPhase<
-                          SlowSubscriptionDependenciesContext<Model>
-                        >(
-                          resolvedSlowSubscriptionDependencies,
-                          maybeDependenciesDuration,
-                          (durationMs, thresholdMs) => ({
-                            _tag: 'SubscriptionDependencies',
-                            subscriptionKey: key,
-                            model,
-                            durationMs,
-                            thresholdMs,
-                          }),
-                        )
-
-                        yield* Ref.set(latestDependenciesRef, dependencies)
-                        return dependencies
-                      }),
-                    ),
-                  )
-
-                  yield* Effect.forkIn(runtimeScope)(
-                    Stream.concat(
-                      Stream.make(initDependencies),
-                      modelChangesStream,
-                    ).pipe(
-                      Stream.changesWith(equivalence),
-                      Stream.switchMap(dependencies =>
-                        dependenciesToStream(dependencies, () =>
-                          Ref.getUnsafe(latestDependenciesRef),
-                        ),
-                      ),
-                      Stream.runForEach(message =>
-                        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                        enqueueMessageEffect(message as Message),
-                      ),
-                      provideAllResources,
-                      Effect.catchCause(cause =>
-                        crashWith(cause, Option.none()),
-                      ),
-                    ),
-                  )
-                }),
-              {
-                concurrency: 'unbounded',
-                discard: true,
-              },
-            ),
-          )
+            initModel,
+            modelPubSub,
+            runtimeScope,
+            maybeSlowSubscriptionDependencies:
+              resolvedSlowSubscriptionDependencies,
+            enqueueMessageEffect,
+            provideAllResources,
+            crashWith,
+          })
         }
 
-        const maybeRequirementsToLifecycle =
-          (
-            config: ManagedResourceConfig<Model, Message>,
-            resourceRef: Ref.Ref<Option.Option<unknown>>,
-          ) =>
-          (
-            maybeRequirements: unknown,
-          ): Stream.Stream<Effect.Effect<Message>> => {
-            if (
-              Option.isOption(maybeRequirements) &&
-              Option.isNone(maybeRequirements)
-            ) {
-              return Stream.empty
-            }
-
-            const requirements = Option.isOption(maybeRequirements)
-              ? Option.getOrThrow(maybeRequirements)
-              : maybeRequirements
-
-            const acquire = Effect.gen(function* () {
-              const value = yield* config.acquire(requirements)
-              yield* Ref.set(resourceRef, Option.some(value))
-              return value
-            })
-
-            const release = (value: unknown) =>
-              Effect.gen(function* () {
-                yield* config
-                  .release(value)
-                  .pipe(Effect.catchCause(() => Effect.void))
-                yield* Ref.set(resourceRef, Option.none())
-                yield* enqueueMessageEffect(config.onReleased())
-              })
-
-            return pipe(
-              Stream.scoped(
-                Stream.fromEffect(Effect.acquireRelease(acquire, release)),
-              ),
-              Stream.flatMap(value =>
-                Stream.concat(
-                  Stream.make(config.onAcquired(value)),
-                  Stream.never,
-                ),
-              ),
-              Stream.map(Effect.succeed),
-              Stream.catch(error =>
-                Stream.make(Effect.succeed(config.onAcquireError(error))),
-              ),
-            )
-          }
-
-        const forkManagedResourceLifecycle = ({
-          config,
-          ref: resourceRef,
-        }: ManagedResourceRef<Model, Message>) =>
-          Effect.gen(function* () {
-            const modelStream = Stream.concat(
-              Stream.make(initModel),
-              Stream.fromPubSub(modelPubSub),
-            )
-
-            const equivalence = Schema.toEquivalence(config.schema)
-
-            yield* Effect.forkIn(runtimeScope)(
-              modelStream.pipe(
-                Stream.map(config.modelToMaybeRequirements),
-                Stream.changesWith(equivalence),
-                Stream.switchMap(
-                  maybeRequirementsToLifecycle(config, resourceRef),
-                ),
-                Stream.runForEach(Effect.flatMap(enqueueMessageEffect)),
-                // NOTE: mirrors the Subscription fork so a defect in
-                // `modelToMaybeRequirements` or the equivalence surfaces as
-                // the crash view instead of dying silently in this detached
-                // fiber. `provideAllResources` is not needed: `acquire` only
-                // requires `Scope`, which `Stream.scoped` supplies, and
-                // `release` requires nothing.
-                Effect.catchCause(cause => crashWith(cause, Option.none())),
-              ),
-            )
-          })
-
-        yield* Effect.forEach(
+        yield* forkManagedResourceFibers({
           managedResourceRefs,
-          forkManagedResourceLifecycle,
-          {
-            concurrency: 'unbounded',
-            discard: true,
-          },
-        )
+          initModel,
+          modelPubSub,
+          runtimeScope,
+          enqueueMessageEffect,
+          crashWith,
+        })
 
         // NOTE: registered before the boot buffer drains, so an interrupt
         // landing anywhere after this yield tears down with the flag set
