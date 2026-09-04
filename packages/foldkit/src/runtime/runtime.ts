@@ -97,11 +97,13 @@ import {
   buildSkew,
   containRefusedPage,
 } from './hydrationHandoff.js'
+import { makeMessageQueue } from './messageQueue.js'
 import { makePreserveScheduler } from './preserveScheduler.js'
 import {
   type ManagedResourceRef,
   makeResourceProvider,
 } from './resourceProvider.js'
+import { makeRuntimeStatus } from './runtimeStatus.js'
 import {
   type SlowConfig,
   type SlowPatchContext,
@@ -778,18 +780,24 @@ export const makeRuntime = <
         const schedulePreserveModel = (model: Model): Effect.Effect<void> =>
           hot ? preserveScheduler.schedule(model) : Effect.void
 
-        // NOTE: the dispatch hot path is plain JavaScript. A dispatched
-        // Message is pushed onto a plain array and drained synchronously on
-        // the spot, so update runs on the dispatching stack (for example, a
-        // DOM event handler, a Command fiber completing, or a Subscription
-        // emit) with no fiber hop in between. The drain guards against
-        // re-entrancy: a Message dispatched mid-drain (for example, by an
-        // update triggered from a synchronous Command) is queued and picked
-        // up by the outer drain loop in arrival order, and a Message
-        // dispatched while a render frame's patch is on the stack is
-        // buffered until the frame completes.
-        let pendingMessages: Array<Message> = []
-        let isProcessingMessages = false
+        const status = makeRuntimeStatus()
+
+        // NOTE: `processMessagePlain` and `crashWith` are defined further
+        // down, so they are wrapped here instead of passed by reference. The
+        // queue has to exist before the navigation listeners attach below,
+        // and reading a `const` before its line has run throws.
+        const {
+          enqueueMessage,
+          enqueueMessageEffect,
+          drainPendingMessages,
+          resetDrainBudget,
+          completeBoot,
+        } = yield* makeMessageQueue<Message>({
+          status,
+          processMessage: message => processMessagePlain(message),
+          crashWith: (cause, maybeMessage) => crashWith(cause, maybeMessage),
+        })
+
         // NOTE: `isRenderFrameScheduled` clears when the frame callback
         // starts, which on the View Transition path is before the patch runs.
         // `commitNotifier` tracks the patch itself, so `Render.afterCommit`
@@ -800,54 +808,6 @@ export const makeRuntime = <
         // from an ordinary frame that was already queued when jumpTo installed
         // the historical view.
         let isLiveViewRestorePending = false
-        // NOTE: mirrors the old queue's boot behavior: a Message arriving
-        // before boot completes (for example, a navigation event during an
-        // async dev-mode boot step, or a boot-forked fiber emitting early)
-        // is buffered, not processed. Processing against a partially
-        // initialized runtime would race the init render, DevTools
-        // recording, and Subscription attachment. The flag flips as the
-        // last act of boot, which then drains the buffer. enqueueMessage
-        // checks it directly, not just the drain: dispatch sources go live
-        // mid-boot, before `drainPendingMessages` is initialized, and
-        // calling it from a pre-boot dispatch would hit the temporal dead
-        // zone.
-        let isBootComplete = false
-        // NOTE: mirrors the old queue's post-interrupt behavior: a Message
-        // dispatched after the runtime scope closed (for example, an
-        // OnUnmount fired by the dispose teardown patch, or a stale DOM
-        // handler) is dropped
-        // instead of updating a disposed runtime. Set by a finalizer
-        // registered at the end of boot, so it runs before
-        // earlier-registered teardown (finalizers are LIFO).
-        let isRuntimeDisposed = false
-        // NOTE: the differ fires destroy and insert hooks while `patch` is
-        // on the stack, and both can dispatch synchronously (for example,
-        // an OnUnmount dispatch, or a Mount stream's synchronous first
-        // emission). Draining
-        // inline would run update, and on a defect the crash renderer,
-        // against a DOM the outer patch is still mutating. The frame
-        // buffers such dispatches and drains them after it completes.
-        let isRenderingFrame = false
-        // NOTE: a crash is terminal. The old runtime's drain fiber died on
-        // the first defect, so nothing was processed after a crash; this
-        // flag preserves that: the drain stops and later dispatches are
-        // dropped, so update, Command forks, and DevTools recording all
-        // stop with the crash view on screen.
-        let isCrashed = false
-
-        const enqueueMessage = (message: Message): void => {
-          if (isRuntimeDisposed || isCrashed) {
-            return
-          }
-          pendingMessages.push(message)
-          if (!isBootComplete || isRenderingFrame) {
-            return
-          }
-          drainPendingMessages()
-        }
-
-        const enqueueMessageEffect = (message: Message) =>
-          Effect.sync(() => enqueueMessage(message))
 
         const initModel = maybeFreezeModel(initModelRaw)
 
@@ -1029,10 +989,10 @@ export const makeRuntime = <
           maybeMessage: Option.Option<Message>,
         ): Effect.Effect<void> =>
           Effect.sync(() => {
-            if (isCrashed) {
+            if (status.isCrashed) {
               return
             }
-            isCrashed = true
+            status.isCrashed = true
             // NOTE: the crash view should appear at once, not animate in from
             // a snapshot of the state that crashed.
             skipPendingViewTransition()
@@ -1050,11 +1010,6 @@ export const makeRuntime = <
             settlePendingCommit()
           })
 
-        // NOTE: drain-local state. Kept as plain closure variables instead
-        // of `Ref`s because nothing else reads or writes them concurrently,
-        // and JS's single-threaded model already orders writes against
-        // subsequent reads. `currentMessage` is read by the crash handler.
-        let currentMessage = Option.none<Message>()
         let maybeLastDirtyMessage = Option.none<Message>()
 
         // NOTE: the DevTools store is installed at most once during boot and
@@ -1149,7 +1104,7 @@ export const makeRuntime = <
             // check its effect would run behind the crash view, contradicting
             // the crash-terminality contract. `crashWith` sets `isCrashed`
             // synchronously, so it is already set by the time this runs.
-            if (isRuntimeDisposed || isCrashed) {
+            if (status.isRuntimeDisposed || status.isCrashed) {
               return
             }
             Effect.runForkWith(runtimeContextForCommands)(
@@ -1245,103 +1200,6 @@ export const makeRuntime = <
             } else if (isModelChanged) {
               Effect.runFork(store.updateLatestModel(nextModel))
             }
-          }
-        }
-
-        // NOTE: escape hatch for synchronous bursts, so the page keeps
-        // painting under pathological load (for example, a fiber
-        // dispatching thousands of Messages in one task, or a fully
-        // synchronous Command chain). Bursts
-        // arrive as many single-Message drains within one browser task, so
-        // the budget is cumulative across drains: it accumulates processing
-        // time and resets when the browser demonstrably got control back (a
-        // render frame ran, or the gap since the last drain exceeds the
-        // budget). Once over budget, processing defers to a MessageChannel
-        // tick, which starts a new task so a pending frame can paint.
-        // setTimeout(0) would be clamped to 4ms+; MessageChannel delivers in
-        // ~0.5ms. The normal path pays two clock reads per drain.
-        let syncWorkMsSinceYield = 0
-        let lastDrainEndedAt = 0
-        let isDrainDeferredToNextTask = false
-        let maybeDeferredDrainChannel: MessageChannel | null = null
-
-        const scheduleDeferredDrain = (): void => {
-          if (maybeDeferredDrainChannel === null) {
-            maybeDeferredDrainChannel = new MessageChannel()
-            maybeDeferredDrainChannel.port2.onmessage = () => {
-              isDrainDeferredToNextTask = false
-              syncWorkMsSinceYield = 0
-              drainPendingMessages()
-            }
-          }
-          isDrainDeferredToNextTask = true
-          maybeDeferredDrainChannel.port1.postMessage(null)
-        }
-
-        yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            if (maybeDeferredDrainChannel !== null) {
-              maybeDeferredDrainChannel.port1.close()
-              maybeDeferredDrainChannel.port2.close()
-              maybeDeferredDrainChannel = null
-            }
-          }),
-        )
-
-        const drainPendingMessages = (): void => {
-          if (
-            !isBootComplete ||
-            isProcessingMessages ||
-            isRenderingFrame ||
-            isDrainDeferredToNextTask ||
-            isRuntimeDisposed ||
-            isCrashed
-          ) {
-            return
-          }
-          const drainStartedAt = performance.now()
-          if (drainStartedAt - lastDrainEndedAt > DRAIN_BUDGET_MS) {
-            syncWorkMsSinceYield = 0
-          }
-          if (syncWorkMsSinceYield > DRAIN_BUDGET_MS) {
-            scheduleDeferredDrain()
-            return
-          }
-          isProcessingMessages = true
-          try {
-            while (pendingMessages.length > 0) {
-              const batch = pendingMessages
-              pendingMessages = []
-              for (let index = 0; index < batch.length; index++) {
-                const message = batch[index]!
-                currentMessage = Option.some(message)
-                processMessagePlain(message)
-
-                const hasRemainingWork =
-                  index + 1 < batch.length || pendingMessages.length > 0
-                if (
-                  hasRemainingWork &&
-                  syncWorkMsSinceYield + (performance.now() - drainStartedAt) >
-                    DRAIN_BUDGET_MS
-                ) {
-                  // NOTE: unprocessed batch Messages arrived before
-                  // anything in pendingMessages, so they go back to the
-                  // front to keep arrival order.
-                  pendingMessages = batch
-                    .slice(index + 1)
-                    .concat(pendingMessages)
-                  scheduleDeferredDrain()
-                  return
-                }
-              }
-            }
-          } catch (error) {
-            Effect.runFork(crashWith(Cause.die(error), currentMessage))
-          } finally {
-            const drainEndedAt = performance.now()
-            syncWorkMsSinceYield += drainEndedAt - drainStartedAt
-            lastDrainEndedAt = drainEndedAt
-            isProcessingMessages = false
           }
         }
 
@@ -1476,7 +1334,7 @@ export const makeRuntime = <
           renderMode: RenderMode = 'Live',
         ) =>
           Effect.gen(function* () {
-            isRenderingFrame = true
+            status.isRenderingFrame = true
             const runtimeContext = yield* Effect.context<never>()
             if (renderMode === 'Replay') {
               beginReplayHtmlRender()
@@ -1491,7 +1349,7 @@ export const makeRuntime = <
           }).pipe(
             Effect.ensuring(
               Effect.sync(() => {
-                isRenderingFrame = false
+                status.isRenderingFrame = false
                 endReplayHtmlRender()
                 drainPendingMessages()
               }),
@@ -1699,7 +1557,7 @@ export const makeRuntime = <
         // wrap the actual patch, which on the transition path happens inside
         // the callback, not when the frame is scheduled.
         const runRenderFrameBody = (): void => {
-          isRenderingFrame = true
+          status.isRenderingFrame = true
           // NOTE: captured before the patch, because `drainPendingMessages`
           // below can advance `liveModel` again before the next frame reads
           // it. What this frame painted is what the next transition animates
@@ -1739,7 +1597,7 @@ export const makeRuntime = <
           } catch (error) {
             Effect.runFork(crashWith(Cause.die(error), maybeLastDirtyMessage))
           } finally {
-            isRenderingFrame = false
+            status.isRenderingFrame = false
           }
           // NOTE: Messages dispatched by patch-time hooks (for example,
           // OnUnmount destroys, or Mount emissions) were buffered while the
@@ -1803,8 +1661,8 @@ export const makeRuntime = <
               // so its callback cannot repaint inside the stale transition
               // even if it arrives after resume has published `Live`.
               if (
-                isRuntimeDisposed ||
-                isCrashed ||
+                status.isRuntimeDisposed ||
+                status.isCrashed ||
                 isPausedNow() ||
                 currentViewState === 'Paused'
               ) {
@@ -1834,18 +1692,18 @@ export const makeRuntime = <
           isLiveViewRestorePending = false
           // NOTE: a frame scheduled before disposal fires after it; a
           // disposed runtime must not repaint the released container.
-          if (isRuntimeDisposed) {
+          if (status.isRuntimeDisposed) {
             settlePendingCommit()
             return
           }
           // NOTE: a frame is running, so the browser got control back; the
           // drain budget starts fresh.
-          syncWorkMsSinceYield = 0
+          resetDrainBudget()
           // NOTE: a Message that dirtied the model can also be the one
           // whose Command crashed the runtime. Without this guard the
           // next animation frame would render the live view over the
           // crash view.
-          if (isCrashed) {
+          if (status.isCrashed) {
             settlePendingCommit()
             return
           }
@@ -2093,7 +1951,7 @@ export const makeRuntime = <
         // Either way no Message is processed against a closing runtime.
         yield* Effect.addFinalizer(() =>
           Effect.sync(() => {
-            isRuntimeDisposed = true
+            status.isRuntimeDisposed = true
             // NOTE: a transition outliving the runtime would keep animating
             // over a container the teardown is about to restore.
             skipPendingViewTransition()
@@ -2120,8 +1978,7 @@ export const makeRuntime = <
           )
         }
 
-        isBootComplete = true
-        drainPendingMessages()
+        completeBoot()
 
         // NOTE: suspend forever. Messages are processed synchronously on
         // the dispatching stack and render frames run as plain rAF
@@ -2150,9 +2007,3 @@ export const makeRuntime = <
   })
   return program
 }
-
-// NOTE: how long one synchronous drain may hold the stack before the
-// remaining Messages defer to a new task so the browser can paint. Only
-// multi-Message bursts ever reach the check; the single-Message path never
-// reads the clock beyond the drain start.
-const DRAIN_BUDGET_MS = 5
