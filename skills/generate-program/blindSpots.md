@@ -22,11 +22,13 @@ Skip, reset, cancel, undo. Trace what each does to counters and derived state. D
 
 For every discriminated-union state: can the code transition INTO every state? OUT of every state? Are there dead states (created, never entered)? States that should be reachable but aren't?
 
-When the answer takes real tracing, that is the signal to reach for `Machine` (`foldkit/experimental`, with `to` / `when` / `otherwise` from `foldkit/experimental/machine`). Writing the transitions as a table makes the edge set enumerable data instead of control flow spread across update handlers, and the Machine then answers this blind spot by computation rather than by reading:
+When the answer takes real tracing, that is the signal to reach for `Machine` (`foldkit/experimental`, with `to` / `when` / `otherwise` / `ignore` from `foldkit/experimental/machine`). Writing the transitions as a table makes the edge set enumerable data instead of control flow spread across update handlers, and the Machine then answers this blind spot by computation rather than by reading:
 
 - `unreachableStates(extraRoots?)` returns the state tags the declared Edge set does not reach from `initial` plus any extra roots.
-- `deadTransitions(extraRoots?)` reports Edges whose source that same walk does not reach, tagged `UnreachableSource`, plus Edges shadowed by an earlier `otherwise`, tagged `ShadowedByOtherwise`.
+- `deadTransitions(extraRoots?)` reports Edges whose source that same walk does not reach, tagged `UnreachableSource`, plus Edges shadowed by an earlier `otherwise` or `ignore()`, tagged `ShadowedByOtherwise` or `ShadowedByIgnore`.
 - `reachableFrom(tag)` gives the closure from any state, and `toMermaid()` renders the diagram for review.
+
+Use `ignore()` as the final entry in an ordered guard list when the Message should intentionally produce no transition after every preceding `when` guard declines. `step()` then reports `ExplicitlyIgnored`, which keeps that deliberate outcome distinct from an accidental guard fallthrough.
 
 The walk cannot see state changes made outside `transition` and `step`. Pass every restored, deep-linked, hydrated, or otherwise externally entered state as an extra root before treating `UnreachableSource` findings as application defects.
 

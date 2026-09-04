@@ -156,7 +156,11 @@ export type Otherwise<
   edge: Edge<State, Message, SourceState, TriggerMessage, void, R, Context>
 }>
 
-/** One entry in an ordered guard list: a {@link When} or the {@link Otherwise} fallback. */
+/** An explicit no-transition fallback at the end of a guard list. Construct with {@link ignore}. */
+export type Ignore = Readonly<{ _tag: 'Ignore' }>
+
+/** One entry in an ordered guard list: a {@link When}, the {@link Otherwise}
+ * transition fallback, or the {@link Ignore} no-transition fallback. */
 export type GuardedEdge<
   State extends Tagged,
   Message extends Tagged,
@@ -167,6 +171,7 @@ export type GuardedEdge<
 > =
   | When<State, Message, SourceState, TriggerMessage, unknown, R, Context>
   | Otherwise<State, Message, SourceState, TriggerMessage, R, Context>
+  | Ignore
 
 type OptionValue<MaybeValue> =
   MaybeValue extends Option.Option<infer Value> ? Value : never
@@ -405,6 +410,16 @@ export const otherwise = <
   edge,
 })
 
+/**
+ * Declares that a Message is intentionally ignored when every preceding
+ * {@link when} guard declines. Evaluation stops at this fallback, and
+ * {@link Machine.step} reports `ExplicitlyIgnored`. Edges listed after it are
+ * reported by {@link Machine.deadTransitions} as `ShadowedByIgnore`.
+ *
+ * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
+ */
+export const ignore = (): Ignore => ({ _tag: 'Ignore' })
+
 // RESULT
 
 /** A step that matched an Edge: the next state plus any transition-time Commands. */
@@ -428,14 +443,16 @@ export type Transitioned<
  * alphabet, but no Edge for it exists from the current state, whether the
  * state is absent from the table or its `on` record lacks the tag.
  * `GuardsFellThrough` means an Edge entry exists for this state and Message,
- * but every guard declined and no {@link otherwise} fallback was present.
+ * but every guard declined and no {@link otherwise} or {@link ignore} fallback
+ * was present.
+ * `ExplicitlyIgnored` means evaluation reached an {@link ignore} fallback.
  */
 export type IgnoredReason =
-  'OutOfAlphabet' | 'NotApplicable' | 'GuardsFellThrough'
+  'OutOfAlphabet' | 'NotApplicable' | 'GuardsFellThrough' | 'ExplicitlyIgnored'
 
 /**
  * A step that matched no Edge: the state is unchanged and the Message is
- * observable as ignored. `reason` distinguishes the three causes, described
+ * observable as ignored. `reason` distinguishes the four causes, described
  * on {@link IgnoredReason}.
  */
 export type Ignored<State extends Tagged, Message extends Tagged> = Readonly<{
@@ -479,9 +496,11 @@ export type EdgeSummary<
  * Why an Edge cannot fire in a walk of the declared Edge set:
  * `UnreachableSource` means no path from the walk roots reaches the Edge's
  * source state, and `ShadowedByOtherwise` means an earlier `otherwise` in the
- * Edge's guard list always fires first.
+ * Edge's guard list always fires first. `ShadowedByIgnore` means an earlier
+ * {@link ignore} stops evaluation first.
  */
-export type DeadTransitionReason = 'UnreachableSource' | 'ShadowedByOtherwise'
+export type DeadTransitionReason =
+  'UnreachableSource' | 'ShadowedByOtherwise' | 'ShadowedByIgnore'
 
 /** An Edge that cannot fire in a walk of the declared Edge set, with the reason. */
 export type DeadTransition<
@@ -526,20 +545,20 @@ export type Machine<
   ) => TransitionResult<State, Message, R>
   /**
    * The state tags a walk of the statically selectable declared Edges visits
-   * starting from `tag`. Edges listed after an `otherwise` are excluded because
-   * the runtime can never select them.
+   * starting from `tag`. Edges listed after an `otherwise` or {@link ignore}
+   * are excluded because the runtime can never select them.
    */
   reachableFrom: (tag: TagOf<State>) => ReadonlySet<TagOf<State>>
   /**
    * The state tags a walk of the statically selectable declared Edges never
    * visits, starting from the initial state's tag plus `extraRoots`. Edges
-   * listed after an `otherwise` are excluded because the runtime can never
-   * select them. The walk sees only declared Edges, so state changes made
-   * outside `transition` and `step` are invisible to it, and it always starts
-   * at `initial`. Entry points other than `initial`, such as restored
-   * persistence, deep links, or SSR hydration, must be passed as `extraRoots`,
-   * or the states they enter are reported unreachable even though the running
-   * program visits them.
+   * listed after an `otherwise` or {@link ignore} are excluded because the
+   * runtime can never select them. The walk sees only declared Edges, so state
+   * changes made outside `transition` and `step` are invisible to it, and it
+   * always starts at `initial`. Entry points other than `initial`, such as
+   * restored persistence, deep links, or SSR hydration, must be passed as
+   * `extraRoots`, or the states they enter are reported unreachable even
+   * though the running program visits them.
    */
   unreachableStates: (
     extraRoots?: ReadonlyArray<TagOf<State>>,
@@ -548,12 +567,12 @@ export type Machine<
    * The Edges that cannot fire in a walk of the declared Edge set starting
    * from the initial state's tag plus `extraRoots`, each with its
    * {@link DeadTransitionReason}. Each Edge appears at most once;
-   * `ShadowedByOtherwise` takes precedence when its source is also
-   * unreachable. The same assumptions as `unreachableStates` apply: the walk
-   * cannot see state changes made outside `transition` and `step`, and entry
-   * points other than `initial` must be passed as `extraRoots`, or their
-   * outgoing Edges are reported as `UnreachableSource` even though the running
-   * program fires them.
+   * `ShadowedByOtherwise` and `ShadowedByIgnore` take precedence when a source
+   * is also unreachable. The same assumptions as `unreachableStates` apply:
+   * the walk cannot see state changes made outside `transition` and `step`,
+   * and entry points other than `initial` must be passed as `extraRoots`, or
+   * their outgoing Edges are reported as `UnreachableSource` even though the
+   * running program fires them.
    */
   deadTransitions: (
     extraRoots?: ReadonlyArray<TagOf<State>>,
@@ -739,11 +758,26 @@ type LooseGuardedEdge<State extends Tagged, Message extends Tagged, R> =
       _tag: 'Otherwise'
       edge: LooseEdge<State, Message, R>
     }>
+  | Ignore
 
 type SelectedEdge<State extends Tagged, Message extends Tagged, R> = Readonly<{
+  _tag: 'SelectedEdge'
   edge: LooseEdge<State, Message, R>
   guardValue: unknown
 }>
+
+type GuardListIgnoredReason = Extract<
+  IgnoredReason,
+  'GuardsFellThrough' | 'ExplicitlyIgnored'
+>
+
+type IgnoredEdge = Readonly<{
+  _tag: 'IgnoredEdge'
+  reason: GuardListIgnoredReason
+}>
+
+type EdgeSelection<State extends Tagged, Message extends Tagged, R> =
+  SelectedEdge<State, Message, R> | IgnoredEdge
 
 type LooseTable<State extends Tagged, Message extends Tagged, R> = Readonly<
   Record<
@@ -941,16 +975,32 @@ function defineImplementation<
         | ReadonlyArray<LooseGuardedEdge<State, Message, R>>,
     ): ReadonlyArray<EdgeSummary<State, Message>> =>
       isGuardList(edgeOrGuardedEdges)
-        ? Array.map(edgeOrGuardedEdges, (guardedEdge, position) =>
-            guardedEdge._tag === 'When'
-              ? makeEdgeSummary(from, messageTag, guardedEdge.edge.target, {
-                  _tag: 'When',
-                  position,
-                })
-              : makeEdgeSummary(from, messageTag, guardedEdge.edge.target, {
-                  _tag: 'Otherwise',
-                  position,
-                }),
+        ? Array.flatMap(edgeOrGuardedEdges, (guardedEdge, position) =>
+            Match.value(guardedEdge).pipe(
+              Match.withReturnType<
+                ReadonlyArray<EdgeSummary<State, Message>>
+              >(),
+              Match.tagsExhaustive({
+                When: guardedWhen => [
+                  makeEdgeSummary(from, messageTag, guardedWhen.edge.target, {
+                    _tag: 'When',
+                    position,
+                  }),
+                ],
+                Otherwise: guardedOtherwise => [
+                  makeEdgeSummary(
+                    from,
+                    messageTag,
+                    guardedOtherwise.edge.target,
+                    {
+                      _tag: 'Otherwise',
+                      position,
+                    },
+                  ),
+                ],
+                Ignore: () => [],
+              }),
+            ),
           )
         : [
             makeEdgeSummary(from, messageTag, edgeOrGuardedEdges.target, {
@@ -997,33 +1047,45 @@ function defineImplementation<
       state: State,
       message: Message,
       context?: Context,
-    ): Option.Option<SelectedEdge<State, Message, R>> =>
+    ): EdgeSelection<State, Message, R> =>
       Array.matchLeft(guardedEdges, {
-        onEmpty: () => Option.none(),
-        onNonEmpty: (guardedEdge, rest) => {
-          if (guardedEdge._tag === 'When') {
-            const maybeGuardValue = runGuard(
-              guardedEdge,
-              state,
-              message,
-              context,
-            )
+        onEmpty: () => ({
+          _tag: 'IgnoredEdge',
+          reason: 'GuardsFellThrough',
+        }),
+        onNonEmpty: (guardedEdge, rest) =>
+          Match.value(guardedEdge).pipe(
+            Match.withReturnType<EdgeSelection<State, Message, R>>(),
+            Match.tagsExhaustive({
+              When: guardedWhen => {
+                const maybeGuardValue = runGuard(
+                  guardedWhen,
+                  state,
+                  message,
+                  context,
+                )
 
-            if (Option.isSome(maybeGuardValue)) {
-              return Option.some({
-                edge: guardedEdge.edge,
-                guardValue: maybeGuardValue.value,
-              })
-            } else {
-              return selectFromGuardList(rest, state, message, context)
-            }
-          } else {
-            return Option.some({
-              edge: guardedEdge.edge,
-              guardValue: undefined,
-            })
-          }
-        },
+                if (Option.isSome(maybeGuardValue)) {
+                  return {
+                    _tag: 'SelectedEdge',
+                    edge: guardedWhen.edge,
+                    guardValue: maybeGuardValue.value,
+                  }
+                } else {
+                  return selectFromGuardList(rest, state, message, context)
+                }
+              },
+              Otherwise: guardedOtherwise => ({
+                _tag: 'SelectedEdge',
+                edge: guardedOtherwise.edge,
+                guardValue: undefined,
+              }),
+              Ignore: () => ({
+                _tag: 'IgnoredEdge',
+                reason: 'ExplicitlyIgnored',
+              }),
+            }),
+          ),
       })
 
     const chooseEdge = (
@@ -1033,10 +1095,14 @@ function defineImplementation<
       state: State,
       message: Message,
       context?: Context,
-    ): Option.Option<SelectedEdge<State, Message, R>> =>
+    ): EdgeSelection<State, Message, R> =>
       isGuardList(edgeOrGuardedEdges)
         ? selectFromGuardList(edgeOrGuardedEdges, state, message, context)
-        : Option.some({ edge: edgeOrGuardedEdges, guardValue: undefined })
+        : {
+            _tag: 'SelectedEdge',
+            edge: edgeOrGuardedEdges,
+            guardValue: undefined,
+          }
 
     const makeRuntimeEdgeInput = (
       state: State,
@@ -1107,15 +1173,24 @@ function defineImplementation<
                 ? 'NotApplicable'
                 : 'OutOfAlphabet',
             ),
-          onSome: edgeOrGuardedEdges =>
-            Option.match(
-              chooseEdge(edgeOrGuardedEdges, state, message, context),
-              {
-                onNone: () => makeIgnored(state, message, 'GuardsFellThrough'),
-                onSome: selectedEdge =>
+          onSome: edgeOrGuardedEdges => {
+            const selection = chooseEdge(
+              edgeOrGuardedEdges,
+              state,
+              message,
+              context,
+            )
+
+            return Match.value(selection).pipe(
+              Match.withReturnType<TransitionResult<State, Message, R>>(),
+              Match.tagsExhaustive({
+                SelectedEdge: selectedEdge =>
                   makeTransitioned(state, message, selectedEdge, context),
-              },
-            ),
+                IgnoredEdge: ignoredEdge =>
+                  makeIgnored(state, message, ignoredEdge.reason),
+              }),
+            )
+          },
         }),
       )
     }
@@ -1127,22 +1202,59 @@ function defineImplementation<
     ): Update.Return<State, Message, R> => {
       const result = step(state, message, ...contextArguments)
 
-      if (result._tag === 'Transitioned') {
-        return { model: result.state, commands: result.commands }
-      } else {
-        return { model: result.state }
-      }
+      return Match.value(result).pipe(
+        Match.withReturnType<Update.Return<State, Message, R>>(),
+        Match.tagsExhaustive({
+          Transitioned: transitioned => ({
+            model: transitioned.state,
+            commands: transitioned.commands,
+          }),
+          Ignored: ignored => ({ model: ignored.state }),
+        }),
+      )
     }
+
+    const makeDeadTransition = (
+      edge: EdgeSummary<State, Message>,
+      reason: DeadTransitionReason,
+    ): DeadTransition<State, Message> => ({ edge, reason })
 
     type EdgeGroup = ReadonlyArray<EdgeSummary<State, Message>>
     type PositionedEdgeGuard = Exclude<
       EdgeGuard,
       Readonly<{ _tag: 'Unguarded' }>
     >
+    type LooseGuardListFallback = Exclude<
+      LooseGuardedEdge<State, Message, R>,
+      Readonly<{ _tag: 'When' }>
+    >
+    type ShadowingReason = Extract<
+      DeadTransitionReason,
+      'ShadowedByOtherwise' | 'ShadowedByIgnore'
+    >
+    type GuardListFallback = Readonly<{
+      position: number
+      reason: ShadowingReason
+    }>
 
     const isPositionedEdgeGuard = (
       guard: EdgeGuard,
     ): guard is PositionedEdgeGuard => guard._tag !== 'Unguarded'
+
+    const isGuardListFallback = (
+      guardedEdge: LooseGuardedEdge<State, Message, R>,
+    ): guardedEdge is LooseGuardListFallback => guardedEdge._tag !== 'When'
+
+    const fallbackToShadowingReason = (
+      fallback: LooseGuardListFallback,
+    ): ShadowingReason =>
+      Match.value(fallback).pipe(
+        Match.withReturnType<ShadowingReason>(),
+        Match.tagsExhaustive({
+          Otherwise: () => 'ShadowedByOtherwise',
+          Ignore: () => 'ShadowedByIgnore',
+        }),
+      )
 
     const maybeGuardPosition = (
       edgeSummary: EdgeSummary<State, Message>,
@@ -1175,15 +1287,54 @@ function defineImplementation<
         ),
       )
 
-    const shadowedEdgesInGroup = (edgeGroup: EdgeGroup): EdgeGroup =>
+    const guardListAt = (
+      from: TagOf<State>,
+      messageTag: TagOf<Message>,
+    ): Option.Option<ReadonlyArray<LooseGuardedEdge<State, Message, R>>> =>
+      pipe(
+        Record.get(looseStates, from),
+        Option.flatMap(stateEntry => Record.get(stateEntry.on, messageTag)),
+        Option.flatMap(Option.liftPredicate(isGuardList)),
+      )
+
+    const firstGuardListFallback = (
+      guardedEdges: ReadonlyArray<LooseGuardedEdge<State, Message, R>>,
+    ): Option.Option<GuardListFallback> =>
+      pipe(
+        guardedEdges,
+        Array.findFirstWithIndex(isGuardListFallback),
+        Option.map(([fallback, position]) => ({
+          position,
+          reason: fallbackToShadowingReason(fallback),
+        })),
+      )
+
+    const firstFallbackInEdgeGroup = (
+      edgeGroup: EdgeGroup,
+    ): Option.Option<GuardListFallback> =>
       pipe(
         edgeGroup,
-        Array.findFirst(edgeSummary => edgeSummary.guard._tag === 'Otherwise'),
-        Option.flatMap(maybeGuardPosition),
+        Array.head,
+        Option.flatMap(edgeSummary =>
+          guardListAt(edgeSummary.from, edgeSummary.messageTag),
+        ),
+        Option.flatMap(firstGuardListFallback),
+      )
+
+    const shadowedTransitionsInGroup = (
+      edgeGroup: EdgeGroup,
+    ): ReadonlyArray<DeadTransition<State, Message>> =>
+      pipe(
+        firstFallbackInEdgeGroup(edgeGroup),
         Option.match({
           onNone: () => [],
-          onSome: otherwisePosition =>
-            edgesAfterGuardPosition(edgeGroup, otherwisePosition),
+          onSome: fallback =>
+            pipe(
+              edgesAfterGuardPosition(edgeGroup, fallback.position),
+              Array.map(edgeSummary =>
+                makeDeadTransition(edgeSummary, fallback.reason),
+              ),
+            ),
         }),
       )
 
@@ -1196,12 +1347,14 @@ function defineImplementation<
       Array.flatMap(groupEdgesByMessageTag),
     )
 
-    const shadowedEdges: ReadonlyArray<EdgeSummary<State, Message>> = pipe(
-      edgeGroups,
-      Array.flatMap(shadowedEdgesInGroup),
-    )
+    const shadowedTransitions: ReadonlyArray<DeadTransition<State, Message>> =
+      pipe(edgeGroups, Array.flatMap(shadowedTransitionsInGroup))
 
-    const shadowedEdgeSet = HashSet.fromIterable(shadowedEdges)
+    const shadowedEdgeSet = pipe(
+      shadowedTransitions,
+      Array.map(shadowedTransition => shadowedTransition.edge),
+      HashSet.fromIterable,
+    )
 
     const selectableEdges = Array.filter(
       edges,
@@ -1246,11 +1399,6 @@ function defineImplementation<
       return Array.filter(stateTags, stateTag => !reachable.has(stateTag))
     }
 
-    const makeDeadTransition = (
-      edge: EdgeSummary<State, Message>,
-      reason: DeadTransitionReason,
-    ): DeadTransition<State, Message> => ({ edge, reason })
-
     const deadTransitions = (
       extraRoots: ReadonlyArray<TagOf<State>> = [],
     ): ReadonlyArray<DeadTransition<State, Message>> => {
@@ -1264,12 +1412,7 @@ function defineImplementation<
         ),
       )
 
-      return Array.flatten([
-        unreachableSourceEdges,
-        Array.map(shadowedEdges, edgeSummary =>
-          makeDeadTransition(edgeSummary, 'ShadowedByOtherwise'),
-        ),
-      ])
+      return Array.flatten([unreachableSourceEdges, shadowedTransitions])
     }
 
     const toMermaid = (): string => {

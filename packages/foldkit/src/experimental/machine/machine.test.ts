@@ -22,6 +22,7 @@ import {
   type TransitionTable,
   define,
   fold,
+  ignore,
   otherwise,
   to,
   when,
@@ -448,6 +449,32 @@ const booleanGuardMachine = define({
   },
 })
 
+const explicitIgnoreMachine = define({
+  state: ConnectionState,
+  message: ConnectionMessage,
+})({
+  initial: ConnectionState.Disconnected(),
+  states: {
+    Connecting: {
+      on: {
+        SocketErrored: [
+          when(
+            state => state.attemptCount < MAX_CONNECT_ATTEMPTS,
+            'Reconnecting',
+            ({ state }) => ({
+              model: ConnectionState.Reconnecting({
+                attemptCount: state.attemptCount,
+                delayMillis: backoffDelayMillis(state.attemptCount),
+              }),
+            }),
+          ),
+          ignore(),
+        ],
+      },
+    },
+  },
+})
+
 const RemoteDataContext = Schema.Struct({
   shouldSucceed: Schema.Boolean,
   data: Schema.String,
@@ -709,6 +736,41 @@ const shadowedGuardMachine = define({
             () => ({ model: RemoteData.Ok({ data: 'unreachable' }) }),
           ),
         ],
+      },
+    },
+  },
+})
+
+const shadowedByIgnoreMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedFetch: [
+          ignore(),
+          when(
+            () => true,
+            'Loading',
+            () => ({ model: RemoteData.Loading() }),
+          ),
+        ],
+      },
+    },
+  },
+})
+
+const ignoreOnlyMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedFetch: [ignore()],
       },
     },
   },
@@ -1407,6 +1469,58 @@ describe('guard lists', () => {
     )
     expect(declinedSocketError).toEqual({ model: atLimit })
   })
+
+  it('distinguishes an explicit ignore from guard fallthrough', () => {
+    const belowLimitSocketError = explicitIgnoreMachine.transition(
+      ConnectionState.Connecting({ attemptCount: 2 }),
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
+    )
+    expect(belowLimitSocketError.model).toStrictEqual(
+      ConnectionState.Reconnecting({ attemptCount: 2, delayMillis: 500 }),
+    )
+
+    const atLimit = ConnectionState.Connecting({
+      attemptCount: MAX_CONNECT_ATTEMPTS,
+    })
+
+    const result = explicitIgnoreMachine.step(
+      atLimit,
+      ConnectionMessage.SocketErrored({ reason: 'boom' }),
+    )
+    expect(result).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Connecting',
+      messageTag: 'SocketErrored',
+      state: atLimit,
+      reason: 'ExplicitlyIgnored',
+    })
+
+    expect(
+      explicitIgnoreMachine.transition(
+        atLimit,
+        ConnectionMessage.SocketErrored({ reason: 'boom' }),
+      ),
+    ).toEqual({ model: atLimit })
+  })
+
+  it('supports an explicit ignore as the only guard-list entry', () => {
+    const initial = RemoteData.Idle()
+    const message = RemoteDataMessage.ClickedFetch()
+
+    expect(ignoreOnlyMachine.step(initial, message)).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Idle',
+      messageTag: 'ClickedFetch',
+      state: initial,
+      reason: 'ExplicitlyIgnored',
+    })
+    expect(ignoreOnlyMachine.transition(initial, message)).toEqual({
+      model: initial,
+    })
+    expect(ignoreOnlyMachine.edges).toEqual([])
+    expect(ignoreOnlyMachine.reachableFrom('Idle')).toEqual(new Set(['Idle']))
+    expect(ignoreOnlyMachine.deadTransitions()).toEqual([])
+  })
 })
 
 describe('context', () => {
@@ -1907,6 +2021,35 @@ describe('type-level guarantees', () => {
       new Set(['Idle', 'Loading']),
     )
     expect(shadowedGuardMachine.unreachableStates()).toEqual(['Error', 'Ok'])
+  })
+
+  it('reports and excludes Edges listed after an explicit ignore', () => {
+    const result = shadowedByIgnoreMachine.step(
+      RemoteData.Idle(),
+      RemoteDataMessage.ClickedFetch(),
+    )
+
+    expect(result).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Idle',
+      messageTag: 'ClickedFetch',
+      state: RemoteData.Idle(),
+      reason: 'ExplicitlyIgnored',
+    })
+    expect(shadowedByIgnoreMachine.reachableFrom('Idle')).toEqual(
+      new Set(['Idle']),
+    )
+    expect(shadowedByIgnoreMachine.deadTransitions()).toEqual([
+      {
+        edge: {
+          from: 'Idle',
+          messageTag: 'ClickedFetch',
+          target: 'Loading',
+          guard: { _tag: 'When', position: 1 },
+        },
+        reason: 'ShadowedByIgnore',
+      },
+    ])
   })
 
   it('reports a shadowed edge under an unreachable source once', () => {
