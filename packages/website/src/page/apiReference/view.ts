@@ -74,12 +74,12 @@ const functionView = (
         ],
         [
           h.div(
-            [h.Class('flex items-center gap-2')],
+            [h.Class('flex flex-wrap items-center gap-2')],
             [
               h.h3(
                 [
                   h.Class(
-                    'text-base font-mono font-code text-gray-900 dark:text-white scroll-mt-6',
+                    'text-base font-mono font-code text-gray-900 dark:text-white scroll-mt-6 wrap-anywhere',
                   ),
                   h.Id(id),
                 ],
@@ -375,12 +375,12 @@ const typeView = (
         ],
         [
           h.div(
-            [h.Class('flex items-center gap-2')],
+            [h.Class('flex flex-wrap items-center gap-2')],
             [
               h.h3(
                 [
                   h.Class(
-                    'text-base font-mono font-code text-gray-900 dark:text-white scroll-mt-6',
+                    'text-base font-mono font-code text-gray-900 dark:text-white scroll-mt-6 wrap-anywhere',
                   ),
                   h.Id(id),
                 ],
@@ -448,12 +448,12 @@ const interfaceView = (
         ],
         [
           h.div(
-            [h.Class('flex items-center gap-2')],
+            [h.Class('flex flex-wrap items-center gap-2')],
             [
               h.h3(
                 [
                   h.Class(
-                    'text-base font-mono font-code text-gray-900 dark:text-white scroll-mt-6',
+                    'text-base font-mono font-code text-gray-900 dark:text-white scroll-mt-6 wrap-anywhere',
                   ),
                   h.Id(id),
                 ],
@@ -521,12 +521,12 @@ const variableView = (
         ],
         [
           h.div(
-            [h.Class('flex items-center gap-2')],
+            [h.Class('flex flex-wrap items-center gap-2')],
             [
               h.h3(
                 [
                   h.Class(
-                    'text-base font-mono font-code text-gray-900 dark:text-white scroll-mt-6',
+                    'text-base font-mono font-code text-gray-900 dark:text-white scroll-mt-6 wrap-anywhere',
                   ),
                   h.Id(id),
                 ],
