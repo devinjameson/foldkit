@@ -22,6 +22,7 @@ import {
   type TransitionTable,
   define,
   fold,
+  forStates,
   ignore,
   otherwise,
   to,
@@ -75,6 +76,49 @@ const remoteDataMachine = define({
     Ok: {
       on: {
         ClickedFetch: to('Loading', () => ({ model: RemoteData.Loading() })),
+      },
+    },
+  },
+})
+
+const sharedRemoteDataMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+})({
+  initial: RemoteData.Idle(),
+  shared: [
+    forStates(['Idle', 'Idle', 'Error']).on({
+      ClickedFetch: to('Loading', ({ state, message }) => {
+        expectTypeOf(state).toEqualTypeOf<
+          typeof RemoteData.Idle.Type | typeof RemoteData.Error.Type
+        >()
+        expectTypeOf(message).toEqualTypeOf<
+          typeof RemoteDataMessage.ClickedFetch.Type
+        >()
+
+        return { model: RemoteData.Loading() }
+      }),
+    }),
+  ],
+  states: {},
+})
+
+const locallyOverriddenSharedRemoteDataMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+})({
+  initial: RemoteData.Idle(),
+  shared: [
+    forStates(['Idle', 'Error']).on({
+      ClickedFetch: to('Loading', () => ({ model: RemoteData.Loading() })),
+    }),
+  ],
+  states: {
+    Error: {
+      on: {
+        ClickedFetch: to('Ok', ({ state }) => ({
+          model: RemoteData.Ok({ data: state.error }),
+        })),
       },
     },
   },
@@ -984,6 +1028,50 @@ const inferredRequirementsMachine = define({
   },
 })
 
+const inferredSharedRequirementsMachine = define({
+  state: SubmitState,
+  message: SubmitMessage,
+})({
+  initial: SubmitState.Idle(),
+  shared: [
+    forStates(['Idle', 'Submitted']).on({
+      ClickedSubmit: to('Presigning', () => ({
+        model: SubmitState.Presigning(),
+        commands: [Presign()],
+      })),
+    }),
+  ],
+  states: {},
+})
+
+const inferredSharedContextualRequirementsMachine = define({
+  state: SubmitState,
+  message: SubmitMessage,
+  context: SubmitContext,
+})({
+  initial: SubmitState.Idle(),
+  shared: [
+    forStates(['Idle', 'Submitted']).on({
+      ClickedSubmit: [
+        when(
+          (_state, _message, context) => context.shouldSubmit,
+          'Presigning',
+          ({ context }) => {
+            expectTypeOf(context).toEqualTypeOf<SubmitContext>()
+
+            return {
+              model: SubmitState.Presigning(),
+              commands: [Presign()],
+            }
+          },
+        ),
+        otherwise(to('Idle', () => ({ model: SubmitState.Idle() }))),
+      ],
+    }),
+  ],
+  states: {},
+})
+
 const inferredContextualRequirementsMachine = define({
   state: SubmitState,
   message: SubmitMessage,
@@ -1253,6 +1341,95 @@ describe('remote data machine', () => {
         '  Ok --> Loading: ClickedFetch',
       ].join('\n'),
     )
+  })
+})
+
+describe('shared transitions', () => {
+  it('expands one transition across every selected source state', () => {
+    const idleFetch = sharedRemoteDataMachine.transition(
+      RemoteData.Idle(),
+      RemoteDataMessage.ClickedFetch(),
+    )
+    expect(idleFetch.model).toStrictEqual(RemoteData.Loading())
+
+    const errorFetch = sharedRemoteDataMachine.transition(
+      RemoteData.Error({ error: 'offline' }),
+      RemoteDataMessage.ClickedFetch(),
+    )
+    expect(errorFetch.model).toStrictEqual(RemoteData.Loading())
+
+    expect(sharedRemoteDataMachine.edges).toEqual([
+      {
+        from: 'Idle',
+        messageTag: 'ClickedFetch',
+        target: 'Loading',
+        guard: { _tag: 'Unguarded' },
+      },
+      {
+        from: 'Error',
+        messageTag: 'ClickedFetch',
+        target: 'Loading',
+        guard: { _tag: 'Unguarded' },
+      },
+    ])
+    expect(sharedRemoteDataMachine.reachableFrom('Error')).toEqual(
+      new Set(['Error', 'Loading']),
+    )
+    expect(sharedRemoteDataMachine.toMermaid()).toContain(
+      '  Error --> Loading: ClickedFetch',
+    )
+  })
+
+  it('lets a state-local transition replace its shared default', () => {
+    const idleFetch = locallyOverriddenSharedRemoteDataMachine.transition(
+      RemoteData.Idle(),
+      RemoteDataMessage.ClickedFetch(),
+    )
+    expect(idleFetch.model).toStrictEqual(RemoteData.Loading())
+
+    const errorFetch = locallyOverriddenSharedRemoteDataMachine.transition(
+      RemoteData.Error({ error: 'offline' }),
+      RemoteDataMessage.ClickedFetch(),
+    )
+    expect(errorFetch.model).toStrictEqual(RemoteData.Ok({ data: 'offline' }))
+  })
+
+  it('rejects overlapping shared transitions for the same state and Message', () => {
+    expect(() =>
+      define({ state: RemoteData, message: RemoteDataMessage })({
+        initial: RemoteData.Idle(),
+        shared: [
+          forStates(['Idle']).on({
+            ClickedFetch: to('Loading', () => ({
+              model: RemoteData.Loading(),
+            })),
+          }),
+          forStates(['Idle']).on({
+            ClickedFetch: to('Loading', () => ({
+              model: RemoteData.Loading(),
+            })),
+          }),
+        ],
+        states: {},
+      }),
+    ).toThrow(
+      'Machine.define: shared transitions overlap for state "Idle" and Message "ClickedFetch"',
+    )
+  })
+
+  it('includes shared Messages in the Machine alphabet', () => {
+    const result = sharedRemoteDataMachine.step(
+      RemoteData.Loading(),
+      RemoteDataMessage.ClickedFetch(),
+    )
+
+    expect(result).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Loading',
+      messageTag: 'ClickedFetch',
+      state: RemoteData.Loading(),
+      reason: 'NotApplicable',
+    })
   })
 })
 
@@ -1937,6 +2114,46 @@ describe('state tag extraction', () => {
 })
 
 describe('type-level guarantees', () => {
+  it('rejects invalid shared transition declarations', () => {
+    if (false) {
+      // @ts-expect-error a shared transition must select at least one source state
+      forStates([])
+
+      define({ state: RemoteData, message: RemoteDataMessage })({
+        initial: RemoteData.Idle(),
+        shared: [
+          // @ts-expect-error Missing is not a RemoteData state tag
+          forStates(['Idle', 'Missing']).on({}),
+        ],
+        states: {},
+      })
+
+      define({ state: RemoteData, message: RemoteDataMessage })({
+        initial: RemoteData.Idle(),
+        shared: [
+          forStates(['Idle'])
+            // @ts-expect-error UnknownMessage is not a RemoteData Message tag
+            .on({
+              ClickedFetch: [ignore()],
+              UnknownMessage: [ignore()],
+            }),
+        ],
+        states: {},
+      })
+
+      define({ state: RemoteData, message: RemoteDataMessage })({
+        initial: RemoteData.Idle(),
+        shared: [
+          // @ts-expect-error shared fragments must be built with forStates
+          { _tag: 'ForStates', sourceTags: ['Idle'], on: {} },
+        ],
+        states: {},
+      })
+    }
+
+    expect(true).toBe(true)
+  })
+
   it('preserves narrowing in an extracted state entry', () => {
     const loadingTransitions: StateTransitions<
       RemoteData,
@@ -2310,6 +2527,34 @@ describe('edge command requirements', () => {
     expect(messages).toEqual([
       SubmitMessage.SucceededPresign({ url: PRESIGNED_URL }),
     ])
+  })
+
+  it('threads a requirement inferred from a shared edge command into R', () => {
+    const submitClick = inferredSharedRequirementsMachine.transition(
+      SubmitState.Idle(),
+      SubmitMessage.ClickedSubmit(),
+    )
+    expect(submitClick.model).toStrictEqual(SubmitState.Presigning())
+
+    expectTypeOf(submitClick.commands).toEqualTypeOf<
+      | ReadonlyArray<Command.Command<SubmitMessage, never, UploadsClient>>
+      | undefined
+    >()
+    expect(submitClick.commands ?? []).toHaveLength(1)
+  })
+
+  it('infers shared guard context independently from edge requirements', () => {
+    const submitClick = inferredSharedContextualRequirementsMachine.transition(
+      SubmitState.Idle(),
+      SubmitMessage.ClickedSubmit(),
+      { shouldSubmit: true },
+    )
+
+    expectTypeOf(submitClick.commands).toEqualTypeOf<
+      | ReadonlyArray<Command.Command<SubmitMessage, never, UploadsClient>>
+      | undefined
+    >()
+    expect(submitClick.commands ?? []).toHaveLength(1)
   })
 
   it('threads a requirement inferred from a guard-list edge command', () => {
