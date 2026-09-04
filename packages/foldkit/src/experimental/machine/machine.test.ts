@@ -18,6 +18,7 @@ import * as Update from '../../update/index.js'
 import {
   type EdgeInput,
   type Machine,
+  type StateTransitions,
   type TransitionTable,
   define,
   fold,
@@ -1822,6 +1823,40 @@ describe('state tag extraction', () => {
 })
 
 describe('type-level guarantees', () => {
+  it('preserves narrowing in an extracted state entry', () => {
+    const loadingTransitions: StateTransitions<
+      RemoteData,
+      RemoteDataMessage,
+      'Loading'
+    > = {
+      on: {
+        SucceededFetch: to('Ok', ({ state, message }) => {
+          expectTypeOf(state).toEqualTypeOf<typeof RemoteData.Loading.Type>()
+          expectTypeOf(message).toEqualTypeOf<
+            typeof RemoteDataMessage.SucceededFetch.Type
+          >()
+
+          return { model: RemoteData.Ok({ data: message.data }) }
+        }),
+      },
+    }
+
+    const machine = define({
+      state: RemoteData,
+      message: RemoteDataMessage,
+    })({
+      initial: RemoteData.Loading(),
+      states: { Loading: loadingTransitions },
+    })
+
+    const result = machine.transition(
+      RemoteData.Loading(),
+      RemoteDataMessage.SucceededFetch({ data: 'ready' }),
+    )
+
+    expect(result.model).toStrictEqual(RemoteData.Ok({ data: 'ready' }))
+  })
+
   it('narrows state and message to the table position without annotations', () => {
     const socketError = narrowingMachine.transition(
       ConnectionState.Connecting({ attemptCount: 0 }),

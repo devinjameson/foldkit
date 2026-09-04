@@ -216,6 +216,20 @@ export type TransitionTable<
   }>
 }>
 
+/** The transition table entry for one source state. Use this alias when
+ * extracting an entry from a Machine's `states` record to preserve the source
+ * state and triggering Message narrowing inside its Edges.
+ *
+ * @experimental Ships from `foldkit/experimental/machine`; expect breaking changes while the API settles.
+ */
+export type StateTransitions<
+  State extends Tagged,
+  Message extends Tagged,
+  SourceTag extends TagOf<State>,
+  R = never,
+  Context = NoMachineContext,
+> = NonNullable<TransitionTable<State, Message, R, Context>[SourceTag]>
+
 const makeEdge = <
   State extends Tagged,
   Message extends Tagged,
