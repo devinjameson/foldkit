@@ -24,22 +24,26 @@ export type {
   PortHandles,
 } from './hostConnector.js'
 
-export { embed, hydrate, makeApplication, makeElement, run } from './runtime.js'
+export { makeApplication } from './makeApplication.js'
 
 export type {
   ApplicationConfig,
   ApplicationConfigWithFlags,
   ApplicationInit,
-  ElementConfig,
-  ElementConfigWithFlags,
-  ElementInit,
-  HydrateOptions,
-  MakeRuntimeReturn,
   RoutingApplicationConfig,
   RoutingApplicationConfigWithFlags,
   RoutingApplicationInit,
-  RunOptions,
-} from './runtime.js'
+} from './makeApplication.js'
+
+export { makeElement } from './makeElement.js'
+
+export type {
+  ElementConfig,
+  ElementConfigWithFlags,
+  ElementInit,
+} from './makeElement.js'
+
+export type { MakeRuntimeReturn } from './runtime.js'
 
 export { SlowPhase, defaultSlowCallback } from './slowPhase.js'
 
@@ -52,6 +56,10 @@ export type {
   SlowUpdateContext,
   SlowViewContext,
 } from './slowPhase.js'
+
+export { embed, hydrate, run } from './start.js'
+
+export type { HydrateOptions, RunOptions } from './start.js'
 
 export type {
   ViewTransitionConfig,

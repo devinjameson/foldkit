@@ -6,7 +6,7 @@ import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import * as Subscription from '../subscription/subscription.js'
 import type * as Update from '../update/index.js'
-import { makeElement } from './runtime.js'
+import { makeElement } from './makeElement.js'
 import {
   type SlowContext,
   type SlowSubscriptionDependenciesContext,

@@ -9,7 +9,9 @@ import * as Port from '../port/index.js'
 import { evo } from '../struct/index.js'
 import * as Subscription from '../subscription/subscription.js'
 import type * as Update from '../update/index.js'
-import { embed, makeApplication, makeElement } from './runtime.js'
+import { makeApplication } from './makeApplication.js'
+import { makeElement } from './makeElement.js'
+import { embed } from './start.js'
 
 const Message = defineMessageUnion({
   ChangedStep: { step: Schema.Number },

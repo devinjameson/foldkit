@@ -5,7 +5,8 @@ import { type Document, __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import type * as Update from '../update/index.js'
-import { makeApplication, run } from './runtime.js'
+import { makeApplication } from './makeApplication.js'
+import { run } from './start.js'
 
 const Message = defineMessageUnion({
   ClickedIncrement: {},

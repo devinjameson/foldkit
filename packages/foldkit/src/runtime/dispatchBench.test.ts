@@ -5,7 +5,7 @@ import { Document, __htmlBuilder, __requireDispatch } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'
 import type * as Update from '../update/index.js'
-import { makeApplication } from './runtime.js'
+import { makeApplication } from './makeApplication.js'
 
 /**
  * Internal dispatch-throughput benchmark. Skipped by default to keep CI
