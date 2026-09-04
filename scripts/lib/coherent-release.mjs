@@ -23,7 +23,7 @@ export const REGISTRY = 'https://registry.npmjs.org'
 export const uploadTag = (channel, commit) =>
   `foldkit-${channel}-upload-${commit.slice(0, 12)}`
 
-const REGISTRY_ATTEMPTS = 30
+const REGISTRY_ATTEMPTS = 90
 const REGISTRY_DELAY_MILLISECONDS = 10_000
 const REGISTRY_REQUEST_TIMEOUT_MILLISECONDS = 30_000
 const FULL_GIT_COMMIT_PATTERN = /^[0-9a-f]{40}$/
