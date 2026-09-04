@@ -15,7 +15,15 @@ import { defineMessageUnion, defineTaggedUnion } from '../../schema/index.js'
 import { evo } from '../../struct/index.js'
 import * as Subscription from '../../subscription/public.js'
 import * as Update from '../../update/index.js'
-import { define, otherwise, to, when } from './machine.js'
+import {
+  type EdgeInput,
+  type Machine,
+  type TransitionTable,
+  define,
+  otherwise,
+  to,
+  when,
+} from './machine.js'
 
 // REMOTE DATA
 
@@ -439,6 +447,179 @@ const booleanGuardMachine = define({
   },
 })
 
+const RemoteDataContext = Schema.Struct({
+  shouldSucceed: Schema.Boolean,
+  data: Schema.String,
+  errorPrefix: Schema.String,
+})
+type RemoteDataContext = typeof RemoteDataContext.Type
+
+const contextualRemoteDataMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+  context: RemoteDataContext,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedFetch: [
+          when(
+            (state, message, context) => {
+              expectTypeOf(state).toEqualTypeOf<typeof RemoteData.Idle.Type>()
+              expectTypeOf(message).toEqualTypeOf<
+                typeof RemoteDataMessage.ClickedFetch.Type
+              >()
+              expectTypeOf(context).toEqualTypeOf<RemoteDataContext>()
+
+              if (context.shouldSucceed) {
+                return Option.some(
+                  `${state._tag}:${message._tag}:${context.data}`,
+                )
+              } else {
+                return Option.none()
+              }
+            },
+            'Ok',
+            ({ state, message, guardValue, context }) => {
+              expectTypeOf(state).toEqualTypeOf<typeof RemoteData.Idle.Type>()
+              expectTypeOf(message).toEqualTypeOf<
+                typeof RemoteDataMessage.ClickedFetch.Type
+              >()
+              expectTypeOf(guardValue).toEqualTypeOf<string>()
+              expectTypeOf(context).toEqualTypeOf<RemoteDataContext>()
+
+              return {
+                model: RemoteData.Ok({
+                  data: `${guardValue}:${context.data}`,
+                }),
+              }
+            },
+          ),
+          otherwise(
+            to('Error', ({ context }) => ({
+              model: RemoteData.Error({
+                error: `${context.errorPrefix}: unavailable`,
+              }),
+            })),
+          ),
+        ],
+      },
+    },
+    Error: {
+      on: {
+        ClickedRetry: to('Ok', input => ({
+          model: RemoteData.Ok({
+            data: `${globalThis.String(Object.hasOwn(input, 'context'))}:${input.context.data}`,
+          }),
+        })),
+      },
+    },
+  },
+})
+
+const contextFreeInputShapeMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedFetch: to('Ok', input => {
+          if (false) {
+            // @ts-expect-error context-free Edge inputs have no context field
+            expectTypeOf(input.context).toBeNever()
+          }
+
+          return {
+            model: RemoteData.Ok({
+              data: globalThis.String(Object.hasOwn(input, 'context')),
+            }),
+          }
+        }),
+      },
+    },
+  },
+})
+
+const contextFreeGuardArityMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedFetch: [
+          when(
+            (...guardArguments) => guardArguments.length === 2,
+            'Loading',
+            () => ({ model: RemoteData.Loading() }),
+          ),
+        ],
+      },
+    },
+  },
+})
+
+const voidContextMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+  context: Schema.Void,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedFetch: to('Loading', ({ context }) => {
+          expectTypeOf(context).toEqualTypeOf<void>()
+
+          return { model: RemoteData.Loading() }
+        }),
+      },
+    },
+  },
+})
+
+const anyContextMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+  context: Schema.Any,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedFetch: to('Loading', ({ context }) => {
+          expectTypeOf(context).toBeAny()
+
+          return { model: RemoteData.Loading() }
+        }),
+      },
+    },
+  },
+})
+
+const neverContextMachine = define({
+  state: RemoteData,
+  message: RemoteDataMessage,
+  context: Schema.Never,
+})({
+  initial: RemoteData.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedFetch: to('Loading', ({ context }) => {
+          expectTypeOf(context).toBeNever()
+
+          return { model: RemoteData.Loading() }
+        }),
+      },
+    },
+  },
+})
+
 const wrongVariantMachine = define({
   state: RemoteData,
   message: RemoteDataMessage,
@@ -703,6 +884,9 @@ const Persist = Command.define('Persist', {
   }),
 })
 
+const SubmitContext = Schema.Struct({ shouldSubmit: Schema.Boolean })
+type SubmitContext = typeof SubmitContext.Type
+
 const inferredRequirementsMachine = define({
   state: SubmitState,
   message: SubmitMessage,
@@ -715,6 +899,35 @@ const inferredRequirementsMachine = define({
           model: SubmitState.Presigning(),
           commands: [Presign()],
         })),
+      },
+    },
+  },
+})
+
+const inferredContextualRequirementsMachine = define({
+  state: SubmitState,
+  message: SubmitMessage,
+  context: SubmitContext,
+})({
+  initial: SubmitState.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedSubmit: [
+          when(
+            (_state, _message, context) => context.shouldSubmit,
+            'Presigning',
+            ({ context }) => {
+              expectTypeOf(context).toEqualTypeOf<SubmitContext>()
+
+              return {
+                model: SubmitState.Presigning(),
+                commands: [Presign()],
+              }
+            },
+          ),
+          otherwise(to('Idle', () => ({ model: SubmitState.Idle() }))),
+        ],
       },
     },
   },
@@ -803,6 +1016,32 @@ const explicitRequirementsMachine = define({
       on: {
         SucceededPersist: to('Submitted', () => ({
           model: SubmitState.Submitted(),
+        })),
+      },
+    },
+  },
+})
+
+const explicitContextualRequirementsMachine = define({
+  state: SubmitState,
+  message: SubmitMessage,
+  context: SubmitContext,
+})<UploadsClient | SaveClient>({
+  initial: SubmitState.Idle(),
+  states: {
+    Idle: {
+      on: {
+        ClickedSubmit: to('Presigning', () => ({
+          model: SubmitState.Presigning(),
+          commands: [Presign()],
+        })),
+      },
+    },
+    Presigning: {
+      on: {
+        SucceededPresign: to('Persisting', () => ({
+          model: SubmitState.Persisting(),
+          commands: [Persist()],
         })),
       },
     },
@@ -1152,6 +1391,209 @@ describe('guard lists', () => {
   })
 })
 
+describe('context', () => {
+  const succeeds: RemoteDataContext = {
+    shouldSucceed: true,
+    data: 'payload',
+    errorPrefix: 'fetch',
+  }
+
+  const fails: RemoteDataContext = {
+    shouldSucceed: false,
+    data: 'payload',
+    errorPrefix: 'fetch',
+  }
+
+  it('passes context through guards and into the selected Edge handler', () => {
+    const result = contextualRemoteDataMachine.step(
+      RemoteData.Idle(),
+      RemoteDataMessage.ClickedFetch(),
+      succeeds,
+    )
+
+    expect(result._tag).toBe('Transitioned')
+    expect(result.state).toStrictEqual(
+      RemoteData.Ok({ data: 'Idle:ClickedFetch:payload:payload' }),
+    )
+  })
+
+  it('passes context through an otherwise fallback', () => {
+    const result = contextualRemoteDataMachine.transition(
+      RemoteData.Idle(),
+      RemoteDataMessage.ClickedFetch(),
+      fails,
+    )
+
+    expect(result.model).toStrictEqual(
+      RemoteData.Error({ error: 'fetch: unavailable' }),
+    )
+  })
+
+  it('adds context to unguarded Edge inputs only when declared', () => {
+    const contextualResult = contextualRemoteDataMachine.transition(
+      RemoteData.Error({ error: 'offline' }),
+      RemoteDataMessage.ClickedRetry(),
+      succeeds,
+    )
+    expect(contextualResult.model).toStrictEqual(
+      RemoteData.Ok({ data: 'true:payload' }),
+    )
+
+    const contextFreeResult = contextFreeInputShapeMachine.transition(
+      RemoteData.Idle(),
+      RemoteDataMessage.ClickedFetch(),
+    )
+    expect(contextFreeResult.model).toStrictEqual(
+      RemoteData.Ok({ data: 'false' }),
+    )
+  })
+
+  it('keeps context-free guard invocation at two arguments', () => {
+    const result = contextFreeGuardArityMachine.transition(
+      RemoteData.Idle(),
+      RemoteDataMessage.ClickedFetch(),
+    )
+
+    expect(result.model).toStrictEqual(RemoteData.Loading())
+  })
+
+  it('preserves the runtime arity of context-free Machine functions', () => {
+    expect(remoteDataMachine.transition).toHaveLength(2)
+    expect(remoteDataMachine.step).toHaveLength(2)
+  })
+
+  it('still requires context when the Message is ignored', () => {
+    const result = contextualRemoteDataMachine.step(
+      RemoteData.Ok({ data: 'settled' }),
+      RemoteDataMessage.ClickedRetry(),
+      succeeds,
+    )
+
+    expect(result).toEqual({
+      _tag: 'Ignored',
+      stateTag: 'Ok',
+      messageTag: 'ClickedRetry',
+      state: RemoteData.Ok({ data: 'settled' }),
+      reason: 'NotApplicable',
+    })
+  })
+
+  it('makes context arity part of the Machine type', () => {
+    if (false) {
+      // @ts-expect-error contextual transition requires its third argument
+      contextualRemoteDataMachine.transition(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+      )
+
+      // @ts-expect-error contextual step requires its third argument
+      contextualRemoteDataMachine.step(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+      )
+
+      contextualRemoteDataMachine.transition(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+        // @ts-expect-error contextual transition requires RemoteDataContext
+        { shouldSucceed: true },
+      )
+
+      remoteDataMachine.transition(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+        // @ts-expect-error context-free transition accepts exactly two arguments
+        succeeds,
+      )
+
+      // @ts-expect-error a declared void context still requires a third argument
+      voidContextMachine.transition(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+      )
+
+      // @ts-expect-error a declared any context still requires a third argument
+      anyContextMachine.transition(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+      )
+      anyContextMachine.transition(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+        { arbitrary: true },
+      )
+
+      // @ts-expect-error a declared never context still requires a third argument
+      neverContextMachine.transition(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+      )
+      neverContextMachine.transition(
+        RemoteData.Idle(),
+        RemoteDataMessage.ClickedFetch(),
+        // @ts-expect-error no value satisfies a never context
+        undefined,
+      )
+
+      define({ state: RemoteData, message: RemoteDataMessage })({
+        initial: RemoteData.Idle(),
+        states: {
+          Idle: {
+            on: {
+              ClickedFetch: [
+                when(
+                  // @ts-expect-error context-free guards accept exactly two arguments
+                  (_state, _message, _context) => true,
+                  'Loading',
+                  () => ({ model: RemoteData.Loading() }),
+                ),
+              ],
+            },
+          },
+        },
+      })
+    }
+
+    const voidContextResult = voidContextMachine.transition(
+      RemoteData.Idle(),
+      RemoteDataMessage.ClickedFetch(),
+      undefined,
+    )
+    expect(voidContextResult.model).toStrictEqual(RemoteData.Loading())
+
+    expect(true).toBe(true)
+  })
+
+  it('preserves existing public generic positions', () => {
+    type IdleState = typeof RemoteData.Idle.Type
+    type ClickedFetchMessage = typeof RemoteDataMessage.ClickedFetch.Type
+    type ExpectedInput = Readonly<{
+      state: IdleState
+      message: ClickedFetchMessage
+      guardValue: string
+    }>
+
+    expectTypeOf<
+      EdgeInput<IdleState, ClickedFetchMessage, string>
+    >().toEqualTypeOf<ExpectedInput>()
+
+    const machine: Machine<RemoteData, RemoteDataMessage, never> =
+      remoteDataMachine
+    expect(machine.initial).toStrictEqual(RemoteData.Idle())
+
+    const table: TransitionTable<RemoteData, RemoteDataMessage, never> = {
+      Idle: {
+        on: {
+          ClickedFetch: to('Loading', () => ({
+            model: RemoteData.Loading(),
+          })),
+        },
+      },
+    }
+    expect(Object.keys(table)).toEqual(['Idle'])
+  })
+})
+
 describe('ignored reasons', () => {
   it('reports a message that appears in no state entry as OutOfAlphabet', () => {
     const result = connectionMachine.step(
@@ -1450,6 +1892,20 @@ describe('edge command requirements', () => {
     ])
   })
 
+  it('infers requirements independently from a declared context', () => {
+    const submitClick = inferredContextualRequirementsMachine.transition(
+      SubmitState.Idle(),
+      SubmitMessage.ClickedSubmit(),
+      { shouldSubmit: true },
+    )
+
+    expectTypeOf(submitClick.commands).toEqualTypeOf<
+      | ReadonlyArray<Command.Command<SubmitMessage, never, UploadsClient>>
+      | undefined
+    >()
+    expect(submitClick.commands ?? []).toHaveLength(1)
+  })
+
   it('threads a requirement inferred from an otherwise fallback command', () => {
     const submitClick = inferredOtherwiseRequirementsMachine.transition(
       SubmitState.Idle(),
@@ -1547,5 +2003,21 @@ describe('edge command requirements', () => {
     expect(persistMessages).toEqual([
       SubmitMessage.SucceededPersist({ id: PERSISTED_ID }),
     ])
+  })
+
+  it('keeps R as the contextual definition stage generic', () => {
+    const submitClick = explicitContextualRequirementsMachine.transition(
+      SubmitState.Idle(),
+      SubmitMessage.ClickedSubmit(),
+      { shouldSubmit: true },
+    )
+
+    expectTypeOf(submitClick.commands).toEqualTypeOf<
+      | ReadonlyArray<
+          Command.Command<SubmitMessage, never, UploadsClient | SaveClient>
+        >
+      | undefined
+    >()
+    expect(submitClick.commands ?? []).toHaveLength(1)
   })
 })
