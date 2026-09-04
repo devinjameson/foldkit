@@ -7,18 +7,14 @@ import {
 } from 'foldkit/html'
 
 import { Shared } from '../component'
-import {
-  docsFooterView,
-  docsHeaderView,
-  searchSubmodelView,
-  searchWeight,
-} from '../layout/docs'
+import { Docs } from '../layout'
 import { Message } from '../message'
 import { type Model } from '../model'
 import { Blog, NotFound } from '../page'
 import * as Prose from '../prose'
 import { type BlogPostRoute, type BlogRoute, homeRouter } from '../route'
 import * as SnippetCopy from '../snippetCopy'
+import * as Search from './search'
 import * as Sidebar from './sidebar'
 
 const PagefindBody = ih.DataAttribute('pagefind-body', '')
@@ -70,8 +66,8 @@ export const view = (
     [h.Class('flex flex-col min-h-screen')],
     [
       Shared.skipNavLink,
-      docsHeaderView(model, h),
-      searchSubmodelView(model, h),
+      Docs.headerView(model, h),
+      Search.dialogView(model, h),
       Sidebar.mobileView(model, h),
       h.main(
         [
@@ -85,14 +81,17 @@ export const view = (
             contentKey,
             [
               PagefindBody,
-              h.DataAttribute('pagefind-weight', searchWeight(blogRoute._tag)),
+              h.DataAttribute(
+                'pagefind-weight',
+                Docs.searchWeight(blogRoute._tag),
+              ),
               h.Class(
                 'flex-1 w-full px-4 py-6 md:px-6 2xl:py-10 max-w-3xl mx-auto min-w-0',
               ),
             ],
             [content],
           ),
-          h.div([PagefindIgnore], [docsFooterView(model.currentYear, h)]),
+          h.div([PagefindIgnore], [Docs.footerView(model.currentYear, h)]),
         ],
       ),
     ],

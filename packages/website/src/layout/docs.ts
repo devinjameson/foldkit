@@ -52,35 +52,23 @@ import {
 } from '../page'
 import * as Prose from '../prose'
 import { type DocsRoute, homeRouter } from '../route'
-import * as Search from '../search'
 import * as SnippetCopy from '../snippetCopy'
 import { type TableOfContentsEntry } from '../tableOfContentsEntry'
-import { HeaderNav, Sidebar, TableOfContents, ThemeSelector } from '../view'
+import {
+  HeaderNav,
+  Search,
+  Sidebar,
+  TableOfContents,
+  ThemeSelector,
+} from '../view'
 
 const PagefindBody = ih.DataAttribute('pagefind-body', '')
 const PagefindIgnore = ih.DataAttribute('pagefind-ignore', '')
 const LlmIgnore = ih.DataAttribute('llm-ignore', '')
 
-/**
- * The site-wide search dialog Submodel, shared by every shell that renders the
- * docs header, so the wiring cannot drift between the docs and blog views.
- */
-export const searchSubmodelView = (
-  model: Model,
-  h: HtmlBuilder<Message>,
-): Html =>
-  h.submodel({
-    slotId: 'search',
-    model: model.search,
-    view: Search.view,
-    toParentMessage: message => Message.GotSearchMessage({ message }),
-  })
-
-const searchKeyboardWarmupSelector = `#${Search.KEYBOARD_WARMUP_INPUT_ID}`
-
 // DOCS HEADER
 
-export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
+export const headerView = (model: Model, h: HtmlBuilder<Message>) =>
   h.header(
     [
       h.Class(
@@ -110,30 +98,7 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
         [h.Class('flex items-center gap-3 md:gap-8')],
         [
           HeaderNav.view(model.route, 'hidden md:flex items-center gap-6', h),
-          h.button(
-            [
-              h.Class(
-                'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-sm hover:border-gray-400 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer',
-              ),
-              h.AriaLabel('Search documentation'),
-              h.OnClick(Message.ClickedOpenSearch(), {
-                focusSelector: searchKeyboardWarmupSelector,
-              }),
-            ],
-            [
-              Icon.magnifyingGlass('w-4 h-4'),
-              h.span([h.Class('mr-4')], ['Search...']),
-              h.span(
-                [
-                  h.AriaHidden(true),
-                  h.Class(
-                    'text-xs text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-700 rounded px-1.5 py-px font-mono',
-                  ),
-                ],
-                ['⌘K'],
-              ),
-            ],
-          ),
+          Search.triggerView('hidden md:flex', h),
           ThemeSelector.view(model.maybeThemePreference, h),
           h.div(
             [h.Class('hidden md:flex items-center gap-3 md:gap-4')],
@@ -160,18 +125,7 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
               ),
             ],
           ),
-          h.button(
-            [
-              h.Class(
-                'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
-              ),
-              h.AriaLabel('Search documentation'),
-              h.OnClick(Message.ClickedOpenSearch(), {
-                focusSelector: searchKeyboardWarmupSelector,
-              }),
-            ],
-            [Icon.magnifyingGlass('w-5 h-5')],
-          ),
+          Search.compactTriggerView('md:hidden', h),
           h.button(
             [
               h.Class(
@@ -190,7 +144,7 @@ export const docsHeaderView = (model: Model, h: HtmlBuilder<Message>) =>
 
 // DOCS FOOTER
 
-export const docsFooterView = (
+export const footerView = (
   currentYear: number,
   h: HtmlBuilder<Message>,
 ): Html =>
@@ -403,11 +357,11 @@ type DocPageView = (
 type ProseDocPageView = (renderHeadingLink: Prose.RenderHeadingLink) => Html
 
 const renderDocContent = (
-  view: DocPageView,
+  pageView: DocPageView,
   snippetCopy: SnippetCopy.Model,
   h: HtmlBuilder<Message>,
 ): Html =>
-  view(
+  pageView(
     SnippetCopy.renderer(
       snippetCopy,
       message => Message.GotSnippetCopyMessage({ message }),
@@ -417,10 +371,12 @@ const renderDocContent = (
   )
 
 const renderProseContent = (
-  view: ProseDocPageView,
+  pageView: ProseDocPageView,
   h: HtmlBuilder<Message>,
 ): Html =>
-  view(Prose.renderHeadingLink(hash => Message.ClickedCopyLink({ hash }), h))
+  pageView(
+    Prose.renderHeadingLink(hash => Message.ClickedCopyLink({ hash }), h),
+  )
 
 const memoizedDocContent = createLazy()
 const memoizedProseContent = createLazy()
@@ -440,7 +396,7 @@ const lazyApiReferenceSkeleton = createLazy()
 
 // VIEW
 
-export const docsView = (
+export const view = (
   model: Model,
   docsRoute: DocsRoute,
   h: HtmlBuilder<Message>,
@@ -1161,8 +1117,8 @@ export const docsView = (
     [h.Class('flex flex-col min-h-screen')],
     [
       Shared.skipNavLink,
-      docsHeaderView(model, h),
-      searchSubmodelView(model, h),
+      headerView(model, h),
+      Search.dialogView(model, h),
       h.div(
         [h.Class('flex flex-1 pt-[var(--header-height)] md:pl-64')],
         [
@@ -1216,7 +1172,7 @@ export const docsView = (
                   ),
                 ],
               ),
-              h.div([PagefindIgnore], [docsFooterView(model.currentYear, h)]),
+              h.div([PagefindIgnore], [footerView(model.currentYear, h)]),
             ],
           ),
           Option.match(currentPageTableOfContents, {

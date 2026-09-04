@@ -7,12 +7,12 @@ import { isSearchRoute } from '../route'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
   searchShortcut: entry(
-    { isDocsPage: Schema.Boolean },
+    { isSearchAvailable: Schema.Boolean },
     {
       modelToDependencies: model => ({
-        isDocsPage: isSearchRoute(model.route),
+        isSearchAvailable: isSearchRoute(model.route),
       }),
-      dependenciesToStream: ({ isDocsPage }) =>
+      dependenciesToStream: ({ isSearchAvailable }) =>
         Stream.when(
           Subscription.fromEventFilterMap<
             KeyboardEvent,
@@ -28,7 +28,7 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
               return Option.none()
             },
           }),
-          Effect.sync(() => isDocsPage),
+          Effect.sync(() => isSearchAvailable),
         ),
     },
   ),
