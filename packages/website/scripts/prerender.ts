@@ -61,6 +61,7 @@ import {
   coreFreezeModelRouter,
   coreHttpRouter,
   coreInitAndFlagsRouter,
+  coreMachineRouter,
   coreManagedResourcesRouter,
   coreMessagesRouter,
   coreModelRouter,
@@ -205,6 +206,7 @@ export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
   AppRoute.CoreFreezeModel(),
   AppRoute.CorePreserveScroll(),
   AppRoute.CoreSubmodel(),
+  AppRoute.CoreMachine(),
   AppRoute.AsyncData(),
   AppRoute.PatternsInformingSubmodels(),
   AppRoute.PatternsSubscriptionOrganization(),
@@ -308,6 +310,7 @@ export const routeToUrlPath = (route: AppRoute): string =>
     CoreFreezeModel: () => coreFreezeModelRouter(),
     CorePreserveScroll: () => corePreserveScrollRouter(),
     CoreSubmodel: () => coreSubmodelRouter(),
+    CoreMachine: () => coreMachineRouter(),
     AsyncData: () => asyncDataRouter(),
     PatternsInformingSubmodels: () => patternsInformingSubmodelsRouter(),
     PatternsSubscriptionOrganization: () =>

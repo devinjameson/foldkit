@@ -727,6 +727,11 @@ export const view = (
           }),
           Core.SubmodelPage.tableOfContents,
         ),
+      CoreMachine: () =>
+        withTableOfContents(
+          lazyDocsContent(Core.Machine.view, [model.snippetCopy, h]),
+          Core.Machine.tableOfContents,
+        ),
       AsyncData: () =>
         withTableOfContents(
           lazyDocsContent(AsyncDataPage.view, [model.snippetCopy, h]),

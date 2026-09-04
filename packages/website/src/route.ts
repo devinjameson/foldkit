@@ -70,6 +70,7 @@ export const AppRoute = defineRouteUnion({
   CoreViewMemoization: {},
   CoreEmbedding: {},
   CoreSubmodel: {},
+  CoreMachine: {},
   AsyncData: {},
   PatternsInformingSubmodels: {},
   PatternsSubscriptionOrganization: {},
@@ -170,6 +171,7 @@ export const DocsRoute = AppRoute.subset([
   'CoreViewMemoization',
   'CoreEmbedding',
   'CoreSubmodel',
+  'CoreMachine',
   'AsyncData',
   'PatternsInformingSubmodels',
   'PatternsSubscriptionOrganization',
@@ -424,6 +426,7 @@ export const coreViewMemoizationRouter = core(
 )
 export const coreEmbeddingRouter = core('embedding', AppRoute.CoreEmbedding)
 export const coreSubmodelRouter = core('submodel', AppRoute.CoreSubmodel)
+export const coreMachineRouter = core('machine', AppRoute.CoreMachine)
 export const asyncDataRouter = core('async-data', AppRoute.AsyncData)
 
 export const patternsInformingSubmodelsRouter = patterns(
@@ -533,6 +536,7 @@ const coreParser = oneOf(
   coreViewMemoizationRouter,
   coreEmbeddingRouter,
   coreSubmodelRouter,
+  coreMachineRouter,
   routingAndNavigationRouter,
   fieldValidationRouter,
   asyncDataRouter,
