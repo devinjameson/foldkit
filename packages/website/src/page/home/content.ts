@@ -173,26 +173,6 @@ const heroSection = (
       h.div(
         [h.Class('landing-section-narrow relative')],
         [
-          h.div(
-            [h.Class('flex items-center gap-3 mb-8')],
-            [
-              h.img([
-                h.Src('/logo.svg'),
-                h.Alt('Foldkit'),
-                h.Width('801'),
-                h.Height('200'),
-                h.Class('h-10 md:h-12 w-auto dark:invert'),
-              ]),
-              h.span(
-                [
-                  h.Class(
-                    'inline-block -rotate-6 rounded bg-accent-700 dark:bg-accent-500 px-2 py-1 text-xs font-extrabold uppercase leading-none tracking-wider text-white dark:text-accent-900 select-none',
-                  ),
-                ],
-                ['Beta'],
-              ),
-            ],
-          ),
           h.h1(
             [
               h.Class(
