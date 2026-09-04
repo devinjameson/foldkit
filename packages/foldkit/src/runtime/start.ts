@@ -16,11 +16,8 @@ import {
   buildPortHandles,
   makeHostConnector,
 } from './hostConnector.js'
-import {
-  type BootMode,
-  type MakeRuntimeReturn,
-  runtimeInternals,
-} from './runtime.js'
+import type { BootMode } from './hydrationHandoff.js'
+import { type MakeRuntimeReturn, runtimeInternals } from './runtime.js'
 
 /** Client-only startup input for an application that declares Flags. Pass it
  *  to `run` or `embed`; `hydrate` instead decodes the exact Flags value
