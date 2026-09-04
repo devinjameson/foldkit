@@ -129,7 +129,6 @@ import {
   uiToastRouter,
   uiTooltipRouter,
   uiVirtualListRouter,
-  whyNoJsxRouter,
 } from '../src/route'
 import { type BlogPostEntry, blogPostSlugs, blogPosts } from './blogPosts'
 import {
@@ -155,7 +154,6 @@ export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
   AppRoute.Home(),
   AppRoute.Newsletter(),
   AppRoute.Manifesto(),
-  AppRoute.WhyNoJsx(),
   AppRoute.Performance(),
   AppRoute.GettingStarted(),
   AppRoute.Roadmap(),
@@ -261,7 +259,6 @@ export const routeToUrlPath = (route: AppRoute): string =>
   AppRoute.match<string>(route, {
     Home: () => homeRouter(),
     Manifesto: () => manifestoRouter(),
-    WhyNoJsx: () => whyNoJsxRouter(),
     Performance: () => performanceRouter(),
     GettingStarted: () => gettingStartedRouter(),
     Roadmap: () => roadmapRouter(),

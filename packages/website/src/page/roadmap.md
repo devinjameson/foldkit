@@ -71,8 +71,6 @@ Names and API signatures can still change before 1.0, but the architecture is lo
 
 Server rendering will not create a second kind of Foldkit application. It uses the same Model, init, and view as the browser, not a parallel server-side programming model. Foldkit will not add `'use client'` and `'use server'` style annotations.
 
-Foldkit will not adopt JSX either. [Why no JSX?](/faq/why-no-jsx) explains why the typed function-call DSL is part of the architecture rather than a cosmetic preference.
-
 ## Beyond 1.0
 
 Once the core is stable, I want to focus mostly on supporting the community and building with Foldkit and Effect in public. I also want to explore:

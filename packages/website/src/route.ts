@@ -17,7 +17,6 @@ import type { CallableTaggedStruct } from 'foldkit/schema'
 export const AppRoute = defineRouteUnion({
   Home: {},
   Manifesto: {},
-  WhyNoJsx: {},
   Performance: {},
   ComingFromReact: {},
   ComingFromTanStackQuery: {},
@@ -119,7 +118,6 @@ export type AppRoute = typeof AppRoute.Type
 
 export const DocsRoute = AppRoute.subset([
   'Manifesto',
-  'WhyNoJsx',
   'Performance',
   'ComingFromReact',
   'ComingFromTanStackQuery',
@@ -275,7 +273,6 @@ export const gettingStartedRouter = getStarted(
 
 export const roadmapRouter = staticPage('roadmap', AppRoute.Roadmap)
 
-export const whyNoJsxRouter = faq('why-no-jsx', AppRoute.WhyNoJsx)
 export const performanceRouter = faq('performance', AppRoute.Performance)
 
 export const comingFromReactRouter = react(
@@ -483,7 +480,7 @@ export const aiMcpRouter = ai('mcp', AppRoute.AiMcp)
 
 const getStartedParser = oneOf(manifestoRouter, gettingStartedRouter)
 
-const faqParser = oneOf(whyNoJsxRouter, performanceRouter)
+const faqParser = performanceRouter
 
 const reactParser = oneOf(
   comingFromReactRouter,

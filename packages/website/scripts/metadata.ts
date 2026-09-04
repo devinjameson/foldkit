@@ -60,11 +60,6 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
     'Why Foldkit exists and the principles behind its design.',
     'Docs',
   ),
-  WhyNoJsx: docs(
-    'Why no JSX?',
-    'Why Foldkit uses a typed function-call DSL instead of JSX, with side-by-side comparisons of buttons, inputs, and conditional rendering.',
-    'FAQ',
-  ),
   Performance: docs(
     'Performance',
     'Foldkit’s rendering cost model, TodoMVC benchmark results, development-mode overhead, and the tools for measuring and memoizing expensive views.',

@@ -46,7 +46,6 @@ import {
   ToolingLinting,
   TypingTerminal,
   Ui,
-  WhyNoJsx,
 } from '../page'
 
 export const subscriptions = Subscription.make<Model, Message>()(entry => ({
@@ -60,7 +59,6 @@ export const subscriptions = Subscription.make<Model, Message>()(entry => ({
         const currentPageTableOfContents = Match.value(model.route).pipe(
           Match.tags({
             Manifesto: () => Manifesto.tableOfContents,
-            WhyNoJsx: () => WhyNoJsx.tableOfContents,
             Performance: () => Performance.tableOfContents,
             GettingStarted: () => GettingStarted.tableOfContents,
             Roadmap: () => Roadmap.tableOfContents,

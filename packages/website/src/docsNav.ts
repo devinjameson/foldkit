@@ -90,7 +90,6 @@ import {
   uiToastRouter,
   uiTooltipRouter,
   uiVirtualListRouter,
-  whyNoJsxRouter,
 } from './route'
 import { type GroupKey } from './sidebarStorage'
 
@@ -417,11 +416,6 @@ export const docsSections: ReadonlyArray<DocsSection> = [
     label: 'FAQ',
     pageGroups: [
       [
-        {
-          _tag: 'WhyNoJsx',
-          href: whyNoJsxRouter(),
-          label: 'Why no JSX?',
-        },
         {
           _tag: 'Performance',
           href: performanceRouter(),
