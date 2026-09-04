@@ -50,7 +50,7 @@ import {
   Ui,
 } from '../page'
 import * as Prose from '../prose'
-import { type DocsRoute, homeRouter } from '../route'
+import { AppRoute, type DocsRoute, homeRouter } from '../route'
 import * as SnippetCopy from '../snippetCopy'
 import { type TableOfContentsEntry } from '../tableOfContentsEntry'
 import {
@@ -71,7 +71,7 @@ export const headerView = (model: Model, h: HtmlBuilder<Message>) =>
   h.header(
     [
       h.Class(
-        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] bg-cream dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800 px-4 md:px-6 flex items-center justify-between transform-gpu',
+        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] bg-cream dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800 px-6 flex items-center justify-between transform-gpu',
       ),
     ],
     [
@@ -150,7 +150,7 @@ export const footerView = (
   h.footer(
     [
       h.Class(
-        'px-4 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:px-6 mt-6 border-t border-gray-300 dark:border-gray-800',
+        'px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:px-10 mt-6 border-t border-gray-300 dark:border-gray-800',
       ),
     ],
     [
@@ -165,7 +165,7 @@ export const footerView = (
       Shared.emailForm,
       h.hr([
         h.Class(
-          'my-6 -mx-4 md:-mx-6 border-t border-gray-300 dark:border-gray-800',
+          'my-6 -mx-6 md:-mx-10 border-t border-gray-300 dark:border-gray-800',
         ),
       ]),
       h.div(
@@ -299,6 +299,10 @@ export const searchWeight = (tag: string): string =>
     Match.whenOr('Examples', 'ExampleDetail', 'TypingTerminal', () => '2'),
     Match.orElse(() => '4'),
   )
+
+// CONTENT WIDTH
+
+const isWideContentRoute = AppRoute.isAnyOf(['Examples', 'ExampleDetail'])
 
 // CONTENT ROUTING
 
@@ -1154,7 +1158,10 @@ export const view = (
                     searchWeight(docsRoute._tag),
                   ),
                   h.Class(
-                    'flex-1 w-full px-4 py-6 md:px-6 2xl:py-10 max-w-4xl mx-auto min-w-0',
+                    clsx(
+                      'flex-1 w-full px-6 py-8 md:px-10 2xl:py-12 mx-auto min-w-0',
+                      isWideContentRoute(docsRoute) ? 'max-w-4xl' : 'max-w-3xl',
+                    ),
                   ),
                 ],
                 [

@@ -77,28 +77,11 @@ const highlightCodePlugin = (): Plugin => ({
     const rawCode = await readFile(filePath, 'utf-8')
     const code = rawCode.trimEnd()
 
-    const lines = code.split('\n')
-    const lineCount = lines.length
-    const lineDigits = String(lineCount).length
-
     const lang = highlightLanguage(filePath)
 
-    const html = await codeToHtml(code, {
-      lang,
-      themes: shikiThemes,
-      decorations: lines.map((line, i) => ({
-        start: { line: i, character: 0 },
-        end: { line: i, character: line.length },
-        properties: { 'data-line': i + 1 },
-      })),
-    })
+    const html = await codeToHtml(code, { lang, themes: shikiThemes })
 
-    const htmlWithDigits = html.replace(
-      '<pre ',
-      `<pre data-line-digits="${lineDigits}" `,
-    )
-
-    return `export default ${JSON.stringify(htmlWithDigits)}`
+    return `export default ${JSON.stringify(html)}`
   },
 })
 
@@ -143,22 +126,11 @@ const cssSnippetsPlugin = (): Plugin => {
           const filePath = join(snippetDirectory, fileName)
           this.addWatchFile(filePath)
           const raw = (await readFile(filePath, 'utf-8')).trimEnd()
-          const lines = raw.split('\n')
 
-          const html = await codeToHtml(raw, {
+          const highlighted = await codeToHtml(raw, {
             lang: 'css',
             themes: shikiThemes,
-            decorations: lines.map((line, index) => ({
-              start: { line: index, character: 0 },
-              end: { line: index, character: line.length },
-              properties: { 'data-line': index + 1 },
-            })),
           })
-
-          const highlighted = html.replace(
-            '<pre ',
-            `<pre data-line-digits="${String(lines.length).length}" `,
-          )
 
           return [fileName.replace(/\.css$/, ''), { raw, highlighted }] as const
         }),
@@ -747,29 +719,13 @@ const highlightExampleFile = async (
 ) => {
   const rawCode = await readFile(filePath, 'utf-8')
   const code = rawCode.trimEnd()
-  const lines = code.split('\n')
-  const lineCount = lines.length
-  const lineDigits = String(lineCount).length
   const lang = langFromExtension(filePath)
 
-  const html = await codeToHtml(code, {
-    lang,
-    themes: shikiThemes,
-    decorations: lines.map((line, i) => ({
-      start: { line: i, character: 0 },
-      end: { line: i, character: line.length },
-      properties: { 'data-line': i + 1 },
-    })),
-  })
-
-  const htmlWithDigits = html.replace(
-    '<pre ',
-    `<pre data-line-digits="${lineDigits}" `,
-  )
+  const html = await codeToHtml(code, { lang, themes: shikiThemes })
 
   return {
     path: relative(baseDirectory, filePath),
-    highlightedHtml: htmlWithDigits,
+    highlightedHtml: html,
     rawCode: code,
   }
 }
