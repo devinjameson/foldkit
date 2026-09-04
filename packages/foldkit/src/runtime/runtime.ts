@@ -138,6 +138,8 @@ type ResolvedViewTransition<Model, Message> = Readonly<{
   reducedMotionQuery: MediaQueryList
 }>
 
+type RenderMode = 'Live' | 'Replay'
+
 const toCommandRecord = (
   command: Readonly<{ name: string; args?: Record<string, unknown> }>,
 ): CommandRecord =>
@@ -1494,6 +1496,123 @@ export const makeRuntime = <
           }
         }
 
+        // NOTE: callers set `isRenderingFrame` before calling this and clear
+        // it after. Without it, a Message dispatched while the patch is still
+        // running would run update against a half-patched DOM. For a replay,
+        // `render` also calls `beginReplayHtmlRender` first, so the old
+        // tree's unmount callbacks don't dispatch into live history.
+        const renderSync = (
+          model: Model,
+          maybeMessage: Option.Option<Message>,
+          dispatchService: typeof Dispatch.Service,
+          renderContext: Context.Context<never>,
+          renderMode: RenderMode,
+        ): void => {
+          const maybeLiveRender = Option.liftPredicate(
+            renderMode,
+            mode => mode === 'Live',
+          )
+          const maybeLiveSlowView = Option.flatMap(
+            maybeLiveRender,
+            () => resolvedSlowView,
+          )
+          const maybeLiveSlowPatch = Option.flatMap(
+            maybeLiveRender,
+            () => resolvedSlowPatch,
+          )
+          const [nextDocument, maybeViewDuration] = measureSlowPhase(
+            maybeLiveSlowView,
+            () => {
+              beginHtmlRender(boundaryRegistry)
+              setHtmlRuntime(
+                dispatchService.dispatchSync,
+                renderContext,
+                boundaryRegistry,
+                renderMode,
+              )
+
+              try {
+                return view(model, htmlBuilder)
+              } finally {
+                clearHtmlRuntime()
+              }
+            },
+          )
+          const { body: nextVNode } = nextDocument
+
+          reportSlowPhase<SlowViewContext<Model, Message>>(
+            maybeLiveSlowView,
+            maybeViewDuration,
+            (durationMs, thresholdMs) => ({
+              _tag: 'View',
+              model,
+              message: maybeMessage,
+              durationMs,
+              thresholdMs,
+            }),
+          )
+
+          const { maybeCurrentVNode } = vnodeSlot
+
+          const [patchedVNode, maybePatchDuration] = measureSlowPhase(
+            maybeLiveSlowPatch,
+            () => {
+              if (
+                Option.isNone(maybeCurrentVNode) &&
+                pendingHydrationRoot !== null
+              ) {
+                const hydrationRoot = pendingHydrationRoot
+                pendingHydrationRoot = null
+                // NOTE: strip the stamp before the patch, not after, so the
+                // patch is the sole owner of the root's attributes. It has
+                // already served its purpose of locating the root, and
+                // removing it after would delete a `data-foldkit-app` the view
+                // itself declares, which a later equal-vnode patch would not
+                // restore. Removing it here also stops a later boot on the same
+                // container (a dispose-then-embed remount) from re-detecting
+                // this now-consumed root as hydratable.
+                hydrationRoot.removeAttribute(FOLDKIT_APP_ATTRIBUTE)
+                // An empty id reaches the adoption step's own check as a
+                // value that matches nothing. Boot already refused a
+                // hydration without an id, so this stands in only for a
+                // caller that reached here another way.
+                return __hydrateVNode(
+                  hydrationRoot,
+                  nextVNode,
+                  boundaryRegistry.dedupeSeen,
+                  buildId ?? '',
+                )
+              }
+              return patchRuntimeVNode(
+                maybeCurrentVNode,
+                nextVNode,
+                boundaryRegistry.dedupeSeen,
+              )
+            },
+          )
+          vnodeSlot.maybeCurrentVNode = Option.some(patchedVNode)
+
+          reportSlowPhase<SlowPatchContext<Model, Message>>(
+            maybeLiveSlowPatch,
+            maybePatchDuration,
+            (durationMs, thresholdMs) => ({
+              _tag: 'Patch',
+              model,
+              message: maybeMessage,
+              durationMs,
+              thresholdMs,
+            }),
+          )
+
+          if (manageDocument) {
+            applyDocumentMetadata(nextDocument, patchedVNode.elm)
+          }
+
+          if (import.meta.hot) {
+            duplicateIdScanner?.schedule(patchedVNode.elm)
+          }
+        }
+
         // NOTE: `dispatchService` defaults to live dispatch but is overridable
         // so a time-travel render can bind both declarative handlers and newly
         // acquired Mounts to `noOpDispatch`. A live Mount keeps its dispatcher
@@ -1503,122 +1622,23 @@ export const makeRuntime = <
         // acquisition access to the live Model.
         const render = (
           model: Model,
-          message: Option.Option<Message>,
+          maybeMessage: Option.Option<Message>,
           dispatchService: typeof Dispatch.Service = dispatch,
-          renderMode: 'Live' | 'Replay' = 'Live',
+          renderMode: RenderMode = 'Live',
         ) =>
           Effect.gen(function* () {
             isRenderingFrame = true
             const runtimeContext = yield* Effect.context<never>()
-            const maybeLiveRender = Option.liftPredicate(
-              renderMode,
-              mode => mode === 'Live',
-            )
             if (renderMode === 'Replay') {
               beginReplayHtmlRender()
             }
-            const maybeLiveSlowView = Option.flatMap(
-              maybeLiveRender,
-              () => resolvedSlowView,
+            renderSync(
+              model,
+              maybeMessage,
+              dispatchService,
+              runtimeContext,
+              renderMode,
             )
-            const maybeLiveSlowPatch = Option.flatMap(
-              maybeLiveRender,
-              () => resolvedSlowPatch,
-            )
-            const [nextDocument, maybeViewDuration] = measureSlowPhase(
-              maybeLiveSlowView,
-              () => {
-                beginHtmlRender(boundaryRegistry)
-                setHtmlRuntime(
-                  dispatchService.dispatchSync,
-                  runtimeContext,
-                  boundaryRegistry,
-                  renderMode,
-                )
-
-                try {
-                  return view(model, htmlBuilder)
-                } finally {
-                  clearHtmlRuntime()
-                }
-              },
-            )
-            const nextVNode = nextDocument.body
-
-            reportSlowPhase<SlowViewContext<Model, Message>>(
-              maybeLiveSlowView,
-              maybeViewDuration,
-              (durationMs, thresholdMs) => ({
-                _tag: 'View',
-                model,
-                message,
-                durationMs,
-                thresholdMs,
-              }),
-            )
-
-            const maybeCurrentVNode = vnodeSlot.maybeCurrentVNode
-
-            const [patchedVNode, maybePatchDuration] = yield* Effect.sync(() =>
-              measureSlowPhase(maybeLiveSlowPatch, () => {
-                if (
-                  Option.isNone(maybeCurrentVNode) &&
-                  pendingHydrationRoot !== null
-                ) {
-                  const hydrationRoot = pendingHydrationRoot
-                  pendingHydrationRoot = null
-                  // NOTE: strip the stamp before the patch, not after, so the
-                  // patch is the sole owner of the root's attributes. It has
-                  // already served its purpose of locating the root, and
-                  // removing it after would delete a `data-foldkit-app` the view
-                  // itself declares, which a later equal-vnode patch would not
-                  // restore. Removing it here also stops a later boot on the same
-                  // container (a dispose-then-embed remount) from re-detecting
-                  // this now-consumed root as hydratable.
-                  hydrationRoot.removeAttribute(FOLDKIT_APP_ATTRIBUTE)
-                  // An empty id reaches the adoption step's own check as a
-                  // value that matches nothing. Boot already refused a
-                  // hydration without an id, so this stands in only for a
-                  // caller that reached here another way.
-                  return __hydrateVNode(
-                    hydrationRoot,
-                    nextVNode,
-                    boundaryRegistry.dedupeSeen,
-                    buildId ?? '',
-                  )
-                }
-                return patchRuntimeVNode(
-                  maybeCurrentVNode,
-                  nextVNode,
-                  boundaryRegistry.dedupeSeen,
-                )
-              }),
-            )
-            vnodeSlot.maybeCurrentVNode = Option.some(patchedVNode)
-
-            reportSlowPhase<SlowPatchContext<Model, Message>>(
-              maybeLiveSlowPatch,
-              maybePatchDuration,
-              (durationMs, thresholdMs) => ({
-                _tag: 'Patch',
-                model,
-                message,
-                durationMs,
-                thresholdMs,
-              }),
-            )
-
-            if (manageDocument) {
-              yield* Effect.sync(() =>
-                applyDocumentMetadata(nextDocument, patchedVNode.elm),
-              )
-            }
-
-            if (import.meta.hot) {
-              yield* Effect.sync(() =>
-                duplicateIdScanner?.schedule(patchedVNode.elm),
-              )
-            }
           }).pipe(
             Effect.ensuring(
               Effect.sync(() => {
@@ -1844,7 +1864,13 @@ export const makeRuntime = <
             maybeLastDirtyMessage = Option.none()
           }
           try {
-            renderSyncPlain(liveModel, maybeLastDirtyMessage)
+            renderSync(
+              liveModel,
+              maybeLastDirtyMessage,
+              dispatch,
+              liveRenderContext,
+              'Live',
+            )
             // NOTE: after the patch, so a render that threw leaves this on the
             // Model still on screen, and before `drainPendingMessages` below,
             // whose handlers can advance `liveModel` again.
@@ -1994,70 +2020,6 @@ export const makeRuntime = <
           }
           if (!startFrameViewTransition(maybeResolvedViewTransition.value)) {
             runRenderFrameBody()
-          }
-        }
-
-        const renderSyncPlain = (
-          model: Model,
-          maybeMessage: Option.Option<Message>,
-        ): void => {
-          const [nextDocument, maybeViewDuration] = measureSlowPhase(
-            resolvedSlowView,
-            () => {
-              beginHtmlRender(boundaryRegistry)
-              setHtmlRuntime(
-                dispatch.dispatchSync,
-                liveRenderContext,
-                boundaryRegistry,
-              )
-              try {
-                return view(model, htmlBuilder)
-              } finally {
-                clearHtmlRuntime()
-              }
-            },
-          )
-          reportSlowPhase<SlowViewContext<Model, Message>>(
-            resolvedSlowView,
-            maybeViewDuration,
-            (durationMs, thresholdMs) => ({
-              _tag: 'View',
-              model,
-              message: maybeMessage,
-              durationMs,
-              thresholdMs,
-            }),
-          )
-
-          const maybeCurrentVNode = vnodeSlot.maybeCurrentVNode
-          const [patchedVNode, maybePatchDuration] = measureSlowPhase(
-            resolvedSlowPatch,
-            () =>
-              patchRuntimeVNode(
-                maybeCurrentVNode,
-                nextDocument.body,
-                boundaryRegistry.dedupeSeen,
-              ),
-          )
-          vnodeSlot.maybeCurrentVNode = Option.some(patchedVNode)
-          reportSlowPhase<SlowPatchContext<Model, Message>>(
-            resolvedSlowPatch,
-            maybePatchDuration,
-            (durationMs, thresholdMs) => ({
-              _tag: 'Patch',
-              model,
-              message: maybeMessage,
-              durationMs,
-              thresholdMs,
-            }),
-          )
-
-          if (manageDocument) {
-            applyDocumentMetadata(nextDocument, patchedVNode.elm)
-          }
-
-          if (import.meta.hot) {
-            duplicateIdScanner?.schedule(patchedVNode.elm)
           }
         }
 
