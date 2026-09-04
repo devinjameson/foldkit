@@ -456,7 +456,7 @@ const acquirePlaygroundEditor = <E>(
       theme: FOLDKIT_DARK_THEME,
       automaticLayout: true,
       fontSize: 13,
-      fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+      fontFamily: 'Paper Mono, ui-monospace, monospace',
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
       tabSize: 2,
