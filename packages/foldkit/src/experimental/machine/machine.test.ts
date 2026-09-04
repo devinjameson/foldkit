@@ -7,7 +7,7 @@ import {
   Schema,
   Stream,
 } from 'effect'
-import { describe, expect, expectTypeOf, it } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import * as Command from '../../command/public.js'
 import * as ManagedResource from '../../managedResource/public.js'
@@ -20,6 +20,7 @@ import {
   type Machine,
   type TransitionTable,
   define,
+  fold,
   otherwise,
   to,
   when,
@@ -261,12 +262,11 @@ type AppModel = typeof AppModel.Type
 
 type AppUpdateReturn = Update.Return<AppModel, ConnectionMessage>
 
-const foldConnection = Update.foldChild({
-  update: connectionMachine.transition,
+const foldConnection = fold({
+  machine: connectionMachine,
   read: (model: AppModel) => Option.some(model.connection),
   write: (model, nextConnection) =>
     evo(model, { connection: () => nextConnection }),
-  toParentMessage: (message: ConnectionMessage) => message,
 })
 
 const update = (model: AppModel, message: ConnectionMessage) =>
@@ -516,6 +516,20 @@ const contextualRemoteDataMachine = define({
       },
     },
   },
+})
+
+const ContextualAppModel = Schema.Struct({
+  remoteData: RemoteData,
+  remoteDataContext: RemoteDataContext,
+})
+type ContextualAppModel = typeof ContextualAppModel.Type
+
+const foldContextualRemoteData = fold({
+  machine: contextualRemoteDataMachine,
+  read: (model: ContextualAppModel) => Option.some(model.remoteData),
+  write: (model, nextRemoteData) =>
+    evo(model, { remoteData: () => nextRemoteData }),
+  context: model => model.remoteDataContext,
 })
 
 const contextFreeInputShapeMachine = define({
@@ -858,6 +872,9 @@ const SubmitState = defineTaggedUnion({
   Submitted: {},
 })
 type SubmitState = typeof SubmitState.Type
+
+const SubmitAppModel = Schema.Struct({ submit: SubmitState })
+type SubmitAppModel = typeof SubmitAppModel.Type
 
 const SubmitMessage = defineMessageUnion({
   ClickedSubmit: {},
@@ -1429,6 +1446,93 @@ describe('context', () => {
     )
   })
 
+  it('reads context from the enclosing Model when folding', () => {
+    const model: ContextualAppModel = {
+      remoteData: RemoteData.Idle(),
+      remoteDataContext: succeeds,
+    }
+
+    const result = foldContextualRemoteData(
+      model,
+      RemoteDataMessage.ClickedFetch(),
+    )
+
+    expect(result.model.remoteData).toStrictEqual(
+      RemoteData.Ok({ data: 'Idle:ClickedFetch:payload:payload' }),
+    )
+    expect(result.model.remoteDataContext).toBe(model.remoteDataContext)
+  })
+
+  it('calls contextual transitions with the current context argument', () => {
+    const transition = vi.fn(contextualRemoteDataMachine.transition)
+    const machine: Machine<
+      RemoteData,
+      RemoteDataMessage,
+      never,
+      RemoteDataContext
+    > = { ...contextualRemoteDataMachine, transition }
+    const foldRemoteData = fold({
+      machine,
+      read: (model: ContextualAppModel) => Option.some(model.remoteData),
+      write: (model, nextRemoteData) =>
+        evo(model, { remoteData: () => nextRemoteData }),
+      context: model => model.remoteDataContext,
+    })
+    const model: ContextualAppModel = {
+      remoteData: RemoteData.Idle(),
+      remoteDataContext: succeeds,
+    }
+    const message = RemoteDataMessage.ClickedFetch()
+
+    foldRemoteData(model, message)
+
+    expect(transition).toHaveBeenCalledWith(model.remoteData, message, succeeds)
+  })
+
+  it('reads context from the current Model in data-last composition', () => {
+    const model: ContextualAppModel = {
+      remoteData: RemoteData.Idle(),
+      remoteDataContext: fails,
+    }
+
+    const result = Update.combine(model, [
+      stepModel => ({
+        model: evo(stepModel, {
+          remoteDataContext: () => succeeds,
+        }),
+      }),
+      foldContextualRemoteData(RemoteDataMessage.ClickedFetch()),
+    ])
+
+    expect(result.model.remoteData).toStrictEqual(
+      RemoteData.Ok({ data: 'Idle:ClickedFetch:payload:payload' }),
+    )
+  })
+
+  it('does not read context when the Machine state is absent', () => {
+    const model: ContextualAppModel = {
+      remoteData: RemoteData.Idle(),
+      remoteDataContext: succeeds,
+    }
+    const foldMissingRemoteData = fold({
+      machine: contextualRemoteDataMachine,
+      read: (_model: ContextualAppModel) => Option.none(),
+      write: (_model, _nextRemoteData) => {
+        throw new Error('write should not run')
+      },
+      context: () => {
+        throw new Error('context should not be read')
+      },
+    })
+
+    const result = foldMissingRemoteData(
+      model,
+      RemoteDataMessage.ClickedFetch(),
+    )
+
+    expect(result).toEqual({ model })
+  })
+
   it('adds context to unguarded Edge inputs only when declared', () => {
     const contextualResult = contextualRemoteDataMachine.transition(
       RemoteData.Error({ error: 'offline' }),
@@ -1837,6 +1941,151 @@ describe('integration', () => {
     expect(releaseUpdate.commands ?? []).toEqual([])
   })
 
+  it('folds data-last as a composable Step', () => {
+    const model: AppModel = {
+      connection: ConnectionState.Disconnected(),
+      isDebugPanelOpen: false,
+    }
+
+    const connect = foldConnection(ConnectionMessage.ClickedConnect())
+    const connectionUpdate = connect(model)
+
+    expectTypeOf(foldConnection).toEqualTypeOf<
+      Update.Fold<AppModel, ConnectionMessage, ConnectionMessage>
+    >()
+    expect(connectionUpdate.model.connection).toStrictEqual(
+      ConnectionState.Connecting({ attemptCount: 1 }),
+    )
+    expect(connectionUpdate.commands).toEqual([])
+  })
+
+  it('calls context-free transitions with two arguments', () => {
+    const transition = vi.fn(connectionMachine.transition)
+    const machine: Machine<ConnectionState, ConnectionMessage> = {
+      ...connectionMachine,
+      transition,
+    }
+    const foldConnectionWithSpy = fold({
+      machine,
+      read: (model: AppModel) => Option.some(model.connection),
+      write: (model, nextConnection) =>
+        evo(model, { connection: () => nextConnection }),
+    })
+    const model: AppModel = {
+      connection: ConnectionState.Disconnected(),
+      isDebugPanelOpen: false,
+    }
+    const message = ConnectionMessage.ClickedConnect()
+
+    foldConnectionWithSpy(model, message)
+
+    expect(transition).toHaveBeenCalledWith(model.connection, message)
+  })
+
+  it('returns the enclosing Model untouched when the Machine state is absent', () => {
+    const model: AppModel = {
+      connection: ConnectionState.Disconnected(),
+      isDebugPanelOpen: false,
+    }
+    const foldMissingConnection = fold({
+      machine: connectionMachine,
+      read: (_model: AppModel) => Option.none(),
+      write: (_model, _nextConnection) => {
+        throw new Error('write should not run')
+      },
+    })
+
+    const connectionUpdate = foldMissingConnection(
+      model,
+      ConnectionMessage.ClickedConnect(),
+    )
+
+    expect(connectionUpdate).toEqual({ model })
+  })
+
+  it('preserves Machine Commands without mapping them', () => {
+    const commands: Update.Commands<ConnectionMessage> = [
+      LogTransition({ description: 'Opened session session-1' }),
+    ]
+    const machine: Machine<ConnectionState, ConnectionMessage> = {
+      ...connectionMachine,
+      transition: state => ({ model: state, commands }),
+    }
+    const foldCommands = fold({
+      machine,
+      read: (model: AppModel) => Option.some(model.connection),
+      write: (model, nextConnection) =>
+        evo(model, { connection: () => nextConnection }),
+    })
+    const model: AppModel = {
+      connection: ConnectionState.Connecting({ attemptCount: 1 }),
+      isDebugPanelOpen: false,
+    }
+
+    const connectionUpdate = foldCommands(
+      model,
+      ConnectionMessage.SocketOpened({ sessionId: 'session-1' }),
+    )
+
+    expect(connectionUpdate.commands).toBe(commands)
+  })
+
+  it('omits Commands when the Machine ignores the Message', () => {
+    const model: AppModel = {
+      connection: ConnectionState.Disconnected(),
+      isDebugPanelOpen: false,
+    }
+
+    const connectionUpdate = foldConnection(
+      model,
+      ConnectionMessage.SocketOpened({ sessionId: 'session-1' }),
+    )
+
+    expect(connectionUpdate.model.connection).toBe(model.connection)
+    expect(Object.hasOwn(connectionUpdate, 'commands')).toBe(false)
+  })
+
+  it('requires context exactly when the Machine declares it', () => {
+    if (false) {
+      // @ts-expect-error a contextual Machine fold requires a context reader
+      fold({
+        machine: contextualRemoteDataMachine,
+        read: (model: ContextualAppModel) => Option.some(model.remoteData),
+        write: (model, nextRemoteData) =>
+          evo(model, { remoteData: () => nextRemoteData }),
+      })
+
+      fold({
+        machine: remoteDataMachine,
+        read: (model: ContextualAppModel) => Option.some(model.remoteData),
+        write: (model, nextRemoteData) =>
+          evo(model, { remoteData: () => nextRemoteData }),
+        // @ts-expect-error a context-free Machine fold rejects a context reader
+        context: model => model.remoteDataContext,
+      })
+
+      fold({
+        machine: contextualRemoteDataMachine,
+        read: (model: ContextualAppModel) => Option.some(model.remoteData),
+        write: (model, nextRemoteData) =>
+          evo(model, { remoteData: () => nextRemoteData }),
+        // @ts-expect-error the context reader must return RemoteDataContext
+        context: () => ({ shouldSucceed: true }),
+      })
+
+      fold({
+        machine: voidContextMachine,
+        read: (model: ContextualAppModel) => Option.some(model.remoteData),
+        write: (model, nextRemoteData) =>
+          evo(model, { remoteData: () => nextRemoteData }),
+        // @ts-expect-error Schema.Void context readers must return undefined
+        context: () => 'not void',
+      })
+    }
+
+    expect(true).toBe(true)
+  })
+
   it('wires the gating sketch records', () => {
     expect(Object.keys(managedResources)).toEqual(['socket'])
     expect(Object.keys(subscriptions)).toEqual(['backoffTimer'])
@@ -1844,6 +2093,23 @@ describe('integration', () => {
 })
 
 describe('edge command requirements', () => {
+  it('threads Machine requirements through its fold', () => {
+    const foldSubmit = fold({
+      machine: inferredRequirementsMachine,
+      read: (model: SubmitAppModel) => Option.some(model.submit),
+      write: (model, nextSubmit) => evo(model, { submit: () => nextSubmit }),
+    })
+    const submitClick = foldSubmit(
+      { submit: SubmitState.Idle() },
+      SubmitMessage.ClickedSubmit(),
+    )
+
+    expectTypeOf(submitClick).toEqualTypeOf<
+      Update.Return<SubmitAppModel, SubmitMessage, UploadsClient>
+    >()
+    expect(submitClick.commands ?? []).toHaveLength(1)
+  })
+
   it('threads a requirement inferred from a single edge command into R', () => {
     const submitClick = inferredRequirementsMachine.transition(
       SubmitState.Idle(),
