@@ -17,7 +17,6 @@ import {
   type HtmlBuilder,
   __htmlBuilder as htmlBuilderFor,
 } from '../html/index.js'
-import { FOLDKIT_APP_ATTRIBUTE } from '../hydrationMarker.js'
 import type { ManagedResources } from '../managedResource/index.js'
 import type { Ports } from '../port/index.js'
 import { RenderCommit, createCommitNotifier } from '../render/commit.js'
@@ -45,9 +44,9 @@ import {
   validatePorts,
 } from './hostConnector.js'
 import {
+  type BootMode,
   type HydrationConfig,
-  buildSkew,
-  containRefusedPage,
+  resolveHydrationHandoff,
 } from './hydrationHandoff.js'
 import { forkManagedResourceFibers } from './managedResourceFibers.js'
 import { type MessageQueue, makeMessageQueue } from './messageQueue.js'
@@ -229,8 +228,6 @@ export type FlagsSchemaConfig<Flags> = Readonly<{
   // needs the same guarantee to serialize Flags without an app context.
   Flags: Schema.Codec<Flags, any, never, never>
 }>
-
-export type BootMode = 'Fresh' | 'Hydrate'
 
 /** A configured Foldkit runtime returned by `makeApplication` or `makeElement`.
  *  Pass it to `run` to start a page-owning app, or to `embed` to start it under
@@ -431,169 +428,19 @@ export const makeRuntime = <
             maybePortChannels,
           })
 
-        const maybeResolveFreshFlags = Option.orElse(
-          Option.fromNullishOr(bootFlags),
-          () => configuredFlags,
-        )
-
-        const resolveFreshFlags: Effect.Effect<Flags> = Option.match(
-          maybeResolveFreshFlags,
-          {
-            onNone: () =>
-              isFlagsRequired
-                ? Effect.die(
-                    new Error(
-                      '[foldkit] This application declares Flags. Pass its ' +
-                        'Flags Effect to Runtime.run or Runtime.embed.',
-                    ),
-                  )
-                : /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                  Effect.succeed(undefined as Flags),
-            onSome: provideResources,
-          },
-        )
-
-        // Every hydration refusal that knows which root it was going to adopt
-        // contains that root first. The build id is one reason to refuse; a
-        // missing, duplicated, malformed, or Schema-incompatible Flags payload
-        // is another, and the page left behind is just as live in each case.
-        const refuseHydration = <A>(
-          root: Element,
-          message: string,
-          cause?: unknown,
-        ): Effect.Effect<A> => {
-          containRefusedPage(root.ownerDocument)
-          return Effect.die(
-            cause === undefined
-              ? new Error(message)
-              : new Error(message, { cause }),
-          )
-        }
-
-        const decodeFlagsPayload = (
-          payload: string,
-          runtimeId: string,
-          root: Element,
-        ): Effect.Effect<Flags> =>
-          Effect.try({
-            try: () => {
-              const parsedPayload: unknown = JSON.parse(payload)
-              return pipe(
-                /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                Schema.toCodecJson(FlagsCodec as Schema.Codec<Flags>),
-                Schema.decodeUnknownSync,
-                decode => decode(parsedPayload),
-              )
-            },
-            catch: cause => cause,
-          }).pipe(
-            Effect.catch(cause =>
-              refuseHydration<Flags>(
-                root,
-                '[foldkit] Runtime.hydrate could not decode the server ' +
-                  `Flags payload for application "${runtimeId}". The HTML ` +
-                  'and client bundle must use the same Flags Schema.',
-                cause,
-              ),
-            ),
-          )
-
-        const maybeRequestedHydration =
-          bootMode === 'Hydrate'
-            ? Option.fromNullishOr(hydration)
-            : Option.none<HydrationConfig>()
-
-        if (bootMode === 'Hydrate' && Option.isNone(maybeRequestedHydration)) {
-          // A hydrating client that finds no stamped root will not adopt
-          // whatever the page holds, so the page is contained whether or not the
-          // caller named a container.
-          containRefusedPage(
-            container === null ? document : container.ownerDocument,
-          )
-          return yield* Effect.die(
-            new Error(
-              '[foldkit] Runtime.hydrate could not find a server-rendered ' +
-                `root stamped with \`${FOLDKIT_APP_ATTRIBUTE}\`. Use ` +
-                'Runtime.run for a fresh client boot.',
-            ),
-          )
-        }
-
-        // The build the served page came from is settled here, before the Flags
-        // payload text is accessed, parsed, or decoded, before `init` runs, and
-        // therefore before any Command, Subscription, ManagedResource, or port
-        // this boot would start. A page from another deployment carries that
-        // deployment's Flags, which the current Schema may well accept while
-        // every value in them means something else, so deferring the comparison
-        // to the DOM patch lets stale data reach new code that already acted on
-        // it.
-        if (Option.isSome(maybeRequestedHydration)) {
-          const skew = buildSkew(
-            maybeRequestedHydration.value.root,
+        const { maybeHydrationRoot, resolveFlags } =
+          yield* resolveHydrationHandoff({
+            bootMode,
+            hydration,
+            bootFlags,
+            configuredFlags,
+            isFlagsRequired,
+            FlagsCodec,
+            hmrModel,
+            container,
             buildId,
-            maybeRequestedHydration.value.runtimeId,
-          )
-          if (skew !== undefined) {
-            containRefusedPage(maybeRequestedHydration.value.root.ownerDocument)
-            return yield* Effect.die(skew)
-          }
-        }
-
-        // NOTE: an HMR-restored Model wins over DOM adoption because the
-        // server DOM reflects older code. The hydration handoff is still
-        // required, but the restored Model gets a fresh patch against its
-        // stamped root.
-        const maybeHydrationRoot: Option.Option<HTMLElement> =
-          Predicate.isUndefined(hmrModel)
-            ? Option.map(
-                maybeRequestedHydration,
-                requestedHydration => requestedHydration.root,
-              )
-            : Option.none()
-
-        const maybeHydrationFlags: Option.Option<Flags> = yield* Option.match(
-          maybeRequestedHydration,
-          {
-            onNone: () => Effect.succeed(Option.none()),
-            onSome: requestedHydration =>
-              Effect.map(
-                requestedHydration.isFlagsRequired
-                  ? Array.match(requestedHydration.flagsScripts, {
-                      onEmpty: () =>
-                        refuseHydration(
-                          requestedHydration.root,
-                          '[foldkit] Runtime.hydrate found application ' +
-                            `"${requestedHydration.runtimeId}" but its ` +
-                            'server Flags payload is missing.',
-                        ),
-                      onNonEmpty: ([payloadScript, ...remainingScripts]) =>
-                        Array.isArrayNonEmpty(remainingScripts)
-                          ? refuseHydration(
-                              requestedHydration.root,
-                              '[foldkit] Runtime.hydrate found multiple ' +
-                                'server Flags payloads for application ' +
-                                `"${requestedHydration.runtimeId}".`,
-                            )
-                          : decodeFlagsPayload(
-                              payloadScript.textContent ?? '',
-                              requestedHydration.runtimeId,
-                              requestedHydration.root,
-                            ),
-                    })
-                  : /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-                    Effect.succeed(undefined as Flags),
-                Option.some,
-              ),
-          },
-        )
-
-        const resolveFlags: Effect.Effect<Flags> = Option.match(
-          maybeHydrationFlags,
-          {
-            onNone: () => resolveFreshFlags,
-            onSome: Effect.succeed,
-          },
-        )
+            provideResources,
+          })
 
         const ModelJsonCodec = Schema.toCodecJson(
           /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
