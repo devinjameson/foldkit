@@ -7,7 +7,6 @@ import {
 } from 'foldkit/html'
 
 import { Menu } from '@foldkit/ui'
-import type { AnchorConfig } from '@foldkit/ui/menu'
 
 import { Icon } from '../icon'
 import { Message, type ThemePreference } from '../message'
@@ -18,7 +17,7 @@ const THEME_PREFERENCES: ReadonlyArray<ThemePreference> = [
   'Dark',
 ]
 
-const THEME_MENU_ANCHOR: AnchorConfig = {
+const THEME_MENU_ANCHOR: Menu.AnchorConfig = {
   placement: 'bottom-end',
   gap: 8,
   padding: 8,

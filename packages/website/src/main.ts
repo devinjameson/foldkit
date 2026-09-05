@@ -61,7 +61,7 @@ import {
 } from './sidebarStorage'
 import * as SnippetCopy from './snippetCopy'
 import * as Subscriptions from './subscription'
-import * as ThemeSelector from './view/themeSelector'
+import { ThemeSelector } from './view'
 import { NARROW_VIEWPORT_QUERY } from './viewport'
 
 export type { Message } from './message'
