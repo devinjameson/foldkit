@@ -69,6 +69,9 @@
   --font-mono: 'Paper Mono', ui-monospace, monospace;
   --font-weight-book: 350;
   --font-weight-code: 425;
+  --text-page-title: 2rem;
+  --text-page-title-wide: 2.5rem;
+  --text-inline-code: 0.9375em;
 }
 
 :root {
