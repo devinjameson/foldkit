@@ -176,7 +176,7 @@ const heroSection = (
           h.h1(
             [
               h.Class(
-                'text-5xl md:text-6xl lg:text-7xl font-light text-gray-900 dark:text-white tracking-tight leading-[1.1] text-balance',
+                'font-heading text-5xl md:text-6xl lg:text-7xl font-light text-gray-900 dark:text-white tracking-tight leading-[1.1] text-balance',
               ),
             ],
             [
@@ -257,7 +257,7 @@ const poweredBySection = (): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white text-balance',
+                'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white text-balance',
               ),
             ],
             [
@@ -307,7 +307,11 @@ const pillarCard = (icon: Html, title: string, description: string): Html =>
     [
       ih.div([ih.Class('mb-3 text-accent-600 dark:text-accent-500')], [icon]),
       ih.h3(
-        [ih.Class('text-xl font-normal text-gray-900 dark:text-white mb-2')],
+        [
+          ih.Class(
+            'font-heading font-book text-xl text-gray-900 dark:text-white mb-2',
+          ),
+        ],
         [title],
       ),
       ih.p(
@@ -327,7 +331,7 @@ const promiseSection = (): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+                'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['Declare behavior. Ship. Repeat.'],
@@ -379,7 +383,7 @@ const demoSection = (demoTabsView: Html): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+                'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['See it work.'],
@@ -413,7 +417,11 @@ const includedFeature = (
     [
       ih.div([ih.Class('mb-3 text-accent-600 dark:text-accent-500')], [icon]),
       ih.h3(
-        [ih.Class('text-xl font-normal text-gray-900 dark:text-white mb-2')],
+        [
+          ih.Class(
+            'font-heading font-book text-xl text-gray-900 dark:text-white mb-2',
+          ),
+        ],
         [title],
       ),
       ih.p(
@@ -454,7 +462,7 @@ const includedSection = (): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+                'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['Batteries included.'],
@@ -647,7 +655,7 @@ const examplesSection: Html = ih.section(
         ih.h2(
           [
             ih.Class(
-              'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+              'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-3 text-balance',
             ),
           ],
           ['Example applications.'],
@@ -696,7 +704,7 @@ const testingSection = (renderCopyButton: CodeBlock.RenderCopyButton): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+                'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             [
@@ -760,7 +768,7 @@ const devToolsSection = (): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+                'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             [
@@ -844,7 +852,7 @@ const fitSection = (): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+                'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['Architectural fit.'],
@@ -886,7 +894,7 @@ const fitSection = (): Html =>
                   ih.h3(
                     [
                       ih.Class(
-                        'text-2xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
+                        'font-heading font-book text-2xl text-gray-900 dark:text-white mb-6 text-balance',
                       ),
                     ],
                     ['A strong fit'],
@@ -916,7 +924,7 @@ const fitSection = (): Html =>
                   ih.h3(
                     [
                       ih.Class(
-                        'text-2xl font-normal text-gray-900 dark:text-white mb-6 text-balance',
+                        'font-heading font-book text-2xl text-gray-900 dark:text-white mb-6 text-balance',
                       ),
                     ],
                     ['Think twice when'],
@@ -983,7 +991,7 @@ const audienceForItem = (title: string, description: string): Html =>
           ih.h3(
             [
               ih.Class(
-                'text-base font-normal text-gray-900 dark:text-white mb-1',
+                'text-base font-medium text-gray-900 dark:text-white mb-1',
               ),
             ],
             [title],
@@ -1011,7 +1019,7 @@ const audienceNotItem = (title: string, description: string): Html =>
           ih.h3(
             [
               ih.Class(
-                'text-base font-normal text-gray-900 dark:text-white mb-1',
+                'text-base font-medium text-gray-900 dark:text-white mb-1',
               ),
             ],
             [title],
@@ -1037,7 +1045,7 @@ const trustSection = (): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-3 text-balance',
+                'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-3 text-balance',
               ),
             ],
             ['Project status.'],
@@ -1264,7 +1272,7 @@ const finalCtaSection = (
                   ih.h2(
                     [
                       ih.Class(
-                        'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-4 text-balance',
+                        'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-4 text-balance',
                       ),
                     ],
                     ['Start building.'],

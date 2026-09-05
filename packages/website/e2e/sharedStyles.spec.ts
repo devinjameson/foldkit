@@ -36,7 +36,7 @@ const assertSharedStyles = async (
     colors.accentBackground,
   )
   await expect(getStartedButton).toHaveCSS('color', colors.accentForeground)
-  await expect(getStartedButton).toHaveCSS('font-weight', '350')
+  await expect(getStartedButton).toHaveCSS('font-weight', '400')
 
   const getStartedStyle = await readAccentStyle(getStartedButton)
   const landingCta = page
