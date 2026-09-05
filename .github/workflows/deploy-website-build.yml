@@ -26,6 +26,8 @@ on:
         required: true
       website_light_font:
         required: true
+      website_medium_font:
+        required: true
 
 permissions:
   contents: read
@@ -79,6 +81,7 @@ jobs:
         env:
           ABC_FAVORIT_BOOK_WOFF2_BASE64: ${{ secrets.website_book_font }}
           ABC_FAVORIT_LIGHT_WOFF2_BASE64: ${{ secrets.website_light_font }}
+          ABC_FAVORIT_MEDIUM_WOFF2_BASE64: ${{ secrets.website_medium_font }}
 
       - name: Resolve GitHub star count
         id: github-stars

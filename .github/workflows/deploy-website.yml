@@ -100,3 +100,4 @@ jobs:
       vercel_project_id: ${{ secrets.VERCEL_WEBSITE_PROJECT_ID }}
       website_book_font: ${{ secrets.ABC_FAVORIT_BOOK_WOFF2_BASE64 }}
       website_light_font: ${{ secrets.ABC_FAVORIT_LIGHT_WOFF2_BASE64 }}
+      website_medium_font: ${{ secrets.ABC_FAVORIT_MEDIUM_WOFF2_BASE64 }}

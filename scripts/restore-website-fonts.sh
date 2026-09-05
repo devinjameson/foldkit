@@ -30,3 +30,6 @@ restore_font \
 restore_font \
   "${ABC_FAVORIT_LIGHT_WOFF2_BASE64:-}" \
   "$fonts_directory/ABCFavorit-Light.woff2"
+restore_font \
+  "${ABC_FAVORIT_MEDIUM_WOFF2_BASE64:-}" \
+  "$fonts_directory/ABCFavorit-Medium.woff2"

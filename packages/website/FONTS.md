@@ -9,6 +9,7 @@ match production:
 
 - `ABCFavorit-Book.woff2`
 - `ABCFavorit-Light.woff2`
+- `ABCFavorit-Medium.woff2`
 
 Production restores the files from encrypted GitHub Actions secrets by running
 `scripts/restore-website-fonts.sh` before building the website.

@@ -51,7 +51,7 @@ export const pageTitle = (id: string, text: string, className?: string): Html =>
     [
       ih.Class(
         twMerge(
-          'text-[2rem] md:text-[2.5rem] leading-tight tracking-tight font-normal text-gray-900 dark:text-white mb-6',
+          'text-[1.75rem] md:text-4xl leading-tight tracking-tight font-medium text-gray-900 dark:text-white mb-6',
           className,
         ),
       ),
@@ -64,13 +64,13 @@ export const pageTitle = (id: string, text: string, className?: string): Html =>
 const sectionHeadingConfig = {
   h2: {
     textClassName:
-      'text-2xl md:text-3xl leading-snug tracking-tight font-normal text-gray-900 dark:text-white scroll-mt-6',
+      'text-[1.375rem] md:text-2xl leading-snug tracking-tight font-medium text-gray-900 dark:text-white scroll-mt-6',
     wrapperClassName:
       'group flex items-center gap-1 md:hover-capable:gap-0 mt-12 mb-4 [h1+&]:mt-8 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },
   h3: {
     textClassName:
-      'text-xl md:text-2xl leading-snug tracking-tight font-normal text-gray-900 dark:text-white scroll-mt-6',
+      'text-lg md:text-xl leading-snug tracking-tight font-medium text-gray-900 dark:text-white scroll-mt-6',
     wrapperClassName:
       'group flex items-center gap-1 md:hover-capable:gap-0 mt-10 mb-3 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },

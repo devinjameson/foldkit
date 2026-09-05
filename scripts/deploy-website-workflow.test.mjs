@@ -777,7 +777,16 @@ test('production and canary call the shared deployment with separate projects', 
       workflow,
       /website_light_font: \$\{\{ secrets\.ABC_FAVORIT_LIGHT_WOFF2_BASE64 \}\}/,
     )
+    assert.match(
+      workflow,
+      /website_medium_font: \$\{\{ secrets\.ABC_FAVORIT_MEDIUM_WOFF2_BASE64 \}\}/,
+    )
   }
+  assert.match(buildWorkflow, /website_medium_font:\n\s+required: true/)
+  assert.match(
+    buildWorkflow,
+    /ABC_FAVORIT_MEDIUM_WOFF2_BASE64: \$\{\{ secrets\.website_medium_font \}\}/,
+  )
 })
 
 test('the canary hostname moves only after its staged deployment passes smoke tests', () => {
