@@ -28,7 +28,7 @@ const verticalGroupClassName = 'flex flex-col gap-3 w-full'
 const verticalOptionClassName =
   'relative flex cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 data-[checked]:border-accent-600 dark:data-[checked]:border-accent-500 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-accent-600 dark:focus-visible:ring-accent-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900'
 
-const horizontalGroupClassName = 'flex flex-row gap-3 w-full'
+const horizontalGroupClassName = 'flex flex-col sm:flex-row gap-3 w-full'
 
 const horizontalOptionClassName =
   'relative flex flex-col flex-1 cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 data-[checked]:border-accent-600 dark:data-[checked]:border-accent-500 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-accent-600 dark:focus-visible:ring-accent-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900'

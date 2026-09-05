@@ -152,7 +152,7 @@ export const bulletPoint = (label: string, description: string): Html =>
   ih.span([], [ih.strong([], [`${label}:`]), ` ${description}`])
 
 const inlineCodeClassName =
-  'bg-gray-200/70 dark:bg-gray-800 px-1 py-px rounded text-sm border border-gray-300/50 dark:border-gray-700/50'
+  'bg-gray-200/70 dark:bg-gray-800 px-1 py-px rounded text-sm border border-gray-300/50 dark:border-gray-700/50 wrap-anywhere'
 
 export const inlineCode = (text: string, className?: string): Html =>
   ih.code([ih.Class(twMerge(inlineCodeClassName, className))], [text])
