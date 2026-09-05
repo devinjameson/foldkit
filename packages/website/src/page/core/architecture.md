@@ -18,15 +18,15 @@ Every Foldkit app repeats the same cycle:
 The complete cycle looks like this:
 
 ```diagram
-+------> update -> Commands -----------+
++-----> update --> Commands -----------+
 |         |                            |
 |         v                            |
-|       Model -> Subscriptions --------+
+|       Model ---> Subscriptions ------+
 |         |                            |
-|         +-> ManagedResources --------+
+|         +------> ManagedResources ---+
 |         |                            |
 |         v                            |
-|       view -> Mounts ----------------+
+|       view ----> Mounts -------------+
 |         |                            |
 |         v                            |
 |       Browser -> events -------------+

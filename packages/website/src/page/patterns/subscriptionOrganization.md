@@ -11,26 +11,29 @@ This mirrors the other halves of the boundary. `Update.foldChild` lifts child up
 Each level declares local entries with `Subscription.make` and lifts child records with `Subscription.lift`. By the time a Stream reaches the root, it emits root Messages that the Runtime can dispatch through update. This diagram follows one leaf record through those lifts:
 
 ```diagram
-page/settings/themeMenu/
-  subscription.ts
-  Subscription.make
-  Stream<ThemeMenu.Message>
-               |
-       Subscription.lift
- wraps with GotThemeMenuMessage
-               v
-page/settings/
-  subscription.ts
-  Stream<Settings.Message>
-               |
-       Subscription.lift
-   wraps with GotSettingsMessage
-               v
-subscription.ts (root)
-  Stream<Message>
-               |
-               v
-            Runtime
++-------------------------------+
+| ThemeMenu                     |
+| Stream<ThemeMenu.Message>     |
++-------------------------------+
+  |
+  | Subscription.lift
+  | wraps with GotThemeMenuMessage
+  v
++-------------------------------+
+| Settings                      |
+| Stream<Settings.Message>      |
++-------------------------------+
+  |
+  | Subscription.lift
+  | wraps with GotSettingsMessage
+  v
++-------------------------------+
+| Root                          |
+| Stream<Message>               |
++-------------------------------+
+  |
+  v
+Runtime
 ```
 
 ## The Composition Verbs {#composition-verbs}
