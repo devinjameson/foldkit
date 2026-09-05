@@ -3,7 +3,6 @@ import { Command, given, message, model, story } from 'foldkit/story'
 import { expect, test } from 'vitest'
 
 import { Tabs } from '@foldkit/ui'
-import { Message as TabsMessage } from '@foldkit/ui/tabs'
 
 import {
   FetchPostDetail,
@@ -32,16 +31,16 @@ const postDetailTag = (model: Model, postId: string): string =>
   )
 
 const selectedPostsTab = Message.GotTabsMessage({
-  message: TabsMessage.SelectedTab({ index: 0, value: 'Posts' }),
+  message: Tabs.Message.SelectedTab({ index: 0, value: 'Posts' }),
 })
 
 const selectedStatsTab = Message.GotTabsMessage({
-  message: TabsMessage.SelectedTab({ index: 1, value: 'Stats' }),
+  message: Tabs.Message.SelectedTab({ index: 1, value: 'Stats' }),
 })
 
 const resolveFocusTab = Command.resolve(
   Tabs.FocusTab,
-  TabsMessage.CompletedFocusTab(),
+  Tabs.Message.CompletedFocusTab(),
 )
 
 test('first visit to the Stats tab fetches stats', () => {

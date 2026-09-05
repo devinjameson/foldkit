@@ -12,7 +12,6 @@ import {
 import { describe, test } from 'vitest'
 
 import { Tabs } from '@foldkit/ui'
-import { Message as TabsMessage } from '@foldkit/ui/tabs'
 
 import { FetchPostDetail, FetchStats, Message, update, view } from './main'
 import {
@@ -26,7 +25,7 @@ import {
 
 const resolveFocusTab = Command.resolve(
   Tabs.FocusTab,
-  TabsMessage.CompletedFocusTab(),
+  Tabs.Message.CompletedFocusTab(),
 )
 
 describe('view', () => {

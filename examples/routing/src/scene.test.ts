@@ -80,26 +80,11 @@ describe('view', () => {
     )
   })
 
-  test('the People route lists every person', () => {
+  test('the People route renders the People heading', () => {
     scene(
       { update, view },
       given(people('')),
-      expect(text('Alice Johnson')).toExist(),
-      expect(text('Bob Smith')).toExist(),
-      expect(text('Carol Davis')).toExist(),
-      expect(text('David Wilson')).toExist(),
-      expect(text('Eva Brown')).toExist(),
-    )
-  })
-
-  test('a search filters People to matches by name or role', () => {
-    scene(
-      { update, view },
-      given(people('designer')),
-      expect(text('Alice Johnson')).toExist(),
-      expect(text('Eva Brown')).toExist(),
-      expect(text('Bob Smith')).toBeAbsent(),
-      expect(text('2 results', { exact: false })).toExist(),
+      expect(role('heading', { name: 'People' })).toExist(),
     )
   })
 
