@@ -26,6 +26,7 @@ import {
   coreFreezeModelRouter,
   coreHttpRouter,
   coreInitAndFlagsRouter,
+  coreMachineRouter,
   coreManagedResourcesRouter,
   coreMessagesRouter,
   coreModelRouter,
@@ -288,6 +289,11 @@ export const docsSections: ReadonlyArray<DocsSection> = [
           _tag: 'AsyncData',
           href: asyncDataRouter(),
           label: 'Async Data',
+        },
+        {
+          _tag: 'CoreMachine',
+          href: coreMachineRouter(),
+          label: 'Machine',
         },
       ],
       [

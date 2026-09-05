@@ -280,6 +280,10 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
     'Submodel',
     'Split a large application into child state machines while preserving parent-to-child Message flow. Covers Update.foldChild, h.submodel, OutMessages, reflection, testing, and DevTools.',
   ),
+  CoreMachine: core(
+    'Machine',
+    'Model multi-state workflows as typed transition tables with guards, shared Edges, update integration, structural analysis, and pure tests.',
+  ),
   AsyncData: core(
     'Async Data',
     'A six-state value type for asynchronously loaded data in the Model: Idle, Loading, Refreshing, Failure, Stale, and Success, with stale-while-revalidate and keep-stale-on-failure built in.',
