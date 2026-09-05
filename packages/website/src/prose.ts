@@ -46,11 +46,14 @@ export const renderHeadingLink =
 export const link = (href: string, text: string): Html =>
   ih.a([ih.Href(href), ih.Class('link-accent font-normal')], [text])
 
-export const pageTitle = (id: string, text: string): Html =>
+export const pageTitle = (id: string, text: string, className?: string): Html =>
   ih.h1(
     [
       ih.Class(
-        'text-3xl md:text-[2.5rem] leading-normal font-normal text-gray-900 dark:text-white mb-4',
+        twMerge(
+          'text-[2rem] md:text-[2.5rem] leading-tight tracking-tight font-normal text-gray-900 dark:text-white mb-6',
+          className,
+        ),
       ),
       ih.Id(id),
       ih.DataAttribute('pagefind-meta', 'section'),
@@ -61,33 +64,33 @@ export const pageTitle = (id: string, text: string): Html =>
 const sectionHeadingConfig = {
   h2: {
     textClassName:
-      'text-2xl md:text-3xl font-normal text-gray-900 dark:text-white scroll-mt-6',
+      'text-2xl md:text-3xl leading-snug tracking-tight font-normal text-gray-900 dark:text-white scroll-mt-6',
     wrapperClassName:
-      'group flex items-center gap-1 md:hover-capable:gap-0 mt-8 mb-4 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
+      'group flex items-center gap-1 md:hover-capable:gap-0 mt-12 mb-4 [h1+&]:mt-8 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },
   h3: {
     textClassName:
-      'text-xl font-normal text-gray-900 dark:text-white scroll-mt-6',
+      'text-xl md:text-2xl leading-snug tracking-tight font-normal text-gray-900 dark:text-white scroll-mt-6',
     wrapperClassName:
-      'group flex items-center gap-1 md:hover-capable:gap-0 mt-6 mb-2 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
+      'group flex items-center gap-1 md:hover-capable:gap-0 mt-10 mb-3 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },
   h4: {
     textClassName:
       'text-base font-mono font-normal text-gray-900 dark:text-white scroll-mt-6',
     wrapperClassName:
-      'group flex items-center gap-1 md:hover-capable:gap-0 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
+      'group flex items-center gap-1 md:hover-capable:gap-0 mt-8 mb-3 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },
   h5: {
     textClassName:
       'text-sm font-mono font-normal text-gray-900 dark:text-white scroll-mt-6',
     wrapperClassName:
-      'group flex items-center gap-1 md:hover-capable:gap-0 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
+      'group flex items-center gap-1 md:hover-capable:gap-0 mt-6 mb-2 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },
   h6: {
     textClassName:
       'text-sm font-mono font-normal text-gray-500 dark:text-gray-400 scroll-mt-6',
     wrapperClassName:
-      'group flex items-center gap-1 md:hover-capable:gap-0 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
+      'group flex items-center gap-1 md:hover-capable:gap-0 mt-6 mb-2 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },
 }
 
@@ -116,11 +119,11 @@ export const headingWithContent = (
 }
 
 export const para = (...content: ReadonlyArray<string | Html>): Html =>
-  ih.p([ih.Class('mb-4 leading-relaxed')], content)
+  ih.p([ih.Class('mb-5 leading-relaxed')], content)
 
 export const subPara = (...content: ReadonlyArray<string | Html>): Html =>
   ih.p(
-    [ih.Class('mb-4 text-sm leading-6 text-gray-800 dark:text-gray-400')],
+    [ih.Class('mb-5 text-sm leading-6 text-gray-800 dark:text-gray-400')],
     content,
   )
 
@@ -144,7 +147,7 @@ export const headingsFor = (renderHeadingLink: RenderHeadingLink) => ({
 
 export const bullets = (...items: ReadonlyArray<string | Html>): Html =>
   ih.ul(
-    [ih.Class('list-disc mb-8 space-y-2')],
+    [ih.Class('list-disc mb-6 space-y-2')],
     Array.map(items, item => ih.li([], [item])),
   )
 
@@ -152,7 +155,7 @@ export const bulletPoint = (label: string, description: string): Html =>
   ih.span([], [ih.strong([], [`${label}:`]), ` ${description}`])
 
 const inlineCodeClassName =
-  'bg-gray-200/70 dark:bg-gray-800 px-1 py-px rounded text-sm border border-gray-300/50 dark:border-gray-700/50 wrap-anywhere'
+  'bg-gray-200/60 dark:bg-gray-800 text-[var(--code-foreground)] [a_&]:text-inherit [:is(h1,h2,h3,h4,h5,h6)_&]:text-inherit mx-[0.1em] px-[0.25em] py-[0.05em] rounded-xs text-[0.9375em] font-code wrap-anywhere'
 
 export const inlineCode = (text: string, className?: string): Html =>
   ih.code([ih.Class(twMerge(inlineCodeClassName, className))], [text])
@@ -286,7 +289,7 @@ export const diagram = (content: string): Html =>
   ih.pre(
     [
       ih.Class(
-        'code-surface mb-4 mx-auto w-fit max-w-full text-sm p-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700/50',
+        'code-surface mb-6 mx-auto w-fit max-w-full text-sm p-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700/50',
       ),
     ],
     [content],
@@ -301,7 +304,7 @@ export const ctaLinks = (blocks: ReadonlyArray<Html>): Html =>
   ih.div(
     [
       ih.Class(
-        'mb-8 flex flex-wrap gap-x-6 gap-y-2 [&>p]:m-0 [&_a]:font-medium',
+        'mb-6 flex flex-wrap gap-x-6 gap-y-2 [&>p]:m-0 [&_a]:font-medium',
       ),
     ],
     blocks,

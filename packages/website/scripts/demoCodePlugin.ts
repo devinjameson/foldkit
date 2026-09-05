@@ -72,7 +72,6 @@ const demoCodeToHtml = async (
   const importLines = importsCode.trimEnd().split('\n')
   const bodyLines = bodyCode.trimEnd().split('\n')
   const lines = [...importLines, '', ...bodyLines]
-  const lineDigits = String(bodyLines.length).length
   const tokens = phaseTokensByLine(bodyLines, phaseRegions)
 
   const html = await codeToHtml(lines.join('\n'), {
@@ -85,7 +84,7 @@ const demoCodeToHtml = async (
     })),
   })
 
-  return html.replace('<pre ', `<pre data-line-digits="${lineDigits}" `)
+  return html
 }
 
 const demoCodePlugin = (

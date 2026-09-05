@@ -56,7 +56,7 @@ const mapMessagesUnderHoodDemo = (
                   [...attributes.panel, h.Class('docs-disclosure-panel')],
                   [
                     h.div(
-                      [h.Class('-mt-8')],
+                      [h.Class('-mt-6')],
                       [
                         CodeBlock.highlightedView(
                           'core-submodel-map-messages-under-hood',

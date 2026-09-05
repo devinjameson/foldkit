@@ -54,7 +54,7 @@ export const view = (
       ih.header(
         [ih.Class('mb-8')],
         [
-          Prose.pageTitle(post.slug, post.frontmatter.title),
+          Prose.pageTitle(post.slug, post.frontmatter.title, 'mb-3'),
           ih.p(
             [ih.Class('text-gray-500 dark:text-gray-400')],
             [`${formatPostDate(post.frontmatter.date)} · ${BLOG_AUTHOR}`],

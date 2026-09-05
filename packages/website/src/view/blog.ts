@@ -86,7 +86,7 @@ export const view = (
                 Docs.searchWeight(blogRoute._tag),
               ),
               h.Class(
-                'flex-1 w-full px-4 py-6 md:px-6 2xl:py-10 max-w-3xl mx-auto min-w-0',
+                'flex-1 w-full px-6 py-8 md:px-10 2xl:py-12 max-w-3xl mx-auto min-w-0',
               ),
             ],
             [content],
