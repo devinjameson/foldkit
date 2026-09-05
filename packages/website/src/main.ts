@@ -1,5 +1,4 @@
 import {
-  Array,
   DateTime,
   Effect,
   Layer,
@@ -54,7 +53,6 @@ import {
 } from './route'
 import * as Search from './search'
 import {
-  DEFAULT_OPEN_GROUPS,
   GroupKey,
   SIDEBAR_STORAGE_KEY,
   SidebarGroups,
@@ -189,7 +187,7 @@ const isGroupOpenOnBoot = (
     return true
   }
   return Option.match(maybeSidebarState, {
-    onNone: () => Array.contains(DEFAULT_OPEN_GROUPS, key),
+    onNone: () => false,
     onSome: ({ open }) => open[key] ?? false,
   })
 }

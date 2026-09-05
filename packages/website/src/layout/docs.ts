@@ -71,70 +71,79 @@ export const headerView = (model: Model, h: HtmlBuilder<Message>) =>
   h.header(
     [
       h.Class(
-        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] bg-cream dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800 px-6 flex items-center justify-between transform-gpu',
+        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] bg-cream dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800 transform-gpu',
       ),
     ],
     [
       h.div(
-        [h.Class('flex items-center gap-2')],
+        [h.Class('docs-shell h-full px-6 flex items-center justify-between')],
         [
-          h.a(
-            [h.Href(homeRouter()), h.Class('flex items-center gap-2')],
-            [
-              h.img([
-                h.Src('/logo.svg'),
-                h.Alt('Foldkit'),
-                h.Width('801'),
-                h.Height('200'),
-                h.Class('h-6 md:h-8 w-auto dark:invert'),
-              ]),
-              Shared.betaTag,
-            ],
-          ),
-        ],
-      ),
-      h.div(
-        [h.Class('flex items-center gap-3 md:gap-8')],
-        [
-          HeaderNav.view(model.route, 'hidden md:flex items-center gap-6', h),
-          Search.triggerView('hidden md:flex', h),
-          ThemeSelector.view(model.maybeThemePreference, h),
           h.div(
-            [h.Class('hidden md:flex items-center gap-3 md:gap-4')],
+            [h.Class('flex items-center gap-2')],
             [
-              Shared.iconLink(
-                Link.github,
-                'GitHub',
-                Icon.github('w-5 h-5 md:w-6 md:h-6'),
-              ),
-              Shared.iconLink(
-                Link.discord,
-                'Discord',
-                Icon.discord('w-5 h-5 md:w-6 md:h-6'),
-              ),
-              Shared.iconLink(
-                Link.xSocial,
-                'X',
-                Icon.xSocial('w-5 h-5 md:w-6 md:h-6'),
-              ),
-              Shared.iconLink(
-                Link.npm,
-                'npm',
-                Icon.npm('w-6 h-6 md:w-8 md:h-8'),
+              h.a(
+                [h.Href(homeRouter()), h.Class('flex items-center gap-2')],
+                [
+                  h.img([
+                    h.Src('/logo.svg'),
+                    h.Alt('Foldkit'),
+                    h.Width('801'),
+                    h.Height('200'),
+                    h.Class('h-6 md:h-8 w-auto dark:invert'),
+                  ]),
+                  Shared.betaTag,
+                ],
               ),
             ],
           ),
-          Search.compactTriggerView('md:hidden', h),
-          h.button(
+          h.div(
+            [h.Class('flex items-center gap-3 md:gap-8')],
             [
-              h.Class(
-                'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
+              HeaderNav.view(
+                model.route,
+                'hidden md:flex items-center gap-6',
+                h,
               ),
-              h.AriaExpanded(model.mobileMenuDialog.isOpen),
-              h.AriaLabel('Toggle menu'),
-              h.OnClick(Message.ClickedOpenMobileMenu()),
+              Search.triggerView('hidden md:flex', h),
+              ThemeSelector.view(model.maybeThemePreference, h),
+              h.div(
+                [h.Class('hidden md:flex items-center gap-3 md:gap-4')],
+                [
+                  Shared.iconLink(
+                    Link.github,
+                    'GitHub',
+                    Icon.github('w-5 h-5 md:w-6 md:h-6'),
+                  ),
+                  Shared.iconLink(
+                    Link.discord,
+                    'Discord',
+                    Icon.discord('w-5 h-5 md:w-6 md:h-6'),
+                  ),
+                  Shared.iconLink(
+                    Link.xSocial,
+                    'X',
+                    Icon.xSocial('w-5 h-5 md:w-6 md:h-6'),
+                  ),
+                  Shared.iconLink(
+                    Link.npm,
+                    'npm',
+                    Icon.npm('w-6 h-6 md:w-8 md:h-8'),
+                  ),
+                ],
+              ),
+              Search.compactTriggerView('md:hidden', h),
+              h.button(
+                [
+                  h.Class(
+                    'md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
+                  ),
+                  h.AriaExpanded(model.mobileMenuDialog.isOpen),
+                  h.AriaLabel('Toggle menu'),
+                  h.OnClick(Message.ClickedOpenMobileMenu()),
+                ],
+                [Icon.menu('w-6 h-6')],
+              ),
             ],
-            [Icon.menu('w-6 h-6')],
           ),
         ],
       ),
@@ -150,7 +159,7 @@ export const footerView = (
   h.footer(
     [
       h.Class(
-        'px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:px-10 mt-6 border-t border-gray-300 dark:border-gray-800',
+        'px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:px-8 xl:px-12 mt-6 border-t border-gray-300 dark:border-gray-800',
       ),
     ],
     [
@@ -165,7 +174,7 @@ export const footerView = (
       Shared.emailForm,
       h.hr([
         h.Class(
-          'my-6 -mx-6 md:-mx-10 border-t border-gray-300 dark:border-gray-800',
+          'my-6 -mx-6 md:-mx-8 xl:-mx-12 border-t border-gray-300 dark:border-gray-800',
         ),
       ]),
       h.div(
@@ -1122,7 +1131,7 @@ export const view = (
       headerView(model, h),
       Search.dialogView(model, h),
       h.div(
-        [h.Class('flex flex-1 pt-[var(--header-height)] md:pl-64')],
+        [h.Class('docs-shell flex flex-1 pt-[var(--header-height)] md:pl-64')],
         [
           Sidebar.view(model, h),
           Sidebar.mobileView(model, h),
@@ -1163,10 +1172,9 @@ export const view = (
                     searchWeight(docsRoute._tag),
                   ),
                   h.Class(
-                    clsx(
-                      'flex-1 w-full px-6 py-8 md:px-10 2xl:py-12 mx-auto min-w-0',
-                      isWideContentRoute(docsRoute) ? 'max-w-4xl' : 'max-w-3xl',
-                    ),
+                    clsx('docs-content flex-1', {
+                      'max-w-5xl': isWideContentRoute(docsRoute),
+                    }),
                   ),
                 ],
                 [

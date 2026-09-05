@@ -25,7 +25,7 @@ export type DocViewConfig = Readonly<{
   renderHeadingLink: RenderHeadingLink
 }>
 
-const linkClassName = 'link-accent font-normal'
+const linkClassName = 'link-accent'
 
 const blockquoteClassName =
   'border-l-4 border-gray-300 dark:border-gray-700 pl-4 italic text-gray-700 dark:text-gray-300 mb-5 [&>p:last-child]:mb-0'
@@ -76,7 +76,7 @@ const titleAttributes = (
 export const docViews = (config: DocViewConfig): Partial<Markdown.Views> => {
   return {
     Paragraph: (_paragraph, content) =>
-      ih.p([ih.Class('mb-5 leading-relaxed')], content),
+      ih.p([ih.Class('mb-5 leading-7')], content),
 
     Link: (link, content) =>
       ih.a(

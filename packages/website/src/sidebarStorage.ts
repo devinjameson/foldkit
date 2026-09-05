@@ -27,8 +27,3 @@ export type GroupKey = typeof GroupKey.Type
 
 export const SidebarGroups = Schema.Record(GroupKey, Schema.Boolean)
 export type SidebarGroups = typeof SidebarGroups.Type
-
-export const DEFAULT_OPEN_GROUPS: ReadonlyArray<GroupKey> = [
-  'getStarted',
-  'coreConcepts',
-]

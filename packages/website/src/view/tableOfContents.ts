@@ -27,7 +27,7 @@ const tableOfContentsEntryView = (
           h.Href(`#${entry.id}`),
           h.OnClick(Message.ChangedActiveSection({ sectionId: entry.id })),
           h.Class(
-            clsx('transition block', {
+            clsx('transition block wrap-anywhere', {
               'text-accent-600 dark:text-accent-400 underline': isActive,
               'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white':
                 !isActive,
@@ -48,24 +48,22 @@ export const view = (
   h.aside(
     [
       h.Class(
-        'hidden xl:block sticky top-[var(--header-height)] min-w-64 w-fit h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-300 dark:border-gray-800 p-4',
+        'hidden xl:block sticky top-[var(--header-height)] w-64 h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-300 dark:border-gray-800 px-4 pt-8 pb-4',
       ),
     ],
     [
       h.h3(
         [
           h.AriaHidden(true),
-          h.Class(
-            'text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-2',
-          ),
+          h.Class('text-sm font-medium text-gray-800 dark:text-gray-200 mb-4'),
         ],
-        ['On This Page'],
+        ['On this page'],
       ),
       h.nav(
         [h.AriaLabel('Table of contents')],
         [
           h.ul(
-            [h.Class('space-y-2 text-sm')],
+            [h.Class('space-y-3 text-sm')],
             Array.map(entries, entry =>
               tableOfContentsEntryView(
                 entry,

@@ -74,6 +74,8 @@
 :root {
   --header-height: calc(3.5rem + env(safe-area-inset-top, 0px));
   --mobile-toc-height: 2.75rem;
+  --docs-max-width: 90rem;
+  --docs-content-width: 58rem;
   --code-foreground: #403d4a;
   --code-background: var(--color-gray-100);
 }
@@ -201,6 +203,21 @@ html.dark {
 }
 
 @layer components {
+  .docs-shell {
+    width: 100%;
+    max-width: var(--docs-max-width);
+    margin-inline: auto;
+  }
+
+  .docs-sidebar {
+    left: max(0px, calc((100% - var(--docs-max-width)) / 2));
+  }
+
+  .docs-content {
+    @apply w-full min-w-0 mx-auto px-6 py-8 md:px-8 xl:px-12 2xl:py-12 font-book leading-7;
+    max-width: var(--docs-content-width);
+  }
+
   .landing-section {
     @apply px-6 py-10 md:px-12 md:py-24 lg:px-20;
   }

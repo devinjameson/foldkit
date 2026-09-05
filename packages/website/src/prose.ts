@@ -48,7 +48,7 @@ export const renderHeadingLink =
     headingLinkButton(id, text, toMessage, h)
 
 export const link = (href: string, text: string): Html =>
-  ih.a([ih.Href(href), ih.Class('link-accent font-normal')], [text])
+  ih.a([ih.Href(href), ih.Class('link-accent')], [text])
 
 export const pageTitle = (id: string, text: string, className?: string): Html =>
   ih.h1(
@@ -123,7 +123,7 @@ export const headingWithContent = (
 }
 
 export const para = (...content: ReadonlyArray<string | Html>): Html =>
-  ih.p([ih.Class('mb-5 leading-relaxed')], content)
+  ih.p([ih.Class('mb-5 leading-7')], content)
 
 export const subPara = (...content: ReadonlyArray<string | Html>): Html =>
   ih.p(

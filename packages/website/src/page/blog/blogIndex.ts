@@ -65,7 +65,7 @@ const postEntry = (post: BlogPost, isFirstEntry: boolean): Html =>
         [`${formatPostDate(post.frontmatter.date)} · ${BLOG_AUTHOR}`],
       ),
       ih.p(
-        [ih.Class('text-gray-600 dark:text-gray-300 leading-relaxed')],
+        [ih.Class('text-gray-600 dark:text-gray-300 leading-7')],
         [post.frontmatter.description],
       ),
       ih.a(
