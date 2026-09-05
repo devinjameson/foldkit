@@ -1,24 +1,14 @@
 import { Submodel } from 'foldkit'
 import type { Html } from 'foldkit/html'
 
-import { Button, DatePicker } from '@foldkit/ui'
+import { Button, DatePicker as UiDatePicker } from '@foldkit/ui'
 
-import { WorkHistory } from '../step'
-import {
-  backdropClassName,
-  calendarView,
-  panelClassName,
-  triggerClassName,
-  triggerContent,
-} from './datePicker'
-import { checkboxField, inputField, textareaField } from './field'
+import { DatePicker, Field } from '../../../view'
+import { Message, type Model } from './entry'
 
 const ANCHOR = { placement: 'bottom-start' as const, gap: 4, padding: 8 }
 
-export const workEntryView = Submodel.defineView<
-  WorkHistory.Entry.Model,
-  WorkHistory.Entry.Message
->((model, h): Html => {
+export const view = Submodel.defineView<Model, Message>((model, h): Html => {
   const showEndDate = !model.isCurrentlyEmployed
 
   const startDatePicker = h.div(
@@ -31,19 +21,18 @@ export const workEntryView = Submodel.defineView<
       h.submodel({
         slotId: model.startDate.id,
         model: model.startDate,
-        view: DatePicker.view,
+        view: UiDatePicker.view,
         viewInputs: {
           anchor: ANCHOR,
           maybeSelectedDate: model.maybeStartDate,
           triggerContent: maybeDate =>
-            triggerContent(maybeDate, 'Select start date'),
-          toCalendarView: calendarView,
-          triggerClassName,
-          panelClassName,
-          backdropClassName,
+            DatePicker.triggerContent(maybeDate, 'Select start date'),
+          toCalendarView: DatePicker.calendarView,
+          triggerClassName: DatePicker.triggerClassName,
+          panelClassName: DatePicker.panelClassName,
+          backdropClassName: DatePicker.backdropClassName,
         },
-        toParentMessage: message =>
-          WorkHistory.Entry.Message.GotStartDateMessage({ message }),
+        toParentMessage: message => Message.GotStartDateMessage({ message }),
       }),
     ],
   )
@@ -59,19 +48,18 @@ export const workEntryView = Submodel.defineView<
       h.submodel({
         slotId: model.endDate.id,
         model: model.endDate,
-        view: DatePicker.view,
+        view: UiDatePicker.view,
         viewInputs: {
           anchor: ANCHOR,
           maybeSelectedDate: model.maybeEndDate,
           triggerContent: maybeDate =>
-            triggerContent(maybeDate, 'Select end date'),
-          toCalendarView: calendarView,
-          triggerClassName,
-          panelClassName,
-          backdropClassName,
+            DatePicker.triggerContent(maybeDate, 'Select end date'),
+          toCalendarView: DatePicker.calendarView,
+          triggerClassName: DatePicker.triggerClassName,
+          panelClassName: DatePicker.panelClassName,
+          backdropClassName: DatePicker.backdropClassName,
         },
-        toParentMessage: message =>
-          WorkHistory.Entry.Message.GotEndDateMessage({ message }),
+        toParentMessage: message => Message.GotEndDateMessage({ message }),
       }),
     ],
   )
@@ -83,24 +71,22 @@ export const workEntryView = Submodel.defineView<
       h.div(
         [h.Class('grid grid-cols-2 gap-3')],
         [
-          inputField(
+          Field.input(
             {
               id: `${model.id}-company`,
               label: 'Company',
               field: model.company,
-              onInput: value =>
-                WorkHistory.Entry.Message.UpdatedCompany({ value }),
+              onInput: value => Message.UpdatedCompany({ value }),
               placeholder: 'e.g. Acme Corp',
             },
             h,
           ),
-          inputField(
+          Field.input(
             {
               id: `${model.id}-title`,
               label: 'Job Title',
               field: model.title,
-              onInput: value =>
-                WorkHistory.Entry.Message.UpdatedTitle({ value }),
+              onInput: value => Message.UpdatedTitle({ value }),
               placeholder: 'e.g. Senior Engineer',
             },
             h,
@@ -111,23 +97,22 @@ export const workEntryView = Submodel.defineView<
         [h.Class('grid grid-cols-2 gap-3')],
         [startDatePicker, ...(showEndDate ? [endDatePicker] : [])],
       ),
-      checkboxField(
+      Field.checkbox(
         {
           id: `${model.id}-current`,
           label: 'I currently work here',
           isChecked: model.isCurrentlyEmployed,
           onToggle: isChecked =>
-            WorkHistory.Entry.Message.ToggledCurrentlyEmployed({ isChecked }),
+            Message.ToggledCurrentlyEmployed({ isChecked }),
         },
         h,
       ),
-      textareaField(
+      Field.textarea(
         {
           id: `${model.id}-description`,
           label: 'Description',
           value: model.description,
-          onInput: value =>
-            WorkHistory.Entry.Message.UpdatedDescription({ value }),
+          onInput: value => Message.UpdatedDescription({ value }),
           rows: 3,
           placeholder: 'Describe your role and key accomplishments...',
         },
@@ -138,7 +123,7 @@ export const workEntryView = Submodel.defineView<
         [
           Button.view(
             {
-              onClick: WorkHistory.Entry.Message.ClickedRemoveSelf(),
+              onClick: Message.ClickedRemoveSelf(),
               toView: attributes =>
                 h.button(
                   [

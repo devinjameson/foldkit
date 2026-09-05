@@ -18,11 +18,11 @@ import { evo } from 'foldkit/struct'
 
 import { DatePicker, Listbox } from '@foldkit/ui'
 
-import { revealFieldErrors } from './validation'
+import { revealFieldErrors } from '../validation'
 
 // MODEL
 
-const PronounsListbox = Listbox.create<string>()
+export const PronounsListbox = Listbox.create<string>()
 
 export const Model = Schema.Struct({
   firstName: Field(Schema.String),

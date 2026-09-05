@@ -15,7 +15,7 @@ import {
   WorkHistory,
 } from './step'
 import { update } from './update'
-import { view } from './view'
+import { view } from './view/view'
 
 // FLAGS
 

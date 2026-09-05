@@ -4,27 +4,13 @@ import { type CalendarDate } from 'foldkit/calendar'
 import { Valid } from 'foldkit/fieldValidation'
 import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 
-import { DatePicker, Listbox } from '@foldkit/ui'
+import { DatePicker as UiDatePicker } from '@foldkit/ui'
 
-import { PronounOption } from '../domain'
-import { PersonalInfo } from '../step'
-import { Message } from '../step/personalInfo'
-import {
-  backdropClassName,
-  calendarView,
-  panelClassName,
-  triggerClassName,
-  triggerContent,
-} from './datePicker'
-import { inputField } from './field'
-import { chevronDown } from './icon'
+import { PronounOption } from '../../domain'
+import { DatePicker, Field, Icon } from '../../view'
+import { Message, type Model, PronounsListbox } from './personalInfo'
 
-const PronounsListbox = Listbox.create<string>()
-
-export const personalInfoView = Submodel.defineView<
-  PersonalInfo.Model,
-  PersonalInfo.Message
->((model, h): Html => {
+export const view = Submodel.defineView<Model, Message>((model, h): Html => {
   const {
     firstName,
     lastName,
@@ -53,7 +39,7 @@ export const personalInfoView = Submodel.defineView<
       h.div(
         [h.Class('grid grid-cols-2 gap-4')],
         [
-          inputField(
+          Field.input(
             {
               id: 'first-name',
               label: 'First Name',
@@ -63,7 +49,7 @@ export const personalInfoView = Submodel.defineView<
             },
             h,
           ),
-          inputField(
+          Field.input(
             {
               id: 'last-name',
               label: 'Last Name',
@@ -75,7 +61,7 @@ export const personalInfoView = Submodel.defineView<
           ),
         ],
       ),
-      inputField(
+      Field.input(
         {
           id: 'email',
           label: 'Email',
@@ -86,7 +72,7 @@ export const personalInfoView = Submodel.defineView<
         },
         h,
       ),
-      inputField(
+      Field.input(
         {
           id: 'phone',
           label: 'Phone (optional)',
@@ -144,7 +130,10 @@ export const personalInfoView = Submodel.defineView<
                     ],
                     [selectedPronounLabel],
                   ),
-                  h.span([h.Class('text-gray-400')], [chevronDown('w-4 h-4')]),
+                  h.span(
+                    [h.Class('text-gray-400')],
+                    [Icon.chevronDown('w-4 h-4')],
+                  ),
                 ],
               ),
               buttonAttributes: childAttributes([
@@ -165,7 +154,7 @@ export const personalInfoView = Submodel.defineView<
       ),
       ...(isOtherSelected
         ? [
-            inputField(
+            Field.input(
               {
                 id: 'custom-pronouns',
                 label: 'Custom Pronouns',
@@ -177,7 +166,7 @@ export const personalInfoView = Submodel.defineView<
             ),
           ]
         : []),
-      inputField(
+      Field.input(
         {
           id: 'portfolio-url',
           label: 'Portfolio URL (optional)',
@@ -193,9 +182,9 @@ export const personalInfoView = Submodel.defineView<
 })
 
 const availableDatePickerView = (
-  model: DatePicker.Model,
+  model: UiDatePicker.Model,
   maybeSelectedDate: Option.Option<CalendarDate>,
-  h: HtmlBuilder<PersonalInfo.Message>,
+  h: HtmlBuilder<Message>,
 ): Html =>
   h.div(
     [h.Class('space-y-1')],
@@ -207,15 +196,16 @@ const availableDatePickerView = (
       h.submodel({
         slotId: model.id,
         model,
-        view: DatePicker.view,
+        view: UiDatePicker.view,
         viewInputs: {
           anchor: { placement: 'bottom-start', gap: 4, padding: 8 },
           maybeSelectedDate,
-          triggerContent: maybeDate => triggerContent(maybeDate, 'Pick a date'),
-          triggerClassName,
-          panelClassName,
-          backdropClassName,
-          toCalendarView: calendarView,
+          triggerContent: maybeDate =>
+            DatePicker.triggerContent(maybeDate, 'Pick a date'),
+          triggerClassName: DatePicker.triggerClassName,
+          panelClassName: DatePicker.panelClassName,
+          backdropClassName: DatePicker.backdropClassName,
+          toCalendarView: DatePicker.calendarView,
         },
         toParentMessage: message =>
           Message.GotAvailableDateMessage({ message }),

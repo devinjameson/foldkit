@@ -579,7 +579,7 @@ For file uploads (resumes, images, attachments):
 - Use the `File` module for file primitives
 - Use `FileDrop` from `@foldkit/ui` for a drag-and-drop + click-to-browse zone with validation
 - `FileDrop.ReceivedFiles` carries `files: NonEmptyArray<File>`, so the happy path never has to handle an empty list. A drop that produced no files arrives as the separate `RejectedNonFiles` OutMessage; handle it to surface a message like "Only files are accepted"
-- Canonical reference: `${CLAUDE_SKILL_DIR}/../../examples/job-application/src/step/attachments.ts`
+- Canonical reference: `${CLAUDE_SKILL_DIR}/../../examples/job-application/src/step/attachments/`
 
 ### View
 

@@ -3,10 +3,9 @@ export {
   Message,
   init,
   update,
-  GenerateEntryId,
+  ValidateEmailAsync,
   hasErrors,
   isComplete,
   revealErrors,
-} from './education'
-export * as Entry from './entry'
+} from './personalInfo'
 export { view } from './view'

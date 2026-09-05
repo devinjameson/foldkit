@@ -14,7 +14,7 @@ import { evo } from 'foldkit/struct'
 
 import { DatePicker } from '@foldkit/ui'
 
-import { revealFieldErrors } from '../validation'
+import { revealFieldErrors } from '../../validation'
 
 // FIELD VALIDATION
 

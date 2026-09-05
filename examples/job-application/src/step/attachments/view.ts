@@ -5,8 +5,7 @@ import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { Button, FileDrop } from '@foldkit/ui'
 
-import { Attachments } from '../step'
-import { Message } from '../step/attachments'
+import { Message, type Model } from './attachments'
 
 const BYTES_PER_KB = 1024
 const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB
@@ -27,10 +26,7 @@ const dropZoneClassName =
 const fileKey = (file: File.File): string =>
   `${File.name(file)}:${File.size(file)}:${file.lastModified}`
 
-const resumeView = (
-  resume: File.File,
-  h: HtmlBuilder<Attachments.Message>,
-): Html =>
+const resumeView = (resume: File.File, h: HtmlBuilder<Message>): Html =>
   h.div(
     [
       h.Class(
@@ -79,7 +75,7 @@ const resumeView = (
 const additionalFileView = (
   file: File.File,
   fileIndex: number,
-  h: HtmlBuilder<Attachments.Message>,
+  h: HtmlBuilder<Message>,
 ): Html =>
   h.keyed('div')(
     fileKey(file),
@@ -119,10 +115,7 @@ const additionalFileView = (
     ],
   )
 
-export const attachmentsView = Submodel.defineView<
-  Attachments.Model,
-  Attachments.Message
->((model, h): Html => {
+export const view = Submodel.defineView<Model, Message>((model, h): Html => {
   const { resumeDrop, maybeResume, additionalFilesDrop, additionalFiles } =
     model
 

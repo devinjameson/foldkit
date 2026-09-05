@@ -13,7 +13,7 @@ import { evo } from 'foldkit/struct'
 
 import { Listbox } from '@foldkit/ui'
 
-import { revealFieldErrors } from '../validation'
+import { revealFieldErrors } from '../../validation'
 
 // FIELD VALIDATION
 
@@ -46,7 +46,7 @@ export const Model = Schema.Struct({
 })
 export type Model = typeof Model.Type
 
-const GraduationYearListbox = Listbox.create<string>()
+export const GraduationYearListbox = Listbox.create<string>()
 
 // MESSAGE
 

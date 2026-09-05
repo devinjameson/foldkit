@@ -5,7 +5,7 @@ import { type Html, inertHtml as ih } from 'foldkit/html'
 import { Calendar } from '@foldkit/ui'
 
 import { fullDate } from './format'
-import { chevronDown } from './icon'
+import * as Icon from './icon'
 
 export const triggerClassName =
   'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500'
@@ -26,7 +26,7 @@ export const triggerContent = (
         onNone: () => ih.span([ih.Class('text-gray-400')], [placeholder]),
         onSome: date => ih.span([], [fullDate(date)]),
       }),
-      ih.span([ih.Class('text-gray-400 shrink-0')], [chevronDown()]),
+      ih.span([ih.Class('text-gray-400 shrink-0')], [Icon.chevronDown()]),
     ],
   )
 
@@ -70,7 +70,7 @@ export const calendarView = (attributes: Calendar.CalendarAttributes): Html =>
                     ...days.headingButton,
                     ih.Class(headingButtonClassName),
                   ],
-                  [days.heading.text, chevronDown('w-3 h-3')],
+                  [days.heading.text, Icon.chevronDown('w-3 h-3')],
                 ),
                 ih.button(
                   [...days.nextMonthButton, ih.Class(navButtonClassName)],
@@ -134,7 +134,7 @@ export const calendarView = (attributes: Calendar.CalendarAttributes): Html =>
                     ...months.headingButton,
                     ih.Class(headingButtonClassName),
                   ],
-                  [months.heading.text, chevronDown('w-3 h-3')],
+                  [months.heading.text, Icon.chevronDown('w-3 h-3')],
                 ),
               ],
             ),
