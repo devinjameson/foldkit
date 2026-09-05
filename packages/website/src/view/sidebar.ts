@@ -56,18 +56,17 @@ const sidebarGroup = (
   const buttonClassName = clsx(
     'w-full flex items-center justify-between transition',
     'px-4 py-2.5 md:py-2',
-    'text-xs font-semibold uppercase tracking-wider',
-    'text-gray-600 dark:text-gray-400',
-    'bg-gray-200 dark:bg-gray-800',
+    'text-sm font-medium',
+    'text-gray-800 dark:text-gray-200',
     {
       'cursor-default': config.isLocked,
-      'cursor-pointer hover:bg-gray-300/60 dark:hover:bg-gray-700/60 hover:text-gray-700 dark:hover:text-gray-300':
+      'cursor-pointer hover:text-gray-900 dark:hover:text-white':
         !config.isLocked,
     },
   )
 
   return h.li(
-    [],
+    [h.Class('mb-5 last:mb-0')],
     [
       Disclosure.view(
         {
@@ -239,9 +238,8 @@ const computeNavLinks = (
 const blogSectionHeaderClassName = clsx(
   'w-full flex items-center justify-between transition cursor-default',
   'px-4 py-2.5 md:py-2',
-  'text-xs font-semibold uppercase tracking-wider',
-  'text-gray-600 dark:text-gray-400',
-  'bg-gray-200 dark:bg-gray-800',
+  'text-sm font-medium',
+  'text-gray-800 dark:text-gray-200',
 )
 
 const blogSection = (route: Model['route'], h: HtmlBuilder<Message>): Html =>
@@ -278,7 +276,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
     [
       h.AriaLabel('Documentation sidebar'),
       h.Class(
-        'hidden md:flex fixed top-[var(--header-height)] bottom-0 left-0 z-40 w-64 bg-cream dark:bg-gray-900 border-r border-gray-300 dark:border-gray-800 flex-col',
+        'docs-sidebar hidden md:flex fixed top-[var(--header-height)] bottom-0 z-40 w-64 bg-cream dark:bg-gray-900 border-r border-gray-300 dark:border-gray-800 flex-col',
       ),
     ],
     [
@@ -286,7 +284,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
         [
           h.AriaLabel('Documentation'),
           h.Id(DOCS_SIDEBAR_NAV_ID),
-          h.Class('flex-1 overflow-y-auto pb-4'),
+          h.Class('flex-1 overflow-y-auto py-6'),
         ],
         [desktopNavLinks],
       ),
@@ -353,7 +351,7 @@ export const mobileView = (model: Model, h: HtmlBuilder<Message>): Html => {
           [
             h.AriaLabel('Documentation'),
             h.Id(MOBILE_MENU_NAV_ID),
-            h.Class('flex-1 overflow-y-auto'),
+            h.Class('flex-1 overflow-y-auto py-4'),
             h.Tabindex(-1),
             ...initialFocus,
           ],

@@ -2,11 +2,7 @@
 
 ## Current Goal
 
-Foldkit is pre-1.0, and the current goal is a production-ready 1.0. All work in progress is in service of that release.
-
-For 1.0, Foldkit will target browser applications. Future view targets may include terminal and native mobile.
-
-Day-to-day work is tracked in [GitHub issues](https://github.com/foldkit/foldkit/issues).
+Foldkit is pre-1.0, and the current goal is a production-ready 1.0. All work in progress is in service of that release. For 1.0, Foldkit will target browser applications. Future view targets may include terminal and native mobile. Day-to-day work is tracked in [GitHub issues](https://github.com/foldkit/foldkit/issues).
 
 ## The Path to 1.0
 

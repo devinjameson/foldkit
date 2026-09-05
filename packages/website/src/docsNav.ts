@@ -147,14 +147,14 @@ export const docsSections: ReadonlyArray<DocsSection> = [
           label: 'Why Foldkit',
         },
         {
-          _tag: 'GettingStarted',
-          href: gettingStartedRouter(),
-          label: 'Getting Started',
-        },
-        {
           _tag: 'Roadmap',
           href: roadmapRouter(),
           label: 'Roadmap',
+        },
+        {
+          _tag: 'GettingStarted',
+          href: gettingStartedRouter(),
+          label: 'Getting Started',
         },
       ],
     ],

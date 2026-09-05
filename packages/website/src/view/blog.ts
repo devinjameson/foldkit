@@ -85,9 +85,7 @@ export const view = (
                 'pagefind-weight',
                 Docs.searchWeight(blogRoute._tag),
               ),
-              h.Class(
-                'flex-1 w-full px-6 py-8 md:px-10 2xl:py-12 max-w-3xl mx-auto min-w-0',
-              ),
+              h.Class('docs-content flex-1'),
             ],
             [content],
           ),
