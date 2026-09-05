@@ -5,7 +5,6 @@ import { fromString } from 'foldkit/url'
 import { describe, expect, test } from 'vitest'
 
 import { Dialog } from '@foldkit/ui'
-import { Message as DialogMessage } from '@foldkit/ui/dialog'
 
 import { AppRoute, Message, type Model, update } from './main'
 import { uiInit } from './ui/init'
@@ -117,7 +116,7 @@ describe('update', () => {
         ),
         Command.resolve(
           Dialog.CloseDialog,
-          DialogMessage.CompletedCloseDialog(),
+          Dialog.Message.CompletedCloseDialog(),
         ),
         model(model => {
           expect(model.uiModel.mobileMenuDialog.isOpen).toBe(false)

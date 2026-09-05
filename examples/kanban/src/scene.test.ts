@@ -23,7 +23,7 @@ import type { Column } from './domain/column'
 import { Message } from './message'
 import type { Model } from './model'
 import { update } from './update'
-import { view } from './view/index'
+import { view } from './view'
 
 const card = (id: string, title: string, sortKey: string): Card => ({
   id,

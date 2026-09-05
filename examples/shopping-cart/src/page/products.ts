@@ -52,7 +52,7 @@ export const init = (products: ReadonlyArray<Item.Item>): Model => ({
 
 // COMMAND
 
-const ReplaceSearchUrl = Command.define('ReplaceSearchUrl', {
+export const ReplaceSearchUrl = Command.define('ReplaceSearchUrl', {
   args: { url: Schema.String },
   messages: [Message.CompletedReplaceSearchUrl],
   execute: ({ url }) =>

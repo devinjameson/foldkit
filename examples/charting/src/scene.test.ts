@@ -12,7 +12,6 @@ import {
 import { describe, test } from 'vitest'
 
 import { RadioGroup } from '@foldkit/ui'
-import { Message as RadioGroupMessage } from '@foldkit/ui/radioGroup'
 
 import { SyncChart } from './command'
 import { loadingModel, readyModel, sampleTelemetry } from './main.fixtures'
@@ -34,7 +33,7 @@ const acknowledgeChartSync = Command.resolve(
 
 const resolveFocusOption = Command.resolve(
   RadioGroup.FocusOption,
-  RadioGroupMessage.CompletedFocusOption(),
+  RadioGroup.Message.CompletedFocusOption(),
 )
 
 describe('view', () => {
