@@ -19,9 +19,9 @@
 }
 
 @font-face {
-  font-family: 'JetBrains Mono';
-  src: url('/fonts/JetBrainsMono-Variable.woff2') format('woff2');
-  font-weight: 300 600;
+  font-family: 'Paper Mono';
+  src: url('/fonts/PaperMono-Variable.woff2') format('woff2');
+  font-weight: 100 800;
   font-display: swap;
 }
 
@@ -58,9 +58,9 @@
   --color-accent-900: #253b0a;
   --color-accent-950: #152205;
   --font-sans: 'ABC Favorit', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'Paper Mono', ui-monospace, monospace;
   --font-weight-normal: 350;
-  --font-weight-code: 400;
+  --font-weight-code: 425;
 }
 
 :root {
@@ -100,7 +100,7 @@ html.dark {
 
   html.dark {
     color-scheme: dark;
-    --font-weight-code: 300;
+    --font-weight-code: 375;
   }
 
   body {
