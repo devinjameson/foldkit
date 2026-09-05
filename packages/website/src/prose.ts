@@ -15,7 +15,12 @@ import { type TableOfContentsEntry } from './tableOfContentsEntry'
 export type RenderHeadingLink = (id: string, text: string) => Html
 
 const mergeClassNames = extendTailwindMerge({
-  extend: { theme: { 'font-weight': ['book', 'code'] } },
+  extend: {
+    theme: {
+      'font-weight': ['book', 'code'],
+      text: ['page-title', 'page-title-wide', 'inline-code'],
+    },
+  },
 })
 
 const headingLinkButton = <Message>(
@@ -55,7 +60,7 @@ export const pageTitle = (id: string, text: string, className?: string): Html =>
     [
       ih.Class(
         mergeClassNames(
-          'font-heading font-book text-[2rem] md:text-[2.5rem] leading-tight tracking-tight text-gray-900 dark:text-white mb-6',
+          'font-heading font-book text-page-title md:text-page-title-wide leading-tight tracking-tight text-gray-900 dark:text-white mb-6',
           className,
         ),
       ),
@@ -159,7 +164,7 @@ export const bulletPoint = (label: string, description: string): Html =>
   ih.span([], [ih.strong([], [`${label}:`]), ` ${description}`])
 
 const inlineCodeClassName =
-  'bg-gray-200/60 dark:bg-gray-800 text-[var(--code-foreground)] [a_&]:text-inherit [:is(h1,h2,h3,h4,h5,h6)_&]:text-inherit mx-[0.1em] px-[0.25em] py-[0.05em] rounded-xs text-[0.9375em] font-code wrap-anywhere'
+  'bg-gray-200/60 dark:bg-gray-800 text-[var(--code-foreground)] [a_&]:text-inherit [:is(h1,h2,h3,h4,h5,h6)_&]:text-inherit mx-[0.1em] px-[0.25em] py-[0.05em] rounded-xs text-inline-code font-code wrap-anywhere'
 
 export const inlineCode = (text: string, className?: string): Html =>
   ih.code([ih.Class(mergeClassNames(inlineCodeClassName, className))], [text])
