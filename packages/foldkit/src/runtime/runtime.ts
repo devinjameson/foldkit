@@ -313,16 +313,16 @@ export const makeRuntime = <
 
   const htmlBuilder = htmlBuilderFor<Message>()
 
-  const resolvedSlow = __resolveSlowConfig(slow, isSlowVisible)
+  const maybeResolvedSlow = __resolveSlowConfig(slow, isSlowVisible)
 
-  const resolvedSlowView = Option.flatMap(resolvedSlow, ({ view }) => view)
-  const resolvedSlowUpdate = Option.flatMap(
-    resolvedSlow,
+  const maybeSlowView = Option.flatMap(maybeResolvedSlow, ({ view }) => view)
+  const maybeSlowUpdate = Option.flatMap(
+    maybeResolvedSlow,
     ({ update }) => update,
   )
-  const resolvedSlowPatch = Option.flatMap(resolvedSlow, ({ patch }) => patch)
-  const resolvedSlowSubscriptionDependencies = Option.flatMap(
-    resolvedSlow,
+  const maybeSlowPatch = Option.flatMap(maybeResolvedSlow, ({ patch }) => patch)
+  const maybeSlowSubscriptionDependencies = Option.flatMap(
+    maybeResolvedSlow,
     ({ subscriptionDependencies }) => subscriptionDependencies,
   )
 
@@ -612,8 +612,8 @@ export const makeRuntime = <
           buildId,
           initModel,
           maybeHydrationRoot,
-          maybeSlowView: resolvedSlowView,
-          maybeSlowPatch: resolvedSlowPatch,
+          maybeSlowView,
+          maybeSlowPatch,
           duplicateIdScanner,
           maybeResolvedViewTransition,
           commitNotifier,
@@ -674,7 +674,7 @@ export const makeRuntime = <
           const currentModel = liveModel
 
           const [messageUpdate, maybeUpdateDuration] = measureSlowPhase(
-            resolvedSlowUpdate,
+            maybeSlowUpdate,
             () => update(currentModel, message),
           )
           const nextModelRaw = messageUpdate.model
@@ -682,7 +682,7 @@ export const makeRuntime = <
           const nextModel = maybeFreezeModel(nextModelRaw)
 
           reportSlowPhase<SlowUpdateContext<Model, Message>>(
-            resolvedSlowUpdate,
+            maybeSlowUpdate,
             maybeUpdateDuration,
             (durationMs, thresholdMs) => ({
               _tag: 'Update',
@@ -747,8 +747,7 @@ export const makeRuntime = <
             initModel,
             modelPubSub,
             runtimeScope,
-            maybeSlowSubscriptionDependencies:
-              resolvedSlowSubscriptionDependencies,
+            maybeSlowSubscriptionDependencies,
             enqueueMessageEffect,
             provideAllResources,
             crashWith,
