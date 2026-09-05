@@ -4,8 +4,8 @@ import { request } from 'node:http'
 import { resolve } from 'node:path'
 
 // The Vite dev host and the production example host answer the same requests.
-// They are different code (one is Vite middleware, the other an Effect
-// HttpServer) reading one test-only server entry, and they disagreed about HTTP
+// They are different code (one is Vite middleware, the other
+// `scripts/serve.ts`) reading one test-only server entry, and they disagreed about HTTP
 // methods: Vite forwarded a POST and its body to `renderPage` while the
 // production host answered 405 before the entry ran. A form action or a
 // `Server.Responded` reply therefore worked all through development and failed
@@ -624,7 +624,7 @@ const assertPortIsFree = async (port: number): Promise<void> => {
 
 const assertNormalExampleHasNoParityResponses = async (): Promise<void> => {
   const origin = `http://localhost:${String(NORMAL_BUILT_PORT)}`
-  const host = startHost('node', ['scripts/serve.mjs'], NORMAL_BUILT_PORT)
+  const host = startHost('node', ['scripts/serve.ts'], NORMAL_BUILT_PORT)
   try {
     await waitForOrigin(origin)
     const echo = await ask(origin, {
@@ -751,7 +751,7 @@ const main = async (): Promise<void> => {
       variant.port,
     ),
   }))
-  const builtHost = startHost('node', ['scripts/serve.mjs'], BUILT_PORT)
+  const builtHost = startHost('node', ['scripts/serve.ts'], BUILT_PORT)
   const builtOrigin = `http://localhost:${BUILT_PORT}`
 
   try {

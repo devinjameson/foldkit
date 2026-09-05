@@ -98,7 +98,7 @@ describe('rendering templates', () => {
     expect(listTemplateFiles('rendering/ssr')).toEqual([
       'README.md',
       'package.json',
-      'scripts/serve.mjs',
+      'scripts/serve.ts',
       'src/cookie.ts',
       'src/entry.server.ts',
       'src/entry.ts',
@@ -111,7 +111,7 @@ describe('rendering templates', () => {
 
     const packageJson = readTemplatePackageJson('rendering/ssr/package.json')
     expect(packageJson.scripts['build']).toBe('vite build')
-    expect(packageJson.scripts['start']).toBe('node scripts/serve.mjs')
+    expect(packageJson.scripts['start']).toBe('node scripts/serve.ts')
 
     const ssrViteConfig = readTemplateFile('rendering/ssr/vite.config.ts')
     expect(ssrViteConfig).toContain("serverEntry: '/src/entry.server.ts'")
@@ -122,9 +122,10 @@ describe('rendering templates', () => {
     expect(readTemplateFile('rendering/ssr/src/entry.ts')).toContain(
       'Runtime.hydrate(application, { buildId: import.meta.env.FOLDKIT_BUILD_ID })',
     )
-    expect(readTemplateFile('rendering/ssr/scripts/serve.mjs')).toContain(
-      'app.fetch',
-    )
+    const serve = readTemplateFile('rendering/ssr/scripts/serve.ts')
+    expect(serve).toContain('HttpStaticServer')
+    expect(serve).toContain('HttpServerResponse.fromWeb')
+    expect(serve).toContain('app.fetch')
   })
 
   it('rendering overlays keep the base name placeholder, shared scripts, and compiler options', () => {
@@ -162,7 +163,7 @@ describe('rendering templates', () => {
       ['src/**/*'],
     )
     expect(readTemplateTsconfig('rendering/ssr/tsconfig.json').include).toEqual(
-      ['src/**/*'],
+      ['src/**/*', 'scripts/**/*.ts'],
     )
   })
 

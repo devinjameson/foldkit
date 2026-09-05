@@ -58,7 +58,7 @@ The entry is application code. Keep it in `src/` (`src/entry.server.ts` in the e
 
 The client and server are separate module graphs. Within each graph, the view and the Foldkit runtime that calls it must resolve to one `foldkit` module instance. The HTML builder tracks a render in module-level state. If one render uses two Foldkit copies, the view writes to one copy while the runtime reads the other. The render fails instead of producing the wrong page. Duplicate monorepo installs and aliases that split one graph are common causes.
 
-A delivery host runs the built `fetch` handler. It does not import the application and render it directly. One `vite build` emits `dist/server/fetch.js` whose default export is `{ fetch }`. The [SSR example](/example-apps/ssr) starts that module with `node scripts/serve.mjs`. A Worker can default-export the same module.
+A delivery host runs the built `fetch` handler. It does not import the application and render it directly. One `vite build` emits `dist/server/fetch.js` whose default export is `{ fetch }`. The [SSR example](/example-apps/ssr) starts that module with `node scripts/serve.ts`. A Worker can default-export the same module.
 
 `renderToString` accepts the server-relevant subset of a `makeApplication` config. That subset contains `init` and `view`, plus `Flags` and `routing` when the application declares them. A full application config satisfies the subset, so an entry can pass it unchanged.
 
@@ -246,7 +246,7 @@ A deployed SSG build is a directory of static files. Any static host or CDN can 
 
 A build that `@foldkit/vite-plugin` owns writes `foldkit.build.json` beside the server bundle, naming the two output directories, the server entry, and every path it generated. A host reads it to decide what its asset layer does with a request matching no file: generated paths are files, anything else reaches the server when there is one. Deriving that from the build is how a deployment target avoids asking for it a second time, in settings whose wrong values serve an empty page at 200.
 
-A deployed SSR application needs a host with two jobs: serve the built client assets and call `fetch` for page requests. On Node, use the [SSR example's `scripts/serve.mjs`](https://github.com/foldkit/foldkit/tree/main/examples/ssr/scripts/serve.mjs) as the reference. It serves static files first and falls through to `dist/server/fetch.js`.
+A deployed SSR application needs a host with two jobs: serve the built client assets and call `fetch` for page requests. On Node, use the [SSR example's `scripts/serve.ts`](https://github.com/foldkit/foldkit/tree/main/examples/ssr/scripts/serve.ts) as the reference. It serves static files first and falls through to `dist/server/fetch.js`.
 
 ### Which methods reach the entry
 

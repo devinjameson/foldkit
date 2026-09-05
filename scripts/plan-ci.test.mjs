@@ -195,7 +195,7 @@ test('an ssr host or framework change selects the host parity gate', () => {
   // one server entry, so either side, or the entry contract between them, can
   // make them disagree.
   for (const file of [
-    'examples/ssr/scripts/serve.mjs',
+    'examples/ssr/scripts/serve.ts',
     'packages/vite-plugin-foldkit/src/ssr.ts',
     'packages/foldkit/src/experimental/server/host.ts',
     'packages/foldkit/src/experimental/server/fetch.ts',
