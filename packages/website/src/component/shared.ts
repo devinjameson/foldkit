@@ -168,7 +168,7 @@ export const emailSignupContent: Html = ih.div(
     ih.h2(
       [
         ih.Class(
-          'text-3xl md:text-4xl font-normal text-gray-900 dark:text-white mb-4 text-balance',
+          'font-heading font-book text-3xl md:text-4xl text-gray-900 dark:text-white mb-4 text-balance',
         ),
       ],
       ['Stay in the update loop.'],

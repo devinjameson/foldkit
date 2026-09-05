@@ -53,7 +53,7 @@ const postEntry = (post: BlogPost, isFirstEntry: boolean): Html =>
           ih.h2(
             [
               ih.Class(
-                'text-2xl font-normal mb-1 text-gray-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition',
+                'font-heading font-book text-2xl mb-1 text-gray-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition',
               ),
             ],
             [post.frontmatter.title],

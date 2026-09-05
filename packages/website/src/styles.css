@@ -19,6 +19,13 @@
 }
 
 @font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Paper Mono';
   src: url('/fonts/PaperMono-Variable.woff2') format('woff2');
   font-weight: 100 800;
@@ -57,9 +64,10 @@
   --color-accent-800: #365610;
   --color-accent-900: #253b0a;
   --color-accent-950: #152205;
-  --font-sans: 'ABC Favorit', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'ABC Favorit', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Paper Mono', ui-monospace, monospace;
-  --font-weight-normal: 350;
+  --font-weight-book: 350;
   --font-weight-code: 425;
 }
 

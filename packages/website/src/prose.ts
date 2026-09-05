@@ -1,6 +1,6 @@
 import { Array } from 'effect'
 import { Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
-import { twMerge } from 'tailwind-merge'
+import { extendTailwindMerge } from 'tailwind-merge'
 
 import { Icon } from './icon'
 import { type TableOfContentsEntry } from './tableOfContentsEntry'
@@ -13,6 +13,10 @@ import { type TableOfContentsEntry } from './tableOfContentsEntry'
  * where it is built, so the renderer keeps that ownership explicit.
  */
 export type RenderHeadingLink = (id: string, text: string) => Html
+
+const mergeClassNames = extendTailwindMerge({
+  extend: { theme: { 'font-weight': ['book', 'code'] } },
+})
 
 const headingLinkButton = <Message>(
   id: string,
@@ -50,8 +54,8 @@ export const pageTitle = (id: string, text: string, className?: string): Html =>
   ih.h1(
     [
       ih.Class(
-        twMerge(
-          'text-[2rem] md:text-[2.5rem] leading-tight tracking-tight font-normal text-gray-900 dark:text-white mb-6',
+        mergeClassNames(
+          'font-heading font-book text-[2rem] md:text-[2.5rem] leading-tight tracking-tight text-gray-900 dark:text-white mb-6',
           className,
         ),
       ),
@@ -64,13 +68,13 @@ export const pageTitle = (id: string, text: string, className?: string): Html =>
 const sectionHeadingConfig = {
   h2: {
     textClassName:
-      'text-2xl md:text-3xl leading-snug tracking-tight font-normal text-gray-900 dark:text-white scroll-mt-6',
+      'font-heading font-book text-2xl md:text-3xl leading-snug tracking-tight text-gray-900 dark:text-white scroll-mt-6',
     wrapperClassName:
       'group flex items-center gap-1 md:hover-capable:gap-0 mt-12 mb-4 [h1+&]:mt-8 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },
   h3: {
     textClassName:
-      'text-xl md:text-2xl leading-snug tracking-tight font-normal text-gray-900 dark:text-white scroll-mt-6',
+      'font-heading font-book text-xl md:text-2xl leading-snug tracking-tight text-gray-900 dark:text-white scroll-mt-6',
     wrapperClassName:
       'group flex items-center gap-1 md:hover-capable:gap-0 mt-10 mb-3 md:hover-capable:flex-row-reverse md:hover-capable:justify-end md:hover-capable:-ml-[1.5rem]',
   },
@@ -158,7 +162,7 @@ const inlineCodeClassName =
   'bg-gray-200/60 dark:bg-gray-800 text-[var(--code-foreground)] [a_&]:text-inherit [:is(h1,h2,h3,h4,h5,h6)_&]:text-inherit mx-[0.1em] px-[0.25em] py-[0.05em] rounded-xs text-[0.9375em] font-code wrap-anywhere'
 
 export const inlineCode = (text: string, className?: string): Html =>
-  ih.code([ih.Class(twMerge(inlineCodeClassName, className))], [text])
+  ih.code([ih.Class(mergeClassNames(inlineCodeClassName, className))], [text])
 
 export const infoCallout = (
   label: string,
