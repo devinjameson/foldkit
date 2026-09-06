@@ -74,51 +74,26 @@
       "ignore": ["test/integration/fixtures/**"]
     },
     "examples/*": {
-      "ignoreDependencies": [
-        "@foldkit/devtools",
-        "@trivago/prettier-plugin-sort-imports",
-        "prettier",
-        "tailwindcss"
-      ]
+      "ignoreDependencies": ["@foldkit/devtools", "tailwindcss"]
     },
     "examples/charting": {
       "entry": [],
-      "ignoreDependencies": [
-        "@foldkit/devtools",
-        "@trivago/prettier-plugin-sort-imports",
-        "prettier",
-        "tailwindcss"
-      ]
+      "ignoreDependencies": ["@foldkit/devtools", "tailwindcss"]
     },
     "examples/ssr": {
       "entry": ["server/main.ts", "src/entry.server.ts"],
       "ignoreFiles": ["vite.config.playground.ts"],
-      "ignoreDependencies": [
-        "@foldkit/devtools",
-        "@trivago/prettier-plugin-sort-imports",
-        "prettier",
-        "tailwindcss"
-      ]
+      "ignoreDependencies": ["@foldkit/devtools", "tailwindcss"]
     },
     "examples/ssg": {
       "entry": ["src/entry.server.ts"],
       "ignoreFiles": ["vite.config.playground.ts"],
-      "ignoreDependencies": [
-        "@foldkit/devtools",
-        "@trivago/prettier-plugin-sort-imports",
-        "prettier",
-        "tailwindcss"
-      ]
+      "ignoreDependencies": ["@foldkit/devtools", "tailwindcss"]
     },
     "examples/personal-blog": {
       "entry": ["src/**/*.test.ts", "src/vitest-*.ts"],
       "ignoreFiles": ["vite.config.playground.ts"],
-      "ignoreDependencies": [
-        "@foldkit/devtools",
-        "@trivago/prettier-plugin-sort-imports",
-        "prettier",
-        "tailwindcss"
-      ]
+      "ignoreDependencies": ["@foldkit/devtools", "tailwindcss"]
     },
     "comparisons/*": {
       "ignoreDependencies": ["tailwindcss"]

@@ -25,6 +25,10 @@
       "error",
       { "assertionStyle": "never" }
     ],
+    "sort-imports": [
+      "error",
+      { "ignoreDeclarationSort": true, "ignoreCase": false }
+    ],
     "foldkit/no-noop-message": "error",
     "foldkit/got-submodel-message-name": "error",
     "foldkit/got-prefix-requires-submodel-payload": "error",

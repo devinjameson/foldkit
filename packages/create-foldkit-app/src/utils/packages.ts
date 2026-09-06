@@ -76,10 +76,9 @@ const TEMPLATE_DEV_DEPENDENCIES = [
   '@foldkit/vite-plugin',
   '@foldkit/devtools-mcp',
   '@foldkit/oxlint-plugin',
-  '@trivago/prettier-plugin-sort-imports',
   'happy-dom',
+  'oxfmt',
   'oxlint',
-  'prettier',
   'vitest',
 ]
 

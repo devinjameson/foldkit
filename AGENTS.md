@@ -91,7 +91,7 @@ Match the implementation style to the subsystem and the behavior being modeled. 
   owning namespace at every call site: `Message.ClickedSubmit()` and
   `OutMessage.SucceededLogin({ user })`.
 - In a `defineMessageUnion()` case record, keep each payload object on one line
-  when it fits. Let Prettier wrap payloads that need more space.
+  when it fits. Let Oxfmt wrap payloads that need more space.
 - Capitalize Schema literal strings: `Schema.Literals(['Horizontal', 'Vertical'])`.
 - Capitalize namespace imports: `import * as Command from './command'`.
 - Use `const`. Only use `let` when mutation is truly unavoidable. Always brace control flow.

@@ -801,9 +801,10 @@
 
   ```ts
   // before
-  const LockScroll = Command.define('LockScroll', CompletedLockScroll)(
-    Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())),
-  )
+  const LockScroll = Command.define(
+    'LockScroll',
+    CompletedLockScroll,
+  )(Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())))
 
   // after
   const LockScroll = Command.define('LockScroll', {

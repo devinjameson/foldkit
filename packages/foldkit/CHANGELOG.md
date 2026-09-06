@@ -1536,9 +1536,10 @@
 
   ```ts
   // before
-  const LockScroll = Command.define('LockScroll', CompletedLockScroll)(
-    Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())),
-  )
+  const LockScroll = Command.define(
+    'LockScroll',
+    CompletedLockScroll,
+  )(Dom.lockScroll.pipe(Effect.as(CompletedLockScroll())))
 
   // after
   const LockScroll = Command.define('LockScroll', {
@@ -5880,7 +5881,10 @@ display: none }` rule. Author CSS like Tailwind's `flex` utility class beats
 
   ```ts
   // Before
-  const dialogView = Dialog.lazy({ panelContent: myContent, panelClassName: '...' })
+  const dialogView = Dialog.lazy({
+    panelContent: myContent,
+    panelClassName: '...',
+  })
   dialogView(model.dialog, toParentMessage)
 
   // After

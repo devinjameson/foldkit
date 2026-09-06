@@ -92,7 +92,7 @@ SavedTodos
 
 The exception is a Message with more than one cause. When several Commands resolve to the same Message, or a Command synthesizes a Message that a Subscription also emits, name it for the fact instead: `EndedAnimation` is produced both by the `WaitForAnimationSettled` Command and by each component's `DetectMovementOrAnimationEnd` race, so no single Command owns the name.
 
-Keep each `defineMessageUnion()` case's payload object on one line when it fits. Let Prettier wrap payloads that need more space, so the declaration remains easy to scan as one variant per line.
+Keep each `defineMessageUnion()` case's payload object on one line when it fits. Let Oxfmt wrap payloads that need more space, so the declaration remains easy to scan as one variant per line.
 
 #### Succeeded/Failed pairing
 

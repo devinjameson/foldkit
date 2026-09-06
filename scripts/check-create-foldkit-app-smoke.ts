@@ -67,10 +67,15 @@ type TemplatePackageJson = {
   }
 }
 
-type PrettierConfig = {
-  readonly importOrder?: ReadonlyArray<string>
-  readonly importOrderSortSpecifiers?: boolean
-  readonly plugins?: ReadonlyArray<string>
+type OxfmtConfig = {
+  readonly sortImports?: {
+    readonly ignoreCase?: boolean
+    readonly customGroups?: ReadonlyArray<{
+      readonly groupName?: string
+      readonly elementNamePattern?: ReadonlyArray<string>
+    }>
+    readonly groups?: ReadonlyArray<string | ReadonlyArray<string>>
+  }
 }
 
 type PackOutput = ReadonlyArray<{
@@ -371,20 +376,32 @@ const assertTemplateTooling = (): void => {
     'template must not include eslint.config.mjs',
   )
 
-  const prettierConfig = readJson<PrettierConfig>(
-    join(TEMPLATE_DIR, '.prettierrc'),
+  assertSmoke(
+    !existsSync(join(TEMPLATE_DIR, '.prettierrc')) &&
+      !existsSync(join(TEMPLATE_DIR, '.prettierignore')),
+    'template must not include Prettier config files',
   )
+
+  const oxfmtConfig = readJson<OxfmtConfig>(join(TEMPLATE_DIR, '.oxfmtrc.json'))
   const keepsImportSorting =
-    prettierConfig.importOrder?.join('|') ===
-      '<THIRD_PARTY_MODULES>|^@|^[./]' &&
-    prettierConfig.importOrderSortSpecifiers === true &&
-    prettierConfig.plugins?.includes(
-      '@trivago/prettier-plugin-sort-imports',
-    ) === true
+    oxfmtConfig.sortImports?.ignoreCase === false &&
+    oxfmtConfig.sortImports.customGroups?.some(
+      group =>
+        group.groupName === 'scoped' &&
+        JSON.stringify(group.elementNamePattern) ===
+          JSON.stringify(['@*', '@*/**']),
+    ) === true &&
+    JSON.stringify(oxfmtConfig.sortImports.groups) ===
+      JSON.stringify([
+        ['builtin', 'external'],
+        'scoped',
+        ['parent', 'sibling', 'index'],
+        'unknown',
+      ])
 
   assertSmoke(
     keepsImportSorting,
-    'template must keep the Prettier import sorting setup',
+    'template must keep the Oxfmt import sorting setup',
   )
 }
 

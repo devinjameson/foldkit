@@ -7,7 +7,7 @@ Run through each category after generating an app. Fix any issues before present
 
 ## Gate commands (run ALL FOUR; fix everything they surface)
 
-- [ ] `format`: run FIRST; rewrites files so subsequent gates see the committed shape. The scaffold wires prettier.
+- [ ] `format`: run FIRST; rewrites files so subsequent gates see the committed shape. The scaffold wires Oxfmt.
 - [ ] `lint`: output clean. This is the substantive structural gate, not just a style pass: the scaffold wires oxlint **and** `@foldkit/oxlint-plugin`, whose 24 `foldkit/*` rules enforce keyed rows, route printing, `Got*` wrapping, Command naming, and more. Treat any `foldkit(...)` diagnostic as a blocker; that is how they are labelled in the output. It also catches the unused imports `tsc` does not.
 - [ ] `typecheck`: no errors. The scaffold wires `tsc --noEmit`.
 - [ ] `test`: all tests pass. The scaffold wires vitest.
@@ -18,7 +18,7 @@ run its script, not the tool named here.
 
 Invoke each through the package manager the project was scaffolded with (`npm run lint`, `pnpm run lint`, `yarn lint`, `bun run lint`). If a script is missing, run the project-local binary through that manager's exec (`pnpm exec oxlint src`, `npm exec --no-install oxlint src`, `yarn exec oxlint src`, `bun x --no-install oxlint src`). Avoid bare `npx`, which fetches from the registry when the binary isn't installed locally.
 
-"Typecheck clean and tests pass" is NOT sufficient. Generated code is rarely Prettier-exact out of the box, and frequently has unused imports (`Invalid`, `NotValidated`, `Valid` imported as values when only used as string-literal tag keys in `Match.tag(...)`) that only the linter catches. Skipping either means the user's first `git commit` produces a cascade of formatting/lint fixes they have to clean up.
+"Typecheck clean and tests pass" is NOT sufficient. Generated code rarely matches Oxfmt's output out of the box, and frequently has unused imports (`Invalid`, `NotValidated`, `Valid` imported as values when only used as string-literal tag keys in `Match.tag(...)`) that only the linter catches. Skipping either means the user's first `git commit` produces a cascade of formatting/lint fixes they have to clean up.
 
 ## Mechanical scans (run on every file before tsc)
 

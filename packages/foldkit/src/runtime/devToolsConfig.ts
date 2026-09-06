@@ -5,7 +5,10 @@ import { type Visibility, isVisible } from './visibility.js'
 
 /** Position of the DevTools badge and panel on screen. */
 export type DevToolsPosition =
-  'BottomRight' | 'BottomLeft' | 'TopRight' | 'TopLeft'
+  | 'BottomRight'
+  | 'BottomLeft'
+  | 'TopRight'
+  | 'TopLeft'
 
 /** Controls DevTools interaction mode.
  *
