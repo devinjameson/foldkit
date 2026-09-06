@@ -45,7 +45,7 @@
     "url": "https://github.com/foldkit/foldkit.git",
     "directory": "packages/create-foldkit-app"
   },
-  "homepage": "https://foldkit.dev/get-started/getting-started",
+  "homepage": "https://foldkit.dev/get-started",
   "publishConfig": {
     "access": "public"
   },

@@ -71,9 +71,9 @@ const lazyNotePlayerDemo = createLazy()
 
 const VIEWPORT_PADDING = 16
 
-// NOTE: mirrors the md+ CSS --header-height (4.5rem); the variable's
+// NOTE: mirrors the md+ CSS --header-height (4rem); the variable's
 // env(safe-area-inset-top) term is not readable from static config.
-const MD_HEADER_HEIGHT = 72
+const MD_HEADER_HEIGHT = 64
 
 const HEADER_CLEARANCE = MD_HEADER_HEIGHT + VIEWPORT_PADDING
 
