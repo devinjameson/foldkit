@@ -42,7 +42,8 @@ const Message = defineMessageUnion({
 })
 type Message = typeof Message.Type
 type EditorMessage =
-  typeof Message.CompletedMountEditor.Type | typeof Message.EditedFromMount.Type
+  | typeof Message.CompletedMountEditor.Type
+  | typeof Message.EditedFromMount.Type
 
 const ChildMessage = defineMessageUnion({
   CompletedChildMount: {},

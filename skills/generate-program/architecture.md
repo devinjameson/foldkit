@@ -274,14 +274,15 @@ Child → Parent: the child returns a record with an optional `outMessage`
 ```ts
 // Child signals to parent
 const update = (model: Model, message: Message) =>
-  Message.match<
-    Update.ReturnWithOutMessage<Model, Message, OutMessage>
-  >(message, {
-    CreatedRoom: ({ roomId, player }) => ({
-      model,
-      outMessage: OutMessage.SucceededCreateRoom({ roomId, player }),
-    }),
-  })
+  Message.match<Update.ReturnWithOutMessage<Model, Message, OutMessage>>(
+    message,
+    {
+      CreatedRoom: ({ roomId, player }) => ({
+        model,
+        outMessage: OutMessage.SucceededCreateRoom({ roomId, player }),
+      }),
+    },
+  )
 
 // Parent folds the child update and handles its OutMessage
 const foldChildOutMessage = Child.OutMessage.match<

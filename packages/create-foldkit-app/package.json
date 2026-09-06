@@ -13,7 +13,7 @@
   "scripts": {
     "clean": "rimraf dist *.tsbuildinfo",
     "build": "pnpm run clean && tsc -b tsconfig.build.json && node scripts/build-templates.mjs",
-    "format": "prettier -w .",
+    "format": "oxfmt",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

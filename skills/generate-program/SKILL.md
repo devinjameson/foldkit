@@ -467,7 +467,7 @@ export type Message = typeof Message.Type
 
 Keep the `defineMessageUnion()` declaration and `type Message` alias adjacent. Construct variants through the namespace, such as `Message.ClickedSubmit()` and `Message.UpdatedEmail({ value })`. Never destructure constructors from `Message` or `OutMessage`; the owning namespace stays visible at every call site.
 
-Keep each case's payload object on one line when it fits. Let Prettier wrap payloads that need more space, so the declaration remains easy to scan as one variant per line.
+Keep each case's payload object on one line when it fits. Let Oxfmt wrap payloads that need more space, so the declaration remains easy to scan as one variant per line.
 
 Name messages by category:
 
@@ -660,18 +660,18 @@ npm run typecheck
 npm run test
 ```
 
-Use whichever package manager the project was scaffolded with: `npm run`, `pnpm run`, `yarn`, or `bun run`. If a script is missing, run the project-local binary through that manager's exec (`pnpm exec prettier -w .`, `npm exec --no-install prettier -w .`, `yarn exec prettier -w .`, `bun x --no-install prettier -w .`). Avoid bare `npx`, which fetches and runs a package from the registry when the binary isn't installed locally.
+Use whichever package manager the project was scaffolded with: `npm run`, `pnpm run`, `yarn`, or `bun run`. If a script is missing, run the project-local binary through that manager's exec (`pnpm exec oxfmt`, `npm exec --no-install oxfmt`, `yarn exec oxfmt`, `bun x --no-install oxfmt`). Avoid bare `npx`, which fetches and runs a package from the registry when the binary isn't installed locally.
 
 Run **format first** because it rewrites files; running it last would leave tsc/test passing against unformatted code that a pre-commit hook would then reformat, creating a diff the user has to clean up. Running it first means lint/typecheck/test verify the exact code that will be committed.
 
 Each catches different classes of issue:
 
-- **Format** rewrites spacing, indentation, trailing commas, and line wrapping to project style. Not a "check"; a normalizer. Generated code rarely matches Prettier's exact formatting by accident; without this step, every `git commit` produces a cascade of formatting-only diffs.
+- **Format** rewrites spacing, indentation, trailing commas, and line wrapping to project style. Not a "check"; a normalizer. Generated code rarely matches Oxfmt's exact formatting by accident; without this step, every `git commit` produces a cascade of formatting-only diffs.
 - **Lint** catches unused imports, unused variables, and style-rule violations. Easy to miss because generated code often imports a symbol "for completeness" that turns out not to be referenced (e.g. importing `NotValidated`, `Invalid` from fieldValidation when they're only used as string literals inside `Match.tag` keys). `tsc` doesn't flag these.
 - **Typecheck** catches API misuse, wrong parameter shapes, missing required props, and structural type errors. Doesn't catch unused imports.
 - **Tests** catch behavioral regressions. Don't catch either of the above.
 
-If the project doesn't have a format/lint script, check `package.json` and run the binaries through your package manager's exec (`pnpm exec prettier -w .` / `pnpm exec oxlint src`, or the npm / yarn / bun equivalent) directly. Don't skip either because "there's no script". The scaffolded `create-foldkit-app` project always ships both configured.
+If the project doesn't have a format/lint script, check `package.json` and run the binaries through your package manager's exec (`pnpm exec oxfmt` / `pnpm exec oxlint src`, or the npm / yarn / bun equivalent) directly. Don't skip either because "there's no script". The scaffolded `create-foldkit-app` project always ships both configured.
 
 Fix ALL output from all four before declaring Phase 5 done. "Typecheck clean and tests pass" is insufficient. Unformatted code with unused imports is not at the bar.
 

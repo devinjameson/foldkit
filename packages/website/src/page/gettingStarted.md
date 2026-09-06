@@ -38,7 +38,7 @@ The exact files depend on the rendering mode and starter example. A small browse
 - `vite.config.ts`: Vite configuration with `@foldkit/vite-plugin`
 - `tsconfig.json`: TypeScript configuration
 - `.oxlintrc.json`: Oxlint configuration
-- `.prettierrc`: Prettier configuration
+- `.oxfmtrc.json`: Oxfmt configuration
 - `AGENTS.md`: your instructions for AI coding assistants working on the project
 - `FOLDKIT.md`: Foldkit's own conventions for those assistants, [replaced from the current template when you upgrade Foldkit](/ai/overview)
 

@@ -477,7 +477,8 @@ type CorsResponseState = Readonly<{
 }>
 
 type ProxyConfiguration =
-  Readonly<Record<string, string | ProxyOptions>> | undefined
+  | Readonly<Record<string, string | ProxyOptions>>
+  | undefined
 
 const isProxyRequest = (
   nodeRequest: Connect.IncomingMessage,

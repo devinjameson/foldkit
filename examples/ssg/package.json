@@ -18,8 +18,6 @@
     "@foldkit/devtools": "workspace:*",
     "@foldkit/vite-plugin": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
-    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.2.2"

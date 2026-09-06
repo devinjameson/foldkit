@@ -236,7 +236,8 @@ export const define = <
   // factories close over nothing Message-specific, exactly like the html
   // builder singleton.
   let cachedElementBuilder:
-    ElementBuilder<unknown, Properties, Events> | undefined
+    | ElementBuilder<unknown, Properties, Events>
+    | undefined
 
   const withMessage = <Message>(
     _h: HtmlBuilder<Message>,

@@ -106,7 +106,10 @@ export interface MountDefinitionWithArgs<
 /** A Mount definition created with `Mount.define` or `Mount.defineStream`.
  *  Union over the no-args and with-args shapes; consumers that only need
  *  name/identity can accept this. */
-export type MountDefinition<Name extends string = string, ResultMessage = any> =
+export type MountDefinition<
+  Name extends string = string,
+  ResultMessage = any,
+> =
   | MountDefinitionNoArgs<Name, ResultMessage>
   | MountDefinitionWithArgs<Name, any, ResultMessage>
 

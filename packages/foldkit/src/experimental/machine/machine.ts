@@ -584,7 +584,10 @@ export type Transitioned<
  * `ExplicitlyIgnored` means evaluation reached an {@link ignore} fallback.
  */
 export type IgnoredReason =
-  'OutOfAlphabet' | 'NotApplicable' | 'GuardsFellThrough' | 'ExplicitlyIgnored'
+  | 'OutOfAlphabet'
+  | 'NotApplicable'
+  | 'GuardsFellThrough'
+  | 'ExplicitlyIgnored'
 
 /**
  * A step that matched no Edge: the state is unchanged and the Message is
@@ -636,7 +639,9 @@ export type EdgeSummary<
  * {@link ignore} stops evaluation first.
  */
 export type DeadTransitionReason =
-  'UnreachableSource' | 'ShadowedByOtherwise' | 'ShadowedByIgnore'
+  | 'UnreachableSource'
+  | 'ShadowedByOtherwise'
+  | 'ShadowedByIgnore'
 
 /** An Edge that cannot fire in a walk of the declared Edge set, with the reason. */
 export type DeadTransition<
@@ -916,7 +921,8 @@ type IgnoredEdge = Readonly<{
 }>
 
 type EdgeSelection<State extends Tagged, Message extends Tagged, R> =
-  SelectedEdge<State, Message, R> | IgnoredEdge
+  | SelectedEdge<State, Message, R>
+  | IgnoredEdge
 
 type LooseTransition<State extends Tagged, Message extends Tagged, R> =
   | LooseEdge<State, Message, R>
