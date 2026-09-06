@@ -1,5 +1,5 @@
 import * as Testing from 'effect-oxlint/testing'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { gotWrapperCarriesOnlyRouting } from '../../src/rules/got-wrapper-carries-only-routing.ts'
 

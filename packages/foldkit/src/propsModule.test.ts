@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { propsModule } from './propsModule.js'
 import { eventListenersModule, h, init, toVNode } from './snabbdom/index.js'

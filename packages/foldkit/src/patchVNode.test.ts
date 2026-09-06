@@ -1,5 +1,5 @@
 import { Context, Option } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { beginRender, createBoundaryRegistry } from './html/boundary.js'
 import { __htmlBuilder } from './html/index.js'

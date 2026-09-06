@@ -20,7 +20,7 @@
     "build": "pnpm run clean && tsc -b",
     "watch": "tsc -b --watch",
     "typecheck": "tsc -b --noEmit && tsc -p tsconfig.test.json",
-    "test": "vitest run"
+    "test": "vp test run"
   },
   "peerDependencies": {
     "effect": "4.0.0-rc.112",
@@ -39,9 +39,10 @@
     "happy-dom": "^20.11.13",
     "rimraf": "^6.1.3",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2",
+    "vite": "catalog:",
     "vite7": "npm:vite@^7.3.6",
-    "vitest": "^4.1.11"
+    "vitest": "catalog:",
+    "vite-plus": "catalog:"
   },
   "keywords": [
     "vite",

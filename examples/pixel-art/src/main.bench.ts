@@ -1,5 +1,5 @@
 import { Option } from 'effect'
-import { bench, describe } from 'vitest'
+import { bench, describe } from 'vite-plus/test'
 
 import { Dialog, Listbox, RadioGroup } from '@foldkit/ui'
 

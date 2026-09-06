@@ -1,6 +1,6 @@
 import { Option } from 'effect'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 
 import {
   FlyTo,

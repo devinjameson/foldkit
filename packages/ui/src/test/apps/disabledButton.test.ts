@@ -1,5 +1,5 @@
 import * as Scene from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { initialModel, update, view, viewWithDialog } from './disabledButton.js'
 

@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite'
+import { defineConfig, lazyPlugins } from 'vite-plus'
 
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [tailwindcss(), react()],
+  plugins: lazyPlugins(() => [tailwindcss(), react()]),
 })

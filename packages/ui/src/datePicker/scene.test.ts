@@ -2,7 +2,7 @@ import { Match, Option } from 'effect'
 import * as Calendar from 'foldkit/calendar'
 import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
-import { expect } from 'vitest'
+import { expect } from 'vite-plus/test'
 
 import { describe, it } from '@effect/vitest'
 

@@ -1,6 +1,6 @@
 import { Array, Option, String } from 'effect'
 import { expect, given, role, scene, text } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { AppRoute, Model, update, view } from './main'
 import { People } from './page'

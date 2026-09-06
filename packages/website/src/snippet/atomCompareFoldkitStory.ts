@@ -1,6 +1,6 @@
 import { AsyncData } from 'foldkit'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 
 test('loading a user: the Command fires, resolves, the Model lands on Success', () => {
   story(

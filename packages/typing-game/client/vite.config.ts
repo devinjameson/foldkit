@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite'
+import { defineConfig, lazyPlugins } from 'vite-plus'
 
 import { foldkit } from '@foldkit/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [tailwindcss(), foldkit()],
+  plugins: lazyPlugins(() => [tailwindcss(), foldkit()]),
 })

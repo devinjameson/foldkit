@@ -1,6 +1,6 @@
 import { Array, Effect, Option } from 'effect'
 import { FetchHttpClient, HttpClient } from 'effect/unstable/http'
-import { expect } from 'vitest'
+import { expect } from 'vite-plus/test'
 
 import { describe, it } from '@effect/vitest'
 

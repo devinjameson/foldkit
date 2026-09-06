@@ -1,5 +1,5 @@
 import { Schema } from 'effect'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import foldkitPackageJson from '../../../foldkit/package.json?raw'
 import gettingStartedSource from './gettingStarted.md?raw'

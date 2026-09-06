@@ -1,5 +1,5 @@
 import { Option, Schema } from 'effect'
-import { expect, expectTypeOf } from 'vitest'
+import { expect, expectTypeOf } from 'vite-plus/test'
 
 import { describe, it } from '@effect/vitest'
 

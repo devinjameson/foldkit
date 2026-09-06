@@ -162,7 +162,7 @@
     "build": "pnpm run clean && tsc -b tsconfig.build.json",
     "watch": "tsc -b tsconfig.build.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --coverage"
+    "test": "vp test run --coverage"
   },
   "dependencies": {
     "parse5": "^8.0.1"
@@ -172,12 +172,14 @@
   },
   "devDependencies": {
     "@effect/vitest": "4.0.0-rc.112",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "catalog:",
     "effect": "4.0.0-rc.112",
     "happy-dom": "^20.11.13",
     "rimraf": "^6.1.3",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vite-plus": "catalog:"
   },
   "keywords": [
     "effect",

@@ -1,5 +1,5 @@
 import { Effect, Fiber, Number, Schema } from 'effect'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import { TextDirection, __htmlBuilder } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'

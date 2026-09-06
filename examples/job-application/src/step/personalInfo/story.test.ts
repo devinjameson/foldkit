@@ -1,7 +1,7 @@
 import { Calendar } from 'foldkit'
 import { Valid, Validating } from 'foldkit/fieldValidation'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { Message, ValidateEmailAsync, init, update } from './personalInfo'
 

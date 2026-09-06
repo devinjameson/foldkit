@@ -1,6 +1,6 @@
 import { Option } from 'effect'
 import { fromString as urlFromString } from 'foldkit/url'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import * as Route from './route'
 

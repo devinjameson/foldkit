@@ -1,5 +1,5 @@
 import { expect, given, role, scene, text } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { Counter } from './island'
 import { AppRoute, Model, update, view } from './main'

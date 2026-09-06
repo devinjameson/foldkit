@@ -1,5 +1,5 @@
 import { Command, click, expect, given, role, scene, text } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { Message, type Model, ReportCount, update, view } from './main'
 

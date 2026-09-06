@@ -1,7 +1,7 @@
 import { Array, Option } from 'effect'
 import { Interruptible } from 'foldkit/command'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import {
   CancelUploadFile,

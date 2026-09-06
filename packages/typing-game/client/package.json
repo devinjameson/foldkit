@@ -4,12 +4,12 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "vp dev",
+    "build": "vp build",
+    "preview": "vp preview",
     "typecheck": "tsc --noEmit",
-    "format": "oxfmt",
-    "test": "vitest run"
+    "format": "vp fmt",
+    "test": "vp test run"
   },
   "dependencies": {
     "@effect/platform-browser": "4.0.0-rc.112",
@@ -25,7 +25,8 @@
     "happy-dom": "^20.11.13",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

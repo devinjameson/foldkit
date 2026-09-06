@@ -1,5 +1,5 @@
 import * as Testing from 'effect-oxlint/testing'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { noArrayIndexViewKeys } from '../../src/rules/no-array-index-view-keys.ts'
 

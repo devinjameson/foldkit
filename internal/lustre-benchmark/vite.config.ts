@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, lazyPlugins } from 'vite-plus'
 
 import { foldkit } from '@foldkit/vite-plugin'
 
@@ -9,7 +9,7 @@ const isOptimised = variant === 'optimised'
 
 export default defineConfig({
   base: './',
-  plugins: [foldkit()],
+  plugins: lazyPlugins(() => [foldkit()]),
   resolve: {
     alias: foldkitAliases(__dirname),
   },

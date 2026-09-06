@@ -1,6 +1,6 @@
 import { Option } from 'effect'
 import { click, expect, given, label, role, scene, text } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { Slider } from '@foldkit/ui'
 

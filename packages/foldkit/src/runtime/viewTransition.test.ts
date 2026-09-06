@@ -1,5 +1,5 @@
 import { Effect, Fiber, Option, PubSub, Queue, Schema, Stream } from 'effect'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import * as Command from '../command/index.js'
 import { type DevToolsStore, INIT_INDEX } from '../devTools/store.js'

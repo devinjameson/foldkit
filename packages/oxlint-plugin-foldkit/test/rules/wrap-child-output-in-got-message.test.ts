@@ -1,5 +1,5 @@
 import * as Testing from 'effect-oxlint/testing'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { wrapChildOutputInGotMessage } from '../../src/rules/wrap-child-output-in-got-message.ts'
 

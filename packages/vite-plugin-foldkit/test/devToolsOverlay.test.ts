@@ -8,7 +8,7 @@ import {
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { createServer, resolveConfig } from 'vite'
-import { describe, expect, it, onTestFinished } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vite-plus/test'
 
 import {
   devToolsOverlayPlugin,

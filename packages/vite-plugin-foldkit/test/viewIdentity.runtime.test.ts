@@ -5,7 +5,7 @@ import { brandViewResult } from 'foldkit/brand'
 import { type Html, inertHtml } from 'foldkit/html'
 import { defineMessageUnion } from 'foldkit/message'
 import { makeElement } from 'foldkit/runtime'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import { transformViewIdentity } from '../src/viewIdentity.ts'
 

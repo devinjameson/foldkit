@@ -1,5 +1,5 @@
 import { Array, Function, Option, pipe } from 'effect'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import type {
   ComputePositionConfig,

@@ -10,7 +10,7 @@ import {
   text,
   type,
 } from 'foldkit/scene'
-import { test } from 'vitest'
+import { test } from 'vite-plus/test'
 
 test('type a zip code, click get weather, see the forecast', () => {
   scene(

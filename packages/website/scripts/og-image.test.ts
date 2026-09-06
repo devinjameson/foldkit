@@ -1,5 +1,5 @@
 import { Array, Option } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { maybePostCover } from '../src/page/blog/frontmatter'
 import { AppRoute } from '../src/route'

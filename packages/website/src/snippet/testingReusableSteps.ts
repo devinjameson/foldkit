@@ -1,5 +1,5 @@
 import { given, message, model, steps, story } from 'foldkit/story'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 
 const givenIncremented = steps(given({ count: 0 }), message(ClickedIncrement()))
 

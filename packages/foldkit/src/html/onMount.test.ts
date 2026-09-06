@@ -1,5 +1,5 @@
 import { Context, Effect, Function, Queue, Stream } from 'effect'
-import { afterEach, beforeEach, expect, vi } from 'vitest'
+import { afterEach, beforeEach, expect, vi } from 'vite-plus/test'
 
 import { describe, it } from '@effect/vitest'
 

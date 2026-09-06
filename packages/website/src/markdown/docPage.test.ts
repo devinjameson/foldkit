@@ -1,6 +1,6 @@
 import { Array, Match, Option, Result, String } from 'effect'
 import { inertHtml as ih } from 'foldkit/html'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import * as Markdown from '@foldkit/markdown'
 import { parseMarkdown } from '@foldkit/markdown/vite'

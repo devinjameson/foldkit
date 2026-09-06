@@ -1,5 +1,5 @@
 import { Equal, Hash, Option } from 'effect'
-import { expect } from 'vitest'
+import { expect } from 'vite-plus/test'
 
 import { describe, it } from '@effect/vitest'
 

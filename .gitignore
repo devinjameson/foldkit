@@ -18,6 +18,7 @@ packages/oxlint-plugin-foldkit/all.json
 playwright-report/
 test-results/
 .DS_Store
+.vite-hooks/_
 
 # Build output written by the vite-plugin build tests
 dist-test

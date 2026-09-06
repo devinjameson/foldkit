@@ -4,7 +4,7 @@
  * Run: pnpm --filter pixel-art-example exec vitest run src/comparison.bench.ts
  */
 import { Option } from 'effect'
-import { test } from 'vitest'
+import { test } from 'vite-plus/test'
 
 import { Dialog, Listbox } from '@foldkit/ui'
 

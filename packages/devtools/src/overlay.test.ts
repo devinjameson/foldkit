@@ -9,7 +9,7 @@ import {
 } from 'effect'
 import { DEVTOOLS_HOST_ID } from 'foldkit/devtools-host'
 import type { DevToolsStore, StoreState } from 'foldkit/devtools-host'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import { createOverlay } from './overlay.js'
 

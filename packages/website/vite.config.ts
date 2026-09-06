@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { basename, extname, join, relative, resolve } from 'node:path'
 import { codeToHtml } from 'shiki'
-import { type Plugin, defineConfig } from 'vite'
+import { type Plugin, defineConfig, lazyPlugins } from 'vite-plus'
 
 import { markdown } from '@foldkit/markdown/vite'
 import { foldkit } from '@foldkit/vite-plugin'
@@ -878,7 +878,7 @@ const playgroundShellFallbackPlugin = (): Plugin => ({
 })
 
 export default defineConfig({
-  plugins: [
+  plugins: lazyPlugins(() => [
     tailwindcss(),
     foldkit({
       devToolsMcpPort: 9988,
@@ -901,5 +901,5 @@ export default defineConfig({
     playgroundTypesPlugin(),
     monacoWorkersPlugin(),
     cssLoadOrderPlugin(),
-  ],
+  ]),
 })

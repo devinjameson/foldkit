@@ -1,6 +1,6 @@
 import { Option } from 'effect'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { Compute, EngineState, Message, type Model, update } from './main'
 

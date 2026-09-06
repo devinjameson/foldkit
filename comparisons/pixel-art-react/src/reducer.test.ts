@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { createEmptyGrid } from './grid'
 import { type Action, reducer } from './reducer'

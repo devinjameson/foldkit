@@ -1,6 +1,6 @@
 import { inertHtml as ih } from 'foldkit/html'
 import { given, scene, withViewInputs } from 'foldkit/scene'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { type CodeBlock } from '../../component'
 import { Message, init, update, view } from './exampleDetail'

@@ -2,7 +2,7 @@ import { Array, Option, String, pipe } from 'effect'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 const WEBSITE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 

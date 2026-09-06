@@ -1,5 +1,5 @@
 import * as Testing from 'effect-oxlint/testing'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { noHandRolledCommandStruct } from '../../src/rules/no-hand-rolled-command-struct.ts'
 

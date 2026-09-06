@@ -10,7 +10,7 @@ import {
   scene,
   text,
 } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { type Model, update, view } from './main'
 

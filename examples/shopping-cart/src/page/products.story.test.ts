@@ -6,7 +6,7 @@ import {
   model,
   story,
 } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { products } from '../data/products'
 import { Message, OutMessage, ReplaceSearchUrl, init, update } from './products'

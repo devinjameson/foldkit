@@ -9,7 +9,7 @@ import {
   Scope,
   SubscriptionRef,
 } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { defineMessageUnion } from '../message/index.js'
 import { evo } from '../struct/index.js'

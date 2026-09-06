@@ -1,5 +1,5 @@
 import { Option, pipe } from 'effect'
-import { describe, expect, expectTypeOf, test } from 'vitest'
+import { describe, expect, expectTypeOf, test } from 'vite-plus/test'
 
 import {
   type HtmlBuilder,

@@ -1,6 +1,6 @@
 import { Array, Option } from 'effect'
 import * as Story from 'foldkit/story'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import {
   ApplyScroll,

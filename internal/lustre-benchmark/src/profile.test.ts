@@ -1,7 +1,7 @@
 import { Effect } from 'effect'
 import { Document, type HtmlBuilder } from 'foldkit/html'
 import { makeApplication } from 'foldkit/runtime'
-import { describe, it } from 'vitest'
+import { describe, it } from 'vite-plus/test'
 
 // Internal API not on the public surface but needed by the profile harness
 // to capture the runtime's sync dispatcher.

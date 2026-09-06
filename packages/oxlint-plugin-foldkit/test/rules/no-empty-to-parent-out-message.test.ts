@@ -1,5 +1,5 @@
 import * as Testing from 'effect-oxlint/testing'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 
 import { noEmptyToParentOutMessage } from '../../src/rules/no-empty-to-parent-out-message.ts'
 

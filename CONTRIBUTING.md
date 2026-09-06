@@ -14,10 +14,12 @@ pnpm install
 
 Node `^22.22.2 || ^24.15.0 || >=26.0.0` and pnpm `>=11`. The repository pins `pnpm@11.8.0` via `packageManager`, so Corepack will select the right version on its own.
 
-`pnpm install` also installs the git hooks. Two of them run:
+`pnpm install` runs `vp config --no-agent`, which installs the Vite+ hook dispatcher. Project-owned hooks live in `.vite-hooks/`:
 
 - **commit-msg** rejects a `Co-Authored-By` line naming Claude.
 - **pre-push** runs the full check suite described below.
+
+Skip one run with `VP_GIT_HOOKS=0`. Turn hooks off in this clone with `vp hooks disable`.
 
 ## Before You Push
 

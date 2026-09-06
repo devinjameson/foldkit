@@ -1,5 +1,5 @@
 import { Array, Effect, Fiber, Option } from 'effect'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vite-plus/test'
 
 import { makeApplication } from '../../runtime/index.js'
 import * as App from './uploads.js'

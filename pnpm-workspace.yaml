@@ -9,7 +9,6 @@ allowBuilds:
   '@parcel/watcher': true
   esbuild: true
   msgpackr-extract: true
-  simple-git-hooks: true
 
 minimumReleaseAgeExclude:
   - '@effect/platform-browser@4.0.0-rc.112'
@@ -27,3 +26,17 @@ overrides:
   '@effect/platform-node-shared': 4.0.0-rc.112
   '@effect/vitest': 4.0.0-rc.112
   'monaco-editor>dompurify': 3.4.14
+  vite@*: 'catalog:'
+  vitest@*: 'catalog:'
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@0.3.0
+  vitest: 4.1.11
+  vite-plus: 0.3.0
+  '@vitest/coverage-v8': 4.1.11
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: '*'
+    vitest: '*'

@@ -1,7 +1,7 @@
 import { connect, createServer as createNetServer } from 'node:net'
 import { resolve } from 'node:path'
 import { createServer } from 'vite'
-import { describe, expect, it, onTestFinished } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vite-plus/test'
 import { WebSocket } from 'ws'
 
 import { foldkit } from '../src/index.ts'

@@ -558,7 +558,7 @@ const assertNormalBundleHasNoParityMarkers = (): void => {
 const buildHostParityFixture = (): void => {
   runRequired('Building the host-parity client...', 'pnpm', [
     'exec',
-    'vite',
+    'vp',
     'build',
     '--outDir',
     'dist/client',
@@ -566,7 +566,7 @@ const buildHostParityFixture = (): void => {
   ])
   runRequired('Building the host-parity server...', 'pnpm', [
     'exec',
-    'vite',
+    'vp',
     'build',
     '--config',
     HOST_PARITY_CONFIG,
@@ -589,7 +589,7 @@ const buildHostParityFixture = (): void => {
   }
 }
 
-// NOTE: its own process group, killed as a group. `pnpm exec vite` spawns the
+// NOTE: its own process group, killed as a group. `pnpm exec vp` spawns the
 // dev server as a child, so killing the pnpm process alone leaves the server
 // holding the port. The next run then binds nothing (`--strictPort` refuses)
 // and probes a host from an earlier build, which reports agreement that the
@@ -743,7 +743,7 @@ const main = async (): Promise<void> => {
   await assertNormalExampleHasNoParityResponses()
   buildHostParityFixture()
 
-  // NOTE: each variant uses the explicit `vite dev` CLI path. In addition to
+  // NOTE: each variant uses the explicit `vp dev` CLI path. In addition to
   // the configured default, the two CLI flags exercise the precedence path
   // that a programmatic createServer test cannot reach.
   const devHosts = DEV_HOST_VARIANTS.map(variant => ({
@@ -752,7 +752,7 @@ const main = async (): Promise<void> => {
       'pnpm',
       [
         'exec',
-        'vite',
+        'vp',
         'dev',
         '--config',
         HOST_PARITY_CONFIG,

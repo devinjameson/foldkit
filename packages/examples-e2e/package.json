@@ -9,7 +9,7 @@
     "test:e2e:ui": "playwright test --ui",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "oxfmt"
+    "format": "vp fmt"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

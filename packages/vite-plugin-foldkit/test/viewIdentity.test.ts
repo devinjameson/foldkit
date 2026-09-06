@@ -1,7 +1,7 @@
 import type { SourceMap } from 'magic-string'
 import { parseAst } from 'vite'
+import { describe, expect, expectTypeOf, it } from 'vite-plus/test'
 import type { Plugin as Vite7Plugin } from 'vite7'
-import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { transformViewIdentity } from '../src/viewIdentity.ts'
 

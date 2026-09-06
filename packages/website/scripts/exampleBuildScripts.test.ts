@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, extname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { canaryVersion } from '../../../scripts/lib/package-version.mjs'
 import { EXAMPLE_FILE_EXTENSIONS, EXAMPLE_ROOT_FILES } from '../vite.config'
@@ -37,7 +37,7 @@ const exampleFile = (slug: string, fileName: string): string =>
 describe('server-rendered example build scripts', () => {
   for (const slug of SERVER_RENDERED_EXAMPLES) {
     it(`ships the config the ${slug} build command reads`, () => {
-      expect(buildScriptOf(slug)).toBe('vite build')
+      expect(buildScriptOf(slug)).toBe('vp build')
 
       const configFileName = 'vite.config.ts'
       expect(

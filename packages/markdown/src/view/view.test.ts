@@ -1,6 +1,6 @@
 import { Array, Option, Schema } from 'effect'
 import { inertHtml as ih } from 'foldkit/html'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import { parseMarkdown } from '../vite/vite.js'
 import { defaultViews, islandsFor, view } from './view.js'

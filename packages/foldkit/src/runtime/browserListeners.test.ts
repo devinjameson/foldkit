@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, expect } from 'vitest'
+import { afterEach, beforeAll, beforeEach, expect } from 'vite-plus/test'
 
 import { describe, it } from '@effect/vitest'
 
