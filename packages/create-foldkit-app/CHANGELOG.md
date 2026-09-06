@@ -1,5 +1,15 @@
 # create-foldkit-app
 
+## 0.33.0
+
+### Minor Changes
+
+- [#1343](https://github.com/foldkit/foldkit/pull/1343) [`7a173a7`](https://github.com/foldkit/foldkit/commit/7a173a785b323ccb94c3831af7339c982718fb72) Thanks [@devinjameson](https://github.com/devinjameson)! - Scaffold new projects with Oxfmt instead of Prettier. The generated project ships `.oxfmtrc.json` with the same formatting options and import grouping the Prettier setup had, its `format` script runs `oxfmt`, and its `.oxlintrc.json` enables the `sort-imports` rule so named import specifiers stay sorted, which Oxfmt does not do on its own. The `prettier` and `@trivago/prettier-plugin-sort-imports` devDependencies are no longer installed.
+
+### Patch Changes
+
+- [#1347](https://github.com/foldkit/foldkit/pull/1347) [`9099339`](https://github.com/foldkit/foldkit/commit/90993394590df06ee4413cbbc766b740138f09f2) Thanks [@devinjameson](https://github.com/devinjameson)! - Point the foldkit README, the create-foldkit-app homepage, and the @foldkit/devtools-mcp README at /get-started and /introduction/why-foldkit.
+
 ## 0.32.1
 
 ### Patch Changes
