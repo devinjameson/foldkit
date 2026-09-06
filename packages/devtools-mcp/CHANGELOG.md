@@ -1,5 +1,11 @@
 # @foldkit/devtools-mcp
 
+## 0.19.4
+
+### Patch Changes
+
+- [#1347](https://github.com/foldkit/foldkit/pull/1347) [`9099339`](https://github.com/foldkit/foldkit/commit/90993394590df06ee4413cbbc766b740138f09f2) Thanks [@devinjameson](https://github.com/devinjameson)! - Point the foldkit README, the create-foldkit-app homepage, and the @foldkit/devtools-mcp README at /get-started and /introduction/why-foldkit.
+
 ## 0.19.3
 
 ### Patch Changes
