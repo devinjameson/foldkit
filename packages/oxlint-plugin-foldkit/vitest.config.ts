@@ -1,4 +1,4 @@
-import { configDefaults, defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vite-plus'
 
 // The integration fixtures under test/integration/fixtures are source files
 // fed to real oxlint by real-oxlint.test.ts, not Vitest suites. Exclude them

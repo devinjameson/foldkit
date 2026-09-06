@@ -1,5 +1,5 @@
 import { inertHtml as ih } from 'foldkit/html'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { type Slots, renderFaqSection, resolveDemo } from './slots'
 

@@ -1,5 +1,5 @@
 import { Context, Effect } from 'effect'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test'
 
 import { defineMessageUnion } from '../message/index.js'
 import { MountTracker } from '../mount/index.js'

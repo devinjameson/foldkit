@@ -1,7 +1,7 @@
 import { Option } from 'effect'
 import { Scene } from 'foldkit'
 import { fromString } from 'foldkit/url'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { AppRoute, Message, Model, update, view, viewTransition } from './main'
 

@@ -1,7 +1,7 @@
 import { Option } from 'effect'
 import { Command, given, message, model, story } from 'foldkit/story'
 import { fromString } from 'foldkit/url'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { Counter } from './island'
 import { Message as CounterMessage } from './island/counter'

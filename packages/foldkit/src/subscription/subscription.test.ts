@@ -1,5 +1,5 @@
 import { Effect, Equivalence, Option, Schema, Stream } from 'effect'
-import { describe, expect, expectTypeOf, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vite-plus/test'
 
 import { type GatedDependencies, lift, make } from './subscription.js'
 

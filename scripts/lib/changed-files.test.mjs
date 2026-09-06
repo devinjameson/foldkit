@@ -86,6 +86,8 @@ const git = (repositoryDir, ...args) => {
       'user.name=Test',
       '-c',
       'commit.gpgsign=false',
+      '-c',
+      'tag.gpgsign=false',
       ...args,
     ],
     { encoding: 'utf8' },

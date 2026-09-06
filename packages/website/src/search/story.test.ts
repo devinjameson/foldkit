@@ -1,6 +1,6 @@
 import { Command, given, message, model, story } from 'foldkit/story'
 import { evo } from 'foldkit/struct'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { init } from './init'
 import { Message } from './message'

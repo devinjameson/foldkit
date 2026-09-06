@@ -36,18 +36,24 @@ const run = (cwd, command, args) => {
   return result.stdout.trim()
 }
 
-const commit = (repo, message) => {
-  run(repo, 'git', ['add', '.'])
+// NOTE: a developer with `tag.gpgsign=true` otherwise turns `git tag name`
+// into a signed annotated tag, which fails here with `fatal: no tag message?`.
+const git = (repo, ...args) =>
   run(repo, 'git', [
     '-c',
     'user.name=Foldkit Test',
     '-c',
     'user.email=foldkit@example.com',
-    'commit',
-    '-q',
-    '-m',
-    message,
+    '-c',
+    'commit.gpgsign=false',
+    '-c',
+    'tag.gpgsign=false',
+    ...args,
   ])
+
+const commit = (repo, message) => {
+  git(repo, 'add', '.')
+  git(repo, 'commit', '-q', '-m', message)
 }
 
 const write = (repo, path, contents) => {
@@ -58,7 +64,7 @@ const write = (repo, path, contents) => {
 
 const makeReleasedRepo = () => {
   const repo = mkdtempSync(join(tmpdir(), 'foldkit-website-deploy-plan-'))
-  run(repo, 'git', ['init', '-q'])
+  git(repo, 'init', '-q')
   for (const packageEntry of PACKAGES) {
     write(
       repo,
@@ -77,7 +83,7 @@ const makeReleasedRepo = () => {
   }
   commit(repo, 'release packages')
   for (const packageEntry of PACKAGES) {
-    run(repo, 'git', ['tag', `${packageEntry.name}@1.0.0`])
+    git(repo, 'tag', `${packageEntry.name}@1.0.0`)
   }
   return repo
 }
@@ -161,7 +167,7 @@ test('defers a website deploy while package source is unpublished', () => {
 test('defers a website deploy when a manifest version has no release tag', () => {
   const repo = makeReleasedRepo()
   try {
-    run(repo, 'git', ['tag', '-d', '@foldkit/vite-plugin@1.0.0'])
+    git(repo, 'tag', '-d', '@foldkit/vite-plugin@1.0.0')
 
     const result = plan(repo)
     assert.equal(result.status, 0, result.stderr)
@@ -190,7 +196,7 @@ test('defers a website deploy when shared package inputs are unpublished', () =>
 test('refuses an older target after a newer website commit exists', () => {
   const repo = makeReleasedRepo()
   try {
-    const released = run(repo, 'git', ['rev-parse', 'HEAD'])
+    const released = git(repo, 'rev-parse', 'HEAD')
     write(repo, 'packages/website/page.ts', 'export const page = true\n')
     commit(repo, 'update website')
 
@@ -207,11 +213,11 @@ test('allows an exact historical release target during finalization', () => {
   const repo = makeReleasedRepo()
 
   try {
-    const released = run(repo, 'git', ['rev-parse', 'HEAD'])
+    const released = git(repo, 'rev-parse', 'HEAD')
 
     write(repo, 'packages/website/page.ts', 'export const page = true\n')
     commit(repo, 'update website')
-    run(repo, 'git', ['checkout', '-q', released])
+    git(repo, 'checkout', '-q', released)
 
     const result = planReleaseTarget(repo, released)
 

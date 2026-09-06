@@ -94,7 +94,7 @@ const buildSpaExample = async (
   outputDir: string,
 ): Promise<void> => {
   await runExampleCommand(exampleDir, slug, [
-    'vite',
+    'vp',
     'build',
     '--base',
     `/example-apps-embed/${slug}/`,
@@ -117,7 +117,7 @@ const buildPrerenderedExample = async (
   await runExampleCommand(
     exampleDir,
     slug,
-    ['vite', 'build', '--base', `/example-apps-embed/${slug}/`],
+    ['vp', 'build', '--base', `/example-apps-embed/${slug}/`],
     { FOLDKIT_BUILD_ID: buildIdForEmbed() },
   )
   cpSync(resolve(exampleDir, 'dist/client'), outputDir, { recursive: true })

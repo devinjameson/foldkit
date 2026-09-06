@@ -1,6 +1,6 @@
 import { Calendar } from 'foldkit'
 import { expectOutMessage, given, message, model, story } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { Message, OutMessage, init, update } from './entry'
 

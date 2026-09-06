@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path'
 import { win32 } from 'node:path'
 import { promisify } from 'node:util'
 import { type Plugin, createBuilder } from 'vite'
-import { afterAll, describe, expect, it, onTestFinished } from 'vitest'
+import { afterAll, describe, expect, it, onTestFinished } from 'vite-plus/test'
 
 import {
   type FoldkitBuildOptions,

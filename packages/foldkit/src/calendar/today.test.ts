@@ -1,6 +1,6 @@
 import { Effect } from 'effect'
 import { TestClock } from 'effect/testing'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { make } from './calendarDate.js'
 import { today } from './today.js'

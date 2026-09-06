@@ -1,6 +1,6 @@
 import { Deferred, Effect, PubSub, Stream } from 'effect'
 import { Mount } from 'foldkit'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import { MountMap } from './main'
 

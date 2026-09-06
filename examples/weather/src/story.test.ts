@@ -1,7 +1,7 @@
 import { Effect, Layer, Match, String } from 'effect'
 import { HttpClient, HttpClientResponse } from 'effect/unstable/http'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 
 import { FetchWeather, Message, fetchWeatherEffect, update } from './main'
 import {

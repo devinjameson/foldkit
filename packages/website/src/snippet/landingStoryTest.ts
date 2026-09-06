@@ -1,5 +1,5 @@
 import { Command, given, message, model, story } from 'foldkit/story'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 
 // Story: test the state machine
 test('fetch weather updates the model', () => {

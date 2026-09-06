@@ -2,7 +2,7 @@ import { HashSet, Option, Record, pipe } from 'effect'
 import { Calendar } from 'foldkit'
 import { Command, given, message, model, story } from 'foldkit/story'
 import * as Url from 'foldkit/url'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { Dialog, Menu } from '@foldkit/ui'
 

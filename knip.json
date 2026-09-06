@@ -80,6 +80,10 @@
       "entry": [],
       "ignoreDependencies": ["@foldkit/devtools", "tailwindcss"]
     },
+    "examples/pixel-art": {
+      "entry": ["vitest.bench.config.ts"],
+      "ignoreDependencies": ["@foldkit/devtools", "tailwindcss"]
+    },
     "examples/ssr": {
       "entry": ["server/main.ts", "src/entry.server.ts"],
       "ignoreFiles": ["vite.config.playground.ts"],
@@ -109,12 +113,14 @@
       "ignoreDependencies": ["tailwindcss"]
     }
   },
-  "ignore": ["**/*.css", "packages/website/public/**"],
+  "ignore": ["**/*.css", "packages/website/public/**", "repos/**"],
   "ignoreDependencies": [
     "@effect/platform-browser",
     "@foldkit/oxlint-plugin",
     "tailwindcss",
-    "madge"
+    "madge",
+    "vite",
+    "vitest"
   ],
   "ignoreBinaries": ["typecheck"]
 }

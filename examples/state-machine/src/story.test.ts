@@ -1,7 +1,7 @@
 import { Array, Effect, Fiber, Option, Ref, pipe } from 'effect'
 import { TestClock } from 'effect/testing'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import {
   CheckoutState,

@@ -18,7 +18,7 @@
  * In React, you must mount real components, mock browser APIs, and
  * assert on imperative mock calls instead of inspecting return values.
  */
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 

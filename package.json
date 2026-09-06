@@ -5,12 +5,12 @@
   "description": "foldkit: Elm-inspired UI framework powered by Effect-TS",
   "packageManager": "pnpm@11.8.0",
   "scripts": {
-    "prepare": "test -z \"$CI\" && simple-git-hooks || true",
+    "prepare": "test -z \"$CI\" && vp config --no-agent || true",
     "build": "pnpm -r --if-present build",
     "build:packages": "node scripts/build-public-packages.mjs",
     "check": "pnpm -F foldkit -F @foldkit/vite-plugin -F @typing-game/shared build && pnpm typecheck:scripts && pnpm -r typecheck && pnpm lint && pnpm check:dead-code && pnpm check:effect-prebundle",
     "lint": "pnpm --filter @foldkit/oxlint-plugin build && pnpm lint:ci",
-    "lint:ci": "oxlint --disable-nested-config && pnpm lint:applications",
+    "lint:ci": "vp lint --disable-nested-config && pnpm lint:applications",
     "lint:applications": "oxlint --config .oxlintrc.app.json --disable-nested-config examples packages/website/src packages/typing-game/client/src",
     "check:dead-code": "knip --no-progress --include files,dependencies,unlisted,unresolved,binaries,duplicates,catalog --treat-config-hints-as-errors",
     "check:effect-prebundle": "tsx scripts/check-effect-prebundle.ts",
@@ -37,8 +37,8 @@
     "typecheck:scripts": "tsc -p scripts/tsconfig.json --noEmit",
     "test:scripts": "bash scripts/run-script-tests.sh",
     "test:e2e": "pnpm --filter website test:e2e",
-    "format": "oxfmt",
-    "format:check": "oxfmt --check",
+    "format": "vp fmt",
+    "format:check": "vp fmt --check",
     "dev:libs": "pnpm --filter foldkit --filter @foldkit/ui --filter @foldkit/devtools --filter @foldkit/markdown --filter @foldkit/vite-plugin --parallel watch",
     "dev:website": "pnpm --filter website dev",
     "build:examples": "tsx scripts/build-examples.ts",
@@ -102,21 +102,28 @@
     "foldkit": "workspace:*",
     "knip": "^6.33.0",
     "madge": "^8.0.0",
-    "oxfmt": "^0.66.0",
     "oxlint": "^1.80.0",
     "semver": "^7.8.5",
-    "simple-git-hooks": "^2.14.0",
     "tsx": "^4.23.12",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vite": "^8.2.2"
-  },
-  "simple-git-hooks": {
-    "commit-msg": "if grep -q 'Co-Authored-By.*[Cc]laude' \"$1\"; then echo '\\n❌ Commit message contains a Claude Co-Authored-By line. Remove it and try again.' && exit 1; fi",
-    "pre-push": "bash scripts/run-pre-push.sh"
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
   },
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
     "pnpm": ">=11"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^22.22.2 || ^24.15.0 || >=26.0.0",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.8.0",
+      "onFail": "error"
+    }
   },
   "keywords": [
     "effect",

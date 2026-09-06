@@ -1,6 +1,6 @@
 import { Calendar } from 'foldkit'
 import { expect, given, label, role, scene } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { init, update } from './education'
 import { view } from './view'

@@ -1,5 +1,5 @@
 import { Array } from 'effect'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 
 import { FetchTelemetry } from './command'
 import { init } from './init'

@@ -13,8 +13,8 @@
   "scripts": {
     "clean": "rimraf dist *.tsbuildinfo",
     "build": "pnpm run clean && tsc -b tsconfig.build.json && node scripts/build-templates.mjs",
-    "format": "oxfmt",
-    "test": "vitest run",
+    "format": "vp fmt",
+    "test": "vp test run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -28,7 +28,9 @@
   "devDependencies": {
     "@effect/vitest": "4.0.0-rc.112",
     "@types/node": "^26.4.0",
-    "vitest": "^4.1.11"
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vite-plus": "catalog:"
   },
   "keywords": [
     "create-foldkit-app",

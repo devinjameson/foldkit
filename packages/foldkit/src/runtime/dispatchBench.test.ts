@@ -1,5 +1,5 @@
 import { Effect, Number, Predicate, Schema } from 'effect'
-import { describe, it } from 'vitest'
+import { describe, it } from 'vite-plus/test'
 
 import { Document, __htmlBuilder, __requireDispatch } from '../html/index.js'
 import { defineMessageUnion } from '../message/index.js'

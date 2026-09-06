@@ -1,5 +1,5 @@
 import { Effect, Fiber, Option, Stream } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { fromEvent, fromEventFilterMap } from './fromEvent.js'
 

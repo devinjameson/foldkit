@@ -1,5 +1,5 @@
 import { Context, Number, Schema } from 'effect'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import { defineMessageUnion } from '../message/index.js'
 import { MountTracker } from '../mount/index.js'

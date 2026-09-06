@@ -1,5 +1,5 @@
 import { Effect, Fiber, Option, Schema } from 'effect'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import { renderToString } from '../experimental/server/server.js'
 import type { Document } from '../html/index.js'

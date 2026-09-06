@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest'
+import { bench, describe } from 'vite-plus/test'
 
 import { createEmptyGrid } from './grid'
 import { type Action, reducer } from './reducer'

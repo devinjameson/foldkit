@@ -1,5 +1,5 @@
 import { Array, Option } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import { BLOG_SECTION } from '../src/page/blog/meta'
 import { findBySlug } from '../src/page/example/meta'

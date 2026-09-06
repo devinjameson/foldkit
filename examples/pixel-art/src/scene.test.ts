@@ -1,6 +1,6 @@
 import { Option } from 'effect'
 import { Command, click, expect, given, role, scene, text } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { Dialog, Listbox, RadioGroup } from '@foldkit/ui'
 

@@ -1,5 +1,5 @@
-import { type Plugin } from 'vite'
-import { defineConfig } from 'vitest/config'
+import { type Plugin } from 'vite-plus'
+import { defineConfig } from 'vite-plus'
 
 import { markdown } from '@foldkit/markdown/vite'
 

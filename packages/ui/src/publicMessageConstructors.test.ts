@@ -1,5 +1,5 @@
 import { Array, Option, Predicate, pipe } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 import * as Animation from './animation/public.js'
 import * as Button from './button/public.js'

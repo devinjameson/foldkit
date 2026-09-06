@@ -1,6 +1,6 @@
 import { Array, Effect, Layer, Match, String } from 'effect'
 import { HttpClient, HttpClientResponse } from 'effect/unstable/http'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 
 import { GitHubApiLive } from './githubApi'
 import {

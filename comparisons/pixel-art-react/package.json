@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "vp dev",
+    "build": "tsc --noEmit && vp build",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview",
-    "test": "vitest run"
+    "preview": "vp preview",
+    "test": "vp test run"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.10",
@@ -26,7 +26,7 @@
     "jsdom": "^30.0.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

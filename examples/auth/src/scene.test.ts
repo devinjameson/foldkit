@@ -8,7 +8,7 @@ import {
   submit,
   text,
 } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { SaveSession } from './command'
 import { Session } from './domain/session'

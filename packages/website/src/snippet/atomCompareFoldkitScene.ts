@@ -8,7 +8,7 @@ import {
   scene,
   text,
 } from 'foldkit/scene'
-import { test } from 'vitest'
+import { test } from 'vite-plus/test'
 
 test('click load, resolve the fetch, see the profile', () => {
   scene(

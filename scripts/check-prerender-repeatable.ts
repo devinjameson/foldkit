@@ -46,7 +46,7 @@ const runRequired = (
 // repeating the build is what repeating the generation means now. There is no
 // step that generates over output another command left behind.
 const build = (label: string): void => {
-  runRequired(label, 'pnpm', ['exec', 'vite', 'build'])
+  runRequired(label, 'pnpm', ['exec', 'vp', 'build'])
 }
 
 // NOTE: the build is byte-identical between runs because the build id is

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vite-plus'
 
 import { foldkit } from '@foldkit/vite-plugin'
 

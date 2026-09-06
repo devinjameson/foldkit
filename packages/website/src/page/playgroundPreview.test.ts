@@ -8,7 +8,7 @@ import {
   selector,
   text,
 } from 'foldkit/scene'
-import { describe, expect as expectValue, test } from 'vitest'
+import { describe, expect as expectValue, test } from 'vite-plus/test'
 
 import * as PlaygroundPreview from './playgroundPreview'
 

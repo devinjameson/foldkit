@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vite-plus'
 
 // NOTE: imported from source rather than the package entry so knip and a
 // clean-checkout CI run do not depend on the plugin's dist being built.

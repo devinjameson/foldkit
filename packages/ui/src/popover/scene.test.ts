@@ -1,6 +1,6 @@
 import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
-import { expect } from 'vitest'
+import { expect } from 'vite-plus/test'
 
 import { describe, it } from '@effect/vitest'
 

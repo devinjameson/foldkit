@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { defineConfig } from 'vite'
+import { defineConfig, lazyPlugins } from 'vite-plus'
 
 import { foldkit } from '@foldkit/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
@@ -23,7 +23,7 @@ process.env['FOLDKIT_BUILD_ID'] ||= randomUUID()
 const buildId = process.env['FOLDKIT_BUILD_ID']
 
 export default defineConfig({
-  plugins: [
+  plugins: lazyPlugins(() => [
     tailwindcss(),
     foldkit({
       buildId,
@@ -33,7 +33,7 @@ export default defineConfig({
         build: { entry: '/server/main.ts' },
       },
     }),
-  ],
+  ]),
   resolve: {
     alias: foldkitAliases(__dirname),
   },

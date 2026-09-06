@@ -40,7 +40,7 @@ jobs:
 
       - name: Build pixel art
         working-directory: examples/pixel-art
-        run: pnpm exec vite build
+        run: vp build
 
       - name: Deploy to Vercel
         working-directory: examples/pixel-art

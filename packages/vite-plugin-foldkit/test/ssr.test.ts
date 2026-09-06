@@ -13,7 +13,7 @@ import {
   type ResolvedConfig,
   createServer as createViteServer,
 } from 'vite'
-import { describe, expect, it, onTestFinished } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vite-plus/test'
 
 import { foldkitSsr } from '../src/ssr.ts'
 

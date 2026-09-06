@@ -7,7 +7,7 @@ import {
   model,
   story,
 } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import {
   CreateRoom,

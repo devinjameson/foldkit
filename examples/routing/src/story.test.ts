@@ -1,7 +1,7 @@
 import { Array, Option, String } from 'effect'
 import { Command, given, message, model, story } from 'foldkit/story'
 import { fromString } from 'foldkit/url'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { AppRoute, Message, Model, update } from './main'
 import { People } from './page'

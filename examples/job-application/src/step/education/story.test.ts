@@ -1,7 +1,7 @@
 import { Array, Option, pipe } from 'effect'
 import { Calendar } from 'foldkit'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { GenerateEntryId, Message, init, update } from './education'
 import * as Entry from './entry'

@@ -11,7 +11,7 @@ import {
   text,
   type,
 } from 'foldkit/scene'
-import { describe, test } from 'vitest'
+import { describe, test } from 'vite-plus/test'
 
 import { FetchWeather, Message, WeatherAsyncData, update, view } from './main'
 import { weatherData, weatherModel } from './main.fixtures'

@@ -1,7 +1,7 @@
 import { Option } from 'effect'
 import { Command, given, message, model, story } from 'foldkit/story'
 import { generateKeyBetween } from 'fractional-indexing'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { DragAndDrop } from '@foldkit/ui'
 

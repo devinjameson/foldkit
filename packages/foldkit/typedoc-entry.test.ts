@@ -1,5 +1,5 @@
 import { Array, Order } from 'effect'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import * as PublicMachine from './src/experimental/machine/public.js'
 import * as PublicServer from './src/experimental/server/public.js'

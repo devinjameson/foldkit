@@ -1,7 +1,7 @@
 import { Array, Option, pipe } from 'effect'
 import { Validating } from 'foldkit/fieldValidation'
 import { Command, given, message, model, story } from 'foldkit/story'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 import { FileDrop, Menu, Tabs } from '@foldkit/ui'
 

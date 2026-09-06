@@ -1,5 +1,5 @@
 import { Array } from 'effect'
-import { describe, expect, expectTypeOf, test } from 'vitest'
+import { describe, expect, expectTypeOf, test } from 'vite-plus/test'
 
 import * as Interruptible from '../command/interruptible/index.js'
 import {
