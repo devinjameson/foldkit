@@ -83,9 +83,8 @@ import {
   exampleDetailRouter,
   examplesRouter,
   fieldValidationRouter,
-  gettingStartedRouter,
+  getStartedRouter,
   homeRouter,
-  manifestoRouter,
   newsletterRouter,
   patternsInformingSubmodelsRouter,
   patternsSubscriptionOrganizationRouter,
@@ -130,6 +129,7 @@ import {
   uiToastRouter,
   uiTooltipRouter,
   uiVirtualListRouter,
+  whyFoldkitRouter,
 } from '../src/route'
 import { type BlogPostEntry, blogPostSlugs, blogPosts } from './blogPosts'
 import {
@@ -154,9 +154,9 @@ import { generateOgImages, injectMetaTags } from './og-image'
 export const STATIC_ROUTES: ReadonlyArray<AppRoute> = [
   AppRoute.Home(),
   AppRoute.Newsletter(),
-  AppRoute.Manifesto(),
+  AppRoute.WhyFoldkit(),
   AppRoute.Performance(),
-  AppRoute.GettingStarted(),
+  AppRoute.GetStarted(),
   AppRoute.Roadmap(),
   AppRoute.ComingFromReact(),
   AppRoute.ComingFromTanStackQuery(),
@@ -260,9 +260,9 @@ const PLAYGROUND_ROUTES: ReadonlyArray<AppRoute> = Array.map(
 export const routeToUrlPath = (route: AppRoute): string =>
   AppRoute.match<string>(route, {
     Home: () => homeRouter(),
-    Manifesto: () => manifestoRouter(),
+    WhyFoldkit: () => whyFoldkitRouter(),
     Performance: () => performanceRouter(),
-    GettingStarted: () => gettingStartedRouter(),
+    GetStarted: () => getStartedRouter(),
     Roadmap: () => roadmapRouter(),
     ComingFromReact: () => comingFromReactRouter(),
     ComingFromTanStackQuery: () => comingFromTanStackQueryRouter(),

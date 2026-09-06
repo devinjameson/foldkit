@@ -172,7 +172,7 @@ describe('shouldExportMarkdown', () => {
   })
 
   it('exports docs and api routes', () => {
-    expect(shouldExportMarkdown({ _tag: 'GettingStarted' })).toBe(true)
+    expect(shouldExportMarkdown({ _tag: 'GetStarted' })).toBe(true)
     expect(shouldExportMarkdown({ _tag: 'CoreModel' })).toBe(true)
     expect(
       shouldExportMarkdown({ _tag: 'ApiModule', moduleSlug: 'html' }),

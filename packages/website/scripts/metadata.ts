@@ -55,7 +55,7 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
     description: SITE_DESCRIPTION,
     section: '',
   },
-  Manifesto: docs(
+  WhyFoldkit: docs(
     'Why Foldkit',
     'Why Foldkit exists and the principles behind its design.',
     'Docs',
@@ -65,8 +65,8 @@ const METADATA_BY_TAG: Record<StaticRouteTag, PageMetadata> = {
     'Foldkit’s rendering cost model, TodoMVC benchmark results, development-mode overhead, and the tools for measuring and memoizing expensive views.',
     'FAQ',
   ),
-  GettingStarted: docs(
-    'Getting Started',
+  GetStarted: docs(
+    'Get Started',
     'Create a Foldkit project from a starter, inspect the generated structure, or add Foldkit to an existing Vite application.',
     'Docs',
   ),

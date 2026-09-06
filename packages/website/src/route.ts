@@ -16,14 +16,14 @@ import type { CallableTaggedStruct } from 'foldkit/schema'
 
 export const AppRoute = defineRouteUnion({
   Home: {},
-  Manifesto: {},
+  WhyFoldkit: {},
   Performance: {},
   ComingFromReact: {},
   ComingFromTanStackQuery: {},
   ReactComparison: {},
   EffectAtomComparison: {},
   ElmComparison: {},
-  GettingStarted: {},
+  GetStarted: {},
   Roadmap: {},
   RoutingAndNavigation: {},
   FieldValidation: {},
@@ -118,14 +118,14 @@ export const AppRoute = defineRouteUnion({
 export type AppRoute = typeof AppRoute.Type
 
 export const DocsRoute = AppRoute.subset([
-  'Manifesto',
+  'WhyFoldkit',
   'Performance',
   'ComingFromReact',
   'ComingFromTanStackQuery',
   'ReactComparison',
   'EffectAtomComparison',
   'ElmComparison',
-  'GettingStarted',
+  'GetStarted',
   'Roadmap',
   'RoutingAndNavigation',
   'FieldValidation',
@@ -254,6 +254,7 @@ const section =
     pipe(literal(sectionSlug), slash(literal(pageSlug)), mapTo(route))
 
 const getStarted = section('get-started')
+const introduction = section('introduction')
 const faq = section('faq')
 const react = section('react')
 const elm = section('elm')
@@ -267,13 +268,14 @@ const ai = section('ai')
 
 export const homeRouter = pipe(root, mapTo(AppRoute.Home))
 
-export const manifestoRouter = getStarted('why-foldkit', AppRoute.Manifesto)
-export const gettingStartedRouter = getStarted(
-  'getting-started',
-  AppRoute.GettingStarted,
-)
+export const whyFoldkitRouter = introduction('why-foldkit', AppRoute.WhyFoldkit)
+export const getStartedRouter = staticPage('get-started', AppRoute.GetStarted)
 
-export const roadmapRouter = staticPage('roadmap', AppRoute.Roadmap)
+export const roadmapRouter = introduction('roadmap', AppRoute.Roadmap)
+
+const whyFoldkitFromGetStarted = getStarted('why-foldkit', AppRoute.WhyFoldkit)
+const getStartedFromNested = getStarted('getting-started', AppRoute.GetStarted)
+const roadmapFromRoot = staticPage('roadmap', AppRoute.Roadmap)
 
 export const performanceRouter = faq('performance', AppRoute.Performance)
 
@@ -481,7 +483,12 @@ export const aiMcpRouter = ai('mcp', AppRoute.AiMcp)
 
 // PARSER
 
-const getStartedParser = oneOf(manifestoRouter, gettingStartedRouter)
+const introductionParser = oneOf(
+  whyFoldkitRouter,
+  roadmapRouter,
+  whyFoldkitFromGetStarted,
+  roadmapFromRoot,
+)
 
 const faqParser = performanceRouter
 
@@ -598,9 +605,11 @@ const siteParser = oneOf(
   contentApiRouter,
 )
 
+const getStartedParser = oneOf(getStartedFromNested, getStartedRouter)
+
 const docsParser = oneOf(
   getStartedParser,
-  roadmapRouter,
+  introductionParser,
   faqParser,
   reactParser,
   elmParser,

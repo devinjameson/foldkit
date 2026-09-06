@@ -6,7 +6,7 @@ Foldkit projects use `oxlint` for general linting and `@foldkit/oxlint-plugin` f
 
 ## Scaffolded Projects
 
-[Create Foldkit app](/get-started/getting-started) includes `.oxlintrc.json`, a `lint` script, `oxlint`, and `@foldkit/oxlint-plugin`. Generated projects extend the recommended Foldkit preset:
+[Create Foldkit app](/get-started) includes `.oxlintrc.json`, a `lint` script, `oxlint`, and `@foldkit/oxlint-plugin`. Generated projects extend the recommended Foldkit preset:
 
 ::Snippet{name="oxlintConfig" label="oxlint config"}
 

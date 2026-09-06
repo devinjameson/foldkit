@@ -48,8 +48,7 @@ import {
   exampleDetailRouter,
   examplesRouter,
   fieldValidationRouter,
-  gettingStartedRouter,
-  manifestoRouter,
+  getStartedRouter,
   patternsInformingSubmodelsRouter,
   patternsSubscriptionOrganizationRouter,
   performanceRouter,
@@ -91,6 +90,7 @@ import {
   uiToastRouter,
   uiTooltipRouter,
   uiVirtualListRouter,
+  whyFoldkitRouter,
 } from './route'
 import { type GroupKey } from './sidebarStorage'
 
@@ -135,26 +135,27 @@ export type DocsSection = Readonly<{
   pageGroups: ReadonlyArray<ReadonlyArray<NavPage>>
 }>
 
+export const getStartedPage: NavPage = {
+  _tag: 'GetStarted',
+  href: getStartedRouter(),
+  label: 'Get Started',
+}
+
 export const docsSections: ReadonlyArray<DocsSection> = [
   {
-    key: 'getStarted',
-    label: 'Get Started',
+    key: 'introduction',
+    label: 'Introduction',
     pageGroups: [
       [
         {
-          _tag: 'Manifesto',
-          href: manifestoRouter(),
+          _tag: 'WhyFoldkit',
+          href: whyFoldkitRouter(),
           label: 'Why Foldkit',
         },
         {
           _tag: 'Roadmap',
           href: roadmapRouter(),
           label: 'Roadmap',
-        },
-        {
-          _tag: 'GettingStarted',
-          href: gettingStartedRouter(),
-          label: 'Getting Started',
         },
       ],
     ],
@@ -697,10 +698,10 @@ export const docsSections: ReadonlyArray<DocsSection> = [
 
 // FLAT PAGE LIST
 
-export const allPages: ReadonlyArray<NavPage> = Array.flatMap(
-  docsSections,
-  ({ pageGroups }) => Array.flatten(pageGroups),
-)
+export const allPages: ReadonlyArray<NavPage> = [
+  getStartedPage,
+  ...Array.flatMap(docsSections, ({ pageGroups }) => Array.flatten(pageGroups)),
+]
 
 // NEXT / PREV LOOKUP
 
@@ -729,10 +730,14 @@ export const findActiveSectionKey = (
   routeTag: string,
   maybeExampleSlug: Option.Option<string>,
 ): Option.Option<GroupKey> => {
-  // NOTE: ApiModule pages aren't in docsSections; their apiReference group is
+  // NOTE: ApiModule and Blog pages aren't in docsSections. Their groups are
   // rendered separately, so map them explicitly.
   if (routeTag === 'ApiModule') {
     return Option.some('apiReference')
+  }
+
+  if (routeTag === 'Blog' || routeTag === 'BlogPost') {
+    return Option.some('blog')
   }
   return pipe(
     docsSections,
