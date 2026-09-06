@@ -71,7 +71,7 @@ export const headerView = (model: Model, h: HtmlBuilder<Message>) =>
   h.header(
     [
       h.Class(
-        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] bg-cream dark:bg-gray-900 border-b border-gray-300 dark:border-gray-800 transform-gpu',
+        'fixed top-0 inset-x-0 z-50 h-[var(--header-height)] pt-[env(safe-area-inset-top,0px)] bg-cream dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 transform-gpu',
       ),
     ],
     [
@@ -83,7 +83,7 @@ export const headerView = (model: Model, h: HtmlBuilder<Message>) =>
         ],
         [
           h.div(
-            [h.Class('flex items-center gap-2')],
+            [h.Class('flex items-center gap-12')],
             [
               h.a(
                 [h.Href(homeRouter()), h.Class('flex items-center gap-2')],
@@ -98,52 +98,47 @@ export const headerView = (model: Model, h: HtmlBuilder<Message>) =>
                   Shared.betaTag,
                 ],
               ),
-            ],
-          ),
-          h.div(
-            [h.Class('flex items-center gap-3 md:gap-8')],
-            [
               HeaderNav.view(
                 model.route,
                 'hidden md:flex items-center gap-6',
                 h,
               ),
+            ],
+          ),
+          h.div(
+            [h.Class('flex items-center gap-1')],
+            [
               Search.triggerView('hidden md:flex', h),
+              Shared.headerGroupDivider('hidden md:block mx-3'),
+              h.div(
+                [h.Class('hidden md:flex items-center gap-3')],
+                [
+                  Shared.iconLink(
+                    Link.github,
+                    'GitHub',
+                    Icon.github('w-5 h-5'),
+                  ),
+                  Shared.iconLink(
+                    Link.discord,
+                    'Discord',
+                    Icon.discord('w-5 h-5'),
+                  ),
+                  Shared.iconLink(Link.xSocial, 'X', Icon.xSocial('w-5 h-5')),
+                  Shared.iconLink(Link.npm, 'npm', Icon.npm('w-6 h-6')),
+                ],
+              ),
+              Shared.headerGroupDivider('hidden md:block mx-3'),
+              Search.compactTriggerView('inline-flex md:hidden', h),
               ThemeSelector.view(
                 model.themeMenu,
                 model.maybeThemePreference,
                 h,
               ),
-              h.div(
-                [h.Class('hidden md:flex items-center gap-3 md:gap-4')],
-                [
-                  Shared.iconLink(
-                    Link.github,
-                    'GitHub',
-                    Icon.github('w-5 h-5 md:w-6 md:h-6'),
-                  ),
-                  Shared.iconLink(
-                    Link.discord,
-                    'Discord',
-                    Icon.discord('w-5 h-5 md:w-6 md:h-6'),
-                  ),
-                  Shared.iconLink(
-                    Link.xSocial,
-                    'X',
-                    Icon.xSocial('w-5 h-5 md:w-6 md:h-6'),
-                  ),
-                  Shared.iconLink(
-                    Link.npm,
-                    'npm',
-                    Icon.npm('w-6 h-6 md:w-8 md:h-8'),
-                  ),
-                ],
-              ),
-              Search.compactTriggerView('md:hidden', h),
+              Shared.headerGroupDivider('mx-2 md:hidden'),
               h.button(
                 [
                   h.Class(
-                    'md:hidden -mr-2 p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 cursor-pointer',
+                    'md:hidden -mr-2 inline-flex size-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400',
                   ),
                   h.AriaExpanded(model.mobileMenuDialog.isOpen),
                   h.AriaLabel('Toggle menu'),
@@ -167,7 +162,7 @@ export const footerView = (
   h.footer(
     [
       h.Class(
-        'px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:px-8 xl:px-12 mt-6 border-t border-gray-300 dark:border-gray-800',
+        'px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:px-8 xl:px-12 mt-6 border-t border-gray-200 dark:border-gray-800',
       ),
     ],
     [
@@ -182,7 +177,7 @@ export const footerView = (
       Shared.emailForm,
       h.hr([
         h.Class(
-          'my-6 -mx-6 md:-mx-8 xl:-mx-12 border-t border-gray-300 dark:border-gray-800',
+          'my-6 -mx-6 md:-mx-8 xl:-mx-12 border-t border-gray-200 dark:border-gray-800',
         ),
       ]),
       h.div(
@@ -269,7 +264,7 @@ const pageNavigationView = (tag: string, h: HtmlBuilder<Message>) => {
     [
       h.AriaLabel('Page navigation'),
       h.Class(
-        'flex items-stretch justify-between gap-4 mt-12 pt-6 border-t border-gray-300 dark:border-gray-800',
+        'flex items-stretch justify-between gap-4 mt-12 pt-6 border-t border-gray-200 dark:border-gray-800',
       ),
     ],
     [

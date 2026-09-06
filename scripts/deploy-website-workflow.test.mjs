@@ -669,14 +669,14 @@ test('the old manifesto paths redirect to Why Foldkit', () => {
     const result = resolveRequest(productionConfig, pathname)
     assert.equal(result.kind, 'redirect', pathname)
     assert.equal(result.status, 308, pathname)
-    assert.equal(result.location, '/get-started/why-foldkit', pathname)
+    assert.equal(result.location, '/introduction/why-foldkit', pathname)
   }
 
   for (const pathname of ['/manifesto.md', '/get-started/manifesto.md']) {
     const result = resolveRequest(productionConfig, pathname)
     assert.equal(result.kind, 'redirect', pathname)
     assert.equal(result.status, 308, pathname)
-    assert.equal(result.location, '/get-started/why-foldkit.md', pathname)
+    assert.equal(result.location, '/introduction/why-foldkit.md', pathname)
   }
 })
 

@@ -1,4 +1,4 @@
-# Getting Started
+# Get Started
 
 Built on Effect. Architected like Elm. Written in TypeScript. Let’s get your first application running.
 

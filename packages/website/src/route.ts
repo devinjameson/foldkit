@@ -254,6 +254,7 @@ const section =
     pipe(literal(sectionSlug), slash(literal(pageSlug)), mapTo(route))
 
 const getStarted = section('get-started')
+const introduction = section('introduction')
 const faq = section('faq')
 const react = section('react')
 const elm = section('elm')
@@ -267,13 +268,16 @@ const ai = section('ai')
 
 export const homeRouter = pipe(root, mapTo(AppRoute.Home))
 
-export const manifestoRouter = getStarted('why-foldkit', AppRoute.Manifesto)
+export const manifestoRouter = introduction('why-foldkit', AppRoute.Manifesto)
 export const gettingStartedRouter = getStarted(
   'getting-started',
   AppRoute.GettingStarted,
 )
 
-export const roadmapRouter = staticPage('roadmap', AppRoute.Roadmap)
+export const roadmapRouter = introduction('roadmap', AppRoute.Roadmap)
+
+const manifestoFromGetStarted = getStarted('why-foldkit', AppRoute.Manifesto)
+const roadmapFromRoot = staticPage('roadmap', AppRoute.Roadmap)
 
 export const performanceRouter = faq('performance', AppRoute.Performance)
 
@@ -481,7 +485,12 @@ export const aiMcpRouter = ai('mcp', AppRoute.AiMcp)
 
 // PARSER
 
-const getStartedParser = oneOf(manifestoRouter, gettingStartedRouter)
+const introductionParser = oneOf(
+  manifestoRouter,
+  roadmapRouter,
+  manifestoFromGetStarted,
+  roadmapFromRoot,
+)
 
 const faqParser = performanceRouter
 
@@ -599,8 +608,8 @@ const siteParser = oneOf(
 )
 
 const docsParser = oneOf(
-  getStartedParser,
-  roadmapRouter,
+  gettingStartedRouter,
+  introductionParser,
   faqParser,
   reactParser,
   elmParser,

@@ -5,7 +5,10 @@ import { findActiveSectionKey } from './docsNav'
 
 describe('findActiveSectionKey', () => {
   test.each([
-    ['Manifesto', 'getStarted'],
+    ['Blog', 'blog'],
+    ['BlogPost', 'blog'],
+    ['Manifesto', 'introduction'],
+    ['Roadmap', 'introduction'],
     ['CoreModel', 'coreConcepts'],
     ['ComingFromReact', 'comparisons'],
     ['ReactComparison', 'comparisons'],
@@ -43,6 +46,12 @@ describe('findActiveSectionKey', () => {
   test('a route in no section resolves to none', () => {
     expect(
       Option.getOrNull(findActiveSectionKey('Home', Option.none())),
+    ).toBeNull()
+  })
+
+  test('the top-level Get Started page is not in a section', () => {
+    expect(
+      Option.getOrNull(findActiveSectionKey('GettingStarted', Option.none())),
     ).toBeNull()
   })
 })
