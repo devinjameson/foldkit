@@ -61,7 +61,6 @@ export const AppRoute = defineRouteUnion({
   CoreServerRendering: {},
   CoreResources: {},
   CoreManagedResources: {},
-  CoreDevTools: {},
   CoreCrashView: {},
   CoreViewTransitions: {},
   CoreSlowWarnings: {},
@@ -69,6 +68,8 @@ export const AppRoute = defineRouteUnion({
   CorePreserveScroll: {},
   CoreViewMemoization: {},
   CoreEmbedding: {},
+  DevToolsOverview: {},
+  DevToolsReRenderOutlines: {},
   CoreSubmodel: {},
   CoreMachine: {},
   AsyncData: {},
@@ -162,7 +163,6 @@ export const DocsRoute = AppRoute.subset([
   'CoreServerRendering',
   'CoreResources',
   'CoreManagedResources',
-  'CoreDevTools',
   'CoreCrashView',
   'CoreViewTransitions',
   'CoreSlowWarnings',
@@ -170,6 +170,8 @@ export const DocsRoute = AppRoute.subset([
   'CorePreserveScroll',
   'CoreViewMemoization',
   'CoreEmbedding',
+  'DevToolsOverview',
+  'DevToolsReRenderOutlines',
   'CoreSubmodel',
   'CoreMachine',
   'AsyncData',
@@ -265,6 +267,7 @@ const testing = section('testing')
 const bestPractices = section('best-practices')
 const ui = section('ui')
 const ai = section('ai')
+const devtools = section('devtools')
 
 export const homeRouter = pipe(root, mapTo(AppRoute.Home))
 
@@ -404,7 +407,6 @@ export const coreManagedResourcesRouter = core(
   'managed-resources',
   AppRoute.CoreManagedResources,
 )
-export const coreDevToolsRouter = core('devtools', AppRoute.CoreDevTools)
 export const coreCrashViewRouter = core('crash-view', AppRoute.CoreCrashView)
 export const coreViewTransitionsRouter = core(
   'view-transitions',
@@ -427,6 +429,14 @@ export const coreViewMemoizationRouter = core(
   AppRoute.CoreViewMemoization,
 )
 export const coreEmbeddingRouter = core('embedding', AppRoute.CoreEmbedding)
+export const devToolsOverviewRouter = pipe(
+  literal('devtools'),
+  mapTo(AppRoute.DevToolsOverview),
+)
+export const devToolsReRenderOutlinesRouter = devtools(
+  're-render-outlines',
+  AppRoute.DevToolsReRenderOutlines,
+)
 export const coreSubmodelRouter = core('submodel', AppRoute.CoreSubmodel)
 export const coreMachineRouter = core('machine', AppRoute.CoreMachine)
 export const asyncDataRouter = core('async-data', AppRoute.AsyncData)
@@ -534,7 +544,6 @@ const coreParser = oneOf(
   coreServerRenderingRouter,
   coreResourcesRouter,
   coreManagedResourcesRouter,
-  coreDevToolsRouter,
   coreCrashViewRouter,
   coreViewTransitionsRouter,
   coreSlowWarningsRouter,
@@ -596,6 +605,11 @@ const uiParser = oneOf(
   uiVirtualListRouter,
 )
 
+const devtoolsParser = oneOf(
+  devToolsReRenderOutlinesRouter,
+  devToolsOverviewRouter,
+)
+
 const aiParser = oneOf(aiOverviewRouter, aiSkillsRouter, aiMcpRouter)
 
 const siteParser = oneOf(
@@ -620,6 +634,7 @@ const docsParser = oneOf(
   testingParser,
   examplesParser,
   uiParser,
+  devtoolsParser,
   aiParser,
   siteParser,
 )
