@@ -150,7 +150,7 @@ const navLink = (
   )
 
 const getStartedClass = (isActive: boolean) =>
-  clsx('block px-4 py-2.5 md:py-2 transition text-sm font-medium', {
+  clsx('block px-4 py-2.5 md:py-0 transition text-sm font-medium', {
     'text-accent-700 dark:text-accent-400 underline underline-offset-2':
       isActive,
     'text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white':
@@ -316,7 +316,7 @@ export const view = (model: Model, h: HtmlBuilder<Message>): Html => {
         [
           h.AriaLabel('Documentation'),
           h.Id(DOCS_SIDEBAR_NAV_ID),
-          h.Class('flex-1 overflow-y-auto py-6'),
+          h.Class('flex-1 overflow-y-auto py-5'),
         ],
         [desktopNavLinks],
       ),
@@ -383,7 +383,7 @@ export const mobileView = (model: Model, h: HtmlBuilder<Message>): Html => {
           [
             h.AriaLabel('Documentation'),
             h.Id(MOBILE_MENU_NAV_ID),
-            h.Class('flex-1 overflow-y-auto py-4'),
+            h.Class('flex-1 overflow-y-auto py-2'),
             h.Tabindex(-1),
             ...initialFocus,
           ],

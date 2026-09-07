@@ -216,6 +216,10 @@ html.dark {
     left: max(0px, calc((100% - var(--docs-max-width)) / 2));
   }
 
+  .docs-toc {
+    right: max(0px, calc((100% - var(--docs-max-width)) / 2));
+  }
+
   .docs-content {
     @apply w-full min-w-0 mx-auto px-6 py-8 md:px-8 xl:px-12 2xl:py-12 font-book leading-7;
     max-width: var(--docs-content-width);
