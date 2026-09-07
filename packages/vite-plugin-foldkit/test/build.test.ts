@@ -87,11 +87,31 @@ describe('foldkitBuild', () => {
   it('builds the browser bundle and the server bundle in one build', async () => {
     const { client, server } = await buildFixture('both')
 
-    expect(await filesUnder(server)).toEqual([
-      'entry.server.js',
-      'foldkit.build.json',
-    ])
+    expect(await filesUnder(server)).toEqual(['fetch.js', 'foldkit.build.json'])
     expect(await filesUnder(client)).toContain('index.html')
+
+    const { pathToFileURL } = await import('node:url')
+    const built = await import(pathToFileURL(resolve(server, 'fetch.js')).href)
+    expect(typeof built.default.fetch).toBe('function')
+    expect(typeof built.renderPage).toBe('function')
+  })
+
+  it('serves the Request.url the platform constructed', async () => {
+    const { server } = await buildFixture('platform-origin')
+    const { pathToFileURL } = await import('node:url')
+    const built = await import(pathToFileURL(resolve(server, 'fetch.js')).href)
+    const response = await built.default.fetch(
+      new Request('https://app.example/about'),
+    )
+    expect(response.status).toBe(200)
+    expect(await response.text()).toContain('>/about</main>')
+  })
+
+  it('bakes the browser build template, not the source HTML', async () => {
+    const { server } = await buildFixture('fetch-template')
+    const bundle = await readFile(resolve(server, 'fetch.js'), 'utf8')
+    expect(bundle).not.toContain('./entry.client.ts')
+    expect(bundle).toContain('assets/')
   })
 
   it('generates a page for every path the entry lists', async () => {
@@ -214,7 +234,8 @@ describe('foldkitBuild', () => {
     )
 
     expect(manifest.prerendered).toEqual(['/', '/about'])
-    expect(manifest.serverEntry).toBe('entry.server.js')
+    expect(manifest.serverEntry).toBe('fetch.js')
+    expect(manifest.host).toBe('fetch')
     expect(manifest.client).toContain('client')
     expect(manifest.server).toContain('server')
   })
@@ -227,7 +248,8 @@ describe('foldkitBuild', () => {
     )
 
     expect(manifest.prerendered).toEqual([])
-    expect(manifest.serverEntry).toBe('entry.server.js')
+    expect(manifest.serverEntry).toBe('fetch.js')
+    expect(manifest.host).toBe('fetch')
   })
 
   // The manifest describes the deployment, and the browser build is the part of
@@ -440,9 +462,10 @@ describe('foldkitBuild orchestration', () => {
     expect(await filesUnder(server)).toContain('foldkit.build.json')
   })
 
-  // `ssr.build` without prerendering is documented as generating no pages, so
-  // a client that emits no HTML entry is a build this has no opinion about.
-  it('builds without an HTML entry when it generates no pages', async () => {
+  // The server bundle renders into the browser build's `index.html`, so a
+  // client that emits no HTML entry leaves the fetch handler with nothing to
+  // render into. That is a failed build, not one to stay quiet about.
+  it('refuses to build the fetch handler without an HTML entry', async () => {
     const jsOnlyClient: Plugin = {
       name: 'test:js-only-client',
       config: () => ({
@@ -454,9 +477,39 @@ describe('foldkitBuild orchestration', () => {
       }),
     }
 
-    const { server } = await buildFixture('js-client', {}, [jsOnlyClient])
+    await expect(buildFixture('js-client', {}, [jsOnlyClient])).rejects.toThrow(
+      /has not emitted index\.html/,
+    )
+  })
 
-    expect(await filesUnder(server)).toContain('entry.server.js')
+  // A host that builds `ssr` before `client` asks for the template before the
+  // browser build has produced it. Reading `dist/client/index.html` from disk
+  // would hand the handler the previous build's shell with its old asset
+  // hashes, and the build would report success. The build fails instead.
+  it('refuses to build the fetch handler before the browser build', async () => {
+    const ssrFirst: Plugin = {
+      name: 'test:ssr-first',
+      config: () => ({
+        builder: {
+          buildApp: async builder => {
+            const environments = Object.values(builder.environments)
+            const ssr = environments.filter(
+              environment => environment.name === 'ssr',
+            )
+            const others = environments.filter(
+              environment => environment.name !== 'ssr',
+            )
+            for (const environment of [...ssr, ...others]) {
+              await builder.build(environment)
+            }
+          },
+        },
+      }),
+    }
+
+    await expect(buildFixture('ssr-first', {}, [ssrFirst])).rejects.toThrow(
+      /has not emitted index\.html/,
+    )
   })
 
   // Prerendering imports what this selects and runs it in the build process, so
@@ -580,10 +633,7 @@ describe('the build id across environments', () => {
       ),
       'utf8',
     )
-    const serverBundle = await readFile(
-      resolve(server, 'entry.server.js'),
-      'utf8',
-    )
+    const serverBundle = await readFile(resolve(server, 'fetch.js'), 'utf8')
 
     const inClient = UUID.exec(clientBundle)?.[0]
     const inServer = UUID.exec(serverBundle)?.[0]
