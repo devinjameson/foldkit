@@ -1,5 +1,12 @@
 # @foldkit/ui
 
+## 0.158.2
+
+### Version Alignment
+
+Updated to keep this package aligned with the rest of this release.
+There are no package-specific changes in this release.
+
 ## 0.158.1
 
 ### Patch Changes
