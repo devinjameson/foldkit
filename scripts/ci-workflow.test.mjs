@@ -82,6 +82,31 @@ test('peer floor changes run the packed-manifest check before release', () => {
   assert.match(releaseWorkflow, /^\s+- 'scripts\/check-peer-floors\.ts'$/m)
 })
 
+test('stable publication verifies website package inputs before upload', () => {
+  const stableJob = releaseWorkflow.slice(
+    releaseWorkflow.indexOf('  stable:'),
+    releaseWorkflow.indexOf('  canary:'),
+  )
+  const guardIndex = stableJob.indexOf(
+    'Verify website package inputs are versioned',
+  )
+  const uploadIndex = stableJob.indexOf(
+    '- name: Upload and verify stable packages',
+  )
+
+  assert.notEqual(guardIndex, -1)
+  assert.notEqual(uploadIndex, -1)
+  assert.ok(guardIndex < uploadIndex)
+  assert.match(
+    stableJob,
+    /- name: Checkout Repo\n\s+uses: actions\/checkout@v4\n\s+with:\n\s+fetch-depth: 0\n\s+fetch-tags: true/,
+  )
+  assert.match(
+    stableJob,
+    /- name: Verify website package inputs are versioned\n\s+run: pnpm check:website-release-inputs/,
+  )
+})
+
 test('browser-backed scaffold checks install Chromium exactly once', () => {
   assert.ok(
     workflow.includes(
