@@ -1134,7 +1134,13 @@ export const view = (
       headerView(model, h),
       Search.dialogView(model, h),
       h.div(
-        [h.Class('docs-shell flex flex-1 pt-[var(--header-height)] md:pl-64')],
+        [
+          h.Class(
+            clsx('docs-shell flex flex-1 pt-[var(--header-height)] md:pl-64', {
+              'xl:pr-64': Option.isSome(currentPageTableOfContents),
+            }),
+          ),
+        ],
         [
           Sidebar.view(model, h),
           Sidebar.mobileView(model, h),

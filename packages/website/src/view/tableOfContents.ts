@@ -48,14 +48,14 @@ export const view = (
   h.aside(
     [
       h.Class(
-        'hidden xl:block sticky top-[var(--header-height)] w-64 h-[calc(100vh-var(--header-height))] shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-800 px-4 pt-8 pb-4',
+        'docs-toc hidden xl:block fixed top-[var(--header-height)] bottom-0 z-30 w-64 overflow-y-auto overscroll-none bg-cream dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 px-4 pt-4 pb-4',
       ),
     ],
     [
       h.h3(
         [
           h.AriaHidden(true),
-          h.Class('text-sm font-medium text-gray-800 dark:text-gray-200 mb-4'),
+          h.Class('text-sm text-gray-800 dark:text-gray-200 mb-4'),
         ],
         ['On this page'],
       ),
