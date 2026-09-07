@@ -1,4 +1,5 @@
 import {
+  Cause,
   Effect,
   Fiber,
   Function,
@@ -72,9 +73,28 @@ export const __startProgram = (
 // put the container element back empty, so the page is left alive with no app
 // in it. A page-owning runtime gains nothing from tearing itself down while
 // the document is on its way out, so it starts with no page-lifecycle
-// interrupt at all and lets the document take the runtime with it. Error
-// reporting and the keep-alive interval come from `makeRunMain` either way.
+// interrupt at all and lets the document take the runtime with it. The
+// keep-alive interval still comes from `makeRunMain`; Foldkit owns the shared
+// error-reporting policy used by page-owning and embedded runtimes below.
 const runMainWithoutUnloadInterrupt = Runtime.makeRunMain(Function.constVoid)
+
+/** Reports unhandled non-interrupt Causes using Effect's runtime policy.
+ * @internal */
+export const __reportUnhandledCause = <E>(
+  cause: Cause.Cause<E>,
+): Effect.Effect<void> => {
+  if (Cause.hasInterruptsOnly(cause)) {
+    return Effect.void
+  }
+
+  return Runtime.getErrorReported(Cause.squash(cause))
+    ? Effect.logError(cause)
+    : Effect.void
+}
+
+const withUnhandledCauseReporting = <A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> => Effect.tapCause(effect, __reportUnhandledCause)
 
 const startProgram = (
   program: RuntimeProgram,
@@ -83,11 +103,14 @@ const startProgram = (
   buildId?: string,
 ): void => {
   runMainWithoutUnloadInterrupt(
-    provideBrowserScheduler(
-      Effect.flatMap(resolveHmrModel(program.runtimeId), hmrModel =>
-        __startProgram(program, hmrModel, bootMode, flags, buildId),
+    withUnhandledCauseReporting(
+      provideBrowserScheduler(
+        Effect.flatMap(resolveHmrModel(program.runtimeId), hmrModel =>
+          __startProgram(program, hmrModel, bootMode, flags, buildId),
+        ),
       ),
     ),
+    { disableErrorReporting: true },
   )
 }
 
@@ -246,7 +269,9 @@ export function embed<P extends Ports | undefined = undefined>(
     ),
   )
 
-  const fiber = Effect.runFork(provideBrowserScheduler(startEffect))
+  const fiber = Effect.runFork(
+    withUnhandledCauseReporting(provideBrowserScheduler(startEffect)),
+  )
   internals.maybeActiveFiber = Option.some(fiber)
 
   let isHandleDisposed = false
