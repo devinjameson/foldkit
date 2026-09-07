@@ -77,9 +77,11 @@ import {
   uiInputRouter,
   uiListboxRouter,
   uiMenuRouter,
+  uiMeterRouter,
   uiNavRouter,
   uiOverviewRouter,
   uiPopoverRouter,
+  uiProgressRouter,
   uiRadioGroupRouter,
   uiSelectRouter,
   uiSelectionSubmodelsRouter,
@@ -489,6 +491,16 @@ export const docsSections: ReadonlyArray<DocsSection> = [
           _tag: 'UiSlider',
           href: uiSliderRouter(),
           label: 'Slider',
+        },
+        {
+          _tag: 'UiMeter',
+          href: uiMeterRouter(),
+          label: 'Meter',
+        },
+        {
+          _tag: 'UiProgress',
+          href: uiProgressRouter(),
+          label: 'Progress',
         },
         {
           _tag: 'UiSelect',
