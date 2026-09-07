@@ -819,6 +819,10 @@ test('stable finalization deploys the exact published website commit', () => {
     productionWorkflow,
     /target: \$\{\{ needs\.authorize\.outputs\.target \}\}/,
   )
+  assert.match(
+    productionWorkflow,
+    /if \[ -n "\$\{PUBLISHED_COMMIT\}" \] && \[ "\$\{deploy\}" != 'true' \]; then\n\s+echo "the published website commit \$\{target\} is not eligible for deployment" >&2\n\s+exit 1\n\s+fi/,
+  )
 })
 
 test('the registry-backed SSG playground build runs only for production', () => {
