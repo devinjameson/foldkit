@@ -1,5 +1,6 @@
 import { Option } from 'effect'
 import * as Story from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -60,10 +61,11 @@ describe('Tabs', () => {
     it('emits Selected with the committed value on a subsequent SelectedTab', () => {
       Story.story(
         update,
-        Story.given({
-          ...init({ id: 'test' }),
-          maybeFocusedIndex: Option.some(1),
-        }),
+        Story.given(
+          evo(init({ id: 'test' }), {
+            maybeFocusedIndex: () => Option.some(1),
+          }),
+        ),
         Story.message(Message.SelectedTab({ index: 0, value: 'tab-0' })),
         Story.expectOutMessage(
           OutMessage.Selected({ value: 'tab-0', index: 0 }),
@@ -90,10 +92,11 @@ describe('Tabs', () => {
     it('SelectedTab in manual mode emits Selected and clears divergence', () => {
       Story.story(
         update,
-        Story.given({
-          ...init({ id: 'test', activationMode: 'Manual' }),
-          maybeFocusedIndex: Option.some(2),
-        }),
+        Story.given(
+          evo(init({ id: 'test', activationMode: 'Manual' }), {
+            maybeFocusedIndex: () => Option.some(2),
+          }),
+        ),
         Story.message(Message.SelectedTab({ index: 2, value: 'tab-2' })),
         Story.expectOutMessage(
           OutMessage.Selected({ value: 'tab-2', index: 2 }),

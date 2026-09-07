@@ -9,6 +9,7 @@ import {
 import { defineMessageUnion } from '../message/index.js'
 import { h } from '../snabbdom/index.js'
 import type { VNode } from '../snabbdom/index.js'
+import { evo } from '../struct/index.js'
 import { defineView } from '../submodel/public.js'
 import type * as Update from '../update/index.js'
 import {
@@ -1631,12 +1632,11 @@ describe('scene', () => {
   })
 
   test('clicking a disabled element throws a clear error', () => {
-    const submittingModel: Model = {
-      ...initialModel,
-      status: 'Submitting',
-      email: 'alice@example.com',
-      password: 'secret',
-    }
+    const submittingModel: Model = evo(initialModel, {
+      status: () => 'Submitting',
+      email: () => 'alice@example.com',
+      password: () => 'secret',
+    })
 
     expect(() =>
       Scene.scene(
@@ -1664,11 +1664,10 @@ describe('scene', () => {
   })
 
   test('click dispatches the button Message', () => {
-    const loggedInModel: Model = {
-      ...initialModel,
-      status: 'LoggedIn',
-      username: 'alice',
-    }
+    const loggedInModel: Model = evo(initialModel, {
+      status: () => 'LoggedIn',
+      username: () => 'alice',
+    })
 
     Scene.scene(
       { update, view },
@@ -1774,11 +1773,10 @@ describe('scene', () => {
 
 describe('scene with locators', () => {
   test('click accepts a Locator', () => {
-    const loggedInModel: Model = {
-      ...initialModel,
-      status: 'LoggedIn',
-      username: 'alice',
-    }
+    const loggedInModel: Model = evo(initialModel, {
+      status: () => 'LoggedIn',
+      username: () => 'alice',
+    })
 
     Scene.scene(
       { update, view },
@@ -1949,11 +1947,10 @@ describe('scene with expect', () => {
   })
 
   test('toContainText checks substring', () => {
-    const loggedInModel: Model = {
-      ...initialModel,
-      status: 'LoggedIn',
-      username: 'alice',
-    }
+    const loggedInModel: Model = evo(initialModel, {
+      status: () => 'LoggedIn',
+      username: () => 'alice',
+    })
 
     Scene.scene(
       { update, view },
@@ -2071,11 +2068,10 @@ describe('scene with expect', () => {
   })
 
   test('toBeEmpty passes for empty element', () => {
-    const loggedInModel: Model = {
-      ...initialModel,
-      status: 'LoggedIn',
-      username: 'alice',
-    }
+    const loggedInModel: Model = evo(initialModel, {
+      status: () => 'LoggedIn',
+      username: () => 'alice',
+    })
     Scene.scene(
       { update, view: (_model, h) => view(loggedInModel, h) },
       Scene.given(loggedInModel),
@@ -2122,11 +2118,10 @@ describe('scene with expect', () => {
   })
 
   test('toHaveAccessibleName matches aria-label', () => {
-    const loggedInModel: Model = {
-      ...initialModel,
-      status: 'LoggedIn',
-      username: 'alice',
-    }
+    const loggedInModel: Model = evo(initialModel, {
+      status: () => 'LoggedIn',
+      username: () => 'alice',
+    })
     Scene.scene(
       { update, view },
       Scene.given(loggedInModel),
@@ -2278,10 +2273,9 @@ describe('scene with file uploads', () => {
   test('changeFiles dispatches an empty array when no files are provided', () => {
     Scene.scene(
       { update: fileUploadUpdate, view: fileUploadView },
-      Scene.given({
-        ...fileUploadInitialModel,
-        receivedFiles: [resumePdf],
-      }),
+      Scene.given(
+        evo(fileUploadInitialModel, { receivedFiles: () => [resumePdf] }),
+      ),
       Scene.changeFiles(Scene.label('resume'), []),
       Scene.expect(Scene.selector('[key="received-count"]')).toContainText(
         'count=0',
@@ -2372,12 +2366,11 @@ describe('scene with Command-based file upload flow', () => {
   const readingStatus = Scene.role('status')
   const errorAlert = Scene.role('alert')
 
-  const resumeSelectedModel: ResumeModel = {
-    ...resumeInitialModel,
-    maybeResume: Option.some(resumePdf),
-    maybePreviewDataUrl: Option.some(previewDataUrl),
-    readStatus: 'Idle',
-  }
+  const resumeSelectedModel: ResumeModel = evo(resumeInitialModel, {
+    maybeResume: () => Option.some(resumePdf),
+    maybePreviewDataUrl: () => Option.some(previewDataUrl),
+    readStatus: () => 'Idle',
+  })
 
   test('happy path: click → resolve select → resolve preview → file visible', () => {
     Scene.scene(
@@ -2493,11 +2486,10 @@ describe('scene with Command-based file upload flow', () => {
 })
 
 describe('scene with expectAll', () => {
-  const loggedInModel: Model = {
-    ...initialModel,
-    status: 'LoggedIn',
-    username: 'alice',
-  }
+  const loggedInModel: Model = evo(initialModel, {
+    status: () => 'LoggedIn',
+    username: () => 'alice',
+  })
 
   test('toHaveCount matches the number of elements', () => {
     Scene.scene(
@@ -2758,7 +2750,7 @@ describe('Scene.Subscription.emit', () => {
   })
 
   test('throws when unresolved Mounts are pending', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
@@ -2771,7 +2763,7 @@ describe('Scene.Subscription.emit', () => {
   })
 
   test('throws when unacknowledged unmounts are pending', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
@@ -3220,7 +3212,7 @@ describe('Scene OutMessage assertions', () => {
   test('preserves every OutMessage from Mount.resolveAll', () => {
     Scene.scene(
       { update: multipleMountOutMessagesUpdate, view: mountView },
-      Scene.given({ ...mountInitialModel, isOpen: true }),
+      Scene.given(evo(mountInitialModel, { isOpen: () => true })),
       Scene.Mount.resolveAll(
         [FocusButton, MountPanelMessage.CompletedFocusButton()],
         [MeasurePanel, MountPanelMessage.MeasuredPanel({ width: 100 })],
@@ -3328,11 +3320,10 @@ describe('Scene.withViewInputs', () => {
 
 describe('scene with within', () => {
   test('within scopes a locator to a parent', () => {
-    const loggedInModel: Model = {
-      ...initialModel,
-      status: 'LoggedIn',
-      username: 'alice',
-    }
+    const loggedInModel: Model = evo(initialModel, {
+      status: () => 'LoggedIn',
+      username: () => 'alice',
+    })
 
     Scene.scene(
       { update, view },
@@ -3377,11 +3368,10 @@ describe('scene with within', () => {
   })
 
   test('click works with within', () => {
-    const loggedInModel: Model = {
-      ...initialModel,
-      status: 'LoggedIn',
-      username: 'alice',
-    }
+    const loggedInModel: Model = evo(initialModel, {
+      status: () => 'LoggedIn',
+      username: () => 'alice',
+    })
 
     Scene.scene(
       { update, view },
@@ -3415,11 +3405,10 @@ describe('scene with within', () => {
 })
 
 describe('scene with inside', () => {
-  const loggedInModel: Model = {
-    ...initialModel,
-    status: 'LoggedIn',
-    username: 'alice',
-  }
+  const loggedInModel: Model = evo(initialModel, {
+    status: () => 'LoggedIn',
+    username: () => 'alice',
+  })
 
   test('inside scopes multiple assertion steps to a parent', () => {
     Scene.scene(
@@ -3972,7 +3961,7 @@ describe('scene mounts', () => {
   })
 
   test('expectExactMounts fails when an unexpected mount is rendered', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
@@ -4007,7 +3996,7 @@ describe('scene mounts', () => {
   })
 
   test('resolveMount feeds the result Message through update', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     Scene.scene(
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
@@ -4037,7 +4026,7 @@ describe('scene mounts', () => {
   })
 
   test('resolveAllMounts resolves a batch in order', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     Scene.scene(
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
@@ -4052,7 +4041,7 @@ describe('scene mounts', () => {
   })
 
   test('resolved mounts that disappear between renders must be acknowledged with expectEnded', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     Scene.scene(
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
@@ -4069,7 +4058,7 @@ describe('scene mounts', () => {
   })
 
   test('an interaction with an unresolved mount throws a clear error', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     expect(() =>
       Scene.scene(
         { update: mountUpdate, view: mountView },
@@ -4089,7 +4078,7 @@ describe('scene mounts', () => {
   })
 
   test('a resolved mount stays resolved across re-renders', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     Scene.scene(
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),
@@ -4203,14 +4192,14 @@ describe('scene mounts', () => {
   })
 
   test('a pending mount whose element disappears must be acknowledged with expectEnded', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
 
     const closingUpdate = (
       model: typeof mountInitialModel,
       message: MountPanelMessage,
     ): Update.Return<typeof mountInitialModel, MountPanelMessage> =>
       message._tag === 'CompletedFocusButton'
-        ? { model: { ...model, isOpen: false } }
+        ? { model: evo(model, { isOpen: () => false }) }
         : mountUpdate(model, message)
 
     Scene.scene(
@@ -4242,14 +4231,14 @@ describe('scene mounts', () => {
   })
 
   test('an unacknowledged unmount throws at end of scene', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
 
     const closingUpdate = (
       model: typeof mountInitialModel,
       message: MountPanelMessage,
     ): Update.Return<typeof mountInitialModel, MountPanelMessage> =>
       message._tag === 'CompletedFocusButton'
-        ? { model: { ...model, isOpen: false } }
+        ? { model: evo(model, { isOpen: () => false }) }
         : mountUpdate(model, message)
 
     expect(() => {
@@ -4262,7 +4251,7 @@ describe('scene mounts', () => {
   })
 
   test('a previously resolved mount whose element disappears must still be acknowledged', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     expect(() => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
@@ -4288,7 +4277,7 @@ describe('scene mounts', () => {
   })
 
   test('an interaction throws when a previous unmount was not acknowledged', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     expect(() => {
       Scene.scene(
         { update: mountUpdate, view: mountView },
@@ -4305,7 +4294,7 @@ describe('scene mounts', () => {
   })
 
   test('a same-key mount that disappears and reappears starts fresh as pending', () => {
-    const openModel = { ...mountInitialModel, isOpen: true }
+    const openModel = evo(mountInitialModel, { isOpen: () => true })
     Scene.scene(
       { update: mountUpdate, view: mountView },
       Scene.given(openModel),

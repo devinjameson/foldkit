@@ -2,6 +2,7 @@ import { Option } from 'effect'
 import { type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -143,13 +144,15 @@ describe('Combobox', () => {
       it('resets pointer position on open', () => {
         Story.story(
           update,
-          Story.given({
-            ...init({ id: 'test' }),
-            maybeLastPointerPosition: Option.some({
-              screenX: 100,
-              screenY: 200,
+          Story.given(
+            evo(init({ id: 'test' }), {
+              maybeLastPointerPosition: () =>
+                Option.some({
+                  screenX: 100,
+                  screenY: 200,
+                }),
             }),
-          }),
+          ),
           Story.message(
             Message.Opened({ maybeActiveItemIndex: Option.some(0) }),
           ),
@@ -191,11 +194,12 @@ describe('Combobox', () => {
       it('closes and restores input to the resting input value', () => {
         Story.story(
           update,
-          Story.given({
-            ...init({ id: 'test' }),
-            isOpen: true,
-            inputValue: 'app',
-          }),
+          Story.given(
+            evo(init({ id: 'test' }), {
+              isOpen: () => true,
+              inputValue: () => 'app',
+            }),
+          ),
           Story.message(
             Message.Closed({ restingInputValue: 'Apple', isClearable: true }),
           ),
@@ -212,12 +216,13 @@ describe('Combobox', () => {
       it('emits ClearedSelection when nullable and input is empty', () => {
         Story.story(
           update,
-          Story.given({
-            ...init({ id: 'test' }),
-            isOpen: true,
-            nullable: true,
-            inputValue: '',
-          }),
+          Story.given(
+            evo(init({ id: 'test' }), {
+              isOpen: () => true,
+              nullable: () => true,
+              inputValue: () => '',
+            }),
+          ),
           Story.message(
             Message.Closed({ restingInputValue: 'Apple', isClearable: true }),
           ),
@@ -245,7 +250,9 @@ describe('Combobox', () => {
       })
 
       it('is a no-op when already closed', () => {
-        const closedModel = { ...init({ id: 'test' }), inputValue: 'Apple' }
+        const closedModel = evo(init({ id: 'test' }), {
+          inputValue: () => 'Apple',
+        })
 
         Story.story(
           update,
@@ -282,11 +289,12 @@ describe('Combobox', () => {
       it('restores input value to the resting input value', () => {
         Story.story(
           update,
-          Story.given({
-            ...init({ id: 'test' }),
-            isOpen: true,
-            inputValue: 'app',
-          }),
+          Story.given(
+            evo(init({ id: 'test' }), {
+              isOpen: () => true,
+              inputValue: () => 'app',
+            }),
+          ),
           Story.message(
             Message.BlurredInput({
               restingInputValue: 'Apple',
@@ -302,12 +310,13 @@ describe('Combobox', () => {
       it('emits ClearedSelection when nullable and input is empty', () => {
         Story.story(
           update,
-          Story.given({
-            ...init({ id: 'test' }),
-            isOpen: true,
-            nullable: true,
-            inputValue: '',
-          }),
+          Story.given(
+            evo(init({ id: 'test' }), {
+              isOpen: () => true,
+              nullable: () => true,
+              inputValue: () => '',
+            }),
+          ),
           Story.message(
             Message.BlurredInput({
               restingInputValue: 'Apple',
@@ -322,7 +331,9 @@ describe('Combobox', () => {
       })
 
       it('is a no-op when already closed', () => {
-        const closedModel = { ...init({ id: 'test' }), inputValue: 'Apple' }
+        const closedModel = evo(init({ id: 'test' }), {
+          inputValue: () => 'Apple',
+        })
 
         Story.story(
           update,
@@ -620,12 +631,13 @@ describe('Combobox', () => {
       it('resets input and emits Selected when nullable and item was selected', () => {
         Story.story(
           update,
-          Story.given({
-            ...init({ id: 'test' }),
-            isOpen: true,
-            nullable: true,
-            inputValue: 'Apple',
-          }),
+          Story.given(
+            evo(init({ id: 'test' }), {
+              isOpen: () => true,
+              nullable: () => true,
+              inputValue: () => 'Apple',
+            }),
+          ),
           Story.message(
             Message.SelectedItem({
               item: 'apple',
@@ -1321,10 +1333,11 @@ describe('Combobox', () => {
     it('marks active item with data-active', () => {
       Scene.scene(
         { update, view: sceneView() },
-        Scene.given({
-          ...openModel(),
-          maybeActiveItemIndex: Option.some(1),
-        }),
+        Scene.given(
+          evo(openModel(), {
+            maybeActiveItemIndex: () => Option.some(1),
+          }),
+        ),
         Scene.tap(({ html }) => {
           expect(Scene.find(html, '[key="test-item-0"]')).not.toHaveAttr(
             'data-active',
@@ -1901,7 +1914,7 @@ describe('Combobox', () => {
             update,
             view: readOnlyView(),
           },
-          Scene.given({ ...openModel(), immediate: true }),
+          Scene.given(evo(openModel(), { immediate: () => true })),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(input, 'ArrowDown'),
@@ -1923,7 +1936,7 @@ describe('Combobox', () => {
               restingInputValue: 'Apple',
             }),
           },
-          Scene.given({ ...openModel(), immediate: true }),
+          Scene.given(evo(openModel(), { immediate: () => true })),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(input, 'ArrowDown'),
@@ -2013,11 +2026,12 @@ describe('Combobox', () => {
             update,
             view: readOnlyView(),
           },
-          Scene.given({
-            ...openModel(),
-            nullable: true,
-            inputValue: 'Apple',
-          }),
+          Scene.given(
+            evo(openModel(), {
+              nullable: () => true,
+              inputValue: () => 'Apple',
+            }),
+          ),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(input, 'Escape'),
@@ -2033,7 +2047,9 @@ describe('Combobox', () => {
             update,
             view: readOnlyView(),
           },
-          Scene.given({ ...openModel(), nullable: true, inputValue: '' }),
+          Scene.given(
+            evo(openModel(), { nullable: () => true, inputValue: () => '' }),
+          ),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(input, 'Escape'),
@@ -2049,7 +2065,9 @@ describe('Combobox', () => {
             update,
             view: readOnlyView(),
           },
-          Scene.given({ ...openModel(), nullable: true, inputValue: '' }),
+          Scene.given(
+            evo(openModel(), { nullable: () => true, inputValue: () => '' }),
+          ),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.blur(input),
@@ -2067,7 +2085,9 @@ describe('Combobox', () => {
               restingInputValue: 'Apple',
             }),
           },
-          Scene.given({ ...openModel(), nullable: true, inputValue: '' }),
+          Scene.given(
+            evo(openModel(), { nullable: () => true, inputValue: () => '' }),
+          ),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(input, 'Escape'),
@@ -2083,10 +2103,11 @@ describe('Combobox', () => {
             update,
             view: readOnlyView(),
           },
-          Scene.given({
-            ...openModel(),
-            maybeActiveItemIndex: Option.none(),
-          }),
+          Scene.given(
+            evo(openModel(), {
+              maybeActiveItemIndex: () => Option.none(),
+            }),
+          ),
           acknowledgeAnchor,
           acknowledgeBackdrop,
           Scene.keydown(input, 'Enter'),

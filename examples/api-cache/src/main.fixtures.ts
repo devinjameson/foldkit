@@ -1,4 +1,5 @@
 import { HashMap, Option } from 'effect'
+import { evo } from 'foldkit/struct'
 
 import { Tabs } from '@foldkit/ui'
 
@@ -43,28 +44,28 @@ export const loadingPostsModel: Model = {
   stats: StatsData.Idle(),
 }
 
-export const loadedPostsModel: Model = {
-  ...loadingPostsModel,
-  posts: PostsData.Success({
-    data: { posts: fixturePosts, fetchedAt: FETCHED_AT },
-  }),
-}
-
-export const cachedFirstPostModel: Model = {
-  ...loadedPostsModel,
-  postDetailById: HashMap.set(
-    HashMap.empty(),
-    'first-post',
-    PostDetailData.Success({
-      data: { detail: firstPostDetail, fetchedAt: FETCHED_AT },
+export const loadedPostsModel: Model = evo(loadingPostsModel, {
+  posts: () =>
+    PostsData.Success({
+      data: { posts: fixturePosts, fetchedAt: FETCHED_AT },
     }),
-  ),
-}
+})
 
-export const loadedStatsModel: Model = {
-  ...loadedPostsModel,
-  activeTab: 'Stats',
-  stats: StatsData.Success({
-    data: { stats: fixtureStats, fetchedAt: FETCHED_AT },
-  }),
-}
+export const cachedFirstPostModel: Model = evo(loadedPostsModel, {
+  postDetailById: () =>
+    HashMap.set(
+      HashMap.empty(),
+      'first-post',
+      PostDetailData.Success({
+        data: { detail: firstPostDetail, fetchedAt: FETCHED_AT },
+      }),
+    ),
+})
+
+export const loadedStatsModel: Model = evo(loadedPostsModel, {
+  activeTab: () => 'Stats',
+  stats: () =>
+    StatsData.Success({
+      data: { stats: fixtureStats, fetchedAt: FETCHED_AT },
+    }),
+})

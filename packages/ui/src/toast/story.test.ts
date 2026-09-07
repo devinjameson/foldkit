@@ -1,5 +1,6 @@
 import { Duration, Option, Schema } from 'effect'
 import * as Story from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -144,11 +145,10 @@ describe('Toast', () => {
   describe('update', () => {
     describe('CompletedWaitBeforeDismissal', () => {
       it('ignores a stale version', () => {
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [makeSettledEntry()],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [makeSettledEntry()],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -166,11 +166,10 @@ describe('Toast', () => {
       })
 
       it('starts the leave transition when the version matches', () => {
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [makeSettledEntry()],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [makeSettledEntry()],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -212,11 +211,10 @@ describe('Toast', () => {
 
     describe('HoveredEntry / LeftEntry', () => {
       it('HoveredEntry flips isHovered true and bumps version to cancel the pending timer', () => {
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [makeSettledEntry()],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [makeSettledEntry()],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -235,11 +233,10 @@ describe('Toast', () => {
           isHovered: true,
           pendingDismissVersion: 1,
         })
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [hoveredEntry],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [hoveredEntry],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -265,11 +262,10 @@ describe('Toast', () => {
           maybeDuration: Option.none(),
           isHovered: true,
         })
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [stickyEntry],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [stickyEntry],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -279,11 +275,10 @@ describe('Toast', () => {
       })
 
       it('a hover arriving before the timer fires cancels the pending dismiss via version bump', () => {
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [makeSettledEntry()],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [makeSettledEntry()],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -337,11 +332,10 @@ describe('Toast', () => {
 
     describe('Dismissed', () => {
       it('runs the full leave flow and removes the entry from the stack', () => {
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [makeSettledEntry()],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [makeSettledEntry()],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -372,11 +366,10 @@ describe('Toast', () => {
             transitionState: 'LeaveAnimating',
           },
         })
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [leavingEntry],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [leavingEntry],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -396,11 +389,10 @@ describe('Toast', () => {
             transitionState: 'LeaveAnimating',
           },
         })
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [entry],
-          nextEntryKey: 1,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [entry],
+          nextEntryKey: () => 1,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -434,11 +426,10 @@ describe('Toast', () => {
             ...Animation.init({ id: 'test-entry-1', isShowing: true }),
           },
         })
-        const model: Model = {
-          ...Toast.init({ id: 'test' }),
-          entries: [entryOne, entryTwo],
-          nextEntryKey: 2,
-        }
+        const model: Model = evo(Toast.init({ id: 'test' }), {
+          entries: () => [entryOne, entryTwo],
+          nextEntryKey: () => 2,
+        })
         Story.story(
           Toast.update,
           Story.given(model),
@@ -531,11 +522,10 @@ describe('Toast', () => {
 
   describe('programmatic helpers', () => {
     it('dismiss(model, entryId) dispatches Dismissed', () => {
-      const model: Model = {
-        ...Toast.init({ id: 'test' }),
-        entries: [makeSettledEntry()],
-        nextEntryKey: 1,
-      }
+      const model: Model = evo(Toast.init({ id: 'test' }), {
+        entries: () => [makeSettledEntry()],
+        nextEntryKey: () => 1,
+      })
       const toastDismiss = Toast.dismiss(model, firstEntryId)
       expect(toastDismiss.model.entries[0]?.animation.transitionState).toBe(
         'LeaveStart',
@@ -543,14 +533,13 @@ describe('Toast', () => {
     })
 
     it('dismissAll(model) dispatches DismissedAll', () => {
-      const model: Model = {
-        ...Toast.init({ id: 'test' }),
-        entries: [
+      const model: Model = evo(Toast.init({ id: 'test' }), {
+        entries: () => [
           makeSettledEntry({ id: 'test-entry-0' }),
           makeSettledEntry({ id: 'test-entry-1' }),
         ],
-        nextEntryKey: 2,
-      }
+        nextEntryKey: () => 2,
+      })
       const toastDismissAll = Toast.dismissAll(model)
       toastDismissAll.model.entries.forEach((entry: Entry) => {
         expect(entry.animation.transitionState).toBe('LeaveStart')

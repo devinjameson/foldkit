@@ -1,5 +1,6 @@
 import { DateTime } from 'effect'
 import { Command, given, message, model, story } from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { describe, expect, test } from 'vitest'
 
 import {
@@ -18,10 +19,9 @@ const idleModel: Model = {
   messageInput: '',
 }
 
-const connectedModel: Model = {
-  ...idleModel,
-  connection: ConnectionState.Connected(),
-}
+const connectedModel: Model = evo(idleModel, {
+  connection: () => ConnectionState.Connected(),
+})
 
 const zonedNow = DateTime.makeZonedUnsafe(0, { timeZone: 'UTC' })
 
@@ -41,10 +41,9 @@ describe('update', () => {
     test('Connected moves into Connected', () => {
       story(
         update,
-        given({
-          ...idleModel,
-          connection: ConnectionState.Connecting(),
-        }),
+        given(
+          evo(idleModel, { connection: () => ConnectionState.Connecting() }),
+        ),
         message(Message.Connected()),
         model(model => {
           expect(model.connection._tag).toBe('Connected')
@@ -55,10 +54,11 @@ describe('update', () => {
     test('Disconnected returns to Disconnected and clears messages', () => {
       story(
         update,
-        given({
-          ...connectedModel,
-          messages: [{ text: 'old', zoned: zonedNow, isSent: true }],
-        }),
+        given(
+          evo(connectedModel, {
+            messages: () => [{ text: 'old', zoned: zonedNow, isSent: true }],
+          }),
+        ),
         message(Message.Disconnected()),
         model(model => {
           expect(model.connection._tag).toBe('Disconnected')
@@ -70,10 +70,9 @@ describe('update', () => {
     test('FailedConnect captures the error message', () => {
       story(
         update,
-        given({
-          ...idleModel,
-          connection: ConnectionState.Connecting(),
-        }),
+        given(
+          evo(idleModel, { connection: () => ConnectionState.Connecting() }),
+        ),
         message(Message.FailedConnect({ error: 'Timeout' })),
         model(model => {
           if (model.connection._tag === 'Error') {
@@ -103,7 +102,7 @@ describe('update', () => {
     test('an empty input is ignored', () => {
       story(
         update,
-        given({ ...connectedModel, messageInput: '' }),
+        given(evo(connectedModel, { messageInput: () => '' })),
         message(Message.SubmittedMessage()),
         Command.expectNone(),
       )
@@ -112,7 +111,7 @@ describe('update', () => {
     test('whitespace-only input is ignored', () => {
       story(
         update,
-        given({ ...connectedModel, messageInput: '   ' }),
+        given(evo(connectedModel, { messageInput: () => '   ' })),
         message(Message.SubmittedMessage()),
         Command.expectNone(),
       )
@@ -121,7 +120,7 @@ describe('update', () => {
     test('connected client fires SendMessage and clears the input', () => {
       story(
         update,
-        given({ ...connectedModel, messageInput: 'Hello there' }),
+        given(evo(connectedModel, { messageInput: () => 'Hello there' })),
         message(Message.SubmittedMessage()),
         model(model => {
           expect(model.messageInput).toBe('')
@@ -151,7 +150,7 @@ describe('update', () => {
     test('disconnected client ignores SubmittedMessage', () => {
       story(
         update,
-        given({ ...idleModel, messageInput: 'Hello' }),
+        given(evo(idleModel, { messageInput: () => 'Hello' })),
         message(Message.SubmittedMessage()),
         Command.expectNone(),
         model(model => {

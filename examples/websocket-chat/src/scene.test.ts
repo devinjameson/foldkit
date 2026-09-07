@@ -12,6 +12,7 @@ import {
   text,
   type,
 } from 'foldkit/scene'
+import { evo } from 'foldkit/struct'
 import { describe, test } from 'vitest'
 
 import {
@@ -50,10 +51,7 @@ describe('view', () => {
   test('connecting state renders the Connecting message', () => {
     scene(
       { update, view },
-      given({
-        ...idleModel,
-        connection: ConnectionState.Connecting(),
-      }),
+      given(evo(idleModel, { connection: () => ConnectionState.Connecting() })),
       expect(text('Connecting...')).toExist(),
     )
   })
@@ -61,10 +59,7 @@ describe('view', () => {
   test('connected state shows the message input and Send button', () => {
     scene(
       { update, view },
-      given({
-        ...idleModel,
-        connection: ConnectionState.Connected(),
-      }),
+      given(evo(idleModel, { connection: () => ConnectionState.Connected() })),
       expect(placeholder('Type a message...')).toExist(),
       expect(role('button', { name: 'Send' })).toBeDisabled(),
       type(placeholder('Type a message...'), 'hi'),
@@ -75,12 +70,14 @@ describe('view', () => {
   test('error state renders the error and a Try Again button', () => {
     scene(
       { update, view },
-      given({
-        ...idleModel,
-        connection: ConnectionState.Error({
-          error: 'Connection refused',
+      given(
+        evo(idleModel, {
+          connection: () =>
+            ConnectionState.Error({
+              error: 'Connection refused',
+            }),
         }),
-      }),
+      ),
       expect(text('Connection Error')).toExist(),
       expect(text('Connection refused')).toExist(),
       expect(role('button', { name: 'Try Again' })).toExist(),
@@ -90,14 +87,15 @@ describe('view', () => {
   test('messages render in the conversation list', () => {
     scene(
       { update, view },
-      given({
-        ...idleModel,
-        connection: ConnectionState.Connected(),
-        messages: [
-          { text: 'Hello there', zoned: zonedAt(0), isSent: true },
-          { text: 'General Kenobi', zoned: zonedAt(0), isSent: false },
-        ],
-      }),
+      given(
+        evo(idleModel, {
+          connection: () => ConnectionState.Connected(),
+          messages: () => [
+            { text: 'Hello there', zoned: zonedAt(0), isSent: true },
+            { text: 'General Kenobi', zoned: zonedAt(0), isSent: false },
+          ],
+        }),
+      ),
       expect(text('Hello there')).toExist(),
       expect(text('General Kenobi')).toExist(),
       expect(text('No messages yet')).toBeAbsent(),
@@ -151,10 +149,7 @@ describe('view', () => {
   test('a message arriving on the socket Subscription lands in the conversation', () => {
     scene(
       { update, view },
-      given({
-        ...idleModel,
-        connection: ConnectionState.Connected(),
-      }),
+      given(evo(idleModel, { connection: () => ConnectionState.Connected() })),
       Subscription.emit(Message.ReceivedMessage({ text: 'hello from echo' })),
       Command.expectExact(
         TimestampReceivedMessage({ text: 'hello from echo' }),

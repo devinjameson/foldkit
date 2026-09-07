@@ -698,7 +698,7 @@ export const update = (model: Model, message: Message) =>
       model,
       commands: [
         CopyLink({
-          url: urlToString({ ...model.url, hash: Option.some(hash) }),
+          url: urlToString(evo(model.url, { hash: () => Option.some(hash) })),
         }),
       ],
     }),

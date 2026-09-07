@@ -9,6 +9,7 @@ import {
   scene,
   text,
 } from 'foldkit/scene'
+import { evo } from 'foldkit/struct'
 import { describe, test } from 'vitest'
 
 import { RadioGroup } from '@foldkit/ui'
@@ -77,10 +78,12 @@ describe('view', () => {
   test('refreshing state keeps the dashboard visible', () => {
     scene(
       { update, view },
-      given({
-        ...readyModel,
-        telemetry: TelemetryAsyncData.Refreshing({ data: sampleTelemetry }),
-      }),
+      given(
+        evo(readyModel, {
+          telemetry: () =>
+            TelemetryAsyncData.Refreshing({ data: sampleTelemetry }),
+        }),
+      ),
       acknowledgeChartMount,
       acknowledgeChartSync,
       expect(text('Refreshing public data')).toExist(),
@@ -91,10 +94,11 @@ describe('view', () => {
   test('failure without stale data shows retry', () => {
     scene(
       { update, view },
-      given({
-        ...loadingModel,
-        telemetry: TelemetryAsyncData.Failure({ error: 'offline' }),
-      }),
+      given(
+        evo(loadingModel, {
+          telemetry: () => TelemetryAsyncData.Failure({ error: 'offline' }),
+        }),
+      ),
       expect(label('Telemetry failed')).toExist(),
       expect(role('button', { name: 'Retry' })).toExist(),
     )

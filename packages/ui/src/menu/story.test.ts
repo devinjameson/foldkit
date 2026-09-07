@@ -2,6 +2,7 @@ import { Option } from 'effect'
 import type { HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -139,11 +140,12 @@ describe('Menu', () => {
       it('resets search state on open', () => {
         Story.story(
           update,
-          Story.given({
-            ...init({ id: 'test' }),
-            searchQuery: 'stale',
-            searchVersion: 1,
-          }),
+          Story.given(
+            evo(init({ id: 'test' }), {
+              searchQuery: () => 'stale',
+              searchVersion: () => 1,
+            }),
+          ),
           Story.message(
             Message.Opened({ maybeActiveItemIndex: Option.some(0) }),
           ),
@@ -187,13 +189,15 @@ describe('Menu', () => {
       it('resets pointer position on open', () => {
         Story.story(
           update,
-          Story.given({
-            ...init({ id: 'test' }),
-            maybeLastPointerPosition: Option.some({
-              screenX: 100,
-              screenY: 200,
+          Story.given(
+            evo(init({ id: 'test' }), {
+              maybeLastPointerPosition: () =>
+                Option.some({
+                  screenX: 100,
+                  screenY: 200,
+                }),
             }),
-          }),
+          ),
           Story.message(
             Message.Opened({ maybeActiveItemIndex: Option.some(0) }),
           ),

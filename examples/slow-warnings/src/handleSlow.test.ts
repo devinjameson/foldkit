@@ -1,3 +1,4 @@
+import { evo } from 'foldkit/struct'
 import { describe, expect, test, vi } from 'vitest'
 
 import { Message, type Model, handleSlow } from './main'
@@ -20,10 +21,9 @@ describe('handleSlow', () => {
         durationMs: 12,
         thresholdMs: 4,
         previousModel: initialModel,
-        nextModel: {
-          ...initialModel,
-          activeWorkload: 'Update',
-        },
+        nextModel: evo(initialModel, {
+          activeWorkload: () => 'Update',
+        }),
         message: Message.ClickedRunUpdateWork(),
       })
 
