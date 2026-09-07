@@ -1,16 +1,12 @@
 import { Array, Option } from 'effect'
-import { Command, Story } from 'foldkit'
+import { Interruptible } from 'foldkit/command'
+import { Command, given, message, model, story } from 'foldkit/story'
 import { describe, expect, test } from 'vitest'
 
 import {
   CancelUploadFile,
-  ClickedCancelAllUploads,
-  ClickedCancelUpload,
-  ClickedRestartUpload,
-  ClickedStartUpload,
-  CompletedCancelUploadFile,
   FAKE_FILES,
-  SucceededUploadFile,
+  Message,
   UploadFile,
   initialModel,
   update,
@@ -21,11 +17,11 @@ const secondFile = Option.getOrThrow(Array.get(FAKE_FILES, 1))
 
 describe('update', () => {
   test('starting an upload appends an Uploading entry and fires UploadFile', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedStartUpload()),
-      Story.model(model => {
+      given(initialModel),
+      message(Message.ClickedStartUpload()),
+      model(model => {
         expect(model.uploads).toEqual([
           {
             id: 0,
@@ -36,14 +32,14 @@ describe('update', () => {
         ])
         expect(model.uploadId).toBe(1)
       }),
-      Story.Command.expectExact(
+      Command.expectExact(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
       ),
-      Story.Command.resolve(
+      Command.resolve(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 0 }),
+        Message.SucceededUploadFile({ uploadId: 0 }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Done',
         ])
@@ -52,20 +48,20 @@ describe('update', () => {
   })
 
   test('cancelling an upload interrupts it and marks it Cancelled', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedCancelUpload({ uploadId: 0 })),
-      Story.Command.resolve(
+      given(initialModel),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
+      Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Command.Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
-      Story.Command.expectNone(),
-      Story.model(model => {
+      Command.expectNone(),
+      model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Cancelled',
         ])
@@ -74,23 +70,23 @@ describe('update', () => {
   })
 
   test('a cancel that lands after completion resolves NotFound and changes nothing', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedStartUpload()),
-      Story.Command.resolve(
+      given(initialModel),
+      message(Message.ClickedStartUpload()),
+      Command.resolve(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 0 }),
+        Message.SucceededUploadFile({ uploadId: 0 }),
       ),
-      Story.message(ClickedCancelUpload({ uploadId: 0 })),
-      Story.Command.resolve(
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
+      Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Command.Interruptible.NotFound(),
+          outcome: Interruptible.Outcome.NotFound(),
         }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Done',
         ])
@@ -99,27 +95,27 @@ describe('update', () => {
   })
 
   test('cancelling one upload leaves the other running', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedCancelUpload({ uploadId: 0 })),
-      Story.Command.resolve(
+      given(initialModel),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
+      Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Command.Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
-      Story.Command.expectExact(
+      Command.expectExact(
         UploadFile({ uploadId: 1, sizeMegabytes: secondFile.sizeMegabytes }),
       ),
-      Story.Command.resolve(
+      Command.resolve(
         UploadFile({ uploadId: 1, sizeMegabytes: secondFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 1 }),
+        Message.SucceededUploadFile({ uploadId: 1 }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Cancelled',
           'Done',
@@ -129,24 +125,24 @@ describe('update', () => {
   })
 
   test('a new upload can start while a cancellation is still pending', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedCancelUpload({ uploadId: 0 })),
-      Story.message(ClickedStartUpload()),
-      Story.Command.resolve(
+      given(initialModel),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
+      message(Message.ClickedStartUpload()),
+      Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Command.Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
-      Story.Command.resolve(
+      Command.resolve(
         UploadFile({ uploadId: 1, sizeMegabytes: secondFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 1 }),
+        Message.SucceededUploadFile({ uploadId: 1 }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Cancelled',
           'Done',
@@ -156,32 +152,32 @@ describe('update', () => {
   })
 
   test('restarting a cancelled upload reuses its id and file', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedCancelUpload({ uploadId: 0 })),
-      Story.Command.resolve(
+      given(initialModel),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedCancelUpload({ uploadId: 0 })),
+      Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Command.Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
-      Story.message(ClickedRestartUpload({ uploadId: 0 })),
-      Story.model(model => {
+      message(Message.ClickedRestartUpload({ uploadId: 0 })),
+      model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Uploading',
         ])
       }),
-      Story.Command.expectExact(
+      Command.expectExact(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
       ),
-      Story.Command.resolve(
+      Command.resolve(
         UploadFile({ uploadId: 0, sizeMegabytes: firstFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 0 }),
+        Message.SucceededUploadFile({ uploadId: 0 }),
       ),
-      Story.model(model => {
+      model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Done',
         ])
@@ -190,33 +186,33 @@ describe('update', () => {
   })
 
   test('cancel all interrupts every running upload and only those', () => {
-    Story.story(
+    story(
       update,
-      Story.with(initialModel),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedStartUpload()),
-      Story.message(ClickedStartUpload()),
-      Story.Command.resolve(
+      given(initialModel),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
+      message(Message.ClickedStartUpload()),
+      Command.resolve(
         UploadFile({ uploadId: 1, sizeMegabytes: secondFile.sizeMegabytes }),
-        SucceededUploadFile({ uploadId: 1 }),
+        Message.SucceededUploadFile({ uploadId: 1 }),
       ),
-      Story.message(ClickedCancelAllUploads()),
-      Story.Command.resolve(
+      message(Message.ClickedCancelAllUploads()),
+      Command.resolve(
         CancelUploadFile({ uploadId: 0 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 0,
-          outcome: Command.Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
-      Story.Command.resolve(
+      Command.resolve(
         CancelUploadFile({ uploadId: 2 }),
-        CompletedCancelUploadFile({
+        Message.CompletedCancelUploadFile({
           uploadId: 2,
-          outcome: Command.Interruptible.Interrupted(),
+          outcome: Interruptible.Outcome.Interrupted(),
         }),
       ),
-      Story.Command.expectNone(),
-      Story.model(model => {
+      Command.expectNone(),
+      model(model => {
         expect(Array.map(model.uploads, upload => upload.status)).toEqual([
           'Cancelled',
           'Done',

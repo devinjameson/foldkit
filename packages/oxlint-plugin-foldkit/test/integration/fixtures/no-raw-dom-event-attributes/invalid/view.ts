@@ -1,10 +1,6 @@
-import { html } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
-import type { Message } from './message'
-
-const h = html<Message>()
-
-export const reloadButton = h.button(
-  [h.Attribute('onclick', 'location.reload()')],
+export const reloadButton = ih.button(
+  [ih.Attribute('onclick', 'location.reload()')],
   ['Reload'],
 )

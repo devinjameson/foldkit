@@ -1,12 +1,7 @@
 // page/commandMenu.ts
 import { Array, Option } from 'effect'
 import { Submodel } from 'foldkit'
-import {
-  type ChildAttribute,
-  type Html,
-  childAttributes,
-  html,
-} from 'foldkit/html'
+import { type ChildAttribute, type Html, childAttributes } from 'foldkit/html'
 
 import {
   ClosedMenu,
@@ -37,8 +32,7 @@ type ViewInputs = Readonly<{
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, viewInputs) => {
-    const h = html<Message>()
+  (model, viewInputs, h) => {
     const toggleMessage = model.isOpen ? ClosedMenu() : OpenedMenu()
 
     const toSlotItem = (label: string, index: number): SlotItem => {

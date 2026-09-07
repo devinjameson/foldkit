@@ -1,6 +1,6 @@
 // main.ts (parent)
 import { Array } from 'effect'
-import { html } from 'foldkit/html'
+import type { HtmlBuilder } from 'foldkit/html'
 
 import { GotCommandMenuMessage, type Message } from './message'
 import type { Model } from './model'
@@ -8,10 +8,8 @@ import * as CommandMenu from './page/commandMenu'
 
 const MENU_ITEMS: ReadonlyArray<string> = ['Open', 'Rename', 'Archive']
 
-export const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+export const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'command-menu',
     model: model.commandMenu,
     view: CommandMenu.view,
@@ -47,4 +45,3 @@ export const view = (model: Model) => {
     },
     toParentMessage: message => GotCommandMenuMessage({ message }),
   })
-}

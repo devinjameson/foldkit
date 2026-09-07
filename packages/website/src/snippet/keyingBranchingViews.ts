@@ -1,10 +1,7 @@
-import { html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
-const searchView = (model: Model): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const searchView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [h.Class('search')],
-    [model.mode === 'Editing' ? editorView(model) : summaryView(model)],
+    [model.mode === 'Editing' ? editorView(model, h) : summaryView(model, h)],
   )
-}

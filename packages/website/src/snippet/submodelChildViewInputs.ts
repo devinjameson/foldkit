@@ -1,7 +1,7 @@
 // page/commandMenu.ts
 import { Array } from 'effect'
 import { Submodel } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
+import type { Html } from 'foldkit/html'
 
 import { ClosedMenu, type Message, OpenedMenu, SelectedItem } from './message'
 import type { Model } from './model'
@@ -9,15 +9,15 @@ import type { Model } from './model'
 // The third type parameter to defineView is `ViewInputs`: per-render
 // data the parent passes alongside the model. Here, the parent supplies
 // the trigger content and the items; the child supplies the open/closed
-// state and the selection behavior.
+// state and the selection behavior. With ViewInputs present, the builder
+// `h` moves to third position.
 export type ViewInputs = Readonly<{
   buttonLabel: Html
   items: ReadonlyArray<string>
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, viewInputs): Html => {
-    const h = html<Message>()
+  (model, viewInputs, h) => {
     const toggleMessage = model.isOpen ? ClosedMenu() : OpenedMenu()
 
     return h.div(

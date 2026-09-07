@@ -1,23 +1,18 @@
 import { Array, Option } from 'effect'
-import { Document, Html, createKeyedLazy, createLazy, html } from 'foldkit/html'
+import {
+  Document,
+  Html,
+  type HtmlBuilder,
+  createKeyedLazy,
+  createLazy,
+} from 'foldkit/html'
 
 import {
-  AddedTodo,
-  CancelledEdit,
-  ClearedCompleted,
-  DeletedTodo,
   EditingState,
   Filter,
   Message,
   Model,
-  SavedEdit,
-  SelectedFilter,
-  StartedEditing,
   Todo,
-  ToggledAll,
-  ToggledTodo,
-  UpdatedEditingTodo,
-  UpdatedNewTodo,
   countActiveTodos,
   filterTodos,
 } from './main.js'
@@ -40,9 +35,7 @@ const todoItemClass = (todo: Todo, isEditing: boolean): string => {
   return ''
 }
 
-const nonEditingTodoView = (todo: Todo): Html => {
-  const h = html<Message>()
-
+const nonEditingTodoView = (todo: Todo, h: HtmlBuilder<Message>): Html => {
   return h.keyed('li')(
     todo.id,
     [h.Class(todoItemClass(todo, false))],
@@ -54,25 +47,27 @@ const nonEditingTodoView = (todo: Todo): Html => {
             h.Class('toggle'),
             h.Type('checkbox'),
             h.Checked(todo.completed),
-            h.OnClick(ToggledTodo({ id: todo.id })),
+            h.OnClick(Message.ToggledTodo({ id: todo.id })),
           ]),
           h.label(
-            [h.OnDoubleClick(StartedEditing({ id: todo.id }))],
+            [h.OnDoubleClick(Message.StartedEditing({ id: todo.id }))],
             [todo.text],
           ),
-          h.button(
-            [h.Class('destroy'), h.OnClick(DeletedTodo({ id: todo.id }))],
-            [],
-          ),
+          h.button([
+            h.Class('destroy'),
+            h.OnClick(Message.DeletedTodo({ id: todo.id })),
+          ]),
         ],
       ),
     ],
   )
 }
 
-const editingTodoView = (todo: Todo, text: string): Html => {
-  const h = html<Message>()
-
+const editingTodoView = (
+  todo: Todo,
+  text: string,
+  h: HtmlBuilder<Message>,
+): Html => {
   return h.keyed('li')(
     todo.id,
     [h.Class(todoItemClass(todo, true))],
@@ -83,14 +78,14 @@ const editingTodoView = (todo: Todo, text: string): Html => {
         h.Name('title'),
         h.Id(`todo-${todo.id}`),
         h.Autofocus(true),
-        h.OnInput(text => UpdatedEditingTodo({ text })),
-        h.OnBlur(SavedEdit()),
+        h.OnInput(text => Message.UpdatedEditingTodo({ text })),
+        h.OnBlur(Message.SavedEdit()),
         h.OnKeyDownPreventDefault(key => {
           if (key === 'Enter') {
-            return Option.some(SavedEdit())
+            return Option.some(Message.SavedEdit())
           }
           if (key === 'Escape') {
-            return Option.some(CancelledEdit())
+            return Option.some(Message.CancelledEdit())
           }
           return Option.none()
         }),
@@ -102,13 +97,14 @@ const editingTodoView = (todo: Todo, text: string): Html => {
 const todoItemView = (
   todo: Todo,
   maybeEditingText: Option.Option<string>,
+  h: HtmlBuilder<Message>,
 ): Html =>
   Option.match(maybeEditingText, {
-    onNone: () => nonEditingTodoView(todo),
-    onSome: text => editingTodoView(todo, text),
+    onNone: () => nonEditingTodoView(todo, h),
+    onSome: text => editingTodoView(todo, text, h),
   })
 
-// NOTE: hot-path helper. `M.value(...).pipe(M.tagsExhaustive(...))`
+// NOTE: hot-path helper. `Match.value(...).pipe(Match.tagsExhaustive(...))`
 // constructs a fresh matcher on every call; done per todo per frame it
 // dominates view time, so this checks the tag directly.
 const maybeEditingTextFor = (
@@ -121,9 +117,7 @@ const maybeEditingTextFor = (
   return Option.none()
 }
 
-const headerView = (newTodoText: string): Html => {
-  const h = html<Message>()
-
+const headerView = (newTodoText: string, h: HtmlBuilder<Message>): Html => {
   return h.header(
     [h.Class('header')],
     [
@@ -134,9 +128,9 @@ const headerView = (newTodoText: string): Html => {
         h.Autofocus(true),
         h.Value(newTodoText),
         h.Name('newTodo'),
-        h.OnInput(text => UpdatedNewTodo({ text })),
+        h.OnInput(text => Message.UpdatedNewTodo({ text })),
         h.OnKeyDownPreventDefault(key =>
-          Option.liftPredicate(AddedTodo(), () => key === 'Enter'),
+          Option.liftPredicate(Message.AddedTodo(), () => key === 'Enter'),
         ),
       ]),
     ],
@@ -148,11 +142,10 @@ const filterItemView = (
   label: string,
   href: string,
   active: Filter,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   return h.li(
-    [h.OnClick(SelectedFilter({ filter }))],
+    [h.OnClick(Message.SelectedFilter({ filter }))],
     [
       h.a(
         [h.Href(href), h.Class(filter === active ? 'selected' : '')],
@@ -162,15 +155,13 @@ const filterItemView = (
   )
 }
 
-const filtersView = (filter: Filter): Html => {
-  const h = html<Message>()
-
+const filtersView = (filter: Filter, h: HtmlBuilder<Message>): Html => {
   return h.ul(
     [h.Class('filters')],
     [
-      filterItemView('All', 'All', '#/', filter),
-      filterItemView('Active', 'Active', '#/active', filter),
-      filterItemView('Completed', 'Completed', '#/completed', filter),
+      filterItemView('All', 'All', '#/', filter, h),
+      filterItemView('Active', 'Active', '#/active', filter, h),
+      filterItemView('Completed', 'Completed', '#/completed', filter, h),
     ],
   )
 }
@@ -185,8 +176,8 @@ const footerView = (
   activeCount: number,
   completedCount: number,
   filter: Filter,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
   const word = activeCount === 1 ? 'item' : 'items'
 
   return h.footer(
@@ -196,10 +187,10 @@ const footerView = (
         [h.Class('todo-count')],
         [h.strong([], [activeCount.toString()]), ` ${word} left`],
       ),
-      lazyFilters(filtersView, [filter]),
+      lazyFilters(filtersView, [filter, h]),
       completedCount > 0
         ? h.button(
-            [h.Class('clear-completed'), h.OnClick(ClearedCompleted())],
+            [h.Class('clear-completed'), h.OnClick(Message.ClearedCompleted())],
             [`Clear completed (${completedCount})`],
           )
         : h.empty,
@@ -207,22 +198,21 @@ const footerView = (
   )
 }
 
-const toggleAllInputView = (allCompleted: boolean): Html => {
-  const h = html<Message>()
-
+const toggleAllInputView = (
+  allCompleted: boolean,
+  h: HtmlBuilder<Message>,
+): Html => {
   return h.input([
     h.Class('toggle-all'),
     h.Id('toggle-all'),
     h.Type('checkbox'),
     h.Name('toggle'),
     h.Checked(allCompleted),
-    h.OnClick(ToggledAll()),
+    h.OnClick(Message.ToggledAll()),
   ])
 }
 
-const toggleAllLabelView = (): Html => {
-  const h = html<Message>()
-
+const toggleAllLabelView = (h: HtmlBuilder<Message>): Html => {
   return h.label([h.For('toggle-all')], ['Mark all as complete'])
 }
 
@@ -232,16 +222,14 @@ const lazyToggleAllInput = createLazy()
 const lazyToggleAllLabel = createLazy()
 const lazyTodo = createKeyedLazy()
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
   const filteredTodos = filterTodos(model.todos, model.filter)
   const activeCount = countActiveTodos(model.todos)
   const completedCount = Array.length(model.todos) - activeCount
   const allCompleted =
     Array.isReadonlyArrayNonEmpty(model.todos) && activeCount === 0
 
-  const renderedHeader = lazyHeader(headerView, [model.newTodoText])
+  const renderedHeader = lazyHeader(headerView, [model.newTodoText, h])
 
   const renderedMain = Array.match(model.todos, {
     onEmpty: () => h.empty,
@@ -249,14 +237,15 @@ export const view = (model: Model): Document => {
       h.section(
         [h.Class('main')],
         [
-          lazyToggleAllInput(toggleAllInputView, [allCompleted]),
-          lazyToggleAllLabel(toggleAllLabelView, []),
+          lazyToggleAllInput(toggleAllInputView, [allCompleted, h]),
+          lazyToggleAllLabel(toggleAllLabelView, [h]),
           h.ul(
             [h.Class('todo-list')],
             Array.map(filteredTodos, todo =>
               lazyTodo(todo.id, todoItemView, [
                 todo,
                 maybeEditingTextFor(model.editing, todo.id),
+                h,
               ]),
             ),
           ),
@@ -267,7 +256,7 @@ export const view = (model: Model): Document => {
   const renderedFooter = Array.match(model.todos, {
     onEmpty: () => h.empty,
     onNonEmpty: () =>
-      lazyFooter(footerView, [activeCount, completedCount, model.filter]),
+      lazyFooter(footerView, [activeCount, completedCount, model.filter, h]),
   })
 
   return {

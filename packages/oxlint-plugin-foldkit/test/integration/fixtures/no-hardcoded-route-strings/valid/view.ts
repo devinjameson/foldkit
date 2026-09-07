@@ -1,8 +1,5 @@
-import { html } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
-import type { Message } from './message'
 import { tasksRouter } from './route'
 
-const h = html<Message>()
-
-export const tasksLink = h.a([h.Href(tasksRouter())], ['Tasks'])
+export const tasksLink = ih.a([ih.Href(tasksRouter())], ['Tasks'])

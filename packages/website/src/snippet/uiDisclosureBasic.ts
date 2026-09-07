@@ -1,37 +1,37 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Schema as S } from 'effect'
-import { html } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { Schema } from 'effect'
+import type { HtmlBuilder } from 'foldkit/html'
+import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
 import { Disclosure } from '@foldkit/ui'
 
 // Store the open state as a plain boolean field in your Model:
-const Model = S.Struct({
-  isFaqOpen: S.Boolean,
+const Model = Schema.Struct({
+  isFaqOpen: Schema.Boolean,
   // ...your other fields
 })
 
 // In your init function, start it closed:
-const init = () => [
-  {
+const init = () => ({
+  model: {
     isFaqOpen: false,
     // ...your other fields
   },
-  [],
-]
+})
 
 // A verb-first, past-tense Message carries the new open state:
-const ToggledFaq = m('ToggledFaq', { isOpen: S.Boolean })
 
-const Message = S.Union([ToggledFaq])
+const Message = defineMessageUnion({
+  ToggledFaq: { isOpen: Schema.Boolean },
+})
 
-// Inside your update function's M.tagsExhaustive({...}), store the value.
+// In the corresponding Message.match handler, store the value.
 // This is the moment to persist the open state, lazy-load panel content, or
 // log analytics.
-ToggledFaq: ({ isOpen }) => [evo(model, { isFaqOpen: () => isOpen }), []]
+ToggledFaq: ({ isOpen }) => ({ model: evo(model, { isFaqOpen: () => isOpen }) })
 
 // Inside your view function, render the disclosure with Disclosure.view.
 // Render the panel unconditionally and pass it through animatePanel: the
@@ -42,32 +42,32 @@ ToggledFaq: ({ isOpen }) => [evo(model, { isFaqOpen: () => isOpen }), []]
 // `Disclosure.buttonId('faq-1')` for a native `<label for>`). Either
 // attribute is only emitted when provided, so the toggle never carries a
 // dangling `aria-labelledby`.
-const view = model => {
-  const h = html<Message>()
-
-  return Disclosure.view<Message>({
-    id: 'faq-1',
-    isOpen: model.isFaqOpen,
-    onToggle: isOpen => ToggledFaq({ isOpen }),
-    // ariaLabel: 'What is Foldkit?',
-    toView: ({ button, panel, animatePanel }) =>
-      h.div(
-        [h.Class('border rounded-lg overflow-hidden')],
-        [
-          h.button(
-            [
-              ...button,
-              h.Class('flex items-center justify-between w-full p-4'),
-            ],
-            [h.span([], ['What is Foldkit?'])],
-          ),
-          animatePanel(
-            h.div(
-              [...panel, h.Class('p-4 border-t')],
-              [h.p([], ['A functional UI framework built on Effect-TS.'])],
+const view = (model, h: HtmlBuilder<Message>) =>
+  Disclosure.view(
+    {
+      id: 'faq-1',
+      isOpen: model.isFaqOpen,
+      onToggle: isOpen => Message.ToggledFaq({ isOpen }),
+      // ariaLabel: 'What is Foldkit?',
+      toView: ({ button, panel, animatePanel }) =>
+        h.div(
+          [h.Class('border rounded-lg overflow-hidden')],
+          [
+            h.button(
+              [
+                ...button,
+                h.Class('flex items-center justify-between w-full p-4'),
+              ],
+              [h.span([], ['What is Foldkit?'])],
             ),
-          ),
-        ],
-      ),
-  })
-}
+            animatePanel(
+              h.div(
+                [...panel, h.Class('p-4 border-t')],
+                [h.p([], ['A functional UI framework built on Effect-TS.'])],
+              ),
+            ),
+          ],
+        ),
+    },
+    h,
+  )

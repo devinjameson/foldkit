@@ -1,16 +1,12 @@
-import { html } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
-import type { Message } from './message'
-
-const h = html<Message>()
-
-const externalLinkAttributes = [h.Rel('noopener noreferrer')]
+const externalLinkAttributes = [ih.Rel('noopener noreferrer')]
 
 // The protective Rel arrives through a spread, so it cannot be proven absent.
-export const docsLink = h.a(
+export const docsLink = ih.a(
   [
-    h.Href('https://example.com'),
-    h.Target('_blank'),
+    ih.Href('https://example.com'),
+    ih.Target('_blank'),
     ...externalLinkAttributes,
   ],
   ['Docs'],

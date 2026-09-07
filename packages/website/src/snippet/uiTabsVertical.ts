@@ -1,16 +1,16 @@
 // Pseudocode walkthrough using the same Model, init, Message, and update
 // as the basic tabs; only the view config changes to set orientation and
 // use flex + flex-col for layout.
-import { html } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import type { HtmlBuilder } from 'foldkit/html'
+import { defineMessageUnion } from 'foldkit/message'
 
 import { Tabs } from '@foldkit/ui'
 
-const GotTabsMessage = m('GotTabsMessage', {
-  message: Tabs.Message,
+const Message = defineMessageUnion({
+  GotTabsMessage: { message: Tabs.Message },
 })
 
-const Framework = S.Literals(['Foldkit', 'React', 'Elm'])
+const Framework = Schema.Literals(['Foldkit', 'React', 'Elm'])
 type Framework = typeof Framework.Type
 
 const FrameworkTabs = Tabs.create<Framework>()
@@ -24,10 +24,8 @@ const descriptions: Record<Framework, string> = {
 
 // Inside your view function, set orientation to 'Vertical' and use flex +
 // flex-col for layout:
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: 'framework-tabs',
     model: model.tabs,
     view: FrameworkTabs.view,
@@ -65,6 +63,5 @@ const view = (model: Model) => {
           ],
         ),
     },
-    toParentMessage: message => GotTabsMessage({ message }),
+    toParentMessage: message => Message.GotTabsMessage({ message }),
   })
-}

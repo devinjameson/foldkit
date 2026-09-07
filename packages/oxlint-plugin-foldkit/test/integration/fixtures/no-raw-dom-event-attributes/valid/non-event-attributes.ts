@@ -1,11 +1,7 @@
-import { html } from 'foldkit/html'
-
-import type { Message } from './message'
-
-const h = html<Message>()
+import { inertHtml as ih } from 'foldkit/html'
 
 // `online` and `onLine` are ordinary names, not DOM event handlers.
-export const marker = h.div(
-  [h.Attribute('online', 'true'), h.Prop({ key: 'onLine', value: true })],
-  [],
-)
+export const marker = ih.div([
+  ih.Attribute('online', 'true'),
+  ih.Prop({ key: 'onLine', value: true }),
+])

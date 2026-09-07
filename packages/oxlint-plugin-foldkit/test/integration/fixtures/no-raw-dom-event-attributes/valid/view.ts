@@ -1,8 +1,7 @@
-import { html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { ClickedReload } from './message'
 import type { Message } from './message'
 
-const h = html<Message>()
-
-export const reloadButton = h.button([h.OnClick(ClickedReload())], ['Reload'])
+export const reloadButton = (h: HtmlBuilder<Message>): Html =>
+  h.button([h.OnClick(ClickedReload())], ['Reload'])
