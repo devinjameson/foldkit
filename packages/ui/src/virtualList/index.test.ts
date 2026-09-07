@@ -1,5 +1,6 @@
 import { Array, Option } from 'effect'
 import * as Story from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -196,7 +197,7 @@ describe('VirtualList', () => {
     })
 
     it('computes the slice from scrollTop, containerHeight, and rowHeightPx', () => {
-      const model: Model = { ...measuredInit(300), scrollTop: 0 }
+      const model: Model = evo(measuredInit(300), { scrollTop: () => 0 })
       const result = visibleWindow(model, 1000, 0)
 
       expect(Option.isSome(result)).toBe(true)
@@ -209,7 +210,7 @@ describe('VirtualList', () => {
     })
 
     it('shifts the slice as scrollTop advances', () => {
-      const model: Model = { ...measuredInit(300), scrollTop: 600 }
+      const model: Model = evo(measuredInit(300), { scrollTop: () => 600 })
       const result = visibleWindow(model, 1000, 0)
 
       if (Option.isSome(result)) {
@@ -221,7 +222,7 @@ describe('VirtualList', () => {
     })
 
     it('expands the slice by the overscan buffer on each side', () => {
-      const model: Model = { ...measuredInit(300), scrollTop: 600 }
+      const model: Model = evo(measuredInit(300), { scrollTop: () => 600 })
       const result = visibleWindow(model, 1000, 5)
 
       if (Option.isSome(result)) {
@@ -231,7 +232,7 @@ describe('VirtualList', () => {
     })
 
     it('clamps startIndex to 0 when overscan crosses the top edge', () => {
-      const model: Model = { ...measuredInit(300), scrollTop: 30 }
+      const model: Model = evo(measuredInit(300), { scrollTop: () => 30 })
       const result = visibleWindow(model, 1000, 5)
 
       if (Option.isSome(result)) {
@@ -241,7 +242,7 @@ describe('VirtualList', () => {
     })
 
     it('clamps endIndex to itemCount when overscan crosses the bottom edge', () => {
-      const model: Model = { ...measuredInit(300), scrollTop: 0 }
+      const model: Model = evo(measuredInit(300), { scrollTop: () => 0 })
       const result = visibleWindow(model, 8, 5)
 
       if (Option.isSome(result)) {
@@ -251,7 +252,7 @@ describe('VirtualList', () => {
     })
 
     it('produces an empty slice when itemCount is 0', () => {
-      const model: Model = { ...measuredInit(300), scrollTop: 0 }
+      const model: Model = evo(measuredInit(300), { scrollTop: () => 0 })
       const result = visibleWindow(model, 0, 5)
 
       if (Option.isSome(result)) {
@@ -281,7 +282,7 @@ describe('VirtualList', () => {
     })
 
     it('computes the slice from cumulative heights at scrollTop 0', () => {
-      const model: Model = { ...measuredInit(60), scrollTop: 0 }
+      const model: Model = evo(measuredInit(60), { scrollTop: () => 0 })
       const result = visibleWindowVariable(model, rows, heightOf, 0)
 
       expect(Option.isSome(result)).toBe(true)
@@ -294,7 +295,7 @@ describe('VirtualList', () => {
     })
 
     it('shifts the slice into rows whose offsets straddle scrollTop', () => {
-      const model: Model = { ...measuredInit(60), scrollTop: 25 }
+      const model: Model = evo(measuredInit(60), { scrollTop: () => 25 })
       const result = visibleWindowVariable(model, rows, heightOf, 0)
 
       if (Option.isSome(result)) {
@@ -306,7 +307,7 @@ describe('VirtualList', () => {
     })
 
     it('expands the slice by overscan and recomputes spacers from cumulative heights', () => {
-      const model: Model = { ...measuredInit(60), scrollTop: 25 }
+      const model: Model = evo(measuredInit(60), { scrollTop: () => 25 })
       const result = visibleWindowVariable(model, rows, heightOf, 1)
 
       if (Option.isSome(result)) {
@@ -318,7 +319,7 @@ describe('VirtualList', () => {
     })
 
     it('clamps the slice to itemCount when scrollTop exceeds total content height', () => {
-      const model: Model = { ...measuredInit(60), scrollTop: 1000 }
+      const model: Model = evo(measuredInit(60), { scrollTop: () => 1000 })
       const result = visibleWindowVariable(model, rows, heightOf, 0)
 
       if (Option.isSome(result)) {
@@ -330,7 +331,7 @@ describe('VirtualList', () => {
     })
 
     it('produces an empty slice when items is empty', () => {
-      const model: Model = { ...measuredInit(60), scrollTop: 0 }
+      const model: Model = evo(measuredInit(60), { scrollTop: () => 0 })
       const result = visibleWindowVariable(model, [], heightOf, 0)
 
       if (Option.isSome(result)) {
@@ -404,7 +405,7 @@ describe('VirtualList', () => {
     const constantHeight = (): number => 30
 
     it('visibleWindow and visibleWindowVariable produce the same slice for uniform-height inputs', () => {
-      const model: Model = { ...measuredInit(300), scrollTop: 600 }
+      const model: Model = evo(measuredInit(300), { scrollTop: () => 600 })
       const uniform = visibleWindow(model, rows.length, 5)
       const variable = visibleWindowVariable(model, rows, constantHeight, 5)
 

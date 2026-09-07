@@ -1,7 +1,8 @@
-import { Option, Schema } from 'effect'
+import { Number, Option, Schema } from 'effect'
 
 import type { Html, HtmlBuilder } from '../../html/index.js'
 import { defineMessageUnion } from '../../message/index.js'
+import { evo } from '../../struct/index.js'
 import type * as Update from '../../update/index.js'
 
 // MODEL
@@ -34,18 +35,16 @@ export const initialModel: Model = {
 export const update = (model: Model, message: Message) =>
   Message.match<Update.Return<Model, Message>>(message, {
     PressedPointerDown: ({ pointerType }) => ({
-      model: {
-        ...model,
-        pointerDownCount: model.pointerDownCount + 1,
-        lastPointerType: pointerType,
-      },
+      model: evo(model, {
+        pointerDownCount: Number.increment,
+        lastPointerType: () => pointerType,
+      }),
     }),
     ReleasedPointerUp: ({ pointerType }) => ({
-      model: {
-        ...model,
-        pointerUpCount: model.pointerUpCount + 1,
-        lastPointerType: pointerType,
-      },
+      model: evo(model, {
+        pointerUpCount: Number.increment,
+        lastPointerType: () => pointerType,
+      }),
     }),
   })
 

@@ -1,6 +1,7 @@
 import { Array, Option, pipe } from 'effect'
 import { Validating } from 'foldkit/fieldValidation'
 import { Command, given, message, model, story } from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { describe, expect, test } from 'vitest'
 
 import { FileDrop, Menu, Tabs } from '@foldkit/ui'
@@ -48,7 +49,7 @@ describe('update', () => {
     test('ClickedPrevious goes back to the previous step', () => {
       story(
         update,
-        given({ ...initialModel, currentStep: 'Education' }),
+        given(evo(initialModel, { currentStep: () => 'Education' })),
         message(Message.ClickedPrevious()),
         model(model => {
           expect(model.currentStep).toBe('WorkHistory')
@@ -70,7 +71,7 @@ describe('update', () => {
     test('ClickedNext on the last step stays put', () => {
       story(
         update,
-        given({ ...initialModel, currentStep: 'Review' }),
+        given(evo(initialModel, { currentStep: () => 'Review' })),
         message(Message.ClickedNext()),
         model(model => {
           expect(model.currentStep).toBe('Review')
@@ -260,7 +261,7 @@ describe('update', () => {
     test('ClickedSubmit on a complete application transitions to Submitting and fires command', () => {
       story(
         update,
-        given({ ...completeModel, currentStep: 'Review' }),
+        given(evo(completeModel, { currentStep: () => 'Review' })),
         message(Message.ClickedSubmit()),
         Command.expectExact(SubmitApplication),
         Command.resolve(
@@ -277,7 +278,7 @@ describe('update', () => {
     test('ClickedSubmit on an incomplete application reveals errors and does not submit', () => {
       story(
         update,
-        given({ ...initialModel, currentStep: 'Review' }),
+        given(evo(initialModel, { currentStep: () => 'Review' })),
         message(Message.ClickedSubmit()),
         Command.expectNone(),
         model(model => {
@@ -317,14 +318,14 @@ describe('update', () => {
     test('ClickedSubmit with pending validation does not submit', () => {
       story(
         update,
-        given({
-          ...completeModel,
-          currentStep: 'Review',
-          personalInfo: {
-            ...completeModel.personalInfo,
-            email: Validating({ value: 'jane@example.com' }),
-          },
-        }),
+        given(
+          evo(completeModel, {
+            currentStep: () => 'Review',
+            personalInfo: evo({
+              email: () => Validating({ value: 'jane@example.com' }),
+            }),
+          }),
+        ),
         message(Message.ClickedSubmit()),
         Command.expectNone(),
         model(model => {
@@ -338,7 +339,7 @@ describe('update', () => {
     test('ClickedSubmit preserves Valid fields rather than re-running validation', () => {
       story(
         update,
-        given({ ...completeModel, currentStep: 'Review' }),
+        given(evo(completeModel, { currentStep: () => 'Review' })),
         message(Message.ClickedSubmit()),
         Command.resolve(
           SubmitApplication,
@@ -354,11 +355,12 @@ describe('update', () => {
     test('successful submission shows success', () => {
       story(
         update,
-        given({
-          ...initialModel,
-          currentStep: 'Review',
-          submission: Submission.Submitting(),
-        }),
+        given(
+          evo(initialModel, {
+            currentStep: () => 'Review',
+            submission: () => Submission.Submitting(),
+          }),
+        ),
         message(Message.SucceededSubmitApplication()),
         model(model => {
           expect(model.submission._tag).toBe('SubmitSuccess')
@@ -369,11 +371,12 @@ describe('update', () => {
     test('failed submission shows error', () => {
       story(
         update,
-        given({
-          ...initialModel,
-          currentStep: 'Review',
-          submission: Submission.Submitting(),
-        }),
+        given(
+          evo(initialModel, {
+            currentStep: () => 'Review',
+            submission: () => Submission.Submitting(),
+          }),
+        ),
         message(Message.FailedSubmitApplication({ error: 'Server down' })),
         model(model => {
           expect(model.submission._tag).toBe('SubmitError')

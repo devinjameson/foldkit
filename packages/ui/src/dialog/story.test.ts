@@ -3,6 +3,7 @@ import * as Dom from 'foldkit/dom'
 import type { ChildAttribute, HtmlBuilder } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
 import * as Story from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { expect } from 'vitest'
 
 import { describe, it } from '@effect/vitest'
@@ -289,15 +290,16 @@ describe('Dialog', () => {
       })
 
       it('ignores RequestedClose when already in LeaveStart', () => {
-        const leavingModel = {
-          ...init({ id: 'test', isOpen: true, isAnimated: true }),
-          isOpen: false,
-          animation: {
-            id: 'test-panel',
-            isShowing: false,
-            transitionState: 'LeaveStart' as const,
+        const leavingModel = evo(
+          init({ id: 'test', isOpen: true, isAnimated: true }),
+          {
+            isOpen: () => false,
+            animation: () =>
+              evo(Animation.init({ id: 'test-panel', isShowing: false }), {
+                transitionState: () => 'LeaveStart',
+              }),
           },
-        }
+        )
         Story.story(
           update,
           Story.given(leavingModel),
@@ -310,15 +312,16 @@ describe('Dialog', () => {
       })
 
       it('dispatches no CloseDialog when the show succeeds during the leave animation', () => {
-        const leavingModel = {
-          ...init({ id: 'test', isOpen: true, isAnimated: true }),
-          isOpen: false,
-          animation: {
-            id: 'test-panel',
-            isShowing: false,
-            transitionState: 'LeaveStart' as const,
+        const leavingModel = evo(
+          init({ id: 'test', isOpen: true, isAnimated: true }),
+          {
+            isOpen: () => false,
+            animation: () =>
+              evo(Animation.init({ id: 'test-panel', isShowing: false }), {
+                transitionState: () => 'LeaveStart',
+              }),
           },
-        }
+        )
         Story.story(
           update,
           Story.given(leavingModel),
@@ -331,15 +334,16 @@ describe('Dialog', () => {
       })
 
       it('ignores RequestedClose when already in LeaveAnimating', () => {
-        const leavingModel = {
-          ...init({ id: 'test', isOpen: true, isAnimated: true }),
-          isOpen: false,
-          animation: {
-            id: 'test-panel',
-            isShowing: false,
-            transitionState: 'LeaveAnimating' as const,
+        const leavingModel = evo(
+          init({ id: 'test', isOpen: true, isAnimated: true }),
+          {
+            isOpen: () => false,
+            animation: () =>
+              evo(Animation.init({ id: 'test-panel', isShowing: false }), {
+                transitionState: () => 'LeaveAnimating',
+              }),
           },
-        }
+        )
         Story.story(
           update,
           Story.given(leavingModel),
@@ -370,15 +374,16 @@ describe('Dialog', () => {
       })
 
       it('resets an in-flight leave animation to Idle without emitting Closed', () => {
-        const leavingModel = {
-          ...init({ id: 'test', isOpen: true, isAnimated: true }),
-          isOpen: false,
-          animation: {
-            id: 'test-panel',
-            isShowing: false,
-            transitionState: 'LeaveAnimating' as const,
+        const leavingModel = evo(
+          init({ id: 'test', isOpen: true, isAnimated: true }),
+          {
+            isOpen: () => false,
+            animation: () =>
+              evo(Animation.init({ id: 'test-panel', isShowing: false }), {
+                transitionState: () => 'LeaveAnimating',
+              }),
           },
-        }
+        )
         Story.story(
           update,
           Story.given(leavingModel),
@@ -437,14 +442,15 @@ describe('Dialog', () => {
       })
 
       it('resets a running enter animation to Idle', () => {
-        const enteringModel = {
-          ...init({ id: 'test', isOpen: true, isAnimated: true }),
-          animation: {
-            id: 'test-panel',
-            isShowing: true,
-            transitionState: 'EnterAnimating' as const,
+        const enteringModel = evo(
+          init({ id: 'test', isOpen: true, isAnimated: true }),
+          {
+            animation: () =>
+              evo(Animation.init({ id: 'test-panel', isShowing: true }), {
+                transitionState: () => 'EnterAnimating',
+              }),
           },
-        }
+        )
         Story.story(
           update,
           Story.given(enteringModel),
@@ -459,15 +465,16 @@ describe('Dialog', () => {
       })
 
       it('resets a running leave animation to Idle', () => {
-        const leavingModel = {
-          ...init({ id: 'test', isOpen: true, isAnimated: true }),
-          isOpen: false,
-          animation: {
-            id: 'test-panel',
-            isShowing: false,
-            transitionState: 'LeaveAnimating' as const,
+        const leavingModel = evo(
+          init({ id: 'test', isOpen: true, isAnimated: true }),
+          {
+            isOpen: () => false,
+            animation: () =>
+              evo(Animation.init({ id: 'test-panel', isShowing: false }), {
+                transitionState: () => 'LeaveAnimating',
+              }),
           },
-        }
+        )
         Story.story(
           update,
           Story.given(leavingModel),
@@ -553,15 +560,16 @@ describe('Dialog', () => {
     })
 
     it('publishes type button while the leave animation runs', () => {
-      const leavingModel = {
-        ...init({ id: 'my-dialog', isOpen: true, isAnimated: true }),
-        isOpen: false,
-        animation: {
-          id: 'my-dialog-panel',
-          isShowing: false,
-          transitionState: 'LeaveStart' as const,
+      const leavingModel = evo(
+        init({ id: 'my-dialog', isOpen: true, isAnimated: true }),
+        {
+          isOpen: () => false,
+          animation: () =>
+            evo(Animation.init({ id: 'my-dialog-panel', isShowing: false }), {
+              transitionState: () => 'LeaveStart',
+            }),
         },
-      }
+      )
       expect(
         hasButtonType(renderGroup(leavingModel, render => render.closeButton)),
       ).toBe(true)

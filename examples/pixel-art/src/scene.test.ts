@@ -1,5 +1,6 @@
 import { Option } from 'effect'
 import { Command, click, expect, given, role, scene, text } from 'foldkit/scene'
+import { evo } from 'foldkit/struct'
 import { describe, test } from 'vitest'
 
 import { Dialog, Listbox, RadioGroup } from '@foldkit/ui'
@@ -37,14 +38,15 @@ const createTestModel = (): Model => ({
   paletteRadioGroup: RadioGroup.init({ id: 'palette-picker' }),
 })
 
-const createPaintedModel = (): Model => ({
-  ...createTestModel(),
-  grid: createEmptyGrid(4).map((row, y) =>
-    row.map((cell, x) =>
-      x === 0 && y === 0 ? Option.some<PaletteIndex>(0) : cell,
-    ),
-  ),
-})
+const createPaintedModel = (): Model =>
+  evo(createTestModel(), {
+    grid: () =>
+      createEmptyGrid(4).map((row, y) =>
+        row.map((cell, x) =>
+          x === 0 && y === 0 ? Option.some<PaletteIndex>(0) : cell,
+        ),
+      ),
+  })
 
 describe('export workflow', () => {
   test('clicking Export PNG produces ExportPng Command', () => {
@@ -167,15 +169,15 @@ describe('history panel', () => {
   })
 
   test('undo enables after painting and re-disables after undoing', () => {
-    const modelWithHistory: Model = {
-      ...createTestModel(),
-      grid: createEmptyGrid(4).map((row, y) =>
-        row.map((cell, x) =>
-          x === 0 && y === 0 ? Option.some<PaletteIndex>(0) : cell,
+    const modelWithHistory: Model = evo(createTestModel(), {
+      grid: () =>
+        createEmptyGrid(4).map((row, y) =>
+          row.map((cell, x) =>
+            x === 0 && y === 0 ? Option.some<PaletteIndex>(0) : cell,
+          ),
         ),
-      ),
-      undoStack: [createEmptyGrid(4)],
-    }
+      undoStack: () => [createEmptyGrid(4)],
+    })
 
     scene(
       { update, view },
@@ -208,15 +210,15 @@ describe('grid size change', () => {
   })
 
   test('confirming grid size change closes dialog and saves canvas', () => {
-    const modelWithPendingResize: Model = {
-      ...createTestModel(),
-      maybePendingGridSize: Option.some(8),
-      gridSizeConfirmDialog: Dialog.init({
-        id: 'grid-size-confirm-dialog',
-        isOpen: true,
-      }),
-      undoStack: [createEmptyGrid(4)],
-    }
+    const modelWithPendingResize: Model = evo(createTestModel(), {
+      maybePendingGridSize: () => Option.some(8),
+      gridSizeConfirmDialog: () =>
+        Dialog.init({
+          id: 'grid-size-confirm-dialog',
+          isOpen: true,
+        }),
+      undoStack: () => [createEmptyGrid(4)],
+    })
 
     scene(
       { update, view },
@@ -233,14 +235,14 @@ describe('grid size change', () => {
   })
 
   test('cancelling grid size change keeps current size', () => {
-    const modelWithPendingResize: Model = {
-      ...createTestModel(),
-      maybePendingGridSize: Option.some(8),
-      gridSizeConfirmDialog: Dialog.init({
-        id: 'grid-size-confirm-dialog',
-        isOpen: true,
-      }),
-    }
+    const modelWithPendingResize: Model = evo(createTestModel(), {
+      maybePendingGridSize: () => Option.some(8),
+      gridSizeConfirmDialog: () =>
+        Dialog.init({
+          id: 'grid-size-confirm-dialog',
+          isOpen: true,
+        }),
+    })
 
     scene(
       { update, view },

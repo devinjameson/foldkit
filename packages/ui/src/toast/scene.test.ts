@@ -1,6 +1,7 @@
 import { Duration, Option, Schema } from 'effect'
 import { type Html, type HtmlBuilder, inertHtml as ih } from 'foldkit/html'
 import * as Scene from 'foldkit/scene'
+import { evo } from 'foldkit/struct'
 
 import { describe, it } from '@effect/vitest'
 
@@ -53,11 +54,11 @@ const sceneView =
 const container = Scene.selector('[key="test"]')
 const entryZero = Scene.selector('[key="test-entry-0"]')
 
-const withEntry = (overrides: Partial<Entry> = {}): Model => ({
-  ...Toast.init({ id: 'test' }),
-  entries: [makeSettledEntry(overrides)],
-  nextEntryKey: 1,
-})
+const withEntry = (overrides: Partial<Entry> = {}): Model =>
+  evo(Toast.init({ id: 'test' }), {
+    entries: () => [makeSettledEntry(overrides)],
+    nextEntryKey: () => 1,
+  })
 
 describe('Toast', () => {
   describe('view', () => {
@@ -105,19 +106,16 @@ describe('Toast', () => {
     })
 
     it('reflects the enter transition via data attributes', () => {
-      const enteringEntry: Entry = {
-        ...makeSettledEntry(),
-        animation: {
-          id: 'test-entry-0',
-          isShowing: true,
-          transitionState: 'EnterAnimating',
-        },
-      }
-      const model: Model = {
-        ...Toast.init({ id: 'test' }),
-        entries: [enteringEntry],
-        nextEntryKey: 1,
-      }
+      const enteringEntry: Entry = evo(makeSettledEntry(), {
+        animation: () =>
+          evo(Animation.init({ id: 'test-entry-0', isShowing: true }), {
+            transitionState: () => 'EnterAnimating',
+          }),
+      })
+      const model: Model = evo(Toast.init({ id: 'test' }), {
+        entries: () => [enteringEntry],
+        nextEntryKey: () => 1,
+      })
       Scene.scene(
         { update: Toast.update, view: sceneView() },
         Scene.given(model),
@@ -127,19 +125,16 @@ describe('Toast', () => {
     })
 
     it('reflects the leave transition via data attributes', () => {
-      const leavingEntry: Entry = {
-        ...makeSettledEntry(),
-        animation: {
-          id: 'test-entry-0',
-          isShowing: false,
-          transitionState: 'LeaveAnimating',
-        },
-      }
-      const model: Model = {
-        ...Toast.init({ id: 'test' }),
-        entries: [leavingEntry],
-        nextEntryKey: 1,
-      }
+      const leavingEntry: Entry = evo(makeSettledEntry(), {
+        animation: () =>
+          evo(Animation.init({ id: 'test-entry-0', isShowing: false }), {
+            transitionState: () => 'LeaveAnimating',
+          }),
+      })
+      const model: Model = evo(Toast.init({ id: 'test' }), {
+        entries: () => [leavingEntry],
+        nextEntryKey: () => 1,
+      })
       Scene.scene(
         { update: Toast.update, view: sceneView() },
         Scene.given(model),

@@ -1,5 +1,6 @@
 import { HashMap, Option, Result } from 'effect'
 import { Command, given, message, model, story } from 'foldkit/story'
+import { evo } from 'foldkit/struct'
 import { expect, test } from 'vitest'
 
 import { Tabs } from '@foldkit/ui'
@@ -96,7 +97,7 @@ test('a revalidation tick keeps stale stats on screen while refetching', () => {
       FetchStats,
       Message.SettledFetchStats({
         result: Result.succeed({
-          stats: { ...fixtureStats, activeUsers: 99 },
+          stats: evo(fixtureStats, { activeUsers: () => 99 }),
           fetchedAt: FETCHED_AT + 5000,
         }),
       }),
@@ -134,7 +135,7 @@ test('a failed refresh keeps the stale stats on screen with the error', () => {
 test('refresh clicks during an in-flight fetch are deduplicated', () => {
   story(
     update,
-    given({ ...loadedStatsModel, stats: StatsData.Loading() }),
+    given(evo(loadedStatsModel, { stats: () => StatsData.Loading() })),
     message(Message.ClickedRefreshStats()),
     Command.expectNone(),
   )
@@ -143,12 +144,14 @@ test('refresh clicks during an in-flight fetch are deduplicated', () => {
 test('a revalidation tick during a refresh is deduplicated', () => {
   story(
     update,
-    given({
-      ...loadedStatsModel,
-      stats: StatsData.Refreshing({
-        data: { stats: fixtureStats, fetchedAt: FETCHED_AT },
+    given(
+      evo(loadedStatsModel, {
+        stats: () =>
+          StatsData.Refreshing({
+            data: { stats: fixtureStats, fetchedAt: FETCHED_AT },
+          }),
       }),
-    }),
+    ),
     message(Message.TickedRevalidateStats()),
     Command.expectNone(),
   )
@@ -183,10 +186,11 @@ test('invalidating posts refetches while keeping the current list', () => {
 test('retrying failed posts shows the loading state and refetches', () => {
   story(
     update,
-    given({
-      ...loadedPostsModel,
-      posts: PostsData.Failure({ error: 'The server is down.' }),
-    }),
+    given(
+      evo(loadedPostsModel, {
+        posts: () => PostsData.Failure({ error: 'The server is down.' }),
+      }),
+    ),
     message(Message.ClickedRetryPosts()),
     model(model => {
       expect(model.posts._tag).toBe('Loading')
@@ -269,14 +273,16 @@ test('a failed post detail fetch lands in Failure and retry refetches', () => {
 test('revisiting a post with a cached failure shows it without refetching', () => {
   story(
     update,
-    given({
-      ...loadedPostsModel,
-      postDetailById: HashMap.set(
-        HashMap.empty(),
-        'first-post',
-        PostDetailData.Failure({ error: 'The connection dropped.' }),
-      ),
-    }),
+    given(
+      evo(loadedPostsModel, {
+        postDetailById: () =>
+          HashMap.set(
+            HashMap.empty(),
+            'first-post',
+            PostDetailData.Failure({ error: 'The connection dropped.' }),
+          ),
+      }),
+    ),
     message(Message.ClickedPost({ postId: 'first-post' })),
     Command.expectNone(),
     model(model => {

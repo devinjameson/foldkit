@@ -1,4 +1,5 @@
 import { Option } from 'effect'
+import { evo } from 'foldkit/struct'
 import { bench, describe } from 'vitest'
 
 import { Dialog, Listbox, RadioGroup } from '@foldkit/ui'
@@ -76,7 +77,7 @@ describe('update: single operations', () => {
   })
 
   bench('flood fill (empty grid)', () => {
-    const fillModel: Model = { ...initialModel, tool: 'Fill' as const }
+    const fillModel: Model = evo(initialModel, { tool: () => 'Fill' })
     dispatch(fillModel, Message.PressedCell({ x: 0, y: 0 }))
   })
 })
@@ -119,7 +120,7 @@ describe('update: paint sequence (16x16 grid)', () => {
   })
 
   bench('paint 50 cells with mirror mode', () => {
-    let model: Model = { ...initialModel, mirrorMode: 'Both' as const }
+    let model: Model = evo(initialModel, { mirrorMode: () => 'Both' })
     for (let i = 0; i < 50; i++) {
       const x = (i * 7 + 3) % GRID_SIZE
       const y = (i * 11 + 5) % GRID_SIZE
