@@ -196,7 +196,7 @@ A gate you just wrote is not evidence until you have watched it fail. Break the 
 
 ## Workspace Setup Errors Are Not Pre-Existing
 
-If `pnpm typecheck`, `pnpm lint`, `pnpm build`, or the pre-push hook surfaces errors like `Cannot find module 'foldkit'`, `Cannot find module 'foldkit/html'`, or unexpected `Property X does not exist` against an Effect API, the workspace itself is out of sync. These are not pre-existing branch failures. Run `bash scripts/cloud-session-setup.sh` to reconcile. The SessionStart hook runs this automatically, so it's only relevant if dependencies drift mid-session.
+If `pnpm typecheck`, `pnpm lint`, `pnpm build`, or the pre-push hook surfaces errors like `Cannot find module 'foldkit'`, `Cannot find module 'foldkit/html'`, or unexpected `Property X does not exist` against an Effect API, the workspace itself is out of sync. These are not pre-existing branch failures. Run `bash scripts/cloud-session-setup.sh` to reconcile. The SessionStart hook runs this automatically in Claude Code cloud sessions. Locally it is a no-op, because the install and rebuild race with `pnpm dev:libs`.
 
 ## GitHub CLI Authentication
 
