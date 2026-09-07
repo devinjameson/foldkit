@@ -23,7 +23,7 @@ import {
   fixtureStats,
   loadedPostsModel,
   loadedStatsModel,
-} from './main.fixtures'
+} from './main.fixture'
 
 const postDetailTag = (model: Model, postId: string): string =>
   HashMap.get(model.postDetailById, postId).pipe(

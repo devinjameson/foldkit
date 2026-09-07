@@ -11,7 +11,7 @@ import {
   chartModes,
   packageIds,
 } from './domain'
-import { loadingModel, readyModel, sampleTelemetry } from './main.fixtures'
+import { loadingModel, readyModel, sampleTelemetry } from './main.fixture'
 import { Message } from './message'
 import { TelemetryAsyncData } from './model'
 import { update } from './update'

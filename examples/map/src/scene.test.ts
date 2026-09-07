@@ -25,7 +25,7 @@ import {
   update,
   view,
 } from './main'
-import { initialModel, mountedModel } from './main.fixtures'
+import { initialModel, mountedModel } from './main.fixture'
 
 const acknowledgeMapMount = Mount.resolve(
   MountMap,
