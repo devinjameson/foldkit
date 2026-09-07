@@ -1,5 +1,11 @@
 # @foldkit/markdown
 
+## 0.9.1
+
+### Patch Changes
+
+- [#1349](https://github.com/foldkit/foldkit/pull/1349) [`b3901c3`](https://github.com/foldkit/foldkit/commit/b3901c3fe836525893c4d392291a5109928b80ee) Thanks [@devinjameson](https://github.com/devinjameson)! - Republish the website build packages so their artifacts match the shared repository inputs and Vite plugin source used by foldkit.dev.
+
 ## 0.9.0
 
 ### Minor Changes
