@@ -21,7 +21,7 @@ const renderPage = async (request: Request) =>
   })
 
 const handle = (request: Request) =>
-  handleRequest(request, { renderPage, template: TEMPLATE, origin: ORIGIN })
+  handleRequest(request, { renderPage, template: TEMPLATE })
 
 describe('handleRequest', () => {
   it('renders a page request into the template', async () => {
@@ -45,20 +45,21 @@ describe('handleRequest', () => {
     )
   })
 
-  it('refuses a target that names another origin', async () => {
-    const response = await handle(new Request('http://evil.example/page'))
-
-    expect(response.status).toBe(400)
-  })
-
-  it('uses the platform Request.url when no origin is configured', async () => {
+  it('hands the entry the Request.url the platform constructed', async () => {
+    const seen: Array<string> = []
     const response = await handleRequest(
       new Request('https://app.example/about'),
-      { renderPage, template: TEMPLATE },
+      {
+        renderPage: request => {
+          seen.push(request.url)
+          return renderPage(request)
+        },
+        template: TEMPLATE,
+      },
     )
 
     expect(response.status).toBe(200)
-    expect(await response.text()).toContain('>/about</main>')
+    expect(seen).toEqual(['https://app.example/about'])
   })
 
   it('does not answer a missing hashed asset with the application shell', async () => {
@@ -91,7 +92,6 @@ describe('handleRequest', () => {
     const response = await handleRequest(new Request(`${ORIGIN}/gone`), {
       renderPage: async () => Responded(Response.redirect(`${ORIGIN}/`, 302)),
       template: TEMPLATE,
-      origin: ORIGIN,
     })
 
     expect(response.status).toBe(302)

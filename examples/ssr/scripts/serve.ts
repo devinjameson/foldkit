@@ -1,4 +1,4 @@
-import { Config, Effect, Layer, Match, Option } from 'effect'
+import { Config, Effect, Layer, Match, Option, Predicate, String } from 'effect'
 import {
   HttpServer,
   HttpServerError,
@@ -6,7 +6,7 @@ import {
   HttpServerResponse,
   HttpStaticServer,
 } from 'effect/unstable/http'
-import * as Server from 'foldkit/experimental/server'
+import { Server } from 'foldkit/experimental'
 import { createServer } from 'node:http'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,24 +37,16 @@ const PORT = Config.withDefault(Config.port('PORT'), DEFAULT_PORT)
 // before static files or fetch. Set ORIGIN when deploying behind a proxy or
 // TLS terminator.
 const ORIGIN = Config.option(Config.string('ORIGIN')).pipe(
-  Config.map(Option.filter(origin => origin !== '')),
+  Config.map(Option.filter(String.isNonEmpty)),
 )
 
-const isFetchHandler = (value: unknown): value is FetchHandler => {
-  if (typeof value !== 'object' || value === null || !('fetch' in value)) {
-    return false
-  }
-  return typeof value.fetch === 'function'
-}
+const isFetchHandler = (value: unknown): value is FetchHandler =>
+  Predicate.hasProperty(value, 'fetch') && Predicate.isFunction(value.fetch)
 
 const isFetchModule = (
   value: unknown,
-): value is { readonly default: FetchHandler } => {
-  if (typeof value !== 'object' || value === null || !('default' in value)) {
-    return false
-  }
-  return isFetchHandler(value.default)
-}
+): value is { readonly default: FetchHandler } =>
+  Predicate.hasProperty(value, 'default') && isFetchHandler(value.default)
 
 const isRouteNotFound = (error: HttpServerError.HttpServerError): boolean =>
   error.reason._tag === 'RouteNotFound'
@@ -81,36 +73,32 @@ const fetchResponse = (
     return HttpServerResponse.fromWeb(response)
   })
 
-const loadFetchHandler = (origin: string) =>
-  Effect.gen(function* () {
-    // The fetch bundle reads `process.env.ORIGIN` at module evaluation. Set it
-    // before the import so the handler locks to the same origin this host
-    // uses for `resolveRequestUrl`.
-    if (process.env['ORIGIN'] === undefined || process.env['ORIGIN'] === '') {
-      process.env['ORIGIN'] = origin
-    }
-    const loaded: unknown = yield* Effect.promise(
-      () => import(FETCH_MODULE_URL),
-    )
-    if (!isFetchModule(loaded)) {
-      return yield* Effect.die(
-        new Error(
-          'dist/server/fetch.js must default-export a Web fetch handler',
-        ),
-      )
-    }
-    return loaded.default
+const loadFetchHandler = Effect.gen(function* () {
+  const loaded: unknown = yield* Effect.tryPromise({
+    try: () => import(FETCH_MODULE_URL),
+    catch: cause =>
+      new Error(
+        'dist/server/fetch.js could not be loaded. Run `vite build` first.',
+        { cause },
+      ),
   })
+  if (!isFetchModule(loaded)) {
+    return yield* Effect.die(
+      new Error('dist/server/fetch.js must default-export a Web fetch handler'),
+    )
+  }
+  return loaded.default
+})
 
 const makeHandler = Effect.gen(function* () {
   const port = yield* PORT
   const origin = Option.getOrElse(
     yield* ORIGIN,
-    () => `http://localhost:${String(port)}`,
+    () => `http://localhost:${globalThis.String(port)}`,
   )
-  const app = yield* loadFetchHandler(origin)
-  // `index` is unset so a directory request does not serve the raw client
-  // `index.html` template. Page requests go through `fetch` instead.
+  const app = yield* loadFetchHandler
+  // NOTE: `index` is unset so a directory request does not serve the raw
+  // client `index.html` template. Page requests go through `fetch` instead.
   const staticFiles = yield* HttpStaticServer.make({
     root: CLIENT_DIR,
     index: undefined,
@@ -119,7 +107,8 @@ const makeHandler = Effect.gen(function* () {
   return HttpServerRequest.HttpServerRequest.use(request => {
     // NOTE: refuse an off-origin target before looking for a file. A
     // network-path request such as `//evil.example/../assets/app.js` names
-    // another host, then a path that exists on disk.
+    // another host, then a path that exists on disk. The fetch handler trusts
+    // the `Request.url` it is given, so this is the one place that resolves it.
     const requestUrl = Server.resolveRequestUrl(request.url, origin)
     if (requestUrl === undefined) {
       return Effect.succeed(HttpServerResponse.empty({ status: 400 }))

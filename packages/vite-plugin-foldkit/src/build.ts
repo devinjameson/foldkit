@@ -1,6 +1,6 @@
 import { Array, Schema } from 'effect'
 import type { RenderedApplication } from 'foldkit/experimental/server'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import nodePath, { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type {
@@ -37,13 +37,6 @@ export type FoldkitBuildOptions = Readonly<{
   clientOutDir?: string
   /** Where the server build is written. */
   serverOutDir?: string
-  /**
-   * The origin generated pages and a locking fetch handler see as
-   * `Request.url`. Generated pages default to `'http://localhost'`. The
-   * fetch handler uses the platform `Request.url` unless this or `ORIGIN`
-   * is set, so a Worker is not refused as off-origin.
-   */
-  origin?: string
   /**
    * The `id` of the empty container in `index.html` the fetch handler
    * replaces. Defaults to `'root'`. The aggregate plugin copies
@@ -336,43 +329,27 @@ const captures = ((): Map<string, Captured> => {
   return fresh
 })()
 
-const originSource = (origin: string | undefined): ReadonlyArray<string> => {
-  const fromEnv =
-    'globalThis.process && globalThis.process.env && globalThis.process.env.ORIGIN'
-  if (origin === undefined) {
-    return [`const origin = ${fromEnv}`]
-  }
-  return [`const origin =`, `  (${fromEnv}) ||`, `  ${JSON.stringify(origin)}`]
-}
-
 const fetchModuleSource = (
   serverEntry: string,
   template: string,
-  origin: string | undefined,
   containerId: string | undefined,
 ): string => {
   const containerLiteral =
     containerId === undefined ? 'undefined' : JSON.stringify(containerId)
   // NOTE: `export *` re-exports whatever the application entry actually names,
   // so a missing `prerenderPaths` is absent rather than a Vite undefined-import
-  // warning. ORIGIN is read at runtime so a Node adapter can serve on a port
-  // the build did not know. When the build did not name an origin, the
-  // handler uses the platform `Request.url` and does not refuse Workers as
-  // off-origin.
+  // warning.
   return `${[
     `import { handleRequest } from 'foldkit/experimental/server'`,
     `import * as server from ${JSON.stringify(serverEntry)}`,
     `export * from ${JSON.stringify(serverEntry)}`,
     `const template = ${JSON.stringify(template)}`,
-    ...originSource(origin),
-    `export { origin }`,
     `const containerId = ${containerLiteral}`,
     `export default {`,
     `  fetch(request) {`,
     `    return handleRequest(request, {`,
     `      renderPage: server.renderPage,`,
     `      template,`,
-    `      origin,`,
     `      containerId,`,
     `    })`,
     `  },`,
@@ -381,22 +358,20 @@ const fetchModuleSource = (
   ].join('\n')}`
 }
 
-const templateForFetchModule = async (
-  root: string,
-  clientOutDir: string,
+// The template is what the browser build emitted in this same `vite build`,
+// never a file on disk: `dist/client/index.html` could only be the previous
+// build's shell with its old asset hashes, and the source `index.html` still
+// names `/src/entry.ts`. Either would bundle into a handler that serves a
+// page which cannot hydrate, from a build that reported success.
+const templateForFetchModule = (
   capturedTemplate: string | undefined,
-): Promise<string> => {
-  if (capturedTemplate !== undefined) {
-    return capturedTemplate
+): string => {
+  if (capturedTemplate === undefined) {
+    throw new Error(
+      '[foldkit] the browser build has not emitted index.html, so the fetch handler has no template to render into. Build the "client" environment before "ssr", and give the client an HTML entry.',
+    )
   }
-  try {
-    return await readFile(resolve(root, clientOutDir, 'index.html'), 'utf8')
-  } catch {
-    // NOTE: never fall back to the source `index.html`. That file still
-    // names `/src/entry.ts`. A client that emitted no HTML is a build this
-    // has no opinion about, so the handler gets an empty template.
-    return ''
-  }
+  return capturedTemplate
 }
 
 /**
@@ -416,7 +391,6 @@ export const foldkitBuild = (
   const clientOutDir = options.clientOutDir ?? DEFAULT_CLIENT_OUT_DIR
   const serverOutDir = options.serverOutDir ?? DEFAULT_SERVER_OUT_DIR
   const prerender = prerenderOptionsFrom(options.prerender ?? false)
-  const fetchOrigin = options.origin ?? prerender?.origin
   const containerId = prerender?.containerId ?? options.containerId
 
   // Prerendering imports the server bundle and runs it in the build process,
@@ -557,6 +531,7 @@ export const foldkitBuild = (
 
   return {
     name: 'foldkit:build',
+    apply: 'build',
     api: {
       host: 'fetch' as const,
       serverEntry,
@@ -568,18 +543,13 @@ export const foldkitBuild = (
       }
       return undefined
     },
-    async load(id) {
+    load(id) {
       if (id !== RESOLVED_FETCH_MODULE_ID) {
         return
       }
-      const root = this.environment.config.root
-      const state = captured(root)
-      const template = await templateForFetchModule(
-        root,
-        clientOutDir,
-        state.template,
-      )
-      return fetchModuleSource(serverEntry, template, fetchOrigin, containerId)
+      const state = captured(this.environment.config.root)
+      const template = templateForFetchModule(state.template)
+      return fetchModuleSource(serverEntry, template, containerId)
     },
     // NOTE: `writeBundle` rather than `generateBundle`: Vite's own HTML plugin
     // emits `index.html` from a `generateBundle` hook of its own, and hook

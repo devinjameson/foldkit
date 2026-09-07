@@ -72,8 +72,8 @@ export type FoldkitPluginOptions = Readonly<{
    */
   devToolsMcpPort?: number
   /**
-   * Serve server-rendered pages from the Vite dev server, and — with
-   * `ssr.build` — emit a Web `fetch` handler as the server bundle. When
+   * Serve server-rendered pages from the Vite dev server, and, with
+   * `ssr.build`, emit a Web `fetch` handler as the server bundle. When
    * set, `vite` passes HTML navigations that fall through Vite, plus
    * non-GET requests, to `renderPage` from the module at
    * `ssr.serverEntry`. When `undefined` (the default), the dev server
@@ -826,9 +826,6 @@ export const foldkit = (options: FoldkitPluginOptions = {}): Array<Plugin> => {
   return [
     ...shared,
     servePages,
-    foldkitBuild(ssr.serverEntry, {
-      ...withContainerId(build, ssr.containerId),
-      ...(ssr.origin === undefined ? {} : { origin: ssr.origin }),
-    }),
+    foldkitBuild(ssr.serverEntry, withContainerId(build, ssr.containerId)),
   ]
 }

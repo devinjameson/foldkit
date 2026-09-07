@@ -4,7 +4,6 @@ import {
   acceptsHtml,
   classifyRequest,
   isHostSettledMethod,
-  resolveRequestUrl,
   resolvesToIndexHtml,
   varyWith,
   varyWithAccept,
@@ -25,17 +24,6 @@ export type HandleRequestOptions = Readonly<{
    * The unfilled HTML shell. Rendered markup is placed into its container.
    */
   template: string
-  /**
-   * The origin this host serves, such as `'https://app.example'`. The
-   * entry sees it as `Request.url`. A target that resolves anywhere else
-   * is refused, so a client cannot choose the redirects or cookie domains
-   * the entry builds from the URL.
-   *
-   * Omit it when the platform already constructed `Request.url` (Workers,
-   * Deno). Node adapters that resolve a raw request target against a
-   * configured origin should pass that origin.
-   */
-  origin?: string
   /**
    * The `id` of the empty container in {@link template} the rendered
    * markup replaces. Defaults to `'root'`.
@@ -71,39 +59,22 @@ const injectOptions = (
 ): InjectIntoTemplateOptions | undefined =>
   containerId === undefined ? undefined : { containerId }
 
-const platformRequestUrl = (requestUrl: string): string | undefined => {
-  let resolved: URL
-  try {
-    resolved = new URL(requestUrl)
-  } catch {
-    return undefined
-  }
-  if (resolved.username !== '' || resolved.password !== '') {
-    return undefined
-  }
-  return resolved.href
-}
-
-const pageUrl = (
-  requestUrl: string,
-  origin: string | undefined,
-): string | undefined => {
-  if (origin === undefined || origin === '') {
-    return platformRequestUrl(requestUrl)
-  }
-  return resolveRequestUrl(requestUrl, origin)
-}
-
 /**
  * Answers one request as a Web `fetch` handler: refuse methods the
- * `Request` constructor cannot represent, refuse a target that names
- * another origin when one is configured, classify a static miss so a
+ * `Request` constructor cannot represent, classify a static miss so a
  * hashed asset is not answered with the application shell, and otherwise
  * call `renderPage`.
  *
  * Static files are the platform's job. This function is what remains
  * after Vite, a file server, or Worker assets have already missed.
  * Node and workerd both call it, so development predicts production.
+ *
+ * `Request.url` is trusted as the platform constructed it. On Workers and
+ * Deno that is the URL the platform resolved. A Node adapter receives a raw
+ * request target instead, which may be an absolute URL or a network-path
+ * reference naming another host, so the adapter resolves that target
+ * against its configured origin with `resolveRequestUrl` and refuses an
+ * off-origin one before constructing the `Request` it passes here.
  *
  * @experimental Ships from `foldkit/experimental/server`; expect breaking changes while the API settles.
  */
@@ -117,12 +88,7 @@ export const handleRequest = async (
     })
   }
 
-  const requestUrl = pageUrl(request.url, options.origin)
-  if (requestUrl === undefined) {
-    return emptyResponse(400)
-  }
-
-  const pageRequest = new Request(requestUrl, request)
+  const requestUrl = request.url
   const method = request.method.toUpperCase()
   const isGetOrHead = method === 'GET' || method === 'HEAD'
 
@@ -148,7 +114,7 @@ export const handleRequest = async (
     }
   }
 
-  const result = await options.renderPage(pageRequest)
+  const result = await options.renderPage(request)
   const rendered = toResponse(
     options.template,
     result,

@@ -282,7 +282,7 @@ Cloudflare Workers, Deno, and Bun already use Web `Request` and `Response`, so t
 
 ::Snippet{name="serverRenderingWorkersHost" label="Workers host example"}
 
-The platform serves the built client assets, and the handler covers page requests. When the build does not name an origin, the handler uses the platform `Request.url`, so a Worker is not refused as off-origin. Set `ssr.origin` or `ORIGIN` only when the host constructs requests against a configured origin, as the Node adapter does. The same built `fetch.js` module runs unchanged on each runtime.
+The platform serves the built client assets, and the handler covers page requests. The handler trusts `Request.url` as the platform constructed it. Only a Node adapter sees a raw request target, and `scripts/serve.ts` resolves that target against its configured origin and refuses an off-origin one before calling `fetch`. The same built `fetch.js` module runs unchanged on each runtime.
 
 [Alchemy](https://alchemy.run) can provision and deploy the host. It is TypeScript-native infrastructure as code built on Effect. The Worker and its databases, object storage, or queues live in the same TypeScript program as the entry. Its [Cloudflare support](https://alchemy.run/cloudflare/) deploys the Worker directly.
 
