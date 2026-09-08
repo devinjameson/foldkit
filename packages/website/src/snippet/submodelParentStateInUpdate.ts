@@ -4,9 +4,9 @@ import { evo } from 'foldkit/struct'
 
 import { Message } from '../../message'
 import type { Model as AppModel } from '../../model'
-import type { User } from '../user'
 import { PersistSettings, Message as SettingsMessage } from './message'
 import type { Model as SettingsModel } from './model'
+import type { User } from './user'
 
 type Context = Readonly<{
   currentUser: User

@@ -3,7 +3,7 @@ import { type Update } from 'foldkit'
 import { defineMessageUnion } from 'foldkit/message'
 import { evo } from 'foldkit/struct'
 
-import { PeopleRoute } from '../route'
+import { PeopleRoute } from './route'
 
 // MESSAGE
 
