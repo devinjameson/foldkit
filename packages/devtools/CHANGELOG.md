@@ -1,5 +1,11 @@
 # @foldkit/devtools
 
+## 0.159.0
+
+### Patch Changes
+
+- [#960](https://github.com/foldkit/foldkit/pull/960) [`40b6ef2`](https://github.com/foldkit/foldkit/commit/40b6ef2babe96011264ba14911318d4a31d5a6d8) Thanks [@armancharan](https://github.com/armancharan)! - `Runtime.embed` now reports unhandled startup failures in the console, matching `Runtime.run` and `Runtime.hydrate`, while host disposal and other interrupt-only exits stay quiet. A failing Flags or resource Effect no longer leaves an embedded program blank without explaining why.
+
 ## 0.158.2
 
 ### Version Alignment
