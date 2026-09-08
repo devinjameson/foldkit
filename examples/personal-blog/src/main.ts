@@ -1,8 +1,8 @@
 import { clsx } from 'clsx'
-import { Effect, Match as M, Option, Schema as S } from 'effect'
-import { Command, Runtime } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { Effect, Option, Schema } from 'effect'
+import { Command, Runtime, Update } from 'foldkit'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
@@ -14,11 +14,11 @@ import { Counter, islandAttributes } from './island'
 import { proseView } from './prose'
 import * as Route from './route'
 
-export { HomeRoute, NotFoundRoute, PostRoute, PostsRoute } from './route'
+export { AppRoute } from './route'
 
 // MODEL
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   route: Route.AppRoute,
   counter: Counter.Model,
 })
@@ -26,95 +26,77 @@ export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const ClickedLink = m('ClickedLink', { request: UrlRequest })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const GotCounterMessage = m('GotCounterMessage', {
-  message: Counter.Message,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  GotCounterMessage: { message: Counter.Message },
 })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-  GotCounterMessage,
-])
 export type Message = typeof Message.Type
 
 // INIT
 
 export const init: Runtime.RoutingApplicationInit<Model, Message> = (
   url: Url,
-) => [{ route: Route.urlToAppRoute(url), counter: Counter.init }, []]
+) => ({ model: { route: Route.urlToAppRoute(url), counter: Counter.init } })
 
 // COMMAND
 
-const NavigateInternal = Command.define(
-  'NavigateInternal',
-  { url: S.String },
-  CompletedNavigateInternal,
-)(({ url }) => pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())))
+const NavigateInternal = Command.define('NavigateInternal', {
+  args: { url: Schema.String },
+  messages: [Message.CompletedNavigateInternal],
+  execute: ({ url }) =>
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
+})
 
-const LoadExternal = Command.define(
-  'LoadExternal',
-  { href: S.String },
-  CompletedLoadExternal,
-)(({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())))
+const LoadExternal = Command.define('LoadExternal', {
+  args: { href: Schema.String },
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
+})
 
 // UPDATE
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
+type UpdateReturn = Update.Return<Model, Message>
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tags({
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [NavigateInternal({ url: urlToString(url) })],
-            ],
-            External: ({ href }) => [model, [LoadExternal({ href })]],
-          }),
-        ),
+const foldCounter = Update.foldChild({
+  update: Counter.update,
+  read: (model: Model) => Option.some(model.counter),
+  write: (model, nextCounter) => evo(model, { counter: () => nextCounter }),
+  toParentMessage: message => Message.GotCounterMessage({ message }),
+})
 
-      ChangedUrl: ({ url }) => {
-        const nextRoute = Route.urlToAppRoute(url)
-        return [evo(model, { route: () => nextRoute }), []]
-      },
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    ClickedLink: ({ request }) =>
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
+        }),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
-      GotCounterMessage: ({ message }) => {
-        const [nextCounter, counterCommands] = Counter.update(
-          model.counter,
-          message,
-        )
-        return [
-          evo(model, { counter: () => nextCounter }),
-          Command.mapMessages(counterCommands, childMessage =>
-            GotCounterMessage({ message: childMessage }),
-          ),
-        ]
-      },
-    }),
-    M.tag('CompletedNavigateInternal', 'CompletedLoadExternal', () => [
-      model,
-      [],
-    ]),
-    M.exhaustive,
-  )
+    ChangedUrl: ({ url }) => {
+      const nextRoute = Route.urlToAppRoute(url)
+      return { model: evo(model, { route: () => nextRoute }) }
+    },
+
+    GotCounterMessage: ({ message }) => foldCounter(model, message),
+    CompletedNavigateInternal: () => ({ model }),
+    CompletedLoadExternal: () => ({ model }),
+  })
 
 // VIEW
 
-const islandViews = (model: Model): Markdown.Islands => {
-  const h = html<Message>()
-
-  return Markdown.islandsFor(islandAttributes, {
+const islandViews = (model: Model, h: HtmlBuilder<Message>): Markdown.Islands =>
+  Markdown.islandsFor(islandAttributes, {
     Counter: ({ label }, _content, occurrenceIndex) =>
       h.div(
         [
@@ -128,7 +110,7 @@ const islandViews = (model: Model): Markdown.Islands => {
             slotId: `counter-${occurrenceIndex}`,
             model: model.counter,
             view: Counter.view,
-            toParentMessage: message => GotCounterMessage({ message }),
+            toParentMessage: message => Message.GotCounterMessage({ message }),
           }),
         ],
       ),
@@ -143,7 +125,6 @@ const islandViews = (model: Model): Markdown.Islands => {
         content,
       ),
   })
-}
 
 const navLinkClassName = ({ isActive }: { isActive: boolean }): string =>
   clsx('text-sm transition hover:text-stone-900', {
@@ -151,10 +132,11 @@ const navLinkClassName = ({ isActive }: { isActive: boolean }): string =>
     'text-stone-500': !isActive,
   })
 
-const headerView = (currentRoute: Route.AppRoute): Html => {
-  const h = html<Message>()
-
-  return h.header(
+const headerView = (
+  currentRoute: Route.AppRoute,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.header(
     [h.Class('border-b border-stone-200')],
     [
       h.div(
@@ -217,14 +199,12 @@ const headerView = (currentRoute: Route.AppRoute): Html => {
       ),
     ],
   )
-}
 
-const homeView = (model: Model): Html => proseView(about, islandViews(model))
+const homeView = (model: Model, h: HtmlBuilder<Message>): Html =>
+  proseView(about, islandViews(model, h))
 
-const postCardView = (post: Post): Html => {
-  const h = html<Message>()
-
-  return h.keyed('li')(
+const postCardView = (post: Post, h: HtmlBuilder<Message>): Html =>
+  h.keyed('li')(
     post.slug,
     [],
     [
@@ -245,24 +225,21 @@ const postCardView = (post: Post): Html => {
       ),
     ],
   )
-}
 
-const postsView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const postsView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
       h.h1([h.Class('mb-8 text-3xl font-bold text-stone-900')], ['Posts']),
-      h.ul([h.Class('list-none space-y-8')], posts.map(postCardView)),
+      h.ul(
+        [h.Class('list-none space-y-8')],
+        posts.map(post => postCardView(post, h)),
+      ),
     ],
   )
-}
 
-const missingPostView = (slug: string): Html => {
-  const h = html()
-
-  return h.div(
+const missingPostView = (slug: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
       h.h1([h.Class('text-3xl font-bold text-stone-900')], ['Post Not Found']),
@@ -272,11 +249,12 @@ const missingPostView = (slug: string): Html => {
       ),
     ],
   )
-}
 
-const postView = (slug: string, model: Model): Html => {
-  const h = html()
-
+const postView = (
+  slug: string,
+  model: Model,
+  h: HtmlBuilder<Message>,
+): Html => {
   const maybePost = findPost(slug)
 
   const contentKey = Option.match(maybePost, {
@@ -285,7 +263,7 @@ const postView = (slug: string, model: Model): Html => {
   })
 
   const content = Option.match(maybePost, {
-    onNone: () => missingPostView(slug),
+    onNone: () => missingPostView(slug, h),
     onSome: post =>
       h.article(
         [],
@@ -295,7 +273,7 @@ const postView = (slug: string, model: Model): Html => {
             [h.Class('mt-2 mb-8 text-sm text-stone-500')],
             [post.publishedOn],
           ),
-          proseView(post.document, islandViews(model)),
+          proseView(post.document, islandViews(model, h)),
         ],
       ),
   })
@@ -317,10 +295,8 @@ const postView = (slug: string, model: Model): Html => {
   )
 }
 
-const notFoundView = (path: string): Html => {
-  const h = html()
-
-  return h.div(
+const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
       h.h1([h.Class('text-3xl font-bold text-stone-900')], ['404']),
@@ -339,40 +315,33 @@ const notFoundView = (path: string): Html => {
       ),
     ],
   )
-}
 
 const routeTitle = (route: Route.AppRoute): string =>
-  M.value(route).pipe(
-    M.tagsExhaustive({
-      Home: () => 'Devin Jameson',
-      Posts: () => 'Posts | Devin Jameson',
-      Post: ({ slug }) =>
-        Option.match(findPost(slug), {
-          onNone: () => 'Post Not Found | Devin Jameson',
-          onSome: post => `${post.title} | Devin Jameson`,
-        }),
-      NotFound: () => 'Not Found | Devin Jameson',
-    }),
-  )
+  Route.AppRoute.match(route, {
+    Home: () => 'Devin Jameson',
+    Posts: () => 'Posts | Devin Jameson',
+    Post: ({ slug }) =>
+      Option.match(findPost(slug), {
+        onNone: () => 'Post Not Found | Devin Jameson',
+        onSome: post => `${post.title} | Devin Jameson`,
+      }),
+    NotFound: () => 'Not Found | Devin Jameson',
+  })
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Home: () => homeView(model),
-      Posts: postsView,
-      Post: ({ slug }) => postView(slug, model),
-      NotFound: ({ path }) => notFoundView(path),
-    }),
-  )
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
+  const routeContent = Route.AppRoute.match(model.route, {
+    Home: () => homeView(model, h),
+    Posts: () => postsView(h),
+    Post: ({ slug }) => postView(slug, model, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   return {
     title: routeTitle(model.route),
     body: h.div(
       [h.Class('min-h-screen bg-white text-stone-800')],
       [
-        headerView(model.route),
+        headerView(model.route, h),
         h.main(
           [h.Class('mx-auto max-w-2xl px-6 py-10')],
           [h.keyed('div')(model.route._tag, [], [routeContent])],

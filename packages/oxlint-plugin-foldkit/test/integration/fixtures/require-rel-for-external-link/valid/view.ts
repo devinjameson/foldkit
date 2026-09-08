@@ -1,14 +1,10 @@
-import { html } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
-import type { Message } from './message'
-
-const h = html<Message>()
-
-export const docsLink = h.a(
+export const docsLink = ih.a(
   [
-    h.Href('https://example.com'),
-    h.Target('_blank'),
-    h.Rel('noopener noreferrer'),
+    ih.Href('https://example.com'),
+    ih.Target('_blank'),
+    ih.Rel('noopener noreferrer'),
   ],
   ['Docs'],
 )

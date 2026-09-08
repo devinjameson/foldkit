@@ -1,18 +1,13 @@
 import * as Story from 'foldkit/story'
 
-import {
-  AdvancedAnimationFrame,
-  EndedAnimation,
-  RequestFrame,
-  WaitForAnimationSettled,
-} from '../animation/index.js'
-import { ElapsedDuration } from './schema.js'
-import { DismissAfter } from './update.js'
+import * as Animation from '../animation/index.js'
+import { Message } from './schema.js'
+import { WaitBeforeDismissal } from './update.js'
 
 /** Input for {@link drainEntry}. `entryId` selects the entry whose lifecycle
  *  to drain. `version` is the auto-dismiss timer version echoed back by
- *  `ElapsedDuration`; it defaults to `0`, the version a freshly shown entry
- *  carries. */
+ *  `CompletedWaitBeforeDismissal`; it defaults to `0`, the version a freshly
+ *  shown entry carries. */
 export type DrainEntryInput = Readonly<{
   entryId: string
   version?: number
@@ -30,10 +25,11 @@ const DEFAULT_VERSION = 0
  *  test must resolve in full or the story fails on leftover Commands. The
  *  steps are:
  *
- *  - enter animation: `RequestFrame` then `AdvancedAnimationFrame`
+ *  - enter animation: `WaitForPaint` then `CompletedWaitForPaint`
  *  - enter settle: `WaitForAnimationSettled` then `EndedAnimation`
- *  - auto-dismiss: `DismissAfter` then `ElapsedDuration`
- *  - exit animation: `RequestFrame` then `AdvancedAnimationFrame`
+ *  - auto-dismiss: `WaitBeforeDismissal` then
+ *    `CompletedWaitBeforeDismissal`
+ *  - exit animation: `WaitForPaint` then `CompletedWaitForPaint`
  *  - exit settle: `WaitForAnimationSettled` then `EndedAnimation`
  *
  *  Each step resolves with the child's raw result Message. `resolveAll` replays
@@ -44,7 +40,7 @@ const DEFAULT_VERSION = 0
  *  ```ts
  *  Story.story(
  *    update,
- *    Story.with(model),
+ *    Story.given(model),
  *    Story.message(ClickedSave()),
  *    Toast.test.drainEntry({ entryId: 'toast-entry-0' }),
  *  )
@@ -55,9 +51,12 @@ export const drainEntry = ({
   version = DEFAULT_VERSION,
 }: DrainEntryInput) =>
   Story.Command.resolveAll(
-    [RequestFrame, AdvancedAnimationFrame()],
-    [WaitForAnimationSettled, EndedAnimation()],
-    [DismissAfter, ElapsedDuration({ entryId, version })],
-    [RequestFrame, AdvancedAnimationFrame()],
-    [WaitForAnimationSettled, EndedAnimation()],
+    [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+    [Animation.WaitForAnimationSettled, Animation.Message.EndedAnimation()],
+    [
+      WaitBeforeDismissal,
+      Message.CompletedWaitBeforeDismissal({ entryId, version }),
+    ],
+    [Animation.WaitForPaint, Animation.Message.CompletedWaitForPaint()],
+    [Animation.WaitForAnimationSettled, Animation.Message.EndedAnimation()],
   )

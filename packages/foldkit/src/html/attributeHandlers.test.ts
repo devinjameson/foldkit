@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { MountTracker } from '../mount/index.js'
 import { Dispatch } from '../runtime/index.js'
-import { html } from './index.js'
+import { __htmlBuilder } from './index.js'
 import {
   type DispatchSync,
   clearRuntime,
@@ -20,7 +20,7 @@ import {
 
 type Message = Readonly<{ _tag: 'IgnoredMouseClick' }>
 
-const h = html<Message>()
+const h = __htmlBuilder<Message>()
 
 const setUpRuntime = (): void => {
   const dispatchSync: DispatchSync = () => {}
@@ -51,7 +51,7 @@ afterEach(() => {
 
 describe('AllowDrop', () => {
   it('registers a dragover handler that prevents the default', () => {
-    const vnode = h.div([h.AllowDrop()], [])
+    const vnode = h.div([h.AllowDrop()])
 
     const dragoverHandler = vnode?.data?.on?.['dragover']
     expect(typeof dragoverHandler).toBe('function')

@@ -1,8 +1,6 @@
-import { html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
-const h = html<Message>()
+import type { Message } from './message'
 
-export const panel = h.div(
-  [h.OnMount(AnchorPopover()), h.OnMount(SyncScroll())],
-  [],
-)
+export const panel = (h: HtmlBuilder<Message>): Html =>
+  h.div([h.OnMount(AnchorPopover()), h.OnMount(SyncScroll())])

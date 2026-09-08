@@ -7,12 +7,42 @@ import {
   Function,
   Option,
   Record,
+  Schema,
   Stream,
 } from 'effect'
 
+import {
+  restoreUncontrolledContent,
+  synchronizeControlledDefault,
+} from '../controlledDomState.js'
+import {
+  FOREIGN_REPRESENTABLE_PROPERTIES,
+  assertStyleIsRepresentable,
+  htmlAttributeValue,
+  isHtmlPropertyRepresentable,
+  normalizedStyleProperties,
+  reflectedAttributeName,
+} from '../domReflection.js'
 import type { File } from '../file/index.js'
 import type { MountAction } from '../mount/index.js'
-import { MountTracker } from '../mount/index.js'
+import {
+  MountRuntime,
+  MountTracker,
+  liveViewStateChanges,
+} from '../mount/index.js'
+import {
+  attachOnUnmount,
+  beginReplayUnmountRender,
+  endReplayUnmountRender,
+  flushReplayUnmountsAfterPatchFailure,
+} from '../onUnmountModule.js'
+import {
+  hasTrustedInnerHtml,
+  isClientOnlyProperty,
+  markClientOnlyProperty,
+  markTrustedInnerHtml,
+  unmarkClientOnlyProperty,
+} from '../propertyProvenance.js'
 import {
   type On,
   type VNodeData,
@@ -20,6 +50,7 @@ import {
   h,
   vnodeDataMaskKey,
 } from '../snabbdom/index.js'
+import { tagNameFromSelector } from '../tagName.js'
 import { VNode } from '../vdom.js'
 import { type ChildAttribute, isChildAttribute } from './childAttribute.js'
 import {
@@ -31,15 +62,22 @@ import {
 } from './dragZoneTracking.js'
 import {
   type DispatchSync,
+  type MountDispatchResolver,
+  type MountRenderOwner,
   type UnmountResolver,
   clearRuntime,
   requireBoundaryMappers,
   requireDispatch,
+  requireMountDispatchResolver,
   requireRuntimeContext,
   requireUnmountResolver,
   setRuntime,
 } from './runtimeSingleton.js'
-import { submodel } from './submodel.js'
+import {
+  type AnySubmodelView,
+  type SubmodelConfig,
+  submodel,
+} from './submodel.js'
 
 export { createKeyedLazy, createLazy } from './lazy.js'
 export {
@@ -49,8 +87,12 @@ export {
 export type { BoundaryRegistry } from './boundary.js'
 export { childAttributes } from './childAttribute.js'
 export type { ChildAttribute } from './childAttribute.js'
-export { defineView, submodel } from './submodel.js'
-export type { SubmodelConfig, SubmodelView } from './submodel.js'
+export { defineView } from './submodel.js'
+export type {
+  AnySubmodelView,
+  SubmodelConfig,
+  SubmodelView,
+} from './submodel.js'
 
 /** Pushes a dispatch and runtime context frame for the duration of a render.
  *  The runtime calls this immediately before invoking a user `view` and
@@ -119,26 +161,93 @@ const keyboardModifiers = (event: KeyboardEvent): KeyboardModifiers => ({
   metaKey: event.metaKey,
 })
 
+const isDevToolsFocusTarget = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.id === DEVTOOLS_HOST_ID
+
+const isFocusInsideCurrentTarget = (event: FocusEvent): boolean =>
+  event.currentTarget instanceof Element &&
+  event.relatedTarget instanceof Node &&
+  event.currentTarget.contains(event.relatedTarget)
+
 /** A virtual DOM element. Constructed synchronously by the element factories
  *  returned from {@link html}. The runtime patches a `VNode` (or `null` to
  *  render nothing) into the application container. */
 export type Html = VNode | null
 export type Child = Html | string
 
+/** Whether an event handler leaves the browser's default action in place or
+ *  prevents it synchronously. */
+export const DefaultAction = Schema.Literals(['Allow', 'Prevent'])
+/** Whether an event handler leaves the browser's default action in place or
+ *  prevents it synchronously. */
+export type DefaultAction = typeof DefaultAction.Type
+
+/** Whether an event continues through its DOM propagation path or stops after
+ *  the handlers on its current element have run. */
+export const EventPropagation = Schema.Literals(['Bubble', 'Stop'])
+/** Whether an event continues through its DOM propagation path or stops after
+ *  the handlers on its current element have run. */
+export type EventPropagation = typeof EventPropagation.Type
+
+/** Declarative controls for an `OnClick` handler. Omitted
+ *  fields keep the browser default, allow the click to bubble, and leave focus
+ *  unchanged. */
+export const ClickOptions = Schema.Struct({
+  defaultAction: Schema.optional(DefaultAction),
+  propagation: Schema.optional(EventPropagation),
+  focusSelector: Schema.optional(Schema.String),
+})
+/** Declarative controls for an `OnClick` handler. Omitted
+ *  fields keep the browser default, allow the click to bubble, and leave focus
+ *  unchanged. */
+export type ClickOptions = typeof ClickOptions.Type
+
+/** Text direction for the document root, applied to `dir` on the `<html>`
+ *  element. `Auto` defers to the browser's first-strong-character heuristic. */
+export const TextDirection = Schema.Literals(['Ltr', 'Rtl', 'Auto'])
+/** Text direction for the document root, applied to `dir` on the `<html>`
+ *  element. `Auto` defers to the browser's first-strong-character heuristic. */
+export type TextDirection = typeof TextDirection.Type
+
+const textDirectionAttributes: Readonly<
+  Record<TextDirection, 'ltr' | 'rtl' | 'auto'>
+> = {
+  Ltr: 'ltr',
+  Rtl: 'rtl',
+  Auto: 'auto',
+}
+
+/** Maps a {@link TextDirection} to the lowercase value written to the `dir`
+ *  attribute on the `<html>` element. Shared by the client runtime, which sets
+ *  it after each render, and server rendering, which stamps it into the served
+ *  shell so the direction is correct on first paint. */
+export const textDirectionToAttribute = (
+  direction: TextDirection,
+): 'ltr' | 'rtl' | 'auto' => textDirectionAttributes[direction]
+
 /** A view's complete output for the runtime: title, body, and optional document
- *  metadata. The runtime applies `title` to `document.title`, syncs `canonical`
- *  to `<link rel="canonical">` (creating it if absent), syncs `ogUrl` to
- *  `<meta property="og:url">` (creating it if absent), and patches `body` into
- *  the application container.
+ *  metadata. The runtime applies `title` to `document.title`, syncs `lang` and
+ *  `dir` to the `<html>` element, syncs `canonical` to `<link rel="canonical">`
+ *  (creating it if absent), syncs `ogUrl` to `<meta property="og:url">`
+ *  (creating it if absent), and patches `body` into the application container.
  *
  *  When `canonical` is omitted, it defaults to the current URL (origin +
  *  pathname + search). When `ogUrl` is omitted, it falls back to `canonical`.
  *
+ *  `lang` and `dir` have no default. When either is omitted the runtime does not
+ *  touch that attribute, leaving whatever value it currently holds, so a view
+ *  that never sets it leaves the served HTML in place. Drive them from the Model
+ *  when the app switches language at runtime. The served HTML still decides what
+ *  a crawler sees on first paint, because the runtime can only sync after the
+ *  first render.
+ *
  *  This is the return type of a `makeApplication` view, which owns the document. An
  *  app embedded at a node should use `makeElement` instead, whose view returns
- *  `Html` and never touches the `<head>`. */
+ *  `Html` and never touches the `<head>` or the `<html>` element. */
 export type Document = Readonly<{
   title: string
+  lang?: string
+  dir?: TextDirection
   canonical?: string
   ogUrl?: string
   body: Html
@@ -360,8 +469,16 @@ export type TagName =
   | 'munderover'
   | 'semantics'
 
+type OnMountLifecycle = {
+  isActive: boolean
+  isStarted: boolean
+}
+
 type OnMountState = {
   fiber: Fiber.Fiber<void>
+  lifecycle: OnMountLifecycle
+  notifyEnded: () => void
+  owner: MountRenderOwner
 }
 
 const onMountStates = new WeakMap<Element, OnMountState>()
@@ -372,23 +489,25 @@ const onMountStates = new WeakMap<Element, OnMountState>()
 // its own. Mount Effects get this for free because the replayed tree is built
 // with `noOpDispatch`, but the `OnUnmount` destroy hook fires against the prior
 // live tree, so the runtime opens this window during a replay render and
-// `OnUnmount` reads it to skip dispatching a hygiene Message into live history.
-let isReplayRenderActive = false
+// the OnUnmount VDOM module defers dispatching a hygiene Message into live
+// history. A successful replay discards those callbacks. Patch-failure recovery
+// flushes them because it destroys and later rebuilds the imperative live tree.
 
 /** Opens a replay-render window. The runtime calls this immediately before a
  *  DevTools time-travel render and closes it with {@link __endReplayRender}
- *  afterward, so any `OnUnmount` destroy hook that fires while the replayed
- *  tree is patched in skips its dispatch. Without the gate the hook would
+ *  afterward, so the `OnUnmount` module can defer live callbacks while the
+ *  replayed tree is patched in. Without the gate the callback would
  *  enqueue a hygiene Message into live history during mere inspection of past
  *  state. */
-export const __beginReplayRender = (): void => {
-  isReplayRenderActive = true
-}
+export const __beginReplayRender = beginReplayUnmountRender
 
 /** Closes the replay-render window opened by {@link __beginReplayRender}. */
-export const __endReplayRender = (): void => {
-  isReplayRenderActive = false
-}
+export const __endReplayRender = endReplayUnmountRender
+
+/** Dispatches the live `OnUnmount` callbacks deferred by a replay patch that
+ *  failed and forced the runtime to discard the damaged DOM. */
+export const __flushReplayUnmountsAfterPatchFailure =
+  flushReplayUnmountsAfterPatchFailure
 
 /** Key under which the OnMount attribute stamps a `{ name }` marker on the
  *  snabbdom `VNodeData`. Snabbdom passes unknown data fields through without
@@ -401,8 +520,9 @@ export const FOLDKIT_MOUNT_KEY = 'foldkitMount' as const
  *  introspection can identify pending mounts. When the mount lives inside a
  *  Submodel boundary, it also carries that boundary's `toParentMessage` chain
  *  (innermost first), snapshotted at render time, so `Scene.Mount.resolve` can
- *  replay the lift the result travels through in production. The chain is read
- *  only by the Scene harness; production dispatch lifts via `ctx.dispatch`. */
+ *  replay the lift the result travels through in production. Production keeps
+ *  the Mount bound to the dispatcher owned by its acquiring render, then
+ *  resolves that owner's latest chain when the Mount emits. */
 export type FoldkitMountMarker = Readonly<{
   name: string
   args?: Record<string, unknown>
@@ -435,8 +555,7 @@ export type Attribute<Message> = Data.TaggedEnum<{
   Popover: { readonly value: string }
   Popovertarget: { readonly value: string }
   Popovertargetaction: { readonly value: string }
-  OnClick: { readonly message: Message }
-  OnClickFocus: { readonly focusSelector: string; readonly message: Message }
+  OnClick: { readonly message: Message; readonly options?: ClickOptions }
   OnDoubleClick: { readonly message: Message }
   OnMouseDown: { readonly message: Message }
   OnMouseUp: { readonly message: Message }
@@ -503,6 +622,8 @@ export type Attribute<Message> = Data.TaggedEnum<{
   }
   OnFocus: { readonly message: Message }
   OnBlur: { readonly message: Message }
+  OnFocusEnter: { readonly message: Message }
+  OnFocusLeave: { readonly message: Message }
   OnInput: { readonly f: (value: string) => Message }
   OnChange: { readonly f: (value: string) => Message }
   OnFileChange: {
@@ -811,7 +932,6 @@ const {
   Popovertarget,
   Popovertargetaction,
   OnClick,
-  OnClickFocus,
   OnDoubleClick,
   OnMouseDown,
   OnMouseUp,
@@ -832,6 +952,8 @@ const {
   OnKeyPress,
   OnFocus,
   OnBlur,
+  OnFocusEnter,
+  OnFocusLeave,
   OnInput,
   OnChange,
   OnFileChange,
@@ -1107,16 +1229,17 @@ const {
 
 export { Prop, OnCustomEvent }
 
-// BUILD CONTEXT: per-VNode bag of mutable VNode data plus the dispatcher this
-// VNode's events route through. Allocated once per unique dispatcher in
-// `buildVNodeData`, typically once total (a second time when ChildAttribute
-// items route through a child Submodel's own dispatch).
+// BUILD CONTEXT: per-VNode bag of mutable VNode data plus the dispatchers this
+// VNode's events and Mount results route through. Allocated once per unique
+// dispatcher in `buildVNodeData`, typically once total (a second time when
+// ChildAttribute items route through a child Submodel's own dispatch).
 type BuildContext = Readonly<{
   data: VNodeData
   getPostpatchProps: () => Array<Readonly<{ propName: string; value: unknown }>>
   dispatch: DispatchSync
   resolveUnmount: UnmountResolver
   boundaryMappers: ReadonlyArray<(message: unknown) => unknown>
+  resolveMountDispatch?: MountDispatchResolver
   getCapturedContext: () => Context.Context<never>
 }>
 
@@ -1145,11 +1268,60 @@ const setModuleData = <K extends keyof VNodeData>(
 // NOTE: single-key fast paths. The bulk of attribute handlers set exactly
 // one prop, attr, or event handler; writing it directly into the vnode data
 // avoids allocating a `{ key: value }` literal and merging it per attribute.
-const setDataProp = (ctx: BuildContext, key: string, value: unknown): void => {
+const writeDataProp = (
+  ctx: BuildContext,
+  key: string,
+  value: unknown,
+): Record<string, unknown> => {
   /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
   const props = (ctx.data.props ??= {}) as Record<string, unknown>
-  props[key] = value
+  if (key === '__proto__') {
+    Object.defineProperty(props, key, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    })
+  } else {
+    props[key] = value
+  }
   addVNodeDataMask(ctx, VNodeDataMask.Props)
+  return props
+}
+
+// A typed attribute builder writes the DOM property that reflects the HTML
+// attribute it is named after, so the server serializer can emit it as that
+// attribute even on a custom element, where a same-named component property
+// would mean something else entirely. Overwriting a property a generic write
+// left behind takes the name back, so the mark always describes the value that
+// is actually in the bag. The unmark is a no-op unless a generic write happened
+// on this element, which keeps the common path free of any bookkeeping.
+const setDataProp = (ctx: BuildContext, key: string, value: unknown): void => {
+  const props = writeDataProp(ctx, key, value)
+  unmarkClientOnlyProperty(props, key)
+}
+
+// `Prop` writes a DOM property and claims nothing about what it means: the
+// value may be a client-only component property, and the name may collide with
+// one an attribute builder owns. `CustomElement.define` property factories
+// produce `Prop`, so a declared component property lands here too.
+const setClientOnlyDataProp = (
+  ctx: BuildContext,
+  key: string,
+  value: unknown,
+): void => {
+  const props = writeDataProp(ctx, key, value)
+  markClientOnlyProperty(props, key)
+}
+
+// NOTE: `h.InnerHTML` marks the value it wrote as markup the view author intends
+// to be parsed as HTML, which is what lets the server serializer write it to the
+// raw sink. A custom-element property or raw `Prop` named `innerHTML` marks the
+// same key client-only instead. The marks are mutually exclusive, so the last
+// builder owns the key even when both builders wrote exactly the same string.
+const setTrustedInnerHtml = (ctx: BuildContext, value: string): void => {
+  const props = writeDataProp(ctx, 'innerHTML', value)
+  markTrustedInnerHtml(props, value)
 }
 
 const setDataAttr = (
@@ -1228,6 +1400,86 @@ const updateDataOn = (ctx: BuildContext, on: On): void => {
   }
 }
 
+// The values a numeric builder accepts, per property.
+//
+// The server writes these as attribute text and a browser parses them; the
+// client assigns them through the DOM property. The two do not agree
+// everywhere. Assigning a negative `maxLength` throws IndexSizeError while the
+// attribute parses to -1; `size = 0` throws while the attribute falls back to
+// 20; `Infinity` and `NaN` become 0 through the property and the attribute's own
+// default through the parser; and past 2^31 the property conversions wrap while
+// the attribute clamps.
+//
+// The bounds below were measured in Chromium: within them, a parsed attribute
+// and a direct assignment produce the same property for every builder here.
+// Outside them the two disagree or the assignment throws, so the value is
+// refused where it is written rather than diverging once served.
+const SIGNED_LONG_MAXIMUM = 2147483647
+const SIGNED_LONG_MINIMUM = -SIGNED_LONG_MAXIMUM - 1
+
+const NUMERIC_PROPERTY_RANGES: Readonly<
+  Record<string, Readonly<{ minimum: number; maximum: number }>>
+> = {
+  cols: { minimum: 0, maximum: SIGNED_LONG_MAXIMUM },
+  colSpan: { minimum: 0, maximum: SIGNED_LONG_MAXIMUM },
+  maxLength: { minimum: 0, maximum: SIGNED_LONG_MAXIMUM },
+  minLength: { minimum: 0, maximum: SIGNED_LONG_MAXIMUM },
+  rows: { minimum: 0, maximum: SIGNED_LONG_MAXIMUM },
+  rowSpan: { minimum: 0, maximum: SIGNED_LONG_MAXIMUM },
+  size: { minimum: 0, maximum: SIGNED_LONG_MAXIMUM },
+  span: { minimum: 0, maximum: SIGNED_LONG_MAXIMUM },
+  // An ordered list may start anywhere, and negatives agree on both sides.
+  start: { minimum: SIGNED_LONG_MINIMUM, maximum: SIGNED_LONG_MAXIMUM },
+  // Any element can carry one, and the two sides agree across the whole signed
+  // long range. Outside it they part company in a way no value hints at: an
+  // out-of-range assignment wraps (2147483648 becomes -2147483648) while the
+  // attribute falls back to the element's default, which is 0 on a focusable
+  // element and -1 on any other, so the same view yields a focusable served
+  // element and an unreachable fresh one.
+  tabIndex: { minimum: SIGNED_LONG_MINIMUM, maximum: SIGNED_LONG_MAXIMUM },
+}
+
+const numericPropertyRefusal = (propName: string, value: number): string =>
+  `[foldkit] ${propName} was given ${String(value)}, which a browser reads ` +
+  'differently depending on whether it arrives as parsed markup or as a ' +
+  'property assignment, and which can throw outright when assigned. '
+
+const setNumericDataProp = (
+  ctx: BuildContext,
+  propName: string,
+  value: number,
+): void => {
+  const range = NUMERIC_PROPERTY_RANGES[propName]
+  if (
+    range !== undefined &&
+    !(
+      Number.isInteger(value) &&
+      value >= range.minimum &&
+      value <= range.maximum
+    )
+  ) {
+    throw new Error(
+      numericPropertyRefusal(propName, value) +
+        `Use an integer from ${String(range.minimum)} to ` +
+        `${String(range.maximum)}.`,
+    )
+  }
+  setDataProp(ctx, propName, value)
+}
+
+const setFiniteNumericDataProp = (
+  ctx: BuildContext,
+  propName: string,
+  value: number,
+): void => {
+  if (!Number.isFinite(value)) {
+    throw new Error(
+      numericPropertyRefusal(propName, value) + 'Use a finite number.',
+    )
+  }
+  setDataProp(ctx, propName, value)
+}
+
 const updatePropsWithPostpatch = (
   ctx: BuildContext,
   propName: string,
@@ -1266,6 +1518,36 @@ const classObjectFor = (value: string): Readonly<Record<string, true>> => {
   return classObject
 }
 
+// NOTE: navigation and resource URL attributes (href, src, action,
+// formaction) execute script when their scheme is `javascript:` or
+// `vbscript:`, so an untrusted value bound to them is an XSS sink. Browsers
+// ignore ASCII control characters embedded in a scheme (`java\tscript:`
+// still runs), so those are stripped before the scheme is read. A dangerous
+// scheme neutralizes to an empty value; every other URL, including relative
+// paths, http(s), mailto, tel, and data URLs, passes through unchanged.
+const DANGEROUS_URL_SCHEMES: ReadonlySet<string> = new Set([
+  'javascript',
+  'vbscript',
+])
+const URL_CONTROL_CHARACTERS = /[\u0000-\u001F\u007F-\u009F]/g
+const URL_SCHEME_PATTERN = /^\s*([a-zA-Z][a-zA-Z0-9+.-]*)\s*:/
+
+const sanitizeUrl = (value: string): string => {
+  const match = URL_SCHEME_PATTERN.exec(
+    value.replace(URL_CONTROL_CHARACTERS, ''),
+  )
+  if (match !== null) {
+    const scheme = match[1]
+    if (
+      scheme !== undefined &&
+      DANGEROUS_URL_SCHEMES.has(scheme.toLowerCase())
+    ) {
+      return ''
+    }
+  }
+  return value
+}
+
 // NOTE: Built once at module load. Handlers are keyed by `_tag` and apply
 // their mutation to a per-VNode BuildContext directly, so applying an
 // attribute is one map lookup and one call with no per-attribute closure
@@ -1289,7 +1571,7 @@ const attributeHandlers: AttributeHandlers = {
   Lang: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'lang', value),
   Dir: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'dir', value),
   Tabindex: ({ value }, ctx: BuildContext) =>
-    setDataProp(ctx, 'tabIndex', value),
+    setNumericDataProp(ctx, 'tabIndex', value),
   Hidden: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'hidden', value),
   Contenteditable: ({ value }, ctx: BuildContext) =>
     setDataAttr(ctx, 'contenteditable', value),
@@ -1305,17 +1587,22 @@ const attributeHandlers: AttributeHandlers = {
     setDataAttr(ctx, 'popovertarget', value),
   Popovertargetaction: ({ value }, ctx: BuildContext) =>
     setDataAttr(ctx, 'popovertargetaction', value),
-  OnClick: ({ message }, ctx: BuildContext) =>
-    addDataOn(ctx, 'click', () => ctx.dispatch(message)),
-  OnClickFocus: ({ focusSelector, message }, ctx: BuildContext) =>
-    updateDataOn(ctx, {
-      click: () => {
+  OnClick: ({ message, options }, ctx: BuildContext) =>
+    addDataOn(ctx, 'click', (event: MouseEvent) => {
+      if (options?.defaultAction === 'Prevent') {
+        event.preventDefault()
+      }
+      if (options?.propagation === 'Stop') {
+        event.stopPropagation()
+      }
+      const focusSelector = options?.focusSelector
+      if (focusSelector !== undefined) {
         const focusTarget = document.querySelector(focusSelector)
         if (focusTarget instanceof HTMLElement) {
           focusTarget.focus()
         }
-        ctx.dispatch(message)
-      },
+      }
+      ctx.dispatch(message)
     }),
   OnDoubleClick: ({ message }, ctx: BuildContext) =>
     addDataOn(ctx, 'dblclick', () => ctx.dispatch(message)),
@@ -1444,13 +1731,26 @@ const attributeHandlers: AttributeHandlers = {
   OnBlur: ({ message }, ctx: BuildContext) =>
     updateDataOn(ctx, {
       blur: (event: FocusEvent) => {
-        if (
-          event.relatedTarget instanceof Element &&
-          event.relatedTarget.id === DEVTOOLS_HOST_ID
-        ) {
+        if (isDevToolsFocusTarget(event.relatedTarget)) {
           return
         }
         ctx.dispatch(message)
+      },
+    }),
+  OnFocusEnter: ({ message }, ctx: BuildContext) =>
+    updateDataOn(ctx, {
+      focusin: (event: FocusEvent) => {
+        if (!isFocusInsideCurrentTarget(event)) {
+          ctx.dispatch(message)
+        }
+      },
+    }),
+  OnFocusLeave: ({ message }, ctx: BuildContext) =>
+    updateDataOn(ctx, {
+      focusout: (event: FocusEvent) => {
+        if (!isFocusInsideCurrentTarget(event)) {
+          ctx.dispatch(message)
+        }
       },
     }),
   OnInput: ({ f: toMessage }, ctx: BuildContext) =>
@@ -1698,30 +1998,36 @@ const attributeHandlers: AttributeHandlers = {
     setDataProp(ctx, 'autocomplete', value),
   Pattern: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'pattern', value),
   Maxlength: ({ value }, ctx: BuildContext) =>
-    setDataProp(ctx, 'maxLength', value),
+    setNumericDataProp(ctx, 'maxLength', value),
   Minlength: ({ value }, ctx: BuildContext) =>
-    setDataProp(ctx, 'minLength', value),
-  Size: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'size', value),
-  Cols: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'cols', value),
-  Rows: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'rows', value),
+    setNumericDataProp(ctx, 'minLength', value),
+  Size: ({ value }, ctx: BuildContext) =>
+    setNumericDataProp(ctx, 'size', value),
+  Cols: ({ value }, ctx: BuildContext) =>
+    setNumericDataProp(ctx, 'cols', value),
+  Rows: ({ value }, ctx: BuildContext) =>
+    setNumericDataProp(ctx, 'rows', value),
   Max: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'max', value),
   Min: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'min', value),
   Step: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'step', value),
   For: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'htmlFor', value),
-  Href: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'href', value),
-  Src: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'src', value),
+  Href: ({ value }, ctx: BuildContext) =>
+    setDataProp(ctx, 'href', sanitizeUrl(value)),
+  Src: ({ value }, ctx: BuildContext) =>
+    setDataProp(ctx, 'src', sanitizeUrl(value)),
   Alt: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'alt', value),
   Target: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'target', value),
   Rel: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'rel', value),
   Download: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'download', value),
-  Action: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'action', value),
+  Action: ({ value }, ctx: BuildContext) =>
+    setDataProp(ctx, 'action', sanitizeUrl(value)),
   Method: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'method', value),
   Enctype: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'enctype', value),
   Novalidate: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'noValidate', value),
   Formaction: ({ value }, ctx: BuildContext) =>
-    setDataProp(ctx, 'formAction', value),
+    setDataProp(ctx, 'formAction', sanitizeUrl(value)),
   Formmethod: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'formMethod', value),
   Formnovalidate: ({ value }, ctx: BuildContext) =>
@@ -1730,12 +2036,16 @@ const attributeHandlers: AttributeHandlers = {
     setDataProp(ctx, 'formTarget', value),
   Formenctype: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'formEnctype', value),
-  Colspan: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'colSpan', value),
-  Rowspan: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'rowSpan', value),
+  Colspan: ({ value }, ctx: BuildContext) =>
+    setNumericDataProp(ctx, 'colSpan', value),
+  Rowspan: ({ value }, ctx: BuildContext) =>
+    setNumericDataProp(ctx, 'rowSpan', value),
   Scope: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'scope', value),
   Headers: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'headers', value),
-  Span: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'span', value),
-  Start: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'start', value),
+  Span: ({ value }, ctx: BuildContext) =>
+    setNumericDataProp(ctx, 'span', value),
+  Start: ({ value }, ctx: BuildContext) =>
+    setNumericDataProp(ctx, 'start', value),
   Reversed: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'reversed', value),
   CiteAttr: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'cite', value),
@@ -1780,9 +2090,12 @@ const attributeHandlers: AttributeHandlers = {
   Preload: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'preload', value),
   Playsinline: ({ value }, ctx: BuildContext) =>
     setDataProp(ctx, 'playsInline', value),
-  High: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'high', value),
-  Low: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'low', value),
-  Optimum: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'optimum', value),
+  High: ({ value }, ctx: BuildContext) =>
+    setFiniteNumericDataProp(ctx, 'high', value),
+  Low: ({ value }, ctx: BuildContext) =>
+    setFiniteNumericDataProp(ctx, 'low', value),
+  Optimum: ({ value }, ctx: BuildContext) =>
+    setFiniteNumericDataProp(ctx, 'optimum', value),
   Usemap: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'usemap', value),
   Ismap: ({ value }, ctx: BuildContext) => setDataProp(ctx, 'isMap', value),
   Role: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'role', value),
@@ -1883,9 +2196,13 @@ const attributeHandlers: AttributeHandlers = {
   DataAttribute: ({ key, value }, ctx: BuildContext) =>
     setDataAttr(ctx, `data-${key}`, value),
   Style: ({ value }, ctx: BuildContext) =>
-    setModuleData(ctx, 'style', value, VNodeDataMask.Style),
-  InnerHTML: ({ value }, ctx: BuildContext) =>
-    setDataProp(ctx, 'innerHTML', value),
+    setModuleData(
+      ctx,
+      'style',
+      normalizedStyleProperties(value),
+      VNodeDataMask.Style,
+    ),
+  InnerHTML: ({ value }, ctx: BuildContext) => setTrustedInnerHtml(ctx, value),
   ViewBox: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'viewBox', value),
   Xmlns: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'xmlns', value),
   Fill: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'fill', value),
@@ -2031,7 +2348,8 @@ const attributeHandlers: AttributeHandlers = {
   Orient: ({ value }, ctx: BuildContext) => setDataAttr(ctx, 'orient', value),
   PreserveAspectRatio: ({ value }, ctx: BuildContext) =>
     setDataAttr(ctx, 'preserveAspectRatio', value),
-  Prop: ({ key, value }, ctx: BuildContext) => setDataProp(ctx, key, value),
+  Prop: ({ key, value }, ctx: BuildContext) =>
+    setClientOnlyDataProp(ctx, key, value),
   OnCustomEvent: ({ name, f: toMessage }, ctx: BuildContext) =>
     updateDataOn(ctx, {
       [name]: (event: Event) => {
@@ -2043,6 +2361,9 @@ const attributeHandlers: AttributeHandlers = {
   OnMount: ({ action }, ctx: BuildContext) => {
     const capturedContext = ctx.getCapturedContext()
     const maybeTracker = Context.getOption(capturedContext, MountTracker)
+    const maybeMountRuntime = Context.getOption(capturedContext, MountRuntime)
+    const resolveMountDispatch =
+      ctx.resolveMountDispatch ?? currentMountDispatchResolverOrFallback()
     const notifyStarted = Option.isSome(maybeTracker)
       ? () => maybeTracker.value.started(action.name, action.args)
       : Function.constVoid
@@ -2065,22 +2386,19 @@ const attributeHandlers: AttributeHandlers = {
       insert: vnode => {
         if (vnode.elm instanceof Element) {
           const element = vnode.elm
-          notifyStarted()
-          const fiber = Effect.runForkWith(capturedContext)(
-            Stream.runForEach(action.f(element), message =>
-              Effect.sync(() => ctx.dispatch(message)),
-            ).pipe(
-              Effect.catchCause(cause =>
-                Effect.sync(() => {
-                  console.error(
-                    `[OnMount ${action.name}] unhandled failure`,
-                    cause,
-                  )
-                }),
-              ),
-            ),
-          )
-          onMountStates.set(element, { fiber })
+          acquireMount(element)
+        }
+      },
+      postpatch: (_previousVNode, vnode) => {
+        if (vnode.elm instanceof Element) {
+          const state = onMountStates.get(vnode.elm)
+          if (
+            state?.owner === 'Replay' &&
+            resolveMountDispatch.owner === 'Live'
+          ) {
+            releaseMount(state)
+            acquireMount(vnode.elm, state.fiber)
+          }
         }
       },
       destroy: vnode => {
@@ -2090,12 +2408,63 @@ const attributeHandlers: AttributeHandlers = {
         if (vnode.elm instanceof Element) {
           const state = onMountStates.get(vnode.elm)
           if (state) {
+            releaseMount(state)
             Effect.runFork(Fiber.interrupt(state.fiber))
             onMountStates.delete(vnode.elm)
-            notifyEnded()
           }
         }
       },
+    }
+
+    function releaseMount(state: OnMountState): void {
+      state.lifecycle.isActive = false
+      if (state.lifecycle.isStarted) {
+        state.lifecycle.isStarted = false
+        if (state.owner === 'Live') {
+          state.notifyEnded()
+        }
+      }
+    }
+
+    function acquireMount(
+      element: Element,
+      previousFiber?: Fiber.Fiber<void>,
+    ): void {
+      const lifecycle: OnMountLifecycle = {
+        isActive: true,
+        isStarted: true,
+      }
+      const mountDispatch = resolveMountDispatch.resolve()
+      const viewStateChanges = Option.match(maybeMountRuntime, {
+        onNone: () => liveViewStateChanges,
+        onSome: mountRuntime => mountRuntime.captureViewStateChanges(),
+      })
+      notifyStarted()
+      const runMount = Effect.suspend(() => {
+        if (!lifecycle.isActive) {
+          return Effect.void
+        }
+        return Stream.runForEach(action.f(element, viewStateChanges), message =>
+          Effect.sync(() => mountDispatch(message)),
+        )
+      }).pipe(
+        Effect.catchCause(cause =>
+          Effect.sync(() => {
+            console.error(`[OnMount ${action.name}] unhandled failure`, cause)
+          }),
+        ),
+      )
+      const acquire =
+        previousFiber === undefined
+          ? runMount
+          : Fiber.interrupt(previousFiber).pipe(Effect.andThen(runMount))
+      const fiber = Effect.runForkWith(capturedContext)(acquire)
+      onMountStates.set(element, {
+        fiber,
+        lifecycle,
+        notifyEnded,
+        owner: resolveMountDispatch.owner,
+      })
     }
   },
   OnUnmount: ({ message }, ctx: BuildContext) => {
@@ -2105,18 +2474,7 @@ const attributeHandlers: AttributeHandlers = {
     // deregistered the wrap, so a fire-time lookup would throw; the
     // precomputed thunk sidesteps that teardown race.
     const dispatchUnmount = ctx.resolveUnmount(message)
-    const existingDestroy = ctx.data.hook?.destroy
-    ctx.data.hook = {
-      ...ctx.data.hook,
-      destroy: vnode => {
-        if (existingDestroy !== undefined) {
-          existingDestroy(vnode)
-        }
-        if (!isReplayRenderActive) {
-          dispatchUnmount()
-        }
-      },
-    }
+    attachOnUnmount(ctx.data, dispatchUnmount)
   },
 }
 
@@ -2177,6 +2535,14 @@ const currentUnmountResolverOrFallback = (): UnmountResolver => {
   }
 }
 
+const currentMountDispatchResolverOrFallback = (): MountDispatchResolver => {
+  try {
+    return requireMountDispatchResolver()
+  } catch {
+    return { owner: 'Live', resolve: () => fallbackDispatch }
+  }
+}
+
 const capturedContextOrEmpty = (): Context.Context<never> => {
   try {
     return requireRuntimeContext()
@@ -2185,21 +2551,72 @@ const capturedContextOrEmpty = (): Context.Context<never> => {
   }
 }
 
+// NOTE: reasserted on `insert` as well as on `postpatch`. The props module sets
+// a controlled property while the element is being created, before its children
+// exist, and a `<select>`'s `value` setter has nothing to match against until
+// its `<option>`s are there, so a fresh render left the select on the browser's
+// own default until some later patch corrected it. The server instead marks the
+// matching option, so the served page was right and the fresh one was not.
+// `insert` fires once the subtree is built, which is where the two agree.
+const applyControlledProps = (
+  vnode: VNode,
+  controlledProps: ReadonlyArray<
+    Readonly<{ propName: string; value: unknown }>
+  >,
+): void => {
+  if (!vnode.elm) {
+    return
+  }
+  Array.forEach(controlledProps, ({ propName, value }) => {
+    const isOutputValue =
+      vnode.elm instanceof Element &&
+      vnode.elm.localName === 'output' &&
+      propName === 'value'
+    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+    if (isOutputValue || (vnode.elm as any)[propName] !== value) {
+      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+      ;(vnode.elm as any)[propName] = value
+    }
+    if (vnode.elm instanceof Element) {
+      synchronizeControlledDefault(vnode.elm, propName, value)
+    }
+  })
+}
+
 const attachPostpatchHook = (
   data: VNodeData,
   postpatchProps: ReadonlyArray<Readonly<{ propName: string; value: unknown }>>,
 ): void => {
+  const existingInsert = data.hook?.insert
+  const existingPostpatch = data.hook?.postpatch
   data.hook = {
     ...data.hook,
-    postpatch: (_oldVnode, vnode) => {
-      if (vnode.elm) {
-        Array.forEach(postpatchProps, ({ propName, value }) => {
-          /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-          if ((vnode.elm as any)[propName] !== value) {
-            /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-            ;(vnode.elm as any)[propName] = value
-          }
-        })
+    insert: vnode => {
+      applyControlledProps(vnode, postpatchProps)
+      existingInsert?.(vnode)
+    },
+    postpatch: (oldVnode, vnode) => {
+      applyControlledProps(vnode, postpatchProps)
+      existingPostpatch?.(oldVnode, vnode)
+    },
+  }
+}
+
+const attachControlledContentOwnershipHook = (data: VNodeData): void => {
+  const existingPostpatch = data.hook?.postpatch
+  data.hook = {
+    ...data.hook,
+    postpatch: (oldVnode, vnode) => {
+      existingPostpatch?.(oldVnode, vnode)
+      const oldProperties = oldVnode.data?.props
+      const properties = vnode.data?.props
+      if (
+        oldProperties !== undefined &&
+        Object.hasOwn(oldProperties, 'value') &&
+        (properties === undefined || !Object.hasOwn(properties, 'value')) &&
+        vnode.elm instanceof Element
+      ) {
+        restoreUncontrolledContent(vnode.elm, vnode)
       }
     },
   }
@@ -2235,13 +2652,20 @@ const buildVNodeData = <Message>(
     if (isChildAttribute(item)) {
       boundaryCtxByDispatch ??= new Map()
       let ctx = boundaryCtxByDispatch.get(item.dispatch)
-      if (ctx === undefined) {
+      if (
+        ctx === undefined ||
+        (item.resolveMountDispatch !== undefined &&
+          ctx.resolveMountDispatch !== item.resolveMountDispatch)
+      ) {
         ctx = {
           data,
           getPostpatchProps: getSharedPostpatchProps,
           dispatch: item.dispatch,
           resolveUnmount: item.resolveUnmount,
           boundaryMappers: item.boundaryMappers,
+          ...(item.resolveMountDispatch !== undefined && {
+            resolveMountDispatch: item.resolveMountDispatch,
+          }),
           getCapturedContext: capturedContextOrEmpty,
         }
         boundaryCtxByDispatch.set(item.dispatch, ctx)
@@ -2291,12 +2715,371 @@ const copyChildrenDroppingEmpty = (
   return next
 }
 
+// Elements whose content a controlled `value` owns. Giving one both a value and
+// trusted raw HTML asks two mechanisms to own the same text.
+const CONTROLLED_CONTENT_ELEMENTS: ReadonlySet<string> = new Set([
+  'output',
+  'select',
+  'textarea',
+])
+
+// Elements that carry no content at all, so raw HTML written into one cannot be
+// represented in served markup. Assigning the property in a browser can still
+// build child nodes, which is a difference no server render can reproduce.
+const VOID_CONTENT_ELEMENTS: ReadonlySet<string> = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+])
+
+// One owner per element's content. Both `h.InnerHTML` and a client-only
+// `innerHTML` property hand the element an opaque subtree. A view that also
+// declares children or a controlled value gives the differ child vnodes for
+// nodes the property replaces, leaving those vnodes detached and making a later
+// patch unable to restore the declared children. Trusted `h.InnerHTML` also
+// disagrees with the server serializer in these combinations. Rejecting at the
+// builder makes the server render, a fresh client render, and hydration refuse
+// the same self-contradictory view.
+const assertSingleContentOwner = (
+  tagName: string,
+  data: VNodeData,
+  children: ReadonlyArray<Child>,
+): void => {
+  const lowerTagName = tagName.toLowerCase()
+  if (
+    (lowerTagName === 'textarea' || lowerTagName === 'output') &&
+    data.props?.['value'] !== undefined &&
+    children.length > 0
+  ) {
+    throw new Error(
+      `[foldkit] <${lowerTagName}> was given both a controlled value and ` +
+        'children. Both own the element content, so a property assignment ' +
+        'replaces the child nodes the differ expects to patch. Keep one owner.',
+    )
+  }
+  const properties = data.props
+  if (properties === undefined || !Object.hasOwn(properties, 'innerHTML')) {
+    return
+  }
+  const innerHtmlOwner = hasTrustedInnerHtml(properties)
+    ? 'h.InnerHTML'
+    : 'a client-only innerHTML property'
+  if (lowerTagName === 'textarea') {
+    throw new Error(
+      `[foldkit] <textarea> was given ${innerHtmlOwner}. Textarea content ` +
+        'must use h.Value because innerHTML stops updating the live value ' +
+        'after the browser marks the field dirty. Remove the innerHTML owner.',
+    )
+  }
+  if (children.length > 0) {
+    throw new Error(
+      `[foldkit] <${lowerTagName}> was given both ${innerHtmlOwner} and children. ` +
+        'innerHTML owns the whole of an element\u2019s content, so the two ' +
+        'cannot both describe it: server rendering emits the raw HTML alone ' +
+        'for h.InnerHTML, while a browser property assignment replaces the ' +
+        'nodes the differ expects to patch. Keep one content owner.',
+    )
+  }
+  if (
+    CONTROLLED_CONTENT_ELEMENTS.has(lowerTagName) &&
+    data.props?.['value'] !== undefined
+  ) {
+    throw new Error(
+      `[foldkit] <${lowerTagName}> was given both ${innerHtmlOwner} and a ` +
+        'controlled value. Both own this element\u2019s content, and they ' +
+        'disagree once the client reasserts the value. Keep one of them.',
+    )
+  }
+  if (VOID_CONTENT_ELEMENTS.has(lowerTagName)) {
+    throw new Error(
+      `[foldkit] <${lowerTagName}> cannot hold content, so ${innerHtmlOwner} ` +
+        'on it ' +
+        'has no representation in served HTML. A browser can still build ' +
+        'child nodes from the property, which no server render reproduces. ' +
+        'Remove the innerHTML value.',
+    )
+  }
+}
+
+const assertSingleStyleOwner = (data: VNodeData): void => {
+  if (
+    data.style === undefined ||
+    htmlAttributeValue(data.attrs, 'style') === undefined
+  ) {
+    return
+  }
+  throw new Error(
+    '[foldkit] An element was given both h.Style and a raw ' +
+      "h.Attribute('style', ...). They are two owners of one declaration " +
+      'block, and CSS parsing can make one swallow or override the other. ' +
+      'Keep all inline declarations in one of them.',
+  )
+}
+
+// The state an element would be in once it exists, read from the tag, the raw
+// attributes, and the typed properties together. A builder on its own cannot
+// decide any of this: `h.Value` is a string on an input and a number on a
+// meter, `type="file"` refuses the value an input takes everywhere else, and a
+// raw attribute means nothing until something says which property claims the
+// same name.
+//
+// Each rule below marks a view whose server render and fresh client render
+// cannot agree. Refusing it where it is written is what makes the two, plus a
+// hydration of the first by the second, fail the same way rather than diverge
+// quietly.
+
+// A number both a parser and an assignment read identically: ASCII digits, one
+// optional leading minus, an optional fraction, an optional exponent. Anything
+// else parts the two: `0x10` is 16 to `Number` and invalid to the parser, a
+// leading `+` or surrounding whitespace is accepted by one and not the other,
+// and `Infinity` throws on assignment while the attribute falls back to the
+// element's default.
+const DECIMAL_NUMBER = /^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$/
+const DECIMAL_INTEGER = /^-?[0-9]+$/
+
+// Properties the DOM defines as numbers on these elements and as strings
+// elsewhere, so the same builder means different things depending on where it
+// is written.
+const DOUBLE_IDL_PROPERTIES: Readonly<Record<string, ReadonlySet<string>>> = {
+  meter: new Set(['high', 'low', 'max', 'min', 'optimum', 'value']),
+  progress: new Set(['max', 'value']),
+}
+
+const LONG_IDL_PROPERTIES: Readonly<Record<string, ReadonlySet<string>>> = {
+  li: new Set(['value']),
+}
+
+const assertDoubleIdlValue = (
+  tagName: string,
+  propName: string,
+  value: unknown,
+): void => {
+  const isRepresentable =
+    typeof value === 'number'
+      ? Number.isFinite(value)
+      : typeof value === 'string' &&
+        DECIMAL_NUMBER.test(value) &&
+        Number.isFinite(Number(value))
+  if (!isRepresentable) {
+    throw new Error(
+      `[foldkit] <${tagName}> reads ${propName} as a number, and ` +
+        `${JSON.stringify(value)} is not one a browser reads the same way from ` +
+        'markup and from a property assignment. Use a finite decimal number.',
+    )
+  }
+}
+
+const assertLongIdlValue = (
+  tagName: string,
+  propName: string,
+  value: unknown,
+): void => {
+  const parsed =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && DECIMAL_INTEGER.test(value)
+        ? Number(value)
+        : Number.NaN
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < SIGNED_LONG_MINIMUM ||
+    parsed > SIGNED_LONG_MAXIMUM
+  ) {
+    throw new Error(
+      `[foldkit] <${tagName}> reads ${propName} as an integer, and ` +
+        `${JSON.stringify(value)} is not one a browser reads the same way from ` +
+        'markup and from a property assignment. Use an integer from ' +
+        `${String(SIGNED_LONG_MINIMUM)} to ${String(SIGNED_LONG_MAXIMUM)}.`,
+    )
+  }
+}
+
+const effectiveInputType = (data: VNodeData): string | undefined => {
+  const typed = data.props?.['type']
+  if (typeof typed === 'string') {
+    return typed.toLowerCase()
+  }
+  const raw = htmlAttributeValue(data.attrs, 'type')
+  return typeof raw === 'string' ? raw.toLowerCase() : undefined
+}
+
+const assertElementStateIsRepresentable = (
+  tagName: string,
+  data: VNodeData,
+): void => {
+  const props = data.props
+  if (props === undefined) {
+    return
+  }
+  const lowerTagName = tagName.toLowerCase()
+  const doubleIdl = DOUBLE_IDL_PROPERTIES[lowerTagName]
+  const longIdl = LONG_IDL_PROPERTIES[lowerTagName]
+
+  for (const propName of Object.keys(props)) {
+    const value = props[propName]
+    if (value === undefined || propName === 'innerHTML') {
+      continue
+    }
+    if (doubleIdl?.has(propName) === true) {
+      assertDoubleIdlValue(lowerTagName, propName, value)
+    }
+    if (longIdl?.has(propName) === true) {
+      assertLongIdlValue(lowerTagName, propName, value)
+    }
+    if (lowerTagName === 'input' && propName === 'size' && value === 0) {
+      throw new Error(
+        numericPropertyRefusal(propName, value) +
+          `Use an integer from 1 to ${String(SIGNED_LONG_MAXIMUM)} on an input.`,
+      )
+    }
+    // A raw attribute and a typed builder that name the same attribute are two
+    // owners of one piece of state, and their served form has no source
+    // spelling. `h.Attribute('checked', '')` with `h.Checked(false)` serves no
+    // attribute at all, so the served element has `defaultChecked` false while
+    // a fresh render parses the attribute and has it true: `form.reset()`,
+    // `:default`, and an attribute selector then read the two pages
+    // differently. A client-only property carries no such claim, so a
+    // `CustomElement.define` property never conflicts with an attribute.
+    const attributeName = reflectedAttributeName(propName)
+    if (
+      attributeName !== undefined &&
+      !isClientOnlyProperty(props, propName) &&
+      htmlAttributeValue(data.attrs, attributeName) !== undefined
+    ) {
+      throw new Error(
+        `[foldkit] <${lowerTagName}> was given both a typed ${propName} and a ` +
+          `raw h.Attribute('${attributeName}', ...). They are two owners of ` +
+          'one attribute, and the state they describe together has no spelling ' +
+          'in served HTML: the property decides what is served while a fresh ' +
+          'render parses the attribute as the default too. Keep one of them.',
+      )
+    }
+  }
+
+  if (lowerTagName === 'input' && effectiveInputType(data) === 'file') {
+    const value = props['value']
+    if (typeof value === 'string' && value !== '') {
+      throw new Error(
+        '[foldkit] <input type="file"> was given a value. A file input takes ' +
+          'no value from markup or from the Model: the served attribute is ' +
+          'ignored and assigning the property throws InvalidStateError, so the ' +
+          'view crashes on a fresh render and on hydration. Drop the value.',
+      )
+    }
+  }
+}
+
+// NOTE: A typed property on an HTML element whose native interface does not own it
+// has always been a client-side expando. For example, RadioGroup deliberately
+// includes `h.Type('button')` in an attribute bundle that consumers may spread
+// onto a button, div, or span. Mark the wrong-element case as client-only so
+// server rendering omits it and hydration applies the same expando a fresh
+// render does, without turning a pre-existing client pattern into live markup.
+const markUnreflectedHtmlPropertiesClientOnly = (
+  tagName: string,
+  data: VNodeData,
+): void => {
+  const props = data.props
+  if (props === undefined) {
+    return
+  }
+  for (const propName of Object.keys(props)) {
+    if (
+      reflectedAttributeName(propName) !== undefined &&
+      !isHtmlPropertyRepresentable(tagName, propName)
+    ) {
+      markClientOnlyProperty(props, propName)
+    }
+  }
+}
+
+// The same question in SVG and MathML, where the answer is decided by the
+// namespace rather than by the tag. A foreign element has none of the HTML
+// interface members a typed builder writes, apart from the three measured to
+// reflect there. Assigning `href` on an SVG `<a>` throws, since bundled code is
+// strict and `SVGAElement.href` is readonly; assigning `title` sets an expando
+// no attribute ever sees. The serializer would have written an attribute for
+// both. Raw `h.Attribute` is the mechanism SVG and MathML use, and it behaves
+// identically on both sides.
+//
+// The namespace is only known once the `svg` or `math` element that introduces
+// it is built, because that is when it propagates down. The walk stops where
+// the namespace stops, so an HTML integration point such as `<foreignObject>`
+// keeps ordinary HTML rules for its content.
+const assertForeignPropertiesAreRepresentable = (node: VNode): void => {
+  const data = node.data
+  if (data === undefined || data.ns === undefined) {
+    return
+  }
+  const props = data.props
+  if (props !== undefined) {
+    for (const propName of Object.keys(props)) {
+      if (
+        props[propName] === undefined ||
+        propName === 'innerHTML' ||
+        FOREIGN_REPRESENTABLE_PROPERTIES.has(propName) ||
+        reflectedAttributeName(propName) === undefined
+      ) {
+        continue
+      }
+      throw new Error(
+        `[foldkit] <${tagNameFromSelector(node.sel ?? '')}> is in the SVG or ` +
+          `MathML namespace, where ${propName} is not a property the element ` +
+          'has. Assigning it on the client sets a value no attribute reflects, ' +
+          'or throws outright, while server rendering writes the attribute, so ' +
+          `the two disagree. Write it as h.Attribute('${propName}', ...), ` +
+          'which foreign content reads the same way on both sides.',
+      )
+    }
+  }
+  for (const child of node.children ?? []) {
+    if (typeof child !== 'string') {
+      assertForeignPropertiesAreRepresentable(child)
+    }
+  }
+}
+
+const buildElement = (
+  tagName: string,
+  data: VNodeData,
+  children: ReadonlyArray<Child>,
+): Html => {
+  const copiedChildren = copyChildrenDroppingEmpty(children)
+  markUnreflectedHtmlPropertiesClientOnly(tagName, data)
+  assertSingleContentOwner(tagName, data, copiedChildren)
+  assertSingleStyleOwner(data)
+  if (data.style !== undefined) {
+    assertStyleIsRepresentable(data.style)
+  }
+  assertElementStateIsRepresentable(tagName, data)
+  if (
+    tagName.toLowerCase() === 'select' ||
+    tagName.toLowerCase() === 'textarea' ||
+    tagName.toLowerCase() === 'output'
+  ) {
+    attachControlledContentOwnershipHook(data)
+  }
+  const built = h(tagName, data, copiedChildren)
+  assertForeignPropertiesAreRepresentable(built)
+  return built
+}
+
 const createElement = <Message>(
   tagName: string,
   attributes: ReadonlyArray<Attribute<Message> | ChildAttribute> = [],
   children: ReadonlyArray<Child> = [],
-): Html =>
-  h(tagName, buildVNodeData(attributes), copyChildrenDroppingEmpty(children))
+): Html => buildElement(tagName, buildVNodeData(attributes), children)
 
 const element =
   <Message>() =>
@@ -2323,7 +3106,7 @@ const voidElement =
     createElement(tagName, attributes, [])
 
 const keyed =
-  <Message>() =>
+  <Message>(): KeyedFunction<Message> =>
   (tagName: TagName) =>
   (
     key: PropertyKey,
@@ -2332,17 +3115,46 @@ const keyed =
   ): Html => {
     const data = buildVNodeData(attributes)
     data.key = key
-    return h(tagName, data, copyChildrenDroppingEmpty(children))
+    return buildElement(tagName, data, children)
   }
 
 type ElementFunction<Message> = (
   attributes: ReadonlyArray<Attribute<Message> | ChildAttribute>,
-  children: ReadonlyArray<Child>,
+  children?: ReadonlyArray<Child>,
 ) => Html
 
 type VoidElementFunction<Message> = (
   attributes: ReadonlyArray<Attribute<Message> | ChildAttribute>,
 ) => Html
+
+/** An attribute accepted by textarea builders. Textarea content must use
+ *  `h.Value`; innerHTML does not keep the live value tracking the Model after
+ *  the field is dirty. */
+export type TextareaAttribute<Message> = Exclude<
+  Attribute<Message>,
+  Readonly<{ _tag: 'InnerHTML' }>
+>
+
+type TextValueElementFunction<Message> = (
+  attributes: ReadonlyArray<TextareaAttribute<Message> | ChildAttribute>,
+) => Html
+
+type KeyedElementFunction<Message> = (
+  key: PropertyKey,
+  attributes?: ReadonlyArray<Attribute<Message> | ChildAttribute>,
+  children?: ReadonlyArray<Child>,
+) => Html
+
+type KeyedTextValueElementFunction<Message> = (
+  key: PropertyKey,
+  attributes?: ReadonlyArray<TextareaAttribute<Message> | ChildAttribute>,
+) => Html
+
+type KeyedFunction<Message> = <Name extends TagName>(
+  tagName: Name,
+) => Name extends 'textarea'
+  ? KeyedTextValueElementFunction<Message>
+  : KeyedElementFunction<Message>
 
 type HtmlElements<Message> = {
   a: ElementFunction<Message>
@@ -2445,7 +3257,7 @@ type HtmlElements<Message> = {
   tbody: ElementFunction<Message>
   td: ElementFunction<Message>
   template: ElementFunction<Message>
-  textarea: ElementFunction<Message>
+  textarea: TextValueElementFunction<Message>
   tfoot: ElementFunction<Message>
   th: ElementFunction<Message>
   thead: ElementFunction<Message>
@@ -2833,17 +3645,36 @@ type HtmlAttributes<Message> = {
     readonly _tag: 'Popovertargetaction'
     readonly value: string
   }
-  OnClick: (message: Message) => {
+  /** Dispatches `message` when the element is clicked. The optional controls
+   *  can synchronously prevent the browser default, stop DOM propagation, and
+   *  focus an existing element before dispatch. Omitted controls preserve the
+   *  existing allow-and-bubble behavior.
+   *
+   *  `propagation: 'Stop'` still lets every click handler registered on the
+   *  current element run, matching `Event.stopPropagation()`. It only prevents
+   *  ancestor handlers from receiving the click.
+   *
+   *  `focusSelector` is for browser APIs that require focus during the
+   *  originating user gesture, such as opening the iOS on-screen keyboard. The
+   *  target must already exist. If the real input mounts after the Message
+   *  changes the view, focus an always-present warmup input here, then return a
+   *  `Dom.focus` Command from update to transfer focus after the real input
+   *  mounts.
+   *
+   *  @example
+   *  ```typescript
+   *  h.OnClick(Message.ClickedExpand(), {
+   *    defaultAction: 'Prevent',
+   *    propagation: 'Stop',
+   *  })
+   *  ``` */
+  OnClick: (
+    message: Message,
+    options?: ClickOptions,
+  ) => {
     readonly _tag: 'OnClick'
     readonly message: Message
-  }
-  OnClickFocus: (
-    focusSelector: string,
-    message: Message,
-  ) => {
-    readonly _tag: 'OnClickFocus'
-    readonly focusSelector: string
-    readonly message: Message
+    readonly options?: ClickOptions
   }
   OnDoubleClick: (message: Message) => {
     readonly _tag: 'OnDoubleClick'
@@ -2995,6 +3826,31 @@ type HtmlAttributes<Message> = {
   }
   OnBlur: (message: Message) => {
     readonly _tag: 'OnBlur'
+    readonly message: Message
+  }
+  /**
+   * Dispatches `message` when focus enters this element's subtree from
+   * outside it. Moving focus between descendants does not dispatch.
+   *
+   * This uses the bubbling `focusin` event, so the element itself does not
+   * need to be focusable. Pair it with {@link OnFocusLeave} to model whether
+   * a compound region such as an editor and its toolbar contains focus.
+   */
+  OnFocusEnter: (message: Message) => {
+    readonly _tag: 'OnFocusEnter'
+    readonly message: Message
+  }
+  /**
+   * Dispatches `message` when focus leaves this element's subtree. Moving
+   * focus between descendants does not dispatch.
+   *
+   * This uses the bubbling `focusout` event and compares its related target
+   * with the current element. The element itself does not need to be
+   * focusable. Pair it with {@link OnFocusEnter} to model whether a compound
+   * region such as an editor and its toolbar contains focus.
+   */
+  OnFocusLeave: (message: Message) => {
+    readonly _tag: 'OnFocusLeave'
     readonly message: Message
   }
   OnInput: (toMessage: (value: string) => Message) => {
@@ -3917,39 +4773,10 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   Popover: (value: string) => Popover({ value }),
   Popovertarget: (value: string) => Popovertarget({ value }),
   Popovertargetaction: (value: string) => Popovertargetaction({ value }),
-  OnClick: (message: Message) => OnClick({ message }),
-  /**
-   * Click handler that synchronously focuses the element matching
-   * `focusSelector`, then dispatches `message`. Both run inside the originating
-   * click event handler, preserving the user-gesture context.
-   *
-   * Use this when tapping the element must open the on-screen keyboard on
-   * iOS Safari. Safari only opens the keyboard if `.focus()` runs synchronously
-   * inside the originating user-gesture handler, which a Command's `Dom.focus`
-   * cannot satisfy (Commands fork through `Effect.forkDetach` +
-   * `requestAnimationFrame` and resolve after the gesture has expired).
-   *
-   * When the real input only mounts later (a search field inside a dialog,
-   * say), focus it in two steps. First, keep a focusable text input that is
-   * always in the DOM (a visually hidden "keyboard warmup") and point
-   * `focusSelector` at it, so the tap focuses the input (which opens the
-   * keyboard) and dispatches a Message. Second, update's branch for that
-   * Message opens the dialog and returns a `Dom.focus` Command pointed at the
-   * real input; by the time it runs the input has mounted, so focus moves to
-   * it. iOS keeps the keyboard up when focus moves between two text inputs,
-   * so it stays open and now targets the real input.
-   *
-   * Like `OnKeyDownPreventDefault`, the side effect (focusing another
-   * element) lives inside the framework's event handler so user code stays
-   * declarative.
-   *
-   * @example
-   * ```typescript
-   * h.OnClickFocus('#search-keyboard-warmup', ClickedSearch())
-   * ```
-   */
-  OnClickFocus: (focusSelector: string, message: Message) =>
-    OnClickFocus({ focusSelector, message }),
+  OnClick: (message: Message, options?: ClickOptions) =>
+    options === undefined
+      ? OnClick({ message })
+      : OnClick({ message, options }),
   OnDoubleClick: (message: Message) => OnDoubleClick({ message }),
   OnMouseDown: (message: Message) => OnMouseDown({ message }),
   OnMouseUp: (message: Message) => OnMouseUp({ message }),
@@ -4038,6 +4865,8 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   ) => OnKeyPress({ f: toMessage }),
   OnFocus: (message: Message) => OnFocus({ message }),
   OnBlur: (message: Message) => OnBlur({ message }),
+  OnFocusEnter: (message: Message) => OnFocusEnter({ message }),
+  OnFocusLeave: (message: Message) => OnFocusLeave({ message }),
   OnInput: (toMessage: (value: string) => Message) => OnInput({ f: toMessage }),
   OnChange: (toMessage: (value: string) => Message) =>
     OnChange({ f: toMessage }),
@@ -4392,29 +5221,120 @@ const htmlAttributes = <Message>(): HtmlAttributes<Message> => ({
   OnUnmount: (message: Message) => OnUnmount({ message }),
 })
 
-const buildHtmlFactory = <Message>() => ({
+declare const messageUniverse: unique symbol
+
+/**
+ * Phantom marker carrying the builder's Message universe invariantly, so a
+ * builder from the wrong frame is rejected on this property rather than deep
+ * inside the structural comparison of every element constructor. It exists only
+ * to keep the diagnostic short and pointed at the cause.
+ */
+type MessageUniverse<Message> = Readonly<{
+  [messageUniverse]: (message: Message) => Message
+}>
+
+/**
+ * The typed Html builder a view builds DOM with: all HTML, SVG, and MathML
+ * element constructors, attribute constructors, a `keyed` helper for keyed
+ * elements, `empty` for rendering nothing, and `submodel` for embedding a
+ * child Submodel.
+ *
+ * A builder cannot be constructed by application code. The runtime supplies
+ * it to each view alongside the model, typed by the Message universe of the
+ * frame that view renders in: the app's Message for the root view, the
+ * Submodel's own Message inside a `Submodel.defineView`. Used in the frame
+ * that supplied it, a handler built with it carries exactly the Messages that
+ * frame's dispatcher can route, so a Message from another universe (the
+ * classic case: a shared helper building an app-level Message inside a
+ * Submodel) is a compile error at the handler call site.
+ *
+ * The type scopes where a builder is obtained, not where it is used. Carrying
+ * one into another frame, by storing it or handing the builder itself to a
+ * child through `viewInputs`, still compiles and still builds handlers that
+ * frame cannot route. Thread `h` as a parameter; never store it.
+ *
+ * Pass `h` along as an ordinary parameter when extracting view helpers; a
+ * memoized helper receives it through the `createLazy` args array. When a
+ * child must render markup that belongs to an ancestor, the ancestor passes a
+ * renderer that already closed over its own builder, not the builder, so the
+ * handlers resolve in the ancestor's boundary. Where no builder is in scope
+ * at all, typically module scope, use {@link inertHtml}.
+ */
+export type HtmlBuilder<Message> = MessageUniverse<Message> &
+  HtmlElements<Message> &
+  HtmlAttributes<Message> &
+  Readonly<{
+    empty: null
+    keyed: KeyedFunction<Message>
+    submodel: <View extends AnySubmodelView>(
+      config: SubmodelConfig<View, Message>,
+    ) => Html
+  }>
+
+const buildHtmlFactory = <Message>(): Omit<
+  HtmlBuilder<Message>,
+  typeof messageUniverse
+> => ({
   ...htmlElements<Message>(),
   ...htmlAttributes<Message>(),
   empty: null,
   keyed: keyed<Message>(),
-  submodel,
+  submodel: <View extends AnySubmodelView>(
+    config: SubmodelConfig<View, Message>,
+  ) => submodel(config, cachedHtmlBuilder),
 })
 
-const cachedHtmlFactory = buildHtmlFactory<unknown>()
+// NOTE: the Message type parameter is erased at runtime and the element and
+// attribute constructors carry no per-program state (dispatch is read from
+// the runtime singleton frame at call time), so one process-wide builder
+// object serves every frame. Handing out the singleton under a frame's
+// Message type changes the static type and nothing else, so the same object
+// reaches every view. That keeps the builder referentially stable across
+// renders, which `createLazy`'s `===` args comparison relies on when `h` is
+// passed through a memoized helper's args array.
+const cachedHtmlBuilder: HtmlBuilder<unknown> =
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  buildHtmlFactory<unknown>() as HtmlBuilder<unknown>
+
+/** @internal Returns the process-wide builder singleton retyped to a frame's
+ *  Message. Only the runtime, the Scene test harness, and the framework's own
+ *  tests call this, each immediately before invoking a view under the frame
+ *  that Message belongs to. `h.submodel` does not: it receives the singleton
+ *  as a parameter, which is what keeps `index.ts` and `submodel.ts` free of a
+ *  runtime import cycle. Application code receives builders exclusively as
+ *  view parameters. */
+export const __htmlBuilder = <Message>(): HtmlBuilder<Message> =>
+  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
+  cachedHtmlBuilder as HtmlBuilder<Message>
 
 /**
- * Returns all HTML, SVG, and MathML element constructors, attribute
- * constructors, a `keyed` helper for keyed elements, and `empty` for
- * rendering nothing.
+ * Builder whose Message universe is empty. Its Message type is `never`, so
+ * every event-handler constructor is uncallable and nothing built with it can
+ * dispatch a Message. Elements, attributes, and keying behave exactly as they
+ * do on any other builder, and the markup itself is free to vary with runtime
+ * data. Inert describes what the result can do, not how it is computed.
  *
- * The returned object is a process-wide singleton. The `Message` type
- * parameter is erased at runtime, and the element and attribute constructors
- * carry no per-program state (dispatch is read from the runtime singleton at
- * call time), so calling `html()` repeatedly from inside view functions does
- * not allocate a fresh object.
+ * Inert to Foldkit's dispatch, not to the browser. A raw DOM attribute still
+ * does whatever the browser makes of it, which is exactly how the default
+ * crash view gets a working reload button:
+ * `h.Attribute('onclick', 'location.reload()')`. What `never` rules out is a
+ * Message reaching `update`, not every possible behavior.
+ *
+ * Use it where no builder is in scope, which in practice means module scope
+ * and the frameless renders the framework performs itself:
+ *
+ * ```ts
+ * import { inertHtml as ih } from 'foldkit/html'
+ *
+ * const PagefindBody = ih.DataAttribute('pagefind-body', '')
+ * ```
+ *
+ * Attributes it produces are `Attribute<never>`, so they flow into any
+ * Message universe by covariance. That makes it the right builder for
+ * library code emitting handler-free attribute bundles for arbitrary apps.
+ *
+ * Inside a view, use the view's own `h` parameter. A view already holds a
+ * builder, and reaching past it for this one is the habit that made a
+ * caller-chosen Message type possible in the first place.
  */
-export const html = <Message = never>(): ReturnType<
-  typeof buildHtmlFactory<Message>
-> =>
-  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-  cachedHtmlFactory as ReturnType<typeof buildHtmlFactory<Message>>
+export const inertHtml: HtmlBuilder<never> = __htmlBuilder<never>()

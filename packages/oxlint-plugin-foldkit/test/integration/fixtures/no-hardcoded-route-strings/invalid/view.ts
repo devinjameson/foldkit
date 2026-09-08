@@ -1,7 +1,3 @@
-import { html } from 'foldkit/html'
+import { inertHtml as ih } from 'foldkit/html'
 
-import type { Message } from './message'
-
-const h = html<Message>()
-
-export const tasksLink = h.a([h.Href('/tasks')], ['Tasks'])
+export const tasksLink = ih.a([ih.Href('/tasks')], ['Tasks'])

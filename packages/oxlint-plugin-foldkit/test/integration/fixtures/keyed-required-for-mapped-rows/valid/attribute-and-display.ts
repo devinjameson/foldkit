@@ -1,13 +1,14 @@
-import { html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
 import { ClickedTask } from './message'
 import type { Message } from './message'
 import type { Task } from './model'
 
-const h = html<Message>()
-
 // The h.Key attribute form keys the row exactly like the keyed wrapper does.
-export const taskListByAttribute = (tasks: ReadonlyArray<Task>) =>
+export const taskListByAttribute = (
+  tasks: ReadonlyArray<Task>,
+  h: HtmlBuilder<Message>,
+): Html =>
   h.ul(
     [],
     tasks.map(task =>
@@ -19,7 +20,10 @@ export const taskListByAttribute = (tasks: ReadonlyArray<Task>) =>
   )
 
 // A row that destructures only display fields has no identity to key by.
-export const displayOnlyList = (tasks: ReadonlyArray<Task>) =>
+export const displayOnlyList = (
+  tasks: ReadonlyArray<Task>,
+  h: HtmlBuilder<Message>,
+): Html =>
   h.ul(
     [],
     tasks.map(({ title }) => h.li([], [title])),

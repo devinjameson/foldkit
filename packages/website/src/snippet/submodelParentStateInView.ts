@@ -1,5 +1,4 @@
 import { Submodel } from 'foldkit'
-import { type Html, html } from 'foldkit/html'
 
 import type { Message } from './message'
 import type { Model } from './model'
@@ -7,23 +6,20 @@ import type { User } from './user'
 
 // The child declares the parent state it needs via the third type
 // parameter on `Submodel.defineView`. The view receives it as
-// `viewInputs` alongside `model`.
+// `viewInputs` alongside `model`, before the builder `h`.
 type ViewInputs = Readonly<{
   currentUser: User
 }>
 
 export const view = Submodel.defineView<Model, Message, ViewInputs>(
-  (model, { currentUser }): Html => {
-    const h = html<Message>()
-
-    return h.div(
+  (model, { currentUser }, h) =>
+    h.div(
       [],
       [
         h.h2([], [`Settings for ${currentUser.name}`]),
         // ...rest of the Settings UI driven by `model`
       ],
-    )
-  },
+    ),
 )
 
 // Inside the parent's view, slice currentUser out of the parent Model

@@ -5,4 +5,4 @@ export type {
   InterruptDefinitionNoArgs,
   InterruptDefinitionWithArgs,
 } from './index.js'
-export { define, Interrupted, NotFound, Outcome } from './index.js'
+export { Outcome } from './index.js'

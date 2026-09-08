@@ -1,11 +1,9 @@
 import { Array } from 'effect'
-import { type Html, html } from 'foldkit/html'
+import type { Html, HtmlBuilder } from 'foldkit/html'
 
-import { EnteredCell, type Message, PressedCell } from './message'
+import { Message } from './message'
 import type { Cell, HexColor } from './model'
 import { type PaletteTheme, resolveColor } from './palette'
-
-const { div, OnMouseDown, OnMouseEnter, Style } = html<Message>()
 
 const rowView = (
   row: ReadonlyArray<Cell>,
@@ -13,22 +11,20 @@ const rowView = (
   previewColor: HexColor,
   previewPositions: ReadonlyArray<readonly [number, number]>,
   theme: PaletteTheme,
+  h: HtmlBuilder<Message>,
 ): Html =>
-  div(
-    [Style({ display: 'flex', flex: '1' })],
+  h.div(
+    [h.Style({ display: 'flex', flex: '1' })],
     Array.map(row, (cell, x) => {
       const isPreview = previewPositions.some(
         ([previewX, previewY]) => previewX === x && previewY === y,
       )
       const displayColor = isPreview ? previewColor : resolveColor(cell, theme)
 
-      return div(
-        [
-          OnMouseDown(PressedCell({ x, y })),
-          OnMouseEnter(EnteredCell({ x, y })),
-          Style({ flex: '1', backgroundColor: displayColor }),
-        ],
-        [],
-      )
+      return h.div([
+        h.OnMouseDown(Message.PressedCell({ x, y })),
+        h.OnMouseEnter(Message.EnteredCell({ x, y })),
+        h.Style({ flex: '1', backgroundColor: displayColor }),
+      ])
     }),
   )

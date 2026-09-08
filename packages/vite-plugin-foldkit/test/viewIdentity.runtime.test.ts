@@ -1,47 +1,43 @@
 // @vitest-environment happy-dom
-import { Effect, Fiber, Match as M, Schema as S } from 'effect'
+import { Effect, Fiber, Schema } from 'effect'
+import { type Update } from 'foldkit'
 import { brandViewResult } from 'foldkit/brand'
-import type { Command } from 'foldkit/command'
-import { type Html, html } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { type Html, inertHtml } from 'foldkit/html'
+import { defineMessageUnion } from 'foldkit/message'
 import { makeElement } from 'foldkit/runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { transformViewIdentity } from '../src/viewIdentity.ts'
 
-const Model = S.Struct({ mode: S.Literals(['Viewing', 'Editing']) })
+const Model = Schema.Struct({ mode: Schema.Literals(['Viewing', 'Editing']) })
 type Model = typeof Model.Type
 
-const ClickedToggle = m('ClickedToggle')
-type Message = typeof ClickedToggle.Type
+const Message = defineMessageUnion({
+  ClickedToggle: {},
+})
 
-const init = (): readonly [Model, ReadonlyArray<Command<Message>>] => [
-  { mode: 'Viewing' },
-  [],
-]
+type Message = typeof Message.Type
 
-const update = (
-  model: Model,
-  message: Message,
-): readonly [Model, ReadonlyArray<Command<Message>>] =>
-  M.value(message).pipe(
-    M.withReturnType<readonly [Model, ReadonlyArray<Command<Message>>]>(),
-    M.tagsExhaustive({
-      ClickedToggle: () => {
-        const nextMode = model.mode === 'Viewing' ? 'Editing' : 'Viewing'
-        return [{ mode: nextMode }, []]
-      },
-    }),
-  )
+const init = (): Update.Return<Model, Message> => ({
+  model: { mode: 'Viewing' },
+})
+
+const update = (model: Model, message: Message) =>
+  Message.match<Update.Return<Model, Message>>(message, {
+    ClickedToggle: () => {
+      const nextMode = model.mode === 'Viewing' ? 'Editing' : 'Viewing'
+      return { model: { mode: nextMode } }
+    },
+  })
 
 const FIXTURE_MODULE_ID = '/app/src/View.js'
 const FIXTURE_ROOT = '/app'
 const BRAND_IMPORT_ALIAS = '__foldkitBrandViewResult'
 const TYPED_TEXT = 'draft text'
 
-const DELEGATED_BRANCH_FIXTURE = `import { html } from 'foldkit/html'
+const DELEGATED_BRANCH_FIXTURE = `import { inertHtml } from 'foldkit/html'
 
-const h = html()
+const h = inertHtml
 
 const summaryView = (model) =>
   h.section([], [h.input([h.Class('summary-input'), h.Placeholder('summary')])])
@@ -59,9 +55,9 @@ const view = (model) =>
   )
 `
 
-const ARM_HANDLER_FIXTURE = `import { html } from 'foldkit/html'
+const ARM_HANDLER_FIXTURE = `import { inertHtml } from 'foldkit/html'
 
-const h = html()
+const h = inertHtml
 
 const view = (model) => {
   const handlers = {
@@ -77,9 +73,9 @@ const view = (model) => {
 }
 `
 
-const SHARED_FUNCTION_FIXTURE = `import { html } from 'foldkit/html'
+const SHARED_FUNCTION_FIXTURE = `import { inertHtml } from 'foldkit/html'
 
-const h = html()
+const h = inertHtml
 
 const panelView = (label) =>
   h.div([], [h.input([h.Class('panel-input'), h.Placeholder(label)])])
@@ -94,9 +90,9 @@ const view = (model) =>
   )
 `
 
-const INLINE_TERNARY_FIXTURE = `import { html } from 'foldkit/html'
+const INLINE_TERNARY_FIXTURE = `import { inertHtml } from 'foldkit/html'
 
-const h = html()
+const h = inertHtml
 
 const view = (model) =>
   h.div(
@@ -120,12 +116,12 @@ type View = (model: Model) => Html
 
 const instantiateView = (viewSource: string): View => {
   const factory = new Function(
-    'html',
+    'inertHtml',
     'ClickedToggle',
     BRAND_IMPORT_ALIAS,
     `${viewSource}\nreturn view`,
   )
-  const view: View = factory(html, ClickedToggle, brandViewResult)
+  const view: View = factory(inertHtml, Message.ClickedToggle, brandViewResult)
   return view
 }
 

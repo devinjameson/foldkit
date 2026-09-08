@@ -1,47 +1,45 @@
-import { Match as M, Option } from 'effect'
-import { Html, html } from 'foldkit/html'
+import { Match, Option } from 'effect'
+import { Html, inertHtml as ih } from 'foldkit/html'
 
 import * as Markdown from '@foldkit/markdown'
-
-const h = html()
 
 const headingView = (
   heading: Markdown.Heading,
   content: Markdown.InlineContent,
 ): Html =>
-  M.value(heading.level).pipe(
-    M.when(1, () =>
-      h.h1([h.Class('text-3xl font-bold text-stone-900')], content),
+  Match.value(heading.level).pipe(
+    Match.when(1, () =>
+      ih.h1([ih.Class('text-3xl font-bold text-stone-900')], content),
     ),
-    M.when(2, () =>
-      h.h2([h.Class('mt-10 text-2xl font-semibold text-stone-900')], content),
+    Match.when(2, () =>
+      ih.h2([ih.Class('mt-10 text-2xl font-semibold text-stone-900')], content),
     ),
-    M.when(3, () =>
-      h.h3([h.Class('mt-8 text-xl font-semibold text-stone-900')], content),
+    Match.when(3, () =>
+      ih.h3([ih.Class('mt-8 text-xl font-semibold text-stone-900')], content),
     ),
-    M.when(4, () =>
-      h.h4([h.Class('mt-6 text-lg font-semibold text-stone-900')], content),
+    Match.when(4, () =>
+      ih.h4([ih.Class('mt-6 text-lg font-semibold text-stone-900')], content),
     ),
-    M.when(5, () =>
-      h.h5([h.Class('mt-6 font-semibold text-stone-900')], content),
+    Match.when(5, () =>
+      ih.h5([ih.Class('mt-6 font-semibold text-stone-900')], content),
     ),
-    M.when(6, () =>
-      h.h6([h.Class('mt-6 text-sm font-semibold text-stone-900')], content),
+    Match.when(6, () =>
+      ih.h6([ih.Class('mt-6 text-sm font-semibold text-stone-900')], content),
     ),
-    M.exhaustive,
+    Match.exhaustive,
   )
 
 const codeBlockView = (codeBlock: Markdown.CodeBlock): Html =>
-  h.div(
-    [h.Class('overflow-hidden rounded-lg bg-stone-900')],
+  ih.div(
+    [ih.Class('overflow-hidden rounded-lg bg-stone-900')],
     [
       ...Option.match(codeBlock.maybeLanguage, {
         onNone: () => [],
         onSome: language => [
-          h.keyed('div')(
+          ih.keyed('div')(
             'Language',
             [
-              h.Class(
+              ih.Class(
                 'border-b border-stone-700 px-4 py-1.5 font-mono text-xs text-stone-400',
               ),
             ],
@@ -49,11 +47,11 @@ const codeBlockView = (codeBlock: Markdown.CodeBlock): Html =>
           ),
         ],
       }),
-      h.pre(
-        [h.Class('overflow-x-auto p-4')],
+      ih.pre(
+        [ih.Class('overflow-x-auto p-4')],
         [
-          h.code(
-            [h.Class('font-mono text-sm text-stone-100')],
+          ih.code(
+            [ih.Class('font-mono text-sm text-stone-100')],
             [codeBlock.value],
           ),
         ],
@@ -64,24 +62,24 @@ const codeBlockView = (codeBlock: Markdown.CodeBlock): Html =>
 const listView = (list: Markdown.List, items: ReadonlyArray<Html>): Html => {
   const startAttributes = Option.match(list.maybeStartNumber, {
     onNone: () => [],
-    onSome: startNumber => [h.Start(startNumber)],
+    onSome: startNumber => [ih.Start(startNumber)],
   })
 
   if (list.isOrdered) {
-    return h.ol(
-      [...startAttributes, h.Class('list-decimal space-y-1 pl-6')],
+    return ih.ol(
+      [...startAttributes, ih.Class('list-decimal space-y-1 pl-6')],
       items,
     )
   } else {
-    return h.ul([h.Class('list-disc space-y-1 pl-6')], items)
+    return ih.ul([ih.Class('list-disc space-y-1 pl-6')], items)
   }
 }
 
 const alignmentClass = (alignment: Markdown.Alignment): string =>
-  M.value(alignment).pipe(
-    M.when('Right', () => 'text-right'),
-    M.when('Center', () => 'text-center'),
-    M.orElse(() => 'text-left'),
+  Match.value(alignment).pipe(
+    Match.when('Right', () => 'text-right'),
+    Match.when('Center', () => 'text-center'),
+    Match.orElse(() => 'text-left'),
   )
 
 const tableCellView = (
@@ -93,9 +91,12 @@ const tableCellView = (
   const cellClass = `px-3 py-2 ${alignmentClass(alignment)}`
 
   if (isHeader) {
-    return h.th([h.Class(`${cellClass} font-semibold text-stone-900`)], content)
+    return ih.th(
+      [ih.Class(`${cellClass} font-semibold text-stone-900`)],
+      content,
+    )
   } else {
-    return h.td([h.Class(`${cellClass} text-stone-700`)], content)
+    return ih.td([ih.Class(`${cellClass} text-stone-700`)], content)
   }
 }
 
@@ -105,13 +106,13 @@ export const blogViews: Markdown.Views = {
   Heading: headingView,
 
   Paragraph: (_paragraph, content) =>
-    h.p([h.Class('leading-relaxed text-stone-700')], content),
+    ih.p([ih.Class('leading-relaxed text-stone-700')], content),
 
   Link: (link, content) =>
-    h.a(
+    ih.a(
       [
-        h.Href(link.url),
-        h.Class(
+        ih.Href(link.url),
+        ih.Class(
           'text-stone-900 underline decoration-stone-300 underline-offset-2 hover:decoration-stone-900',
         ),
       ],
@@ -119,8 +120,8 @@ export const blogViews: Markdown.Views = {
     ),
 
   InlineCode: inlineCode =>
-    h.code(
-      [h.Class('rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[0.9em]')],
+    ih.code(
+      [ih.Class('rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[0.9em]')],
       [inlineCode.value],
     ),
 
@@ -129,29 +130,29 @@ export const blogViews: Markdown.Views = {
   List: listView,
 
   ListItem: (_listItem, blocks) =>
-    h.li([h.Class('leading-relaxed text-stone-700')], blocks),
+    ih.li([ih.Class('leading-relaxed text-stone-700')], blocks),
 
   Blockquote: (_blockquote, blocks) =>
-    h.blockquote(
-      [h.Class('space-y-4 border-l-4 border-stone-200 pl-4 text-stone-600')],
+    ih.blockquote(
+      [ih.Class('space-y-4 border-l-4 border-stone-200 pl-4 text-stone-600')],
       blocks,
     ),
 
-  ThematicBreak: () => h.hr([h.Class('my-8 border-stone-200')]),
+  ThematicBreak: () => ih.hr([ih.Class('my-8 border-stone-200')]),
 
   Table: (_table, headerRow, bodyRows) =>
-    h.div(
-      [h.Class('overflow-x-auto')],
+    ih.div(
+      [ih.Class('overflow-x-auto')],
       [
-        h.table(
-          [h.Class('w-full border-collapse text-sm')],
-          [h.thead([], [headerRow]), h.tbody([], bodyRows)],
+        ih.table(
+          [ih.Class('w-full border-collapse text-sm')],
+          [ih.thead([], [headerRow]), ih.tbody([], bodyRows)],
         ),
       ],
     ),
 
   TableRow: (_tableRow, cells) =>
-    h.tr([h.Class('border-b border-stone-200')], cells),
+    ih.tr([ih.Class('border-b border-stone-200')], cells),
 
   TableCell: tableCellView,
 }
@@ -160,7 +161,7 @@ export const proseView = (
   document: Markdown.MarkdownDocument,
   islands: Markdown.Islands,
 ): Html =>
-  h.div(
-    [h.Class('space-y-5')],
+  ih.div(
+    [ih.Class('space-y-5')],
     Markdown.viewBlocks(document, { islands, views: blogViews }),
   )

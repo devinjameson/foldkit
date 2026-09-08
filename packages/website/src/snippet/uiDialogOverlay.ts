@@ -1,47 +1,44 @@
 // Pseudocode walkthrough of the Foldkit integration points. Each labeled
 // block below is an excerpt. Fit them into your own Model, init, Message,
 // update, and view definitions.
-import { Option } from 'effect'
-import { html } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { Option, Schema } from 'effect'
+import type { HtmlBuilder } from 'foldkit/html'
+import { defineMessageUnion } from 'foldkit/message'
 
 import { Combobox, Dialog } from '@foldkit/ui'
 
 // One Model field for the dialog, one for the overlay it contains, plus
 // the parent-owned selection (`City` and `CityCombobox` are the
-// `S.Literals` Schema and typed factory from the Combobox example):
-const Model = S.Struct({
+// `Schema.Literals` Schema and typed factory from the Combobox example):
+const Model = Schema.Struct({
   dialog: Dialog.Model,
   combobox: Combobox.Model,
-  maybeCity: S.Option(City),
+  maybeCity: Schema.Option(City),
   // ...your other fields
 })
 
-const init = () => [
-  {
+const init = () => ({
+  model: {
     dialog: Dialog.init({ id: 'edit-filters' }),
     combobox: Combobox.init({ id: 'city' }),
     maybeCity: Option.none(),
     // ...your other fields
   },
-  [],
-]
+})
 
 // Embed each submodel's Message in your parent Message and delegate both to
 // their own update (see the Dialog and Combobox examples for the delegation).
-const GotDialogMessage = m('GotDialogMessage', { message: Dialog.Message })
-const GotComboboxMessage = m('GotComboboxMessage', {
-  message: Combobox.Message,
+const Message = defineMessageUnion({
+  GotDialogMessage: { message: Dialog.Message },
+  GotComboboxMessage: { message: Combobox.Message },
 })
 
 // Render the overlay inside the dialog panel. The key is `portal: false` on
 // the overlay's anchor. By default the panel portals to the document body,
 // where the dialog's high stacking order hides it. With portal: false the
 // panel stays inside the dialog and renders above the panel content.
-const view = (model: Model) => {
-  const h = html<Message>()
-
-  return h.submodel({
+const view = (model: Model, h: HtmlBuilder<Message>) =>
+  h.submodel({
     slotId: model.dialog.id,
     model: model.dialog,
     view: Dialog.view,
@@ -51,7 +48,7 @@ const view = (model: Model) => {
           [...dialog],
           isVisible
             ? [
-                h.div([...backdrop, h.Class('fixed inset-0 bg-black/50')], []),
+                h.div([...backdrop, h.Class('fixed inset-0 bg-black/50')]),
                 h.div(
                   [
                     ...panel,
@@ -73,7 +70,7 @@ const view = (model: Model) => {
                         anchor: { placement: 'bottom-start', portal: false },
                       },
                       toParentMessage: message =>
-                        GotComboboxMessage({ message }),
+                        Message.GotComboboxMessage({ message }),
                     }),
                   ],
                 ),
@@ -81,6 +78,5 @@ const view = (model: Model) => {
             : [],
         ),
     },
-    toParentMessage: message => GotDialogMessage({ message }),
+    toParentMessage: message => Message.GotDialogMessage({ message }),
   })
-}

@@ -1,19 +1,13 @@
 import clsx from 'clsx'
 import { Array, Option } from 'effect'
 import { Submodel } from 'foldkit'
-import { Html, childAttributes, html } from 'foldkit/html'
+import { type Html, type HtmlBuilder, childAttributes } from 'foldkit/html'
 
 import { Combobox } from '@foldkit/ui'
 import type { AnchorConfig } from '@foldkit/ui/combobox'
 
 import * as Icon from '../../icon'
-import {
-  GotComboboxDemoMessage,
-  GotComboboxMultiDemoMessage,
-  GotComboboxNullableDemoMessage,
-  GotComboboxSelectOnFocusDemoMessage,
-  type UiMessage,
-} from '../message'
+import { Message as UiMessage } from '../message'
 import type { City, UiModel } from '../model'
 
 export const CityCombobox = Combobox.create<City>()
@@ -63,18 +57,20 @@ const filterCities = (inputValue: string): ReadonlyArray<City> =>
         city.toLowerCase().includes(inputValue.toLowerCase()),
       )
 
-export const comboboxInputs = ({
-  inputValue,
-  restingInputValue,
-  anchor = COMBOBOX_ANCHOR,
-  wrapperClass = wrapperClassName,
-}: Readonly<{
-  inputValue: string
-  restingInputValue: string
-  anchor?: AnchorConfig
-  wrapperClass?: string
-}>): Omit<Combobox.ViewInputs<City>, 'maybeSelectedValue'> => {
-  const h = html<UiMessage>()
+export const comboboxInputs = (
+  {
+    inputValue,
+    restingInputValue,
+    anchor = COMBOBOX_ANCHOR,
+    wrapperClass = wrapperClassName,
+  }: Readonly<{
+    inputValue: string
+    restingInputValue: string
+    anchor?: AnchorConfig
+    wrapperClass?: string
+  }>,
+  h: HtmlBuilder<UiMessage>,
+): Omit<Combobox.ViewInputs<City>, 'maybeSelectedValue'> => {
   const filteredCities = filterCities(inputValue)
 
   return {
@@ -111,158 +107,220 @@ export const comboboxInputs = ({
   }
 }
 
-export const view = Submodel.defineView<UiModel, UiMessage>((model): Html => {
-  const h = html<UiMessage>()
+export const view = Submodel.defineView<UiModel, UiMessage>(
+  (model, h): Html => {
+    return h.div(
+      [],
+      [
+        h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Combobox']),
 
-  return h.div(
-    [],
-    [
-      h.h2([h.Class('text-2xl font-bold text-gray-900 mb-6')], ['Combobox']),
-
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Single-Select'],
-      ),
-      h.label(
-        [
-          h.For(Combobox.inputId(model.comboboxDemo.id)),
-          h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
-        ],
-        ['City'],
-      ),
-      h.div(
-        [h.Class('relative')],
-        [
-          h.submodel({
-            slotId: model.comboboxDemo.id,
-            model: model.comboboxDemo,
-            view: CityCombobox.view,
-            viewInputs: {
-              ...comboboxInputs({
-                inputValue: model.comboboxDemo.inputValue,
-                restingInputValue: Option.getOrElse(
-                  model.maybeComboboxDemoSelectedCity,
-                  () => '',
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Single-Select'],
+        ),
+        h.label(
+          [
+            h.For(Combobox.inputId(model.comboboxDemo.id)),
+            h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
+          ],
+          ['City'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.submodel({
+              slotId: model.comboboxDemo.id,
+              model: model.comboboxDemo,
+              view: CityCombobox.view,
+              viewInputs: {
+                ...comboboxInputs(
+                  {
+                    inputValue: model.comboboxDemo.inputValue,
+                    restingInputValue: Option.getOrElse(
+                      model.maybeComboboxDemoSelectedCity,
+                      () => '',
+                    ),
+                  },
+                  h,
                 ),
-              }),
-              maybeSelectedValue: model.maybeComboboxDemoSelectedCity,
-            },
-            toParentMessage: message => GotComboboxDemoMessage({ message }),
-          }),
-        ],
-      ),
-
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Nullable'],
-      ),
-      h.label(
-        [
-          h.For(Combobox.inputId(model.comboboxNullableDemo.id)),
-          h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
-        ],
-        ['City'],
-      ),
-      h.div(
-        [h.Class('relative')],
-        [
-          h.submodel({
-            slotId: model.comboboxNullableDemo.id,
-            model: model.comboboxNullableDemo,
-            view: CityCombobox.view,
-            viewInputs: {
-              ...comboboxInputs({
-                inputValue: model.comboboxNullableDemo.inputValue,
-                restingInputValue: Option.getOrElse(
-                  model.maybeComboboxNullableDemoSelectedCity,
-                  () => '',
-                ),
-              }),
-              maybeSelectedValue: model.maybeComboboxNullableDemoSelectedCity,
-            },
-            toParentMessage: message =>
-              GotComboboxNullableDemoMessage({ message }),
-          }),
-        ],
-      ),
-
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Select on Focus'],
-      ),
-      h.label(
-        [
-          h.For(Combobox.inputId(model.comboboxSelectOnFocusDemo.id)),
-          h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
-        ],
-        ['City'],
-      ),
-      h.div(
-        [h.Class('relative')],
-        [
-          h.submodel({
-            slotId: model.comboboxSelectOnFocusDemo.id,
-            model: model.comboboxSelectOnFocusDemo,
-            view: CityCombobox.view,
-            viewInputs: {
-              ...comboboxInputs({
-                inputValue: model.comboboxSelectOnFocusDemo.inputValue,
-                restingInputValue: Option.getOrElse(
-                  model.maybeComboboxSelectOnFocusDemoSelectedCity,
-                  () => '',
-                ),
-              }),
-              maybeSelectedValue:
-                model.maybeComboboxSelectOnFocusDemoSelectedCity,
-            },
-            toParentMessage: message =>
-              GotComboboxSelectOnFocusDemoMessage({ message }),
-          }),
-        ],
-      ),
-
-      h.h3(
-        [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
-        ['Multi-Select'],
-      ),
-      h.label(
-        [
-          h.For(Combobox.inputId(model.comboboxMultiDemo.id)),
-          h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
-        ],
-        ['Cities'],
-      ),
-      h.div(
-        [h.Class('relative')],
-        [
-          h.div(
-            [h.Class('flex flex-wrap gap-1.5 mb-2')],
-            Array.match(model.comboboxMultiDemoSelectedCities, {
-              onEmpty: () => [
-                h.span([h.Class(emptyTagClassName)], ['No selection']),
-              ],
-              onNonEmpty: selectedCities =>
-                selectedCities.map(city =>
-                  h.span([h.Class(tagClassName)], [city]),
-                ),
+                maybeSelectedValue: model.maybeComboboxDemoSelectedCity,
+              },
+              toParentMessage: message =>
+                UiMessage.GotComboboxDemoMessage({ message }),
             }),
-          ),
-          h.submodel({
-            slotId: model.comboboxMultiDemo.id,
-            model: model.comboboxMultiDemo,
-            view: CityMultiCombobox.view,
-            viewInputs: {
-              ...comboboxInputs({
-                inputValue: model.comboboxMultiDemo.inputValue,
-                restingInputValue: '',
+          ],
+        ),
+
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-2')],
+          ['Locked Placement'],
+        ),
+        h.p(
+          [h.Class('text-sm text-gray-600 mb-4')],
+          [
+            'The panel keeps the side chosen when it opens as filtering changes its height.',
+          ],
+        ),
+        h.label(
+          [
+            h.For(Combobox.inputId(model.comboboxPlacementLockDemo.id)),
+            h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
+          ],
+          ['City'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.submodel({
+              slotId: model.comboboxPlacementLockDemo.id,
+              model: model.comboboxPlacementLockDemo,
+              view: CityCombobox.view,
+              viewInputs: {
+                ...comboboxInputs(
+                  {
+                    inputValue: model.comboboxPlacementLockDemo.inputValue,
+                    restingInputValue: Option.getOrElse(
+                      model.maybeComboboxPlacementLockDemoSelectedCity,
+                      () => '',
+                    ),
+                    anchor: {
+                      ...COMBOBOX_ANCHOR,
+                      isPlacementLocked: true,
+                    },
+                  },
+                  h,
+                ),
+                maybeSelectedValue:
+                  model.maybeComboboxPlacementLockDemoSelectedCity,
+                openOnFocus: true,
+              },
+              toParentMessage: message =>
+                UiMessage.GotComboboxPlacementLockDemoMessage({ message }),
+            }),
+          ],
+        ),
+
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Nullable'],
+        ),
+        h.label(
+          [
+            h.For(Combobox.inputId(model.comboboxNullableDemo.id)),
+            h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
+          ],
+          ['City'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.submodel({
+              slotId: model.comboboxNullableDemo.id,
+              model: model.comboboxNullableDemo,
+              view: CityCombobox.view,
+              viewInputs: {
+                ...comboboxInputs(
+                  {
+                    inputValue: model.comboboxNullableDemo.inputValue,
+                    restingInputValue: Option.getOrElse(
+                      model.maybeComboboxNullableDemoSelectedCity,
+                      () => '',
+                    ),
+                  },
+                  h,
+                ),
+                maybeSelectedValue: model.maybeComboboxNullableDemoSelectedCity,
+              },
+              toParentMessage: message =>
+                UiMessage.GotComboboxNullableDemoMessage({ message }),
+            }),
+          ],
+        ),
+
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Select on Focus'],
+        ),
+        h.label(
+          [
+            h.For(Combobox.inputId(model.comboboxSelectOnFocusDemo.id)),
+            h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
+          ],
+          ['City'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.submodel({
+              slotId: model.comboboxSelectOnFocusDemo.id,
+              model: model.comboboxSelectOnFocusDemo,
+              view: CityCombobox.view,
+              viewInputs: {
+                ...comboboxInputs(
+                  {
+                    inputValue: model.comboboxSelectOnFocusDemo.inputValue,
+                    restingInputValue: Option.getOrElse(
+                      model.maybeComboboxSelectOnFocusDemoSelectedCity,
+                      () => '',
+                    ),
+                  },
+                  h,
+                ),
+                maybeSelectedValue:
+                  model.maybeComboboxSelectOnFocusDemoSelectedCity,
+              },
+              toParentMessage: message =>
+                UiMessage.GotComboboxSelectOnFocusDemoMessage({ message }),
+            }),
+          ],
+        ),
+
+        h.h3(
+          [h.Class('text-lg font-semibold text-gray-900 mt-8 mb-4')],
+          ['Multi-Select'],
+        ),
+        h.label(
+          [
+            h.For(Combobox.inputId(model.comboboxMultiDemo.id)),
+            h.Class('block mb-1.5 text-sm font-medium text-gray-900'),
+          ],
+          ['Cities'],
+        ),
+        h.div(
+          [h.Class('relative')],
+          [
+            h.div(
+              [h.Class('flex flex-wrap gap-1.5 mb-2')],
+              Array.match(model.comboboxMultiDemoSelectedCities, {
+                onEmpty: () => [
+                  h.span([h.Class(emptyTagClassName)], ['No selection']),
+                ],
+                onNonEmpty: selectedCities =>
+                  selectedCities.map(city =>
+                    h.span([h.Class(tagClassName)], [city]),
+                  ),
               }),
-              selectedValues: model.comboboxMultiDemoSelectedCities,
-            },
-            toParentMessage: message =>
-              GotComboboxMultiDemoMessage({ message }),
-          }),
-        ],
-      ),
-    ],
-  )
-})
+            ),
+            h.submodel({
+              slotId: model.comboboxMultiDemo.id,
+              model: model.comboboxMultiDemo,
+              view: CityMultiCombobox.view,
+              viewInputs: {
+                ...comboboxInputs(
+                  {
+                    inputValue: model.comboboxMultiDemo.inputValue,
+                    restingInputValue: '',
+                  },
+                  h,
+                ),
+                selectedValues: model.comboboxMultiDemoSelectedCities,
+              },
+              toParentMessage: message =>
+                UiMessage.GotComboboxMultiDemoMessage({ message }),
+            }),
+          ],
+        ),
+      ],
+    )
+  },
+)

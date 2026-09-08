@@ -1,5 +1,5 @@
-import { Match as M, Option } from 'effect'
-import { type Attribute, type Html, html } from 'foldkit/html'
+import { Match, Option } from 'effect'
+import type { Attribute, Html, HtmlBuilder } from 'foldkit/html'
 
 // VIEW
 
@@ -16,7 +16,13 @@ import { type Attribute, type Html, html } from 'foldkit/html'
  *  ```
  *
  *  The `checkbox` and `label` bundles carry the click and Space handlers that
- *  dispatch the configured `onToggle` Message. */
+ *  dispatch the configured `onToggle` Message.
+ *
+ *  The `checkbox` bundle sets `type="button"` so that rendering the control as a
+ *  `button` element inside a `form` element toggles without also submitting the
+ *  form. Setting it is harmless on the other elements a control might use, such
+ *  as a `div` or a `span`, because the builder assigns a DOM property rather
+ *  than an HTML attribute. Spread a later `h.Type` to override it. */
 export type CheckboxAttributes<Message> = Readonly<{
   checkbox: ReadonlyArray<Attribute<Message>>
   label: ReadonlyArray<Attribute<Message>>
@@ -33,20 +39,32 @@ export type CheckboxAttributes<Message> = Readonly<{
  *    the checkbox or its label, or presses Space. Handle it in the parent's
  *    `update` by storing the value.
  *  - `toView`: receives the {@link CheckboxAttributes} and lays out the
- *    checkbox. */
+ *    checkbox.
+ *  - `isDisabled`: marks the checkbox unavailable with `aria-disabled="true"`
+ *    and `data-disabled`, keeping it focusable. Use it when the control does
+ *    not apply; use `isReadOnly` when its state is still information the user
+ *    needs.
+ *  - `isReadOnly`: prevents toggling while exposing read-only semantics with
+ *    `aria-readonly="true"` and `data-readonly`. The checkbox remains
+ *    focusable. Independent of `isDisabled`: setting both emits both
+ *    attribute sets, and either one removes the interaction handlers. */
 export type ViewConfig<Message> = Readonly<{
   id: string
   isChecked: boolean
   onToggle: (isChecked: boolean) => Message
   toView: (attributes: CheckboxAttributes<Message>) => Html
   isDisabled?: boolean
+  isReadOnly?: boolean
   isIndeterminate?: boolean
   name?: string
   value?: string
 }>
 
-const labelId = (id: string): string => `${id}-label`
-const descriptionId = (id: string): string => `${id}-description`
+/** Returns the label element id, derived from the checkbox's base id. */
+export const labelId = (id: string): string => `${id}-label`
+
+/** Returns the description element id, derived from the checkbox's base id. */
+export const descriptionId = (id: string): string => `${id}-description`
 
 /** Renders an accessible checkbox as a stateless controlled component. The
  *  parent owns the checked state (`isChecked`) and receives the new state via
@@ -54,28 +72,32 @@ const descriptionId = (id: string): string => `${id}-description`
  *
  *  ```ts
  *  // In view:
- *  Checkbox.view<Message>({
- *    id: 'accept-terms',
- *    isChecked: model.acceptedTerms,
- *    onToggle: isChecked => ToggledTerms({ isChecked }),
- *    toView: attributes => ...,
- *  })
+ *  Checkbox.view(
+ *    {
+ *      id: 'accept-terms',
+ *      isChecked: model.acceptedTerms,
+ *      onToggle: isChecked => ToggledTerms({ isChecked }),
+ *      toView: attributes => ...,
+ *    },
+ *    h,
+ *  )
  *
  *  // In update:
- *  ToggledTerms: ({ isChecked }) => [
- *    evo(model, { acceptedTerms: () => isChecked }),
- *    [],
- *  ],
+ *  ToggledTerms: ({ isChecked }) => ({
+ *    model: evo(model, { acceptedTerms: () => isChecked }),
+ *  }),
  *  ``` */
-export const view = <Message>(config: ViewConfig<Message>): Html => {
-  const h = html<Message>()
-
+export const view = <Message>(
+  config: ViewConfig<Message>,
+  h: HtmlBuilder<Message>,
+): Html => {
   const {
     id,
     isChecked,
     onToggle,
     toView,
     isDisabled = false,
+    isReadOnly = false,
     isIndeterminate = false,
     name,
     value: formValue = 'on',
@@ -84,9 +106,9 @@ export const view = <Message>(config: ViewConfig<Message>): Html => {
   const nextChecked = !isChecked
 
   const handleKeyUp = (key: string): Option.Option<Message> =>
-    M.value(key).pipe(
-      M.when(' ', () => Option.some(onToggle(nextChecked))),
-      M.orElse(() => Option.none()),
+    Match.value(key).pipe(
+      Match.when(' ', () => Option.some(onToggle(nextChecked))),
+      Match.orElse(() => Option.none()),
     )
 
   const resolveStateAttributes = () => {
@@ -103,7 +125,14 @@ export const view = <Message>(config: ViewConfig<Message>): Html => {
     ? [h.AriaDisabled(true), h.DataAttribute('disabled', '')]
     : []
 
+  const readOnlyAttributes = isReadOnly
+    ? [h.AriaReadonly(true), h.DataAttribute('readonly', '')]
+    : []
+
+  const isInteractive = !isDisabled && !isReadOnly
+
   const checkboxAttributes = [
+    h.Type('button'),
     h.Role('checkbox'),
     h.AriaChecked(isIndeterminate ? 'mixed' : isChecked),
     h.AriaLabelledBy(labelId(id)),
@@ -111,17 +140,15 @@ export const view = <Message>(config: ViewConfig<Message>): Html => {
     h.Tabindex(0),
     ...resolveStateAttributes(),
     ...disabledAttributes,
-    ...(isDisabled
-      ? []
-      : [
-          h.OnClick(onToggle(nextChecked)),
-          h.OnKeyUpPreventDefault(handleKeyUp),
-        ]),
+    ...readOnlyAttributes,
+    ...(isInteractive
+      ? [h.OnClick(onToggle(nextChecked)), h.OnKeyUpPreventDefault(handleKeyUp)]
+      : []),
   ]
 
   const labelAttributes = [
     h.Id(labelId(id)),
-    ...(isDisabled ? [] : [h.OnClick(onToggle(nextChecked))]),
+    ...(isInteractive ? [h.OnClick(onToggle(nextChecked))] : []),
   ]
 
   const descriptionAttributes = [h.Id(descriptionId(id))]

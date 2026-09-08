@@ -1,18 +1,10 @@
-import {
-  Array,
-  Duration,
-  Effect,
-  Match as M,
-  Option,
-  Schema as S,
-  pipe,
-} from 'effect'
+import { Array, Duration, Effect, Match, Option, Schema, pipe } from 'effect'
 import { Command, Runtime, Update } from 'foldkit'
-import { Document, Html, html } from 'foldkit/html'
-import { m } from 'foldkit/message'
+import { Document, Html, HtmlBuilder } from 'foldkit/html'
+import { defineMessageUnion } from 'foldkit/message'
 import { UrlRequest, load, pushUrl } from 'foldkit/navigation'
 import { Transition } from 'foldkit/route'
-import { ts } from 'foldkit/schema'
+import { defineTaggedUnion } from 'foldkit/schema'
 import { evo } from 'foldkit/struct'
 import { Url, toString as urlToString } from 'foldkit/url'
 
@@ -26,14 +18,7 @@ import {
   urlToAppRoute,
 } from './route'
 
-export {
-  AppRoute,
-  GalleryRoute,
-  HomeRoute,
-  NotFoundRoute,
-  PaintingRoute,
-  StudioRoute,
-} from './route'
+export { AppRoute } from './route'
 
 const CATALOG_LATENCY = Duration.millis(600)
 const PAINTING_LATENCY = Duration.millis(400)
@@ -42,104 +27,93 @@ const MAX_LOGGED_TRANSITIONS = 20
 
 // MODEL
 
-export const CatalogStatus = S.Literals(['Idle', 'Loading', 'Ready'])
+export const CatalogStatus = Schema.Literals(['Idle', 'Loading', 'Ready'])
 export type CatalogStatus = typeof CatalogStatus.Type
 
-export const PaintingIdle = ts('PaintingIdle')
-export const PaintingLoading = ts('PaintingLoading', { paintingId: S.Number })
-export const PaintingReady = ts('PaintingReady', { paintingId: S.Number })
-
-export const PaintingStatus = S.Union([
-  PaintingIdle,
-  PaintingLoading,
-  PaintingReady,
-])
+export const PaintingStatus = defineTaggedUnion({
+  Idle: {},
+  Loading: { paintingId: Schema.Number },
+  Ready: { paintingId: Schema.Number },
+})
 export type PaintingStatus = typeof PaintingStatus.Type
 
-export const LoggedTransition = S.Struct({
-  sequenceNumber: S.Number,
-  maybePreviousRoute: S.Option(AppRoute),
+export const LoggedTransition = Schema.Struct({
+  sequenceNumber: Schema.Number,
+  maybePreviousRoute: Schema.Option(AppRoute),
   nextRoute: AppRoute,
 })
 export type LoggedTransition = typeof LoggedTransition.Type
 
-export const Model = S.Struct({
+export const Model = Schema.Struct({
   route: AppRoute,
-  transitionLog: S.Array(LoggedTransition),
+  transitionLog: Schema.Array(LoggedTransition),
   catalogStatus: CatalogStatus,
   paintingStatus: PaintingStatus,
-  studioDraft: S.String,
-  maybeSavedDraft: S.Option(S.String),
+  studioDraft: Schema.String,
+  maybeSavedDraft: Schema.Option(Schema.String),
 })
 export type Model = typeof Model.Type
 
 // MESSAGE
 
-export const CompletedNavigateInternal = m('CompletedNavigateInternal')
-export const CompletedLoadExternal = m('CompletedLoadExternal')
-export const ClickedLink = m('ClickedLink', { request: UrlRequest })
-export const ChangedUrl = m('ChangedUrl', { url: Url })
-export const SucceededLoadCatalog = m('SucceededLoadCatalog')
-export const SucceededLoadPainting = m('SucceededLoadPainting', {
-  paintingId: S.Number,
+export const Message = defineMessageUnion({
+  CompletedNavigateInternal: {},
+  CompletedLoadExternal: {},
+  ClickedLink: { request: UrlRequest },
+  ChangedUrl: { url: Url },
+  SucceededLoadCatalog: {},
+  SucceededLoadPainting: { paintingId: Schema.Number },
+  UpdatedStudioDraft: { value: Schema.String },
+  SucceededSaveDraft: { draft: Schema.String },
 })
-export const UpdatedStudioDraft = m('UpdatedStudioDraft', { value: S.String })
-export const SucceededSaveDraft = m('SucceededSaveDraft', { draft: S.String })
 
-export const Message = S.Union([
-  CompletedNavigateInternal,
-  CompletedLoadExternal,
-  ClickedLink,
-  ChangedUrl,
-  SucceededLoadCatalog,
-  SucceededLoadPainting,
-  UpdatedStudioDraft,
-  SucceededSaveDraft,
-])
 export type Message = typeof Message.Type
 
 // COMMAND
 
-const NavigateInternal = Command.define(
-  'NavigateInternal',
-  { url: S.String },
-  CompletedNavigateInternal,
-)(({ url }) => pushUrl(url).pipe(Effect.as(CompletedNavigateInternal())))
+const NavigateInternal = Command.define('NavigateInternal', {
+  args: { url: Schema.String },
+  messages: [Message.CompletedNavigateInternal],
+  execute: ({ url }) =>
+    pushUrl(url).pipe(Effect.as(Message.CompletedNavigateInternal())),
+})
 
-const LoadExternal = Command.define(
-  'LoadExternal',
-  { href: S.String },
-  CompletedLoadExternal,
-)(({ href }) => load(href).pipe(Effect.as(CompletedLoadExternal())))
+const LoadExternal = Command.define('LoadExternal', {
+  args: { href: Schema.String },
+  messages: [Message.CompletedLoadExternal],
+  execute: ({ href }) =>
+    load(href).pipe(Effect.as(Message.CompletedLoadExternal())),
+})
 
-export const LoadCatalog = Command.define(
-  'LoadCatalog',
-  SucceededLoadCatalog,
-)(Effect.sleep(CATALOG_LATENCY).pipe(Effect.as(SucceededLoadCatalog())))
-
-export const LoadPainting = Command.define(
-  'LoadPainting',
-  { paintingId: S.Number },
-  SucceededLoadPainting,
-)(({ paintingId }) =>
-  Effect.sleep(PAINTING_LATENCY).pipe(
-    Effect.as(SucceededLoadPainting({ paintingId })),
+export const LoadCatalog = Command.define('LoadCatalog', {
+  messages: [Message.SucceededLoadCatalog],
+  execute: Effect.sleep(CATALOG_LATENCY).pipe(
+    Effect.as(Message.SucceededLoadCatalog()),
   ),
-)
+})
 
-export const SaveDraft = Command.define(
-  'SaveDraft',
-  { draft: S.String },
-  SucceededSaveDraft,
-)(({ draft }) =>
-  Effect.sleep(SAVE_LATENCY).pipe(Effect.as(SucceededSaveDraft({ draft }))),
-)
+export const LoadPainting = Command.define('LoadPainting', {
+  args: { paintingId: Schema.Number },
+  messages: [Message.SucceededLoadPainting],
+  execute: ({ paintingId }) =>
+    Effect.sleep(PAINTING_LATENCY).pipe(
+      Effect.as(Message.SucceededLoadPainting({ paintingId })),
+    ),
+})
+
+export const SaveDraft = Command.define('SaveDraft', {
+  args: { draft: Schema.String },
+  messages: [Message.SucceededSaveDraft],
+  execute: ({ draft }) =>
+    Effect.sleep(SAVE_LATENCY).pipe(
+      Effect.as(Message.SucceededSaveDraft({ draft })),
+    ),
+})
 
 // UPDATE
 
 type UpdateReturn = Update.Return<Model, Message>
 type Step = Update.Step<Model, Message>
-const withUpdateReturn = M.withReturnType<UpdateReturn>()
 
 export type AppTransition = Transition.Transition<AppRoute>
 
@@ -153,8 +127,8 @@ const nextSequenceNumber = (
 
 const logTransition =
   (transition: AppTransition): Step =>
-  model => [
-    evo(model, {
+  model => ({
+    model: evo(model, {
       transitionLog: transitionLog =>
         pipe(
           transitionLog,
@@ -166,54 +140,60 @@ const logTransition =
           Array.take(MAX_LOGGED_TRANSITIONS),
         ),
     }),
-    [],
-  ]
+  })
 
 const loadCatalogOnGalleryEntry =
   (transition: AppTransition): Step =>
   model =>
     Transition.isEntering(transition, 'Gallery') &&
     model.catalogStatus !== 'Loading'
-      ? [evo(model, { catalogStatus: () => 'Loading' }), [LoadCatalog()]]
-      : [model, []]
+      ? {
+          model: evo(model, { catalogStatus: () => 'Loading' }),
+          commands: [LoadCatalog()],
+        }
+      : { model }
 
 const loadPaintingOnEntry =
   (transition: AppTransition): Step =>
   model =>
-    Option.match(Transition.enteredRoute(transition, 'Painting'), {
-      onNone: () => [model, []],
-      onSome: ({ paintingId }) => [
-        evo(model, { paintingStatus: () => PaintingLoading({ paintingId }) }),
-        [LoadPainting({ paintingId })],
-      ],
+    Option.match(Transition.entered(transition, 'Painting'), {
+      onNone: () => ({ model }),
+      onSome: ({ paintingId }) => ({
+        model: evo(model, {
+          paintingStatus: () => PaintingStatus.Loading({ paintingId }),
+        }),
+        commands: [LoadPainting({ paintingId })],
+      }),
     })
 
 const reloadPaintingOnIdChange =
   (transition: AppTransition): Step =>
   model =>
     Option.match(Transition.stayed(transition, 'Painting'), {
-      onNone: () => [model, []],
+      onNone: () => ({ model }),
       onSome: ({ previousRoute, nextRoute }) =>
         previousRoute.paintingId === nextRoute.paintingId
-          ? [model, []]
-          : [
-              evo(model, {
+          ? { model }
+          : {
+              model: evo(model, {
                 paintingStatus: () =>
-                  PaintingLoading({ paintingId: nextRoute.paintingId }),
+                  PaintingStatus.Loading({
+                    paintingId: nextRoute.paintingId,
+                  }),
               }),
-              [LoadPainting({ paintingId: nextRoute.paintingId })],
-            ],
+              commands: [LoadPainting({ paintingId: nextRoute.paintingId })],
+            },
     })
 
 const saveDraftOnStudioExit =
   (transition: AppTransition): Step =>
   model =>
-    Option.match(Transition.exitedRoute(transition, 'Studio'), {
-      onNone: () => [model, []],
+    Option.match(Transition.exited(transition, 'Studio'), {
+      onNone: () => ({ model }),
       onSome: () =>
         model.studioDraft === ''
-          ? [model, []]
-          : [model, [SaveDraft({ draft: model.studioDraft })]],
+          ? { model }
+          : { model, commands: [SaveDraft({ draft: model.studioDraft })] },
     })
 
 const handleTransition = (
@@ -228,61 +208,54 @@ const handleTransition = (
     saveDraftOnStudioExit(transition),
   ])
 
-export const update = (model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    withUpdateReturn,
-    M.tagsExhaustive({
-      CompletedNavigateInternal: () => [model, []],
-      CompletedLoadExternal: () => [model, []],
+export const update = (model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    CompletedNavigateInternal: () => ({ model }),
+    CompletedLoadExternal: () => ({ model }),
 
-      ClickedLink: ({ request }) =>
-        M.value(request).pipe(
-          withUpdateReturn,
-          M.tagsExhaustive({
-            Internal: ({ url }) => [
-              model,
-              [NavigateInternal({ url: urlToString(url) })],
-            ],
-            External: ({ href }) => [model, [LoadExternal({ href })]],
-          }),
-        ),
+    ClickedLink: ({ request }) =>
+      UrlRequest.match<UpdateReturn>(request, {
+        Internal: ({ url }) => ({
+          model,
+          commands: [NavigateInternal({ url: urlToString(url) })],
+        }),
+        External: ({ href }) => ({
+          model,
+          commands: [LoadExternal({ href })],
+        }),
+      }),
 
-      ChangedUrl: ({ url }) => {
-        const nextRoute = urlToAppRoute(url)
-        const transition = Transition.make(model.route, nextRoute)
-        return handleTransition(
-          evo(model, { route: () => nextRoute }),
-          transition,
-        )
-      },
+    ChangedUrl: ({ url }) => {
+      const nextRoute = urlToAppRoute(url)
+      const transition = Transition.make(model.route, nextRoute)
+      return handleTransition(
+        evo(model, { route: () => nextRoute }),
+        transition,
+      )
+    },
 
-      SucceededLoadCatalog: () => [
-        evo(model, { catalogStatus: () => 'Ready' }),
-        [],
-      ],
-
-      SucceededLoadPainting: ({ paintingId }) =>
-        model.paintingStatus._tag === 'PaintingLoading' &&
-        model.paintingStatus.paintingId === paintingId
-          ? [
-              evo(model, {
-                paintingStatus: () => PaintingReady({ paintingId }),
-              }),
-              [],
-            ]
-          : [model, []],
-
-      UpdatedStudioDraft: ({ value }) => [
-        evo(model, { studioDraft: () => value }),
-        [],
-      ],
-
-      SucceededSaveDraft: ({ draft }) => [
-        evo(model, { maybeSavedDraft: () => Option.some(draft) }),
-        [],
-      ],
+    SucceededLoadCatalog: () => ({
+      model: evo(model, { catalogStatus: () => 'Ready' }),
     }),
-  )
+
+    SucceededLoadPainting: ({ paintingId }) =>
+      model.paintingStatus._tag === 'Loading' &&
+      model.paintingStatus.paintingId === paintingId
+        ? {
+            model: evo(model, {
+              paintingStatus: () => PaintingStatus.Ready({ paintingId }),
+            }),
+          }
+        : { model },
+
+    UpdatedStudioDraft: ({ value }) => ({
+      model: evo(model, { studioDraft: () => value }),
+    }),
+
+    SucceededSaveDraft: ({ draft }) => ({
+      model: evo(model, { maybeSavedDraft: () => Option.some(draft) }),
+    }),
+  })
 
 // INIT
 
@@ -294,7 +267,7 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
     route,
     transitionLog: [],
     catalogStatus: 'Idle',
-    paintingStatus: PaintingIdle(),
+    paintingStatus: PaintingStatus.Idle(),
     studioDraft: '',
     maybeSavedDraft: Option.none(),
   })
@@ -304,19 +277,18 @@ export const init: Runtime.RoutingApplicationInit<Model, Message> = (
 // VIEW
 
 const routeLabel = (route: AppRoute): string =>
-  M.value(route).pipe(
-    M.tagsExhaustive({
-      Home: () => 'Home',
-      Gallery: () => 'Gallery',
-      Painting: ({ paintingId }) => `Painting ${paintingId}`,
-      Studio: () => 'Studio',
-      NotFound: () => 'Not found',
-    }),
-  )
+  AppRoute.match(route, {
+    Home: () => 'Home',
+    Gallery: () => 'Gallery',
+    Painting: ({ paintingId }) => `Painting ${paintingId}`,
+    Studio: () => 'Studio',
+    NotFound: () => 'Not found',
+  })
 
-const navigationView = (currentRoute: AppRoute): Html => {
-  const h = html<Message>()
-
+const navigationView = (
+  currentRoute: AppRoute,
+  h: HtmlBuilder<Message>,
+): Html => {
   const navLinkClassName = (isActive: boolean) =>
     `font-medium px-3 py-1 rounded transition hover:bg-indigo-500 ${isActive ? 'bg-indigo-700' : ''}`
 
@@ -373,10 +345,8 @@ const navigationView = (currentRoute: AppRoute): Html => {
   )
 }
 
-const homeView = (): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const homeView = (h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
       h.h1(
@@ -421,12 +391,9 @@ const homeView = (): Html => {
       ),
     ],
   )
-}
 
-const loadingView = (label: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const loadingView = (label: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [
       h.Class(
         'border border-dashed border-gray-300 rounded-lg p-12 text-center text-gray-500',
@@ -434,12 +401,9 @@ const loadingView = (label: string): Html => {
     ],
     [label],
   )
-}
 
-const paintingGridView = (): Html => {
-  const h = html<Message>()
-
-  return h.ul(
+const paintingGridView = (h: HtmlBuilder<Message>): Html =>
+  h.ul(
     [h.Class('grid gap-4 sm:grid-cols-2 list-none')],
     Array.map(paintings, painting =>
       h.keyed('li')(
@@ -454,10 +418,7 @@ const paintingGridView = (): Html => {
               ),
             ],
             [
-              h.div(
-                [h.Class(`h-28 bg-gradient-to-br ${painting.gradient}`)],
-                [],
-              ),
+              h.div([h.Class(`h-28 bg-gradient-to-br ${painting.gradient}`)]),
               h.div(
                 [h.Class('p-4')],
                 [
@@ -474,11 +435,11 @@ const paintingGridView = (): Html => {
       ),
     ),
   )
-}
 
-const galleryView = (catalogStatus: CatalogStatus): Html => {
-  const h = html<Message>()
-
+const galleryView = (
+  catalogStatus: CatalogStatus,
+  h: HtmlBuilder<Message>,
+): Html => {
   const isCatalogReady = catalogStatus === 'Ready'
 
   return h.div(
@@ -492,8 +453,8 @@ const galleryView = (catalogStatus: CatalogStatus): Html => {
         ],
       ),
       isCatalogReady
-        ? paintingGridView()
-        : loadingView('Hanging the paintings…'),
+        ? paintingGridView(h)
+        : loadingView('Hanging the paintings…', h),
     ],
   )
 }
@@ -501,10 +462,9 @@ const galleryView = (catalogStatus: CatalogStatus): Html => {
 const neighborView = (
   label: string,
   maybeNeighbor: Option.Option<Painting>,
-): Html => {
-  const h = html<Message>()
-
-  return Option.match(maybeNeighbor, {
+  h: HtmlBuilder<Message>,
+): Html =>
+  Option.match(maybeNeighbor, {
     onNone: () => h.span([h.Class('text-gray-300')], [label]),
     onSome: neighbor =>
       h.a(
@@ -515,28 +475,28 @@ const neighborView = (
         [label],
       ),
   })
-}
 
-const paintingNeighborsView = (paintingIndex: number): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const paintingNeighborsView = (
+  paintingIndex: number,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [h.Class('flex items-center justify-between mt-6')],
     [
-      neighborView('← Previous', Array.get(paintings, paintingIndex - 1)),
+      neighborView('← Previous', Array.get(paintings, paintingIndex - 1), h),
       h.span(
         [h.Class('text-sm text-gray-500')],
         [`${paintingIndex + 1} of ${paintings.length}`],
       ),
-      neighborView('Next →', Array.get(paintings, paintingIndex + 1)),
+      neighborView('Next →', Array.get(paintings, paintingIndex + 1), h),
     ],
   )
-}
 
-const missingPaintingView = (paintingId: number): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const missingPaintingView = (
+  paintingId: number,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [],
     [
       h.h1(
@@ -553,18 +513,15 @@ const missingPaintingView = (paintingId: number): Html => {
       ),
     ],
   )
-}
 
 const foundPaintingView = (
   painting: Painting,
   paintingIndex: number,
   paintingStatus: PaintingStatus,
+  h: HtmlBuilder<Message>,
 ): Html => {
-  const h = html<Message>()
-
   const isPaintingReady =
-    paintingStatus._tag === 'PaintingReady' &&
-    paintingStatus.paintingId === painting.id
+    paintingStatus._tag === 'Ready' && paintingStatus.paintingId === painting.id
 
   return h.div(
     [],
@@ -580,10 +537,7 @@ const foundPaintingView = (
         ? h.article(
             [h.Class('bg-white rounded-lg shadow overflow-hidden')],
             [
-              h.div(
-                [h.Class(`h-56 bg-gradient-to-br ${painting.gradient}`)],
-                [],
-              ),
+              h.div([h.Class(`h-56 bg-gradient-to-br ${painting.gradient}`)]),
               h.div(
                 [h.Class('p-6')],
                 [
@@ -596,8 +550,8 @@ const foundPaintingView = (
               ),
             ],
           )
-        : loadingView('Unpacking the painting…'),
-      paintingNeighborsView(paintingIndex),
+        : loadingView('Unpacking the painting…', h),
+      paintingNeighborsView(paintingIndex, h),
     ],
   )
 }
@@ -605,20 +559,20 @@ const foundPaintingView = (
 const paintingView = (
   paintingId: number,
   paintingStatus: PaintingStatus,
+  h: HtmlBuilder<Message>,
 ): Html =>
   Option.match(findPaintingWithIndex(paintingId), {
-    onNone: () => missingPaintingView(paintingId),
+    onNone: () => missingPaintingView(paintingId, h),
     onSome: ({ painting, paintingIndex }) =>
-      foundPaintingView(painting, paintingIndex, paintingStatus),
+      foundPaintingView(painting, paintingIndex, paintingStatus, h),
   })
 
 const studioView = (
   studioDraft: string,
   maybeSavedDraft: Option.Option<string>,
-): Html => {
-  const h = html<Message>()
-
-  return h.div(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.div(
     [],
     [
       h.h1([h.Class('text-4xl font-bold text-gray-800 mb-2')], ['Studio']),
@@ -628,17 +582,14 @@ const studioView = (
           'Write something, then leave. Exiting this route fires a one-shot SaveDraft Command with whatever is here.',
         ],
       ),
-      h.textarea(
-        [
-          h.Value(studioDraft),
-          h.OnInput(value => UpdatedStudioDraft({ value })),
-          h.Placeholder('A half-finished thought…'),
-          h.Class(
-            'w-full h-40 bg-white border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500',
-          ),
-        ],
-        [],
-      ),
+      h.textarea([
+        h.Value(studioDraft),
+        h.OnInput(value => Message.UpdatedStudioDraft({ value })),
+        h.Placeholder('A half-finished thought…'),
+        h.Class(
+          'w-full h-40 bg-white border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500',
+        ),
+      ]),
       h.div(
         [h.Class('mt-6')],
         [
@@ -665,12 +616,9 @@ const studioView = (
       ),
     ],
   )
-}
 
-const notFoundView = (path: string): Html => {
-  const h = html<Message>()
-
-  return h.div(
+const notFoundView = (path: string, h: HtmlBuilder<Message>): Html =>
+  h.div(
     [],
     [
       h.h1(
@@ -687,12 +635,13 @@ const notFoundView = (path: string): Html => {
       ),
     ],
   )
-}
 
-const badgeView = (className: string, label: string): Html => {
-  const h = html<Message>()
-
-  return h.span(
+const badgeView = (
+  className: string,
+  label: string,
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.span(
     [
       h.Class(
         `text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${className}`,
@@ -700,20 +649,24 @@ const badgeView = (className: string, label: string): Html => {
     ],
     [label],
   )
-}
 
-const logEntryBadges = (transition: AppTransition): ReadonlyArray<Html> => {
+const logEntryBadges = (
+  transition: AppTransition,
+  h: HtmlBuilder<Message>,
+): ReadonlyArray<Html> => {
   const coldLoadBadges = Option.match(transition.maybePreviousRoute, {
-    onNone: () => [badgeView('bg-violet-100 text-violet-700', 'Cold load')],
+    onNone: () => [badgeView('bg-violet-100 text-violet-700', 'Cold load', h)],
     onSome: () => [],
   })
 
-  const maybeEnteredBadge = Option.map(Transition.entered(transition), route =>
-    badgeView('bg-emerald-100 text-emerald-700', `Entered ${route._tag}`),
+  const maybeEnteredBadge = Option.map(
+    Transition.enteredAny(transition),
+    route =>
+      badgeView('bg-emerald-100 text-emerald-700', `Entered ${route._tag}`, h),
   )
 
-  const maybeExitedBadge = Option.map(Transition.exited(transition), route =>
-    badgeView('bg-amber-100 text-amber-700', `Exited ${route._tag}`),
+  const maybeExitedBadge = Option.map(Transition.exitedAny(transition), route =>
+    badgeView('bg-amber-100 text-amber-700', `Exited ${route._tag}`, h),
   )
 
   const maybeStayedBadge = Option.map(
@@ -722,6 +675,7 @@ const logEntryBadges = (transition: AppTransition): ReadonlyArray<Html> => {
       badgeView(
         'bg-sky-100 text-sky-700',
         `Stayed on Painting: ${previousRoute.paintingId} → ${nextRoute.paintingId}`,
+        h,
       ),
   )
 
@@ -733,15 +687,16 @@ const logEntryBadges = (transition: AppTransition): ReadonlyArray<Html> => {
 
   return Array.match([...coldLoadBadges, ...helperBadges], {
     onEmpty: () => [
-      badgeView('bg-gray-100 text-gray-600', 'Stayed within route'),
+      badgeView('bg-gray-100 text-gray-600', 'Stayed within route', h),
     ],
     onNonEmpty: badges => badges,
   })
 }
 
-const logEntryView = (entry: LoggedTransition): Html => {
-  const h = html<Message>()
-
+const logEntryView = (
+  entry: LoggedTransition,
+  h: HtmlBuilder<Message>,
+): Html => {
   const sourceLabel = Option.match(entry.maybePreviousRoute, {
     onNone: () => 'Cold load',
     onSome: routeLabel,
@@ -757,17 +712,16 @@ const logEntryView = (entry: LoggedTransition): Html => {
           `#${entry.sequenceNumber} ${sourceLabel} → ${routeLabel(entry.nextRoute)}`,
         ],
       ),
-      h.div([h.Class('flex flex-wrap gap-1.5')], logEntryBadges(entry)),
+      h.div([h.Class('flex flex-wrap gap-1.5')], logEntryBadges(entry, h)),
     ],
   )
 }
 
 const transitionLogView = (
   transitionLog: ReadonlyArray<LoggedTransition>,
-): Html => {
-  const h = html<Message>()
-
-  return h.aside(
+  h: HtmlBuilder<Message>,
+): Html =>
+  h.aside(
     [h.Class('bg-white rounded-lg shadow p-4 h-fit lg:sticky lg:top-8')],
     [
       h.h2(
@@ -780,45 +734,42 @@ const transitionLogView = (
       ),
       h.ul(
         [h.Class('space-y-3 list-none')],
-        Array.map(transitionLog, logEntryView),
+        Array.map(transitionLog, entry => logEntryView(entry, h)),
       ),
     ],
   )
-}
 
 const routeTitle = (route: AppRoute): string =>
-  M.value(route).pipe(
-    M.tag('Home', () => 'Route Transitions'),
-    M.orElse(currentRoute => `${routeLabel(currentRoute)} | Route Transitions`),
+  Match.value(route).pipe(
+    Match.tag('Home', () => 'Route Transitions'),
+    Match.orElse(
+      currentRoute => `${routeLabel(currentRoute)} | Route Transitions`,
+    ),
   )
 
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  const routeContent = M.value(model.route).pipe(
-    M.tagsExhaustive({
-      Home: homeView,
-      Gallery: () => galleryView(model.catalogStatus),
-      Painting: ({ paintingId }) =>
-        paintingView(paintingId, model.paintingStatus),
-      Studio: () => studioView(model.studioDraft, model.maybeSavedDraft),
-      NotFound: ({ path }) => notFoundView(path),
-    }),
-  )
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => {
+  const routeContent = AppRoute.match(model.route, {
+    Home: () => homeView(h),
+    Gallery: () => galleryView(model.catalogStatus, h),
+    Painting: ({ paintingId }) =>
+      paintingView(paintingId, model.paintingStatus, h),
+    Studio: () => studioView(model.studioDraft, model.maybeSavedDraft, h),
+    NotFound: ({ path }) => notFoundView(path, h),
+  })
 
   return {
     title: routeTitle(model.route),
     body: h.div(
       [h.Class('min-h-screen bg-gray-100')],
       [
-        h.header([], [navigationView(model.route)]),
+        h.header([], [navigationView(model.route, h)]),
         h.main(
           [
             h.Class(
               'max-w-6xl mx-auto px-4 py-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] items-start',
             ),
           ],
-          [routeContent, transitionLogView(model.transitionLog)],
+          [routeContent, transitionLogView(model.transitionLog, h)],
         ),
       ],
     ),

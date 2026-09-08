@@ -8,7 +8,7 @@ type Commands = ReadonlyArray<Command.Command<Message>>
 const commandsOnExit = (
   transition: Transition.Transition<AppRoute>,
 ): Commands =>
-  Option.match(Transition.exitedRoute(transition, 'Person'), {
+  Option.match(Transition.exited(transition, 'Person'), {
     onNone: () => [],
     onSome: ({ personId }) => [RecordVisitEnded({ personId })],
   })

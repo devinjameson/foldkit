@@ -1,44 +1,21 @@
-import {
-  Array,
-  Context,
-  Effect,
-  Fiber,
-  Option,
-  Predicate,
-  Schema,
-} from 'effect'
+import { Array, Context, Effect, Fiber, Option, Schema } from 'effect'
 
-import { ts } from '../../schema/index.js'
-import { CommandDefinitionTypeId } from '../index.js'
+import { defineTaggedUnion } from '../../schema/index.js'
+import { CommandDefinitionTypeId, brandAsDefinition } from '../brand.js'
 
-/** At least one in-flight Command held the interrupt key, and every holder
- *  has been stopped. Their declared result Messages are guaranteed never to
- *  dispatch. */
-export const Interrupted = ts('Interrupted')
+/** The result of interrupting a key. `Outcome.Interrupted` means at least one
+ * in-flight Command was stopped and will not dispatch its result Message.
+ * `Outcome.NotFound` means no Command held the key. The interrupt operation
+ * itself cannot fail. */
+export const Outcome = defineTaggedUnion({
+  Interrupted: {},
+  NotFound: {},
+})
 
-/** At least one in-flight Command held the interrupt key, and every holder
- *  has been stopped. Their declared result Messages are guaranteed never to
- *  dispatch. */
-export type Interrupted = typeof Interrupted.Type
-
-/** No Command holds the interrupt key: every target already completed (its
- *  result Message dispatched or will dispatch) or was never dispatched. The
- *  two cases are indistinguishable by design. */
-export const NotFound = ts('NotFound')
-
-/** No Command holds the interrupt key: every target already completed (its
- *  result Message dispatched or will dispatch) or was never dispatched. The
- *  two cases are indistinguishable by design. */
-export type NotFound = typeof NotFound.Type
-
-/** The result of an Interrupt Command: {@link Interrupted} when at least one
- *  holder was stopped, {@link NotFound} when nothing held the key.
- *  Interruption itself cannot fail. */
-export const Outcome = Schema.Union([Interrupted, NotFound])
-
-/** The result of an Interrupt Command: {@link Interrupted} when at least one
- *  holder was stopped, {@link NotFound} when nothing held the key.
- *  Interruption itself cannot fail. */
+/** The result of interrupting a key. `Outcome.Interrupted` means at least one
+ * in-flight Command was stopped and will not dispatch its result Message.
+ * `Outcome.NotFound` means no Command held the key. The interrupt operation
+ * itself cannot fail. */
 export type Outcome = typeof Outcome.Type
 
 /** @internal The per-runtime-instance map from interrupt key to the fibers
@@ -97,9 +74,11 @@ export const __makeRegistry = (): __Registry => {
   const interrupt = (key: string): Effect.Effect<Outcome> =>
     Effect.suspend(() =>
       Array.match(lookup(key), {
-        onEmpty: () => Effect.succeed<Outcome>(NotFound()),
+        onEmpty: () => Effect.succeed<Outcome>(Outcome.NotFound()),
         onNonEmpty: fibers =>
-          Effect.map(Fiber.interruptAll(fibers), (): Outcome => Interrupted()),
+          Effect.map(Fiber.interruptAll(fibers), (): Outcome =>
+            Outcome.Interrupted(),
+          ),
       }),
     )
 
@@ -123,7 +102,7 @@ export const __CurrentRegistry = Context.Reference<__Registry>(
 // `register` but before `ensuring` attached, the fiber would die without
 // ever removing itself from the registry, and every later Interrupt would
 // report `Interrupted` against that dead entry forever.
-const registerKeyWhileRunning = <A, E, R>(
+export const __registerKeyWhileRunning = <A, E, R>(
   key: string,
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E, R> =>
@@ -156,7 +135,7 @@ const makeInterruptEffect = <ToMessage>(
  *  to produce a Command that interrupts every holder of the definition's key. */
 export interface InterruptDefinitionNoArgs<Name extends string> {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
-  readonly name: `${Name}.Interrupt`;
+  readonly name: `${Name}.Interrupt`
   <ToMessage>(toMessage: (outcome: Outcome) => ToMessage): Readonly<{
     name: `${Name}.Interrupt`
     interruptsKey: string
@@ -170,7 +149,7 @@ export interface InterruptDefinitionNoArgs<Name extends string> {
  *  interrupts every holder of the key derived from `keyArgs`. */
 export interface InterruptDefinitionWithArgs<Name extends string, KeyArgs> {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
-  readonly name: `${Name}.Interrupt`;
+  readonly name: `${Name}.Interrupt`
   <ToMessage>(
     keyArgs: KeyArgs,
     toMessage: (outcome: Outcome) => ToMessage,
@@ -191,7 +170,7 @@ export interface DefinitionNoArgs<
 > {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
   readonly name: Name
-  readonly Interrupt: InterruptDefinitionNoArgs<Name>;
+  readonly Interrupt: InterruptDefinitionNoArgs<Name>
   (): Readonly<{ name: Name; key: string; effect: Eff }>
 }
 
@@ -202,12 +181,12 @@ export interface DefinitionNoArgs<
 export interface DefinitionWithArgs<
   Name extends string,
   Fields extends Schema.Struct.Fields,
-  KeyArgs extends Partial<Schema.Schema.Type<Schema.Struct<Fields>>>,
+  KeyArgs extends object,
   Eff extends Effect.Effect<any, any, any>,
 > {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
   readonly name: Name
-  readonly Interrupt: InterruptDefinitionWithArgs<Name, KeyArgs>;
+  readonly Interrupt: InterruptDefinitionWithArgs<Name, KeyArgs>
   (args: Schema.Schema.Type<Schema.Struct<Fields>>): Readonly<{
     name: Name
     args: Schema.Schema.Type<Schema.Struct<Fields>>
@@ -229,7 +208,7 @@ export interface DefinitionWithArgsNameKeyed<
 > {
   readonly [CommandDefinitionTypeId]: CommandDefinitionTypeId
   readonly name: Name
-  readonly Interrupt: InterruptDefinitionNoArgs<Name>;
+  readonly Interrupt: InterruptDefinitionNoArgs<Name>
   (args: Schema.Schema.Type<Schema.Struct<Fields>>): Readonly<{
     name: Name
     args: Schema.Schema.Type<Schema.Struct<Fields>>
@@ -238,17 +217,12 @@ export interface DefinitionWithArgsNameKeyed<
   }>
 }
 
-const brandAsDefinition = (definition: unknown, name: string): void => {
-  Object.defineProperty(definition, 'name', {
-    value: name,
-    configurable: true,
-  })
-  Object.defineProperty(definition, CommandDefinitionTypeId, {
-    value: CommandDefinitionTypeId,
-  })
-}
-
-const makeInterruptDefinitionNoArgs = (name: string, key: string): unknown => {
+/** @internal Builds the `Interrupt` constructor for an interruptible definition
+ *  whose key is the Command name. Internal to the Command module. */
+export const __makeInterruptDefinitionNoArgs = (
+  name: string,
+  key: string,
+): unknown => {
   const interruptName = `${name}.Interrupt`
   const definition = (toMessage: (outcome: Outcome) => unknown) => ({
     name: interruptName,
@@ -260,7 +234,9 @@ const makeInterruptDefinitionNoArgs = (name: string, key: string): unknown => {
   return definition
 }
 
-const makeInterruptDefinitionWithArgs = (
+/** @internal Builds the `Interrupt` constructor for an interruptible definition
+ *  whose key is derived from its args. Internal to the Command module. */
+export const __makeInterruptDefinitionWithArgs = (
   name: string,
   toFullKey: (keyArgs: any) => string,
 ): unknown => {
@@ -280,210 +256,4 @@ const makeInterruptDefinitionWithArgs = (
   }
   brandAsDefinition(definition, interruptName)
   return definition
-}
-
-/**
- * Defines an interruptible Command. Like `Command.define`, but every
- * invocation registers under a key in the runtime's interrupt registry for
- * the duration of its Effect, and the returned Definition carries an
- * `Interrupt` constructor that builds the Command to stop it.
- *
- * Keys are namespaced by the Command name automatically. With no declared
- * args the key is the Command name itself. With declared args, `toKey` maps
- * them to the part that distinguishes invocations, and the full key becomes
- * `` `${name}:${toKey(args)}` ``, so keys never collide across definitions
- * and call sites never restate the name. Derive the key part from the Model
- * identity that owns the in-flight work (a list item id, an entity id), never
- * from a generated value: the update function is pure, and any invocation you
- * can meaningfully target is already distinguished by data in the Model.
- *
- * `toKey` is optional on the with-args form. Omit it when at most one
- * invocation is meaningfully in flight (a single-instance submit flow), and the
- * key is the Command name, exactly like the no-args form, with `Interrupt`
- * taking only `toMessage`. Provide it, deriving the key from the owning Model
- * identity, when invocations run concurrently and must be interrupted
- * independently.
- *
- * Semantics:
- *
- * - A key is an address, not a lock. Any number of invocations may run under
- *   one key concurrently, and dispatching never interrupts anything.
- *   Interruption only happens when update returns an Interrupt Command.
- * - `Definition.Interrupt` produces a Command whose Effect interrupts every
- *   current holder of the key and results in `toMessage(outcome)`. The
- *   outcome is `Interrupted` when at least one holder was stopped (the
- *   stopped holders' result Messages are guaranteed never to dispatch) or
- *   `NotFound` when nothing held the key. Name the result Message
- *   `CompletedCancel<CommandName>`.
- * - To dispatch a replacement after cancelling, sequence through the
- *   Interrupt's result Message: return the new Command from the
- *   `CompletedCancel<CommandName>` handler. Commands in one batch run
- *   concurrently with no execution-order guarantee, so `[Interrupt, Next]`
- *   in a single list is a race, not a sequence.
- *
- * For work that should stop when the Model says so, reach for a Subscription
- * or ManagedResource instead; interruption is for one-shot async work that is
- * structurally a Command (for example an in-flight HTTP request, a file read,
- * or an upload).
- *
- * @example No args
- * ```ts
- * const SyncLibrary = Command.Interruptible.define(
- *   'SyncLibrary',
- *   SucceededSyncLibrary,
- *   FailedSyncLibrary,
- * )(Effect.gen(function* () { ... }))
- * // Call sites:
- * SyncLibrary()
- * SyncLibrary.Interrupt(outcome => CompletedCancelSyncLibrary({ outcome }))
- * ```
- *
- * @example With args, key derived from them
- * ```ts
- * const UploadFile = Command.Interruptible.define(
- *   'UploadFile',
- *   { uploadId: S.Number, file: S.instanceOf(File) },
- *   ({ uploadId }: { uploadId: number }) => String(uploadId),
- *   SucceededUploadFile,
- *   FailedUploadFile,
- * )(({ uploadId, file }) =>
- *   Effect.gen(function* () { ... }),
- * )
- * // Call sites:
- * UploadFile({ uploadId: 1, file })
- * UploadFile.Interrupt({ uploadId: 1 }, outcome =>
- *   CompletedCancelUploadFile({ uploadId: 1, outcome }),
- * )
- * ```
- *
- * @example With args, keyed by name (one invocation in flight)
- * ```ts
- * const SaveDraft = Command.Interruptible.define(
- *   'SaveDraft',
- *   { draftId: S.String, body: S.String },
- *   SucceededSaveDraft,
- *   FailedSaveDraft,
- * )(({ draftId, body }) =>
- *   Effect.gen(function* () { ... }),
- * )
- * // Call sites:
- * SaveDraft({ draftId: 'abc', body })
- * SaveDraft.Interrupt(outcome => CompletedCancelSaveDraft({ outcome }))
- * ```
- */
-export function define<
-  const Name extends string,
-  Results extends ReadonlyArray<Schema.Top>,
->(
-  name: Name,
-  ...results: Results
-): <Eff extends Effect.Effect<Schema.Schema.Type<Results[number]>, any, any>>(
-  effect: Eff,
-) => DefinitionNoArgs<Name, Eff>
-
-export function define<
-  const Name extends string,
-  Fields extends Schema.Struct.Fields,
-  KeyArgs extends Partial<Schema.Schema.Type<Schema.Struct<Fields>>>,
-  Results extends ReadonlyArray<Schema.Top>,
->(
-  name: Name,
-  args: Fields,
-  toKey: (keyArgs: KeyArgs) => string,
-  ...results: Results
-): <Eff extends Effect.Effect<Schema.Schema.Type<Results[number]>, any, any>>(
-  effectBuilder: (args: Schema.Schema.Type<Schema.Struct<Fields>>) => Eff,
-) => DefinitionWithArgs<Name, Fields, KeyArgs, Eff>
-
-export function define<
-  const Name extends string,
-  Fields extends Schema.Struct.Fields,
-  Results extends ReadonlyArray<Schema.Top>,
->(
-  name: Name,
-  args: Fields,
-  ...results: Results
-): <Eff extends Effect.Effect<Schema.Schema.Type<Results[number]>, any, any>>(
-  effectBuilder: (args: Schema.Schema.Type<Schema.Struct<Fields>>) => Eff,
-) => DefinitionWithArgsNameKeyed<Name, Fields, Eff>
-
-export function define(name: string, ...rest: ReadonlyArray<unknown>): unknown {
-  const [maybeArgs, maybeToKey] = rest
-
-  const isArgsRecord =
-    Predicate.isObject(maybeArgs) && !Schema.isSchema(maybeArgs)
-
-  if (!isArgsRecord) {
-    const key = name
-    return (effect: Effect.Effect<any, any, any>) => {
-      const definition = () => ({
-        name,
-        key,
-        effect: registerKeyWhileRunning(key, effect),
-        messageMappers: [],
-      })
-      brandAsDefinition(definition, name)
-      Object.defineProperty(definition, 'Interrupt', {
-        value: makeInterruptDefinitionNoArgs(name, key),
-      })
-      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-      return definition as unknown as DefinitionNoArgs<
-        string,
-        Effect.Effect<any, any, any>
-      >
-    }
-  }
-
-  const isToKeyFunction =
-    Predicate.isFunction(maybeToKey) && !Schema.isSchema(maybeToKey)
-
-  if (!isToKeyFunction) {
-    const key = name
-    return (effectBuilder: (args: any) => Effect.Effect<any, any, any>) => {
-      const definition = (args: any) => ({
-        name,
-        args,
-        key,
-        effect: registerKeyWhileRunning(key, effectBuilder(args)),
-        messageMappers: [],
-      })
-      brandAsDefinition(definition, name)
-      Object.defineProperty(definition, 'Interrupt', {
-        value: makeInterruptDefinitionNoArgs(name, key),
-      })
-      /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-      return definition as unknown as DefinitionWithArgsNameKeyed<
-        string,
-        any,
-        Effect.Effect<any, any, any>
-      >
-    }
-  }
-
-  /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-  const toKey = maybeToKey as (keyArgs: any) => string
-  const toFullKey = (keyArgs: any): string => `${name}:${toKey(keyArgs)}`
-  return (effectBuilder: (args: any) => Effect.Effect<any, any, any>) => {
-    const definition = (args: any) => {
-      const key = toFullKey(args)
-      return {
-        name,
-        args,
-        key,
-        effect: registerKeyWhileRunning(key, effectBuilder(args)),
-        messageMappers: [],
-      }
-    }
-    brandAsDefinition(definition, name)
-    Object.defineProperty(definition, 'Interrupt', {
-      value: makeInterruptDefinitionWithArgs(name, toFullKey),
-    })
-    /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions */
-    return definition as unknown as DefinitionWithArgs<
-      string,
-      any,
-      any,
-      Effect.Effect<any, any, any>
-    >
-  }
 }

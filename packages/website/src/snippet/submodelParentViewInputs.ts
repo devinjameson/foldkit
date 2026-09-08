@@ -1,5 +1,5 @@
 // main.ts (parent)
-import { type Document, html } from 'foldkit/html'
+import type { Document, HtmlBuilder } from 'foldkit/html'
 
 import { GotCommandMenuMessage, type Message } from './message'
 import type { Model } from './model'
@@ -11,25 +11,21 @@ const MENU_ITEMS: ReadonlyArray<string> = ['Open', 'Rename', 'Archive']
 // `buttonLabel` and `items` are configuration the parent owns; the child
 // slots them into its open/closed widget. The child has no idea what the
 // items mean. Only that they exist.
-export const view = (model: Model): Document => {
-  const h = html<Message>()
-
-  return {
-    title: 'My App',
-    body: h.div(
-      [],
-      [
-        h.submodel({
-          slotId: 'command-menu',
-          model: model.commandMenu,
-          view: CommandMenu.view,
-          viewInputs: {
-            buttonLabel: h.span([], ['Actions']),
-            items: MENU_ITEMS,
-          },
-          toParentMessage: message => GotCommandMenuMessage({ message }),
-        }),
-      ],
-    ),
-  }
-}
+export const view = (model: Model, h: HtmlBuilder<Message>): Document => ({
+  title: 'My App',
+  body: h.div(
+    [],
+    [
+      h.submodel({
+        slotId: 'command-menu',
+        model: model.commandMenu,
+        view: CommandMenu.view,
+        viewInputs: {
+          buttonLabel: h.span([], ['Actions']),
+          items: MENU_ITEMS,
+        },
+        toParentMessage: message => GotCommandMenuMessage({ message }),
+      }),
+    ],
+  ),
+})

@@ -1,48 +1,48 @@
-import { Effect, Fiber, Match as M, Schema as S } from 'effect'
+import { Effect, Fiber, Match, Schema } from 'effect'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as Command from '../command/index.js'
-import { html } from '../html/index.js'
-import { m } from '../message/index.js'
-import { makeElement } from './runtime.js'
+import { __htmlBuilder } from '../html/index.js'
+import { defineMessageUnion } from '../message/index.js'
+import type * as Update from '../update/index.js'
+import { makeElement } from './makeElement.js'
 
 // CHILD
 
-const CompletedDoChildWork = m('CompletedDoChildWork')
-const ChildMessage = S.Union([CompletedDoChildWork])
+const ChildMessage = defineMessageUnion({
+  CompletedDoChildWork: {},
+})
 type ChildMessage = typeof ChildMessage.Type
 
-const DoChildWork = Command.define(
-  'DoChildWork',
-  CompletedDoChildWork,
-)(Effect.succeed(CompletedDoChildWork()))
+const DoChildWork = Command.define('DoChildWork', {
+  messages: [ChildMessage.CompletedDoChildWork],
+  execute: Effect.succeed(ChildMessage.CompletedDoChildWork()),
+})
 
 // PARENT
 
-const GotChildMessage = m('GotChildMessage', { message: ChildMessage })
-const Message = S.Union([GotChildMessage])
+const Message = defineMessageUnion({
+  GotChildMessage: { message: ChildMessage },
+})
 type Message = typeof Message.Type
 
-const Model = S.Struct({ label: S.String })
+const Model = Schema.Struct({ label: Schema.String })
 type Model = typeof Model.Type
 
-type UpdateReturn = readonly [Model, ReadonlyArray<Command.Command<Message>>]
+type UpdateReturn = Update.Return<Model, Message>
 
-const update = (_model: Model, message: Message): UpdateReturn =>
-  M.value(message).pipe(
-    M.withReturnType<UpdateReturn>(),
-    M.tagsExhaustive({
-      GotChildMessage: ({ message: childMessage }) =>
-        M.value(childMessage).pipe(
-          M.withReturnType<UpdateReturn>(),
-          M.tagsExhaustive({
-            CompletedDoChildWork: () => [{ label: 'child done' }, []],
-          }),
-        ),
-    }),
-  )
+const update = (_model: Model, message: Message) =>
+  Message.match<UpdateReturn>(message, {
+    GotChildMessage: ({ message: childMessage }) =>
+      Match.value(childMessage).pipe(
+        Match.withReturnType<UpdateReturn>(),
+        Match.tagsExhaustive({
+          CompletedDoChildWork: () => ({ model: { label: 'child done' } }),
+        }),
+      ),
+  })
 
-const h = html<Message>()
+const h = __htmlBuilder<Message>()
 
 const view = (model: Model) => h.div([], [model.label])
 
@@ -74,12 +74,12 @@ describe('command message mappers', () => {
   it('dispatches a mapped Command result in the parent Message space', async () => {
     const element = makeElement({
       Model,
-      init: () => [
-        { label: 'start' },
-        Command.mapMessages([DoChildWork()], childMessage =>
-          GotChildMessage({ message: childMessage }),
+      init: () => ({
+        model: { label: 'start' },
+        commands: Command.mapMessages([DoChildWork()], childMessage =>
+          Message.GotChildMessage({ message: childMessage }),
         ),
-      ],
+      }),
       update,
       view,
       crash,

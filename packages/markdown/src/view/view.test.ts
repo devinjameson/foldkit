@@ -1,5 +1,5 @@
-import { Array, Option, Schema as S } from 'effect'
-import { html } from 'foldkit/html'
+import { Array, Option, Schema } from 'effect'
+import { inertHtml as ih } from 'foldkit/html'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { parseMarkdown } from '../vite/vite.js'
@@ -89,6 +89,32 @@ describe('view', () => {
     ).toStrictEqual(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
   })
 
+  it('passes each code block its occurrence index in document order', () => {
+    const document = parseMarkdown(
+      lines(
+        '```ts',
+        'const first = 1',
+        '```',
+        '',
+        '```ts',
+        'const second = 2',
+        '```',
+      ),
+    )
+    const receivedIndexes: Array<number> = []
+
+    view(document, {
+      views: {
+        CodeBlock: (_codeBlock, occurrenceIndex) => {
+          receivedIndexes.push(occurrenceIndex)
+          return ih.pre([])
+        },
+      },
+    })
+
+    expect(receivedIndexes).toStrictEqual([0, 1])
+  })
+
   it('renders nested inline content through the default views', () => {
     const document = parseMarkdown(
       'Some *emphasis*, `code`, and a [link](https://example.com).',
@@ -139,7 +165,6 @@ describe('view', () => {
   })
 
   it('renders islands through the registered view with attributes and nested content', () => {
-    const h = html()
     const document = parseMarkdown(
       lines(':::Note{tone="calm"}', 'Inside the island.', ':::'),
     )
@@ -148,8 +173,8 @@ describe('view', () => {
       view(document, {
         islands: {
           Note: (attributes, content) =>
-            h.aside(
-              [h.Class(`note-${attributes['tone'] ?? 'plain'}`)],
+            ih.aside(
+              [ih.Class(`note-${attributes['tone'] ?? 'plain'}`)],
               content,
             ),
         },
@@ -162,7 +187,6 @@ describe('view', () => {
   })
 
   it('passes each island its per-name occurrence index in document order', () => {
-    const h = html()
     const document = parseMarkdown(
       lines('::Slot', '', 'Between.', '', '::Slot'),
     )
@@ -172,7 +196,7 @@ describe('view', () => {
       islands: {
         Slot: (_attributes, _content, occurrenceIndex) => {
           receivedIndexes.push(occurrenceIndex)
-          return h.div([], [])
+          return ih.div([])
         },
       },
     })
@@ -207,14 +231,13 @@ describe('view', () => {
   })
 
   it('applies view overrides over the defaults', () => {
-    const h = html()
     const document = parseMarkdown('A paragraph.')
 
     const root = asElement(
       view(document, {
         views: {
           Paragraph: (_paragraph, content) =>
-            h.p([h.Class('leading-relaxed')], content),
+            ih.p([ih.Class('leading-relaxed')], content),
         },
       }),
     )
@@ -225,16 +248,17 @@ describe('view', () => {
   })
 
   it('islandsFor decodes attributes through the island schema before dispatch', () => {
-    const h = html()
     const document = parseMarkdown('::Badge{label="hi"}')
 
     const root = asElement(
       view(document, {
         islands: islandsFor(
-          { Badge: S.Struct({ label: S.optionalKey(S.String) }) },
+          {
+            Badge: Schema.Struct({ label: Schema.optionalKey(Schema.String) }),
+          },
           {
             Badge: ({ label }, _content, occurrenceIndex) =>
-              h.span([], [label ?? 'none', String(occurrenceIndex)]),
+              ih.span([], [label ?? 'none', String(occurrenceIndex)]),
           },
         ),
       }),
@@ -245,14 +269,13 @@ describe('view', () => {
 
   it('islandsFor warns and renders nothing when attributes fail the schema', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const h = html()
     const document = parseMarkdown('::Gauge')
 
     const root = asElement(
       view(document, {
         islands: islandsFor(
-          { Gauge: S.Struct({ level: S.String }) },
-          { Gauge: ({ level }) => h.span([], [level]) },
+          { Gauge: Schema.Struct({ level: Schema.String }) },
+          { Gauge: ({ level }) => ih.span([], [level]) },
         ),
       }),
     )

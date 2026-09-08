@@ -1,20 +1,12 @@
 import { Effect } from 'effect'
-import { Document } from 'foldkit/html'
+import { Document, type HtmlBuilder } from 'foldkit/html'
 import { makeApplication } from 'foldkit/runtime'
 import { describe, it } from 'vitest'
 
 // Internal API not on the public surface but needed by the profile harness
 // to capture the runtime's sync dispatcher.
 import { __requireDispatch } from '../../../packages/foldkit/src/html/index.js'
-import {
-  AddedTodo,
-  DeletedTodo,
-  Model,
-  ToggledTodo,
-  UpdatedNewTodo,
-  update as baseUpdate,
-  init,
-} from './main.js'
+import { Message, Model, update as baseUpdate, init } from './main.js'
 import type { Todo } from './main.js'
 import { view as naiveView } from './main.js'
 import { view as optimisedView } from './main.optimised.js'
@@ -104,7 +96,7 @@ type Profile = Readonly<{
 }>
 
 const runProfile = async (
-  baseView: (model: Model) => Document,
+  baseView: (model: Model, h: HtmlBuilder<Message>) => Document,
 ): Promise<Profile> => {
   const container = document.createElement('section')
   container.id = `profile-${Math.random().toString(36).slice(2)}`
@@ -117,12 +109,12 @@ const runProfile = async (
   const wrappedView = wrap(baseView)
   const wrappedUpdate = wrap(baseUpdate)
 
-  const captureView = (model: Model) => {
+  const captureView = (model: Model, h: HtmlBuilder<Message>) => {
     if (capturedDispatch === null) {
       capturedDispatch = __requireDispatch()
     }
     latestModel = model
-    return wrappedView.fn(model)
+    return wrappedView.fn(model, h)
   }
 
   const application = makeApplication({
@@ -154,8 +146,8 @@ const runProfile = async (
   // the next render so the runtime processes the queue exactly like the
   // harness's event-driven path.
   for (let index = 0; index < TODO_COUNT; index++) {
-    dispatch(UpdatedNewTodo({ text: `Todo ${index}` }))
-    dispatch(AddedTodo())
+    dispatch(Message.UpdatedNewTodo({ text: `Todo ${index}` }))
+    dispatch(Message.AddedTodo())
     await waitForCondition(() => getModel().todos.length === index + 1)
     await nextFrame()
   }
@@ -165,7 +157,7 @@ const runProfile = async (
     (todo: Todo) => todo.id,
   )
   for (const id of todoIds) {
-    dispatch(ToggledTodo({ id }))
+    dispatch(Message.ToggledTodo({ id }))
     await nextFrame()
   }
 
@@ -175,7 +167,7 @@ const runProfile = async (
     if (firstId === undefined) {
       break
     }
-    dispatch(DeletedTodo({ id: firstId }))
+    dispatch(Message.DeletedTodo({ id: firstId }))
     await nextFrame()
   }
 
@@ -219,7 +211,7 @@ const printRow = (
 
 const reportSlot = async (
   label: string,
-  view: (model: Model) => Document,
+  view: (model: Model, h: HtmlBuilder<Message>) => Document,
   warmupRuns: number,
   measuredRuns: number,
 ): Promise<Profile> => {
